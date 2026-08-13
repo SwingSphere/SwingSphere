@@ -1,0 +1,63 @@
+{
+  "version": 8,
+  "name": "SwingSphere Mini Map",
+  "sources": {
+    "osm": {
+      "type": "vector",
+      "tiles": ["https://example.local/osm/{z}/{x}/{y}.pbf"],
+      "minzoom": 0,
+      "maxzoom": 14
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#0b0c0f"
+      }
+    },
+    {
+      "id": "boundary-fill",
+      "type": "fill",
+      "source": "osm",
+      "source-layer": "boundary",
+      "paint": {
+        "fill-color": "#2a2018",
+        "fill-opacity": 0.45
+      }
+    },
+    {
+      "id": "boundary-line",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "boundary",
+      "paint": {
+        "line-color": "#c9b27a",
+        "line-opacity": 0.6,
+        "line-width": 1.2
+      }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "osm",
+      "source-layer": "road",
+      "paint": {
+        "line-color": "#6f6357",
+        "line-opacity": 0.2,
+        "line-width": 0.7
+      }
+    },
+    {
+      "id": "point-accent",
+      "type": "circle",
+      "source": "osm",
+      "source-layer": "poi",
+      "paint": {
+        "circle-color": "#d6b479",
+        "circle-opacity": 0.9
+      }
+    }
+  ]
+}

@@ -1,0 +1,3431 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  CalendarDays,
+  Clock3,
+  Crosshair,
+  Globe2,
+  LockKeyhole,
+  MapPin,
+  Minus,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
+import ExplorerDetailsPanel from './sidebar/ExplorerDetailsPanel';
+import ExplorerDiscoveryRail from './explorer/ExplorerDiscoveryRail';
+import ExplorerFilterPanel from './explorer/ExplorerFilterPanel';
+import ExplorerNearbyCarousel from './explorer/ExplorerNearbyCarousel';
+import MobileExplorerPrototype from './explorer/MobileExplorerPrototype';
+import { useExplorerState } from '../hooks/useExplorerState';
+import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
+import { useExplorerContext } from './explorer/ExplorerProvider';
+import { useAppStore } from '../store/appStore';
+import { useEntityIndex } from '../hooks/useEntityIndex';
+import * as api from '../lib/api';
+import { adaptListingsToGlobeEvents, isGlobeEligibleListing, resolveCountryIsoCodes } from '../lib/globeEntityAdapter';
+import { aggregateEventsForSpatialDisplay } from '../lib/spatialEventAggregation';
+import { shouldShowDevTools } from '../lib/devTools';
+import { adaptListingsToDiscoveryPoints } from '../lib/discoveryPointAdapter';
+import { adaptOrganizationsToDiscoveryPoints, adaptOrganizationsToGlobeEvents } from '../lib/hostGlobeAdapter';
+import { getListingDisplayCoords } from '../lib/explorerMarkers';
+import { isApproximateLocation } from '../lib/publicLocation';
+import type { MapViewportDiscoverySnapshot } from '../lib/mapViewportDiscovery';
+import { createActivityRegions, type ActivityRegion } from '../lib/activityRegionProvider';
+import {
+  buildListingDistributionFraming,
+  buildListingMapFraming,
+  type ExplorerMapFraming,
+} from '../lib/explorerDestinationFraming';
+import {
+  DEFAULT_MAP_CAMERA,
+  GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+  WORLD_BEARING,
+  WORLD_PITCH,
+  mapZoomToZoomIntent,
+  zoomIntentToMapZoom,
+  type ExplorerCameraPose,
+} from '../lib/explorerCamera';
+import { ExplorerTransitionController } from '../lib/explorerTransition';
+import type { BuildingAsset, Listing } from '../types';
+import { getBuildingAssetForListing, getListingPhysicalAddress } from '../lib/entityCompatibility';
+import {
+  createGlobePerformanceConfig,
+  getGraphicsCapability,
+  type GraphicsCapability,
+} from '../lib/graphicsCapability';
+import {
+  GlobeQualityController,
+  type ExplorerPerformanceMode,
+  type ExplorerPerformanceSnapshot,
+  type GlobePerformanceSnapshot,
+  type GlobeQualityTier,
+} from '../lib/globePerformance';
+import {
+  type GlobeV1CountrySelection,
+  type GlobeV1RuntimeEvent,
+} from '../data/globeV1MockData';
+import {
+  buildGlobeScaleFixtureDiscoveryPoints,
+  buildGlobeScaleFixtureEvents,
+  getGlobeScaleFixture,
+} from '../data/globeScaleCalibrationFixtures';
+import {
+  buildGlobePerformanceFixtureListings,
+  parseGlobePerformanceFixtureCount,
+} from '../data/globePerformanceFixtures';
+import type { GlobePresentationConfig } from './dev/GlobeScaleCalibrationPanel';
+import { GLOBE_PRESENTATION_PRESETS } from '../src/features/globe/runtime/GlobePresentationConfig.js';
+import {
+  defaultHeroArrivalProfile,
+  formatHeroArrivalSnippet,
+  HERO_COMPOSER_CUSTOM_PRESET_STORAGE_KEY,
+  HERO_COMPOSER_ENABLED_STORAGE_KEY,
+  HERO_COMPOSER_PROFILE_STORAGE_KEY,
+  mergeHeroArrivalProfile,
+  readHeroArrivalProfile,
+  type HeroArrivalProfile,
+  type HeroArrivalProfileInput,
+  type HeroComposerSnapshot,
+} from '../lib/heroArrivalProfile';
+
+const FlatWorldMap = React.lazy(() => import('./maps/FlatWorldMap'));
+const HybridGlobePrototypeLayer = import.meta.env.DEV
+  ? React.lazy(() => import('./dev/HybridGlobePrototypeLayer'))
+  : null;
+const GlobePerformancePanel = import.meta.env.DEV
+  ? React.lazy(() => import('./dev/GlobePerformancePanel'))
+  : null;
+const GlobeScaleCalibrationPanel = import.meta.env.DEV
+  ? React.lazy(() => import('./dev/GlobeScaleCalibrationPanel'))
+  : null;
+
+type GlobeRuntime = {
+  mount: () => Promise<GlobeRuntime> | GlobeRuntime;
+  updateEvents: (events: GlobeV1RuntimeEvent[]) => void;
+  updateVisibleEvents: (events: GlobeV1RuntimeEvent[]) => void;
+  updateActivityRegions: (regions: ActivityRegion[]) => void;
+  setCountryActivityCountries: (countries: string[]) => void;
+  setCountryActivityEvents: (events: GlobeV1RuntimeEvent[]) => void;
+  setDirectPinsVisible: (visible: boolean) => void;
+  setCountryDiscoveryEmphasis: (enabled: boolean) => void;
+  updateAtmosphereConfig: (config: AtmospherePatch) => void;
+  updatePresentationConfig: (config: GlobePresentationConfig, options?: { frameWorld?: boolean }) => GlobePresentationConfig | null;
+  getPresentationConfig: () => GlobePresentationConfig;
+  updateAlignmentDebugConfig: (config: AlignmentDebugState) => void;
+  updatePinAlignmentDebugConfig: (config: AlignmentDebugRuntimePatch) => void;
+  updateDebugView: (config: AlignmentDebugViewPatch) => void;
+  setIdleMotionSuppressed: (suppressed: boolean) => void;
+  start: () => void;
+  stop: () => void;
+  setTransitionActive: (active: boolean) => void;
+  setQualityTier: (tier: GlobeQualityTier) => void;
+  getPerformanceSnapshot: () => GlobePerformanceSnapshot | null;
+  selectEvent: (eventId: string) => GlobeV1RuntimeEvent | null;
+  selectActivityRegion: (regionId: string) => ActivityRegion | null;
+  selectCountry: (countryIdOrIso: string | number) => GlobeV1CountrySelection | null;
+  clearSelection: () => void;
+  clearEventSelection: () => void;
+  getNavigationSnapshot: () => GlobeNavigationSnapshot | null;
+  updateHeroArrivalProfile: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
+  previewHeroArrivalProfile: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
+  animateHeroArrivalPreview: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
+  captureHeroArrivalProfile: () => HeroArrivalProfile | null;
+  getHeroArrivalComposerSnapshot: () => HeroComposerSnapshot | null;
+  setNavigationPose: (pose: { lng: number; lat: number; zoomIntent: number; distance?: number }) => GlobeNavigationSnapshot | null;
+  returnToWorld: () => void;
+  resize: () => void;
+  dispose: () => void;
+};
+
+type GlobeNavigationSnapshot = {
+  lng: number;
+  lat: number;
+  targetSource: GlobeNavigationTargetSource;
+  cameraDirectionLng?: number;
+  cameraDirectionLat?: number;
+  distance: number;
+  zoomIntent: number;
+  minDistance: number;
+  maxDistance: number;
+  activeActivityRegionId: string | null;
+  selectedEventId: string | null;
+};
+
+type GlobeNavigationTargetSource =
+  | 'screen-center-ray'
+  | 'camera-direction-fallback'
+  | 'controls-target-fallback'
+  | 'selected-listing';
+
+type GlobeConstructor = new (
+  container: HTMLElement,
+  options: {
+    events: GlobeV1RuntimeEvent[];
+    activityRegions: ActivityRegion[];
+    config: Record<string, unknown>;
+    onReady: () => void;
+    onError: (error: unknown) => void;
+    onCountrySelect: (country: GlobeV1CountrySelection | null) => void;
+    onCountryHover: (country: GlobeV1CountrySelection | null, sample?: GlobeHoverSample | null) => void;
+    onEventHover: (event: GlobeV1RuntimeEvent | null) => void;
+    onEventSelect: (event: GlobeV1RuntimeEvent) => false | void;
+    onActivityRegionSelect: (region: ActivityRegion) => void;
+    onDiscoveryModeChange: (region: ActivityRegion | null) => void;
+    onNavigationChange: (snapshot: GlobeNavigationSnapshot) => void;
+    onFocusArrival: (arrival: { selectedEventId: string | null; activeActivityRegionId: string | null }) => void;
+    onSurfaceDoubleClick: () => void;
+    onContextLost: () => void;
+    onContextRestored: () => void;
+    onPerformanceSnapshot: (snapshot: GlobePerformanceSnapshot) => void;
+  },
+) => GlobeRuntime;
+
+const globeAssetsConfig = {
+  assets: {
+    landModel: '/assets/globe/models/land.glb',
+    oceanModel: '/assets/globe/models/ocean.glb',
+    countryIdTexture: '/assets/globe/textures/countryIdTexture_v4.png',
+    visualCountryAtlas: '/assets/globe/textures/visualCountryAtlas_v4.png',
+    countryLookup: '/assets/globe/data/countryLookup.json',
+  },
+};
+
+const ADRIATIC_BALKANS_PRESENTATION_GROUP = {
+  id: 'adriatic-balkans',
+  label: 'Adriatic & Balkans',
+  members: ['SVN', 'HRV', 'BIH', 'SRB', 'MNE', 'ALB'],
+  suppressVectorBorders: true,
+} as const;
+
+const productionCountryPresentationConfig = {
+  countryPresentationGroups: [ADRIATIC_BALKANS_PRESENTATION_GROUP],
+  selection: {
+    enabledEventOnly: true,
+    highlightVisible: false,
+    useSphereRaycast: true,
+    highlightMaskSource: 'id',
+    activeHitPaddingPixels: 5,
+    focusDurationMs: 1150,
+  },
+  hybridCountryBorders: {
+    enabled: true,
+    manifestUrl: '/assets/globe/borders/hybrid/v1/manifest.json',
+    sourceMode: 'hybrid',
+  },
+  countryVectorActivity: {
+    enabled: true,
+    manifestUrl: '/assets/globe/borders/hybrid/v1/manifest.json',
+    fallbackGeoJsonUrl: '/geo/countries.json',
+    radiusScale: 1.009,
+    hoverTransitionSeconds: 0.22,
+    selectedTransitionSeconds: 0.3,
+    idle: {
+      coreColor: '#d9dde2',
+      glowColor: '#ff465c',
+      coreWidth: 2,
+      coreOpacity: 0.52,
+      glowWidth: 5.5,
+      glowOpacity: 0.045,
+      coreVisible: true,
+      glowVisible: true,
+      pulseEnabled: true,
+      pulseSpeed: 0.64,
+    },
+    hover: {
+      coreColor: '#f4f5f7',
+      glowColor: '#ff465c',
+      sweepColor: '#ffffff',
+      coreWidth: 1.25,
+      coreOpacity: 0.82,
+      glowWidth: 8,
+      glowOpacity: 0.12,
+      coreVisible: true,
+      glowVisible: true,
+      sweepEnabled: true,
+      sweepWidth: 0.22,
+      sweepStrength: 0.9,
+      sweepSpeed: 0.7,
+      sweepRepeat: true,
+    },
+  },
+  countryVectorBorders: {
+    enabled: true,
+    url: '/geo/countries.json',
+    coreWidth: 2,
+    opacity: 0.96,
+    glowWidth: 5.5,
+    glowOpacity: 0.04,
+    speed: 0.5,
+    coreVisible: false,
+    glowVisible: true,
+    animationEnabled: true,
+    hoverEnabled: false,
+    selectedTransitionSeconds: 0.34,
+    palette: ['#17181d', '#17181d', '#17181d', '#17181d', '#17181d', '#17181d', '#ff465c', '#ff465c'],
+    radiusScale: 1.009,
+    conformToLand: true,
+    shorelineSnap: true,
+    shorelineSnapStrength: 1,
+    maxSegmentDegrees: 0.55,
+    preparedCacheSize: 8,
+  },
+  countryGeoJson: {
+    enabled: true,
+    url: '/geo/countries.json',
+    meshScale: 1.003,
+    staticTextureWidth: 1024,
+    staticTextureHeight: 512,
+    dynamicTextureWidth: 2048,
+    dynamicTextureHeight: 1024,
+    simplifyStepDeg: 0.32,
+    quantizeStepDeg: 0.18,
+    minIslandAreaDeg2: 0.035,
+    maxIslandPolygonsPerCountry: 12,
+    baseRasterWidth: 1,
+    hoverRasterWidth: 1.25,
+    selectedRasterWidth: 1.75,
+    baseOpacity: 0,
+    hoverBorderOpacity: 0,
+    selectedBorderOpacity: 0,
+    hoverFillOpacity: 0.12,
+    selectedFillOpacity: 0.28,
+    activityColor: '#e4e8ed',
+    activityRasterWidth: 2,
+    activityBorderOpacity: 0,
+    activityFillOpacity: 0.035,
+    hoverTransitionSeconds: 0.22,
+    selectedTransitionSeconds: 0.34,
+    glowEnabled: false,
+  },
+} as const;
+
+type AtmosphereShell = {
+  radius: number;
+  opacity: number;
+  crimsonIntensity: number;
+  graphiteIntensity: number;
+  fresnelPower: number;
+  horizonFalloff: number;
+};
+
+type AtmospherePatch = {
+  atmosphere: {
+    inner: AtmosphereShell;
+    outer: AtmosphereShell;
+  };
+  crimsonRim: {
+    radius: number;
+  };
+};
+
+type AlignmentDebugState = {
+  land: LayerAlignmentState;
+  countryAtlas: LayerAlignmentState;
+  pins: PinAlignmentState;
+  cameraTargets: CameraTargetAlignmentState;
+  toggles: AlignmentDebugToggles;
+  opacity: AlignmentDebugOpacity;
+};
+
+type LayerAlignmentState = {
+  longitudeSign: 1 | -1;
+  longitudeOffsetDeg: number;
+  latitudeOffsetDeg: number;
+  flipU: boolean;
+  flipV: boolean;
+};
+
+type PinAlignmentState = {
+  longitudeSign: 1 | -1;
+  longitudeOffsetDeg: number;
+  latitudeOffsetDeg: number;
+  latitudeSign: 1 | -1;
+};
+
+type CameraTargetAlignmentState = {
+  longitudeOffsetDeg: number;
+  latitudeOffsetDeg: number;
+};
+
+type AlignmentDebugToggles = {
+  showLandMesh: boolean;
+  showOceanMesh: boolean;
+  showCountryIdTexture: boolean;
+  showVisualCountryAtlas: boolean;
+  showCountryHighlightMask: boolean;
+  showPinAnchors: boolean;
+  showEventLabels: boolean;
+  showCameraTarget: boolean;
+};
+
+type AlignmentDebugOpacity = {
+  countryIdTexture: number;
+  visualAtlas: number;
+  highlightMask: number;
+};
+
+type GlobeHoverSample = {
+  uv?: { u: number; v: number };
+  sample?: { r: number; g: number; b: number; x: number; y: number };
+  country?: GlobeV1CountrySelection | null;
+};
+
+type PinHoverDebug = {
+  name: string;
+  lat: number;
+  lon: number;
+  countryIso3: string;
+  worldPosition?: number[] | null;
+};
+
+type GlobeHoverDebug = {
+  uv?: { u: number; v: number };
+  rgb?: [number, number, number];
+  country?: GlobeV1CountrySelection | null;
+};
+
+type SpatialDebugSnapshot = {
+  canonicalLng: number | null;
+  canonicalLat: number | null;
+  globeLng: number | null;
+  globeLat: number | null;
+  globeCameraDirectionLng: number | null;
+  globeCameraDirectionLat: number | null;
+  mapLng: number | null;
+  mapLat: number | null;
+  targetSource: GlobeNavigationTargetSource | 'map-center' | null;
+  deltaMeters: number | null;
+  surfaceMode: 'globe' | 'map';
+  transitionProgress: number;
+};
+
+type HeroArrivalPreset = {
+  id: string;
+  name: string;
+  description: string;
+  profile: HeroArrivalProfile;
+};
+
+type ExplorerTravelPhase =
+  | 'idle'
+  | 'planning'
+  | 'globe-travel'
+  | 'globe-arrived'
+  | 'traveling'
+  | 'blending'
+  | 'arriving'
+  | 'local-explore'
+  | 'venue-explore';
+
+type ExplorerDestination =
+  | {
+      type: 'listing';
+      listingId: string;
+      lat: number;
+      lng: number;
+      framing: ExplorerMapFraming;
+    }
+  | {
+      type: 'cluster' | 'region' | 'country';
+      id: string;
+      lat: number;
+      lng: number;
+      listingIds?: string[];
+      framing: ExplorerMapFraming;
+    };
+
+type AlignmentDebugRuntimePatch = {
+  alignment: {
+    pinLongitudeSign: 1 | -1;
+    pinLongitudeOffsetDeg: number;
+    pinLatitudeOffsetDeg: number;
+    pinLatitudeSign: 1 | -1;
+  };
+  pinPlacement: {
+    showPinAnchors: boolean;
+  };
+};
+
+type AlignmentDebugViewPatch = {
+  showCountryHighlightMask: boolean;
+  showCountryIdTexture: boolean;
+  showVisualCountryAtlas: boolean;
+  countryAtlas: LayerAlignmentState;
+  countryIdTextureOpacity: number;
+  visualAtlasOpacity: number;
+  highlightMaskOpacity: number;
+};
+
+const ATMOSPHERE_TOOL_STORAGE_KEY = 'swingsphere.globeV1.atmosphereTool';
+const DETAIL_PANEL_SETTLE_MS = 360;
+const SPATIAL_DEBUG_STORAGE_KEY = 'swingsphere.spatialDebug';
+const GLOBE_TRAVEL_ARRIVAL_PAUSE_MS = 420;
+const COUNTRY_PIN_REVEAL_DELAY_MS = 1050;
+
+const isSpatialDebugEnabled = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(SPATIAL_DEBUG_STORAGE_KEY) === 'true';
+
+const distanceMetersBetween = (
+  a: { lng: number; lat: number } | null,
+  b: { lng: number; lat: number } | null,
+): number | null => {
+  if (!a || !b) return null;
+  const earthRadiusMeters = 6371008.8;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const deltaLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const deltaLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return 2 * earthRadiusMeters * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+const formatApproxDistance = (distanceMeters: number): string => {
+  if (!Number.isFinite(distanceMeters)) return 'Nearby';
+  if (distanceMeters < 30) return 'Here';
+  if (distanceMeters < 305) return `${Math.max(50, Math.round((distanceMeters * 3.28084) / 50) * 50)} ft`;
+  const miles = distanceMeters / 1609.344;
+  if (miles < 10) return `${miles.toFixed(1)} mi`;
+  return `${Math.round(miles)} mi`;
+};
+
+const estimateGlobeTravelDurationMs = (
+  from: { lng: number; lat: number } | null,
+  to: { lng: number; lat: number },
+): number => {
+  const distanceMeters = distanceMetersBetween(from, to) ?? 0;
+  const distanceKm = distanceMeters / 1000;
+  if (distanceKm < 80) return 1250;
+  if (distanceKm < 750) return 1700;
+  if (distanceKm < 2800) return 2250;
+  if (distanceKm < 7000) return 2850;
+  return 3350;
+};
+
+const defaultAtmosphereToolState: AtmospherePatch = {
+  atmosphere: {
+    inner: {
+      radius: 0.976,
+      opacity: 0.145,
+      crimsonIntensity: 0.971,
+      graphiteIntensity: 1.441,
+      fresnelPower: 6,
+      horizonFalloff: 1.465,
+    },
+    outer: {
+      radius: 0.97,
+      opacity: 0.056,
+      crimsonIntensity: 1.235,
+      graphiteIntensity: 1.059,
+      fresnelPower: 1.55,
+      horizonFalloff: 2.943,
+    },
+  },
+  crimsonRim: {
+    radius: 0.979,
+  },
+};
+
+const createHeroPresetProfile = (profile: HeroArrivalProfileInput): HeroArrivalProfile =>
+  ({
+    ...defaultHeroArrivalProfile,
+    ...profile,
+    heroComposition: {
+      ...defaultHeroArrivalProfile.heroComposition,
+      ...profile.heroComposition,
+    },
+    heroStage: {
+      ...defaultHeroArrivalProfile.heroStage,
+      ...profile.heroStage,
+    },
+    ease: profile.ease ?? defaultHeroArrivalProfile.ease,
+    mode: profile.mode ?? 'legacy',
+  });
+
+const builtInHeroArrivalPresets: HeroArrivalPreset[] = [
+  {
+    id: 'destination-tilt',
+    name: 'Destination Tilt',
+    description: 'Destination-relative cinematic shot with the Earth framed low.',
+    profile: createHeroPresetProfile({
+      mode: 'destinationTilt',
+      fov: 31.25,
+      durationMs: 2875,
+      heroStage: {
+        distance: 6.79,
+        tiltDegrees: 18,
+        headingDegrees: -8,
+        globeScreenX: 0.5,
+        globeScreenY: 0.62,
+        labelAnchorX: 0.5,
+        labelAnchorY: 0.44,
+      },
+      heroComposition: {
+        maxCorrectionDegrees: 3,
+      },
+    }),
+  },
+  {
+    id: 'classic-globe',
+    name: 'Classic Globe',
+    description: 'Premium original-feel globe shot with the Earth as the subject.',
+    profile: createHeroPresetProfile({
+      centerDistance: 6.9,
+      tangentOffset: -0.35,
+      sideOffset: -0.08,
+      horizontalOffset: -0.03,
+      verticalOffset: -0.42,
+      lookAtOffset: 0.08,
+      horizonBias: 0.24,
+      destinationScreenX: 0.62,
+      destinationScreenY: 0.64,
+      fov: 34,
+      durationMs: 2600,
+    }),
+  },
+  {
+    id: 'cinematic-horizon',
+    name: 'Cinematic Horizon',
+    description: 'Lower dramatic composition with more curvature and breathing room.',
+    profile: createHeroPresetProfile({
+      centerDistance: 7.15,
+      tangentOffset: -0.62,
+      sideOffset: -0.14,
+      horizontalOffset: -0.08,
+      verticalOffset: -0.52,
+      lookAtOffset: 0.16,
+      horizonBias: 0.48,
+      destinationScreenX: 0.7,
+      destinationScreenY: 0.72,
+      fov: 31,
+      durationMs: 3000,
+    }),
+  },
+  {
+    id: 'venue-hero',
+    name: 'Venue Hero',
+    description: 'Pin-forward listing arrival while remaining unmistakably globe-scale.',
+    profile: createHeroPresetProfile({
+      centerDistance: 6.45,
+      tangentOffset: -0.48,
+      sideOffset: -0.18,
+      horizontalOffset: -0.05,
+      verticalOffset: -0.44,
+      lookAtOffset: 0.12,
+      horizonBias: 0.34,
+      destinationScreenX: 0.72,
+      destinationScreenY: 0.68,
+      fov: 30.5,
+      durationMs: 2750,
+    }),
+  },
+  {
+    id: 'wide-explorer',
+    name: 'Wide Explorer',
+    description: 'Wider geography-first shot for clusters and orientation.',
+    profile: createHeroPresetProfile({
+      centerDistance: 8.05,
+      tangentOffset: -0.28,
+      sideOffset: -0.06,
+      horizontalOffset: -0.02,
+      verticalOffset: -0.38,
+      lookAtOffset: 0.06,
+      horizonBias: 0.2,
+      destinationScreenX: 0.6,
+      destinationScreenY: 0.61,
+      fov: 37.5,
+      durationMs: 2800,
+    }),
+  },
+  {
+    id: 'regional-approach',
+    name: 'Regional Approach',
+    description: 'Balanced mid-altitude frame for activity regions and city groups.',
+    profile: createHeroPresetProfile({
+      centerDistance: 7.35,
+      tangentOffset: -0.42,
+      sideOffset: -0.11,
+      horizontalOffset: -0.04,
+      verticalOffset: -0.43,
+      lookAtOffset: 0.1,
+      horizonBias: 0.3,
+      destinationScreenX: 0.66,
+      destinationScreenY: 0.66,
+      fov: 35,
+      durationMs: 2850,
+    }),
+  },
+  {
+    id: 'low-angle',
+    name: 'Low Angle',
+    description: 'Strong upward-looking feel with pronounced horizon and atmosphere.',
+    profile: createHeroPresetProfile({
+      centerDistance: 7.05,
+      tangentOffset: -0.82,
+      sideOffset: -0.2,
+      horizontalOffset: -0.09,
+      verticalOffset: -0.62,
+      lookAtOffset: 0.22,
+      horizonBias: 0.62,
+      destinationScreenX: 0.74,
+      destinationScreenY: 0.76,
+      fov: 30,
+      durationMs: 3150,
+    }),
+  },
+  {
+    id: 'building-setup',
+    name: 'Building Setup',
+    description: 'Closer last-globe frame before local detail or map reveal.',
+    profile: createHeroPresetProfile({
+      centerDistance: 5.85,
+      tangentOffset: -0.5,
+      sideOffset: -0.18,
+      horizontalOffset: -0.06,
+      verticalOffset: -0.45,
+      lookAtOffset: 0.14,
+      horizonBias: 0.34,
+      destinationScreenX: 0.74,
+      destinationScreenY: 0.7,
+      fov: 29,
+      durationMs: 2450,
+    }),
+  },
+  {
+    id: 'minimal-neutral',
+    name: 'Minimal / Neutral',
+    description: 'Clean fallback with the destination close to center.',
+    profile: createHeroPresetProfile({
+      centerDistance: 6.9,
+      tangentOffset: -0.12,
+      sideOffset: 0,
+      horizontalOffset: 0,
+      verticalOffset: -0.34,
+      lookAtOffset: 0,
+      horizonBias: 0.08,
+      destinationScreenX: 0.5,
+      destinationScreenY: 0.56,
+      fov: 36,
+      durationMs: 2200,
+    }),
+  },
+];
+
+const defaultAlignmentDebugState: AlignmentDebugState = {
+  land: {
+    longitudeSign: 1,
+    longitudeOffsetDeg: 0,
+    latitudeOffsetDeg: 0,
+    flipU: false,
+    flipV: false,
+  },
+  countryAtlas: {
+    longitudeSign: -1,
+    longitudeOffsetDeg: 0,
+    latitudeOffsetDeg: 0,
+    flipU: false,
+    flipV: false,
+  },
+  pins: {
+    longitudeSign: -1,
+    longitudeOffsetDeg: 0,
+    latitudeOffsetDeg: 0,
+    latitudeSign: 1,
+  },
+  cameraTargets: {
+    longitudeOffsetDeg: 0,
+    latitudeOffsetDeg: 0,
+  },
+  toggles: {
+    showLandMesh: true,
+    showOceanMesh: true,
+    showCountryIdTexture: false,
+    showVisualCountryAtlas: false,
+    showCountryHighlightMask: false,
+    showPinAnchors: false,
+    showEventLabels: false,
+    showCameraTarget: false,
+  },
+  opacity: {
+    countryIdTexture: 0.86,
+    visualAtlas: 0.86,
+    highlightMask: 1,
+  },
+};
+
+const toAlignmentRuntimePatch = (state: AlignmentDebugState): AlignmentDebugRuntimePatch => ({
+  alignment: {
+    pinLongitudeSign: state.pins.longitudeSign,
+    pinLongitudeOffsetDeg: state.pins.longitudeOffsetDeg,
+    pinLatitudeOffsetDeg: state.pins.latitudeOffsetDeg,
+    pinLatitudeSign: state.pins.latitudeSign,
+  },
+  pinPlacement: {
+    showPinAnchors: state.toggles.showPinAnchors,
+  },
+});
+
+const toAlignmentViewPatch = (state: AlignmentDebugState): AlignmentDebugViewPatch => ({
+  showCountryHighlightMask: state.toggles.showCountryHighlightMask,
+  showCountryIdTexture: state.toggles.showCountryIdTexture,
+  showVisualCountryAtlas: state.toggles.showVisualCountryAtlas,
+  countryAtlas: state.countryAtlas,
+  countryIdTextureOpacity: state.opacity.countryIdTexture,
+  visualAtlasOpacity: state.opacity.visualAtlas,
+  highlightMaskOpacity: state.opacity.highlightMask,
+});
+
+const formatAlignmentSnippet = (state: AlignmentDebugState) => JSON.stringify(state, null, 2);
+
+type ProductionGlobePageProps = {
+  variant?: 'page' | 'hero' | 'surface';
+  showDevTools?: boolean;
+  hybridPrototype?: boolean;
+};
+
+const readAtmosphereToolState = (): AtmospherePatch => {
+  if (typeof window === 'undefined') return defaultAtmosphereToolState;
+  try {
+    const raw = window.localStorage.getItem(ATMOSPHERE_TOOL_STORAGE_KEY);
+    if (!raw) return defaultAtmosphereToolState;
+    return mergeAtmosphereState(defaultAtmosphereToolState, JSON.parse(raw));
+  } catch {
+    return defaultAtmosphereToolState;
+  }
+};
+
+const mergeAtmosphereState = (base: AtmospherePatch, override: Partial<AtmospherePatch>): AtmospherePatch => ({
+  atmosphere: {
+    inner: { ...base.atmosphere.inner, ...override.atmosphere?.inner },
+    outer: { ...base.atmosphere.outer, ...override.atmosphere?.outer },
+  },
+  crimsonRim: { ...base.crimsonRim, ...override.crimsonRim },
+});
+
+const formatAtmosphereSnippet = (state: AtmospherePatch) => JSON.stringify(state, null, 2);
+
+const readHeroComposerEnabled = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(HERO_COMPOSER_ENABLED_STORAGE_KEY) === 'true';
+
+const readCustomHeroArrivalPreset = (): HeroArrivalPreset | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(HERO_COMPOSER_CUSTOM_PRESET_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      id: 'custom',
+      name: 'Custom',
+      description: 'Saved local custom hero shot.',
+      profile: mergeHeroArrivalProfile(defaultHeroArrivalProfile, parsed.profile ?? parsed),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const getHeroArrivalPresets = (customPreset: HeroArrivalPreset | null): HeroArrivalPreset[] => [
+  ...builtInHeroArrivalPresets,
+  customPreset ?? {
+    id: 'custom',
+    name: 'Custom',
+    description: 'Current manually edited values.',
+    profile: readHeroArrivalProfile(),
+  },
+];
+
+const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false }) => {
+  const devToolsEnabled = shouldShowDevTools(showDevTools);
+  const captureParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+  const captureFixtureId = captureParams?.get('scaleFixture');
+  const capturePresetId = captureParams?.get('scalePreset') as keyof typeof GLOBE_PRESENTATION_PRESETS | null;
+  const captureDistance = Number(captureParams?.get('scaleDistance'));
+  const performanceFixtureCount = import.meta.env.DEV
+    ? parseGlobePerformanceFixtureCount(captureParams?.get('perfFixture'))
+    : null;
+  const performanceFixtureEnabled = performanceFixtureCount !== null;
+  const fixtureModeEnabled = import.meta.env.DEV && Boolean(devToolsEnabled || captureFixtureId || performanceFixtureEnabled);
+  const performanceToolsEnabled = import.meta.env.DEV
+    && (devToolsEnabled || new URLSearchParams(window.location.search).get('perf') === '1');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const countryHoverLabelRef = useRef<HTMLDivElement | null>(null);
+  const countryPointerRef = useRef({ x: 0, y: 0 });
+  const globeRef = useRef<GlobeRuntime | null>(null);
+  const [graphicsCapability] = useState<GraphicsCapability>(() => getGraphicsCapability());
+  const qualityControllerRef = useRef<GlobeQualityController | null>(null);
+  if (!qualityControllerRef.current) qualityControllerRef.current = new GlobeQualityController(graphicsCapability);
+  const [qualityTier, setQualityTier] = useState<GlobeQualityTier>(() => qualityControllerRef.current?.tier ?? 'high');
+  const [devPerformanceSnapshot, setDevPerformanceSnapshot] = useState<ExplorerPerformanceSnapshot | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  const [hoveredCountry, setHoveredCountry] = useState<GlobeV1CountrySelection | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<GlobeV1CountrySelection | null>(null);
+  const [countryDiscoveryScope, setCountryDiscoveryScope] = useState<{ iso3: string; name: string } | null>(null);
+  const [revealedCountryIso3, setRevealedCountryIso3] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
+  const [activeActivityRegionId, setActiveActivityRegionId] = useState<string | null>(null);
+  const [runtimeState, setRuntimeState] = useState<'loading' | 'ready' | 'recovering' | 'error'>('loading');
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [atmosphereTool, setAtmosphereTool] = useState<AtmospherePatch>(() => devToolsEnabled ? readAtmosphereToolState() : defaultAtmosphereToolState);
+  const [heroComposerEnabled, setHeroComposerEnabled] = useState(() => devToolsEnabled && (readHeroComposerEnabled() || showDevTools));
+  const [heroArrivalProfile, setHeroArrivalProfile] = useState<HeroArrivalProfile>(() => devToolsEnabled ? readHeroArrivalProfile() : defaultHeroArrivalProfile);
+  const [previousHeroArrivalProfile, setPreviousHeroArrivalProfile] = useState<HeroArrivalProfile | null>(null);
+  const [customHeroArrivalPreset, setCustomHeroArrivalPreset] = useState<HeroArrivalPreset | null>(() => devToolsEnabled ? readCustomHeroArrivalPreset() : null);
+  const [selectedHeroPresetId, setSelectedHeroPresetId] = useState('custom');
+  const [heroComposerSnapshot, setHeroComposerSnapshot] = useState<HeroComposerSnapshot | null>(null);
+  const [heroComposerMessage, setHeroComposerMessage] = useState<string | null>(null);
+  const [showHeroGuides, setShowHeroGuides] = useState(true);
+  const [alignmentDebug, setAlignmentDebug] = useState<AlignmentDebugState>(defaultAlignmentDebugState);
+  const [isAtmospherePanelOpen, setIsAtmospherePanelOpen] = useState(true);
+  const [isScaleCalibrationPanelOpen, setIsScaleCalibrationPanelOpen] = useState(true);
+  const [hybridBlend, setHybridBlend] = useState(0);
+  const [hybridZoomIntent, setHybridZoomIntent] = useState(0);
+  const [hybridFadeStart, setHybridFadeStart] = useState(2.2);
+  const [hybridFadeEnd, setHybridFadeEnd] = useState(3.8);
+  const [hybridMapInteractive, setHybridMapInteractive] = useState(true);
+  const [scaleFixtureId, setScaleFixtureId] = useState(captureFixtureId ?? 'bay-area');
+  const [globePresentation, setGlobePresentation] = useState<GlobePresentationConfig>(() => {
+    const preset = capturePresetId && GLOBE_PRESENTATION_PRESETS[capturePresetId]
+      ? GLOBE_PRESENTATION_PRESETS[capturePresetId]
+      : GLOBE_PRESENTATION_PRESETS.recommended;
+    return JSON.parse(JSON.stringify(preset));
+  });
+  const initialGlobePresentationRef = useRef(globePresentation);
+  const [buildingAssets, setBuildingAssets] = useState<BuildingAsset[]>([]);
+  const [travelPhase, setTravelPhase] = useState<ExplorerTravelPhase>('idle');
+  const [travelDestination, setTravelDestination] = useState<ExplorerDestination | null>(null);
+  const [spatialDebugEnabled] = useState(() => devToolsEnabled && isSpatialDebugEnabled());
+  const [spatialDebug, setSpatialDebug] = useState<SpatialDebugSnapshot>({
+    canonicalLng: null,
+    canonicalLat: null,
+    globeLng: null,
+    globeLat: null,
+    globeCameraDirectionLng: null,
+    globeCameraDirectionLat: null,
+    mapLng: null,
+    mapLat: null,
+    targetSource: null,
+    deltaMeters: null,
+    surfaceMode: 'globe',
+    transitionProgress: 0,
+  });
+  const {
+    surfaceMode,
+    setSurfaceMode,
+    camera,
+    setCamera,
+    listingTypes: activeListingTypes,
+  } = useExplorerContext();
+  const transitionControllerRef = useRef<ExplorerTransitionController | null>(null);
+  const transitionDirectionRef = useRef<'globe-to-map' | 'map-to-globe' | null>(null);
+  const transitionStartedAtRef = useRef(0);
+  const transitionMetricsRef = useRef({
+    lastGlobeToMapDurationMs: null as number | null,
+    lastMapToGlobeDurationMs: null as number | null,
+    roundTrips: 0,
+  });
+  const performanceContextRef = useRef({
+    explorerMode: 'globe' as ExplorerPerformanceMode,
+    mapMounted: false,
+  });
+  const plannedTravelTimerRef = useRef<number | null>(null);
+  const countryPinRevealTimerRef = useRef<number | null>(null);
+  const beginListingTravelRef = useRef<(listingId: string) => void>(() => undefined);
+  const beginAreaTravelRef = useRef<(region: ActivityRegion) => void>(() => undefined);
+  const enterLocalViewForListingRef = useRef<(listingId: string) => void>(() => undefined);
+  const suppressNextGlobeSelectTravelRef = useRef<'allow-focus' | 'prevent-focus' | null>(null);
+  const globeEventSelectInProgressRef = useRef(false);
+  const navigationStateRef = useRef<{
+    selectedListingId: string | null;
+    travelPhase: ExplorerTravelPhase;
+    travelDestination: ExplorerDestination | null;
+  }>({
+    selectedListingId: null,
+    travelPhase: 'idle',
+    travelDestination: null,
+  });
+  const globeListingsRef = useRef<Listing[]>([]);
+  const lastNavigationCameraSyncAtRef = useRef(0);
+  const detailPanelSettlesAtRef = useRef(0);
+  const surfaceModeRef = useRef(surfaceMode);
+  const suppressNextHeroPreviewEffectRef = useRef(false);
+  const [transitionFrame, setTransitionFrame] = useState(() => ({
+    progress: 0,
+    globeOpacity: 1,
+    globeScale: 1,
+    globeBlurPx: 0,
+    mapOpacity: 0,
+    mapScale: 0.988,
+    mapBlurPx: 0,
+    veilOpacity: 0.08,
+  }));
+  const [mapViewportDiscovery, setMapViewportDiscovery] = useState<MapViewportDiscoverySnapshot | null>(null);
+  const [isMapViewportDiscoveryPending, setIsMapViewportDiscoveryPending] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { setDebugInfo } = useAppStore();
+  const { listings, organizations, index: entityIndex } = useEntityIndex();
+  const isHero = variant === 'hero';
+  const isSurface = variant === 'surface';
+  const shouldMountMap =
+    graphicsCapability !== 'unsupported' &&
+    (surfaceMode === 'map' || transitionFrame.progress > 0.001);
+  const explorerPerformanceMode: ExplorerPerformanceMode = transitionDirectionRef.current
+    ?? (surfaceMode === 'map' ? 'map' : 'globe');
+  performanceContextRef.current = {
+    explorerMode: explorerPerformanceMode,
+    mapMounted: shouldMountMap,
+  };
+  const globeRuntimeConfig = useMemo(() => {
+    const performanceConfig = createGlobePerformanceConfig(
+      graphicsCapability,
+      prefersReducedMotion,
+      qualityControllerRef.current?.tier,
+    );
+    return {
+      ...globeAssetsConfig,
+      ...performanceConfig,
+      ...productionCountryPresentationConfig,
+      selection: {
+        ...productionCountryPresentationConfig.selection,
+        ...((performanceConfig.selection as Record<string, unknown> | undefined) ?? {}),
+      },
+      presentation: initialGlobePresentationRef.current,
+      renderer: {
+        ...(performanceConfig.renderer as Record<string, unknown>),
+      },
+    };
+  }, [graphicsCapability, prefersReducedMotion]);
+
+  const performanceFixtureListings = useMemo(
+    () => performanceFixtureCount ? buildGlobePerformanceFixtureListings(performanceFixtureCount) : null,
+    [performanceFixtureCount],
+  );
+  const globeListings = useMemo(
+    () => (performanceFixtureListings ?? listings).filter((listing) =>
+      isGlobeEligibleListing(listing)
+      && (!activeListingTypes.length || activeListingTypes.includes(listing.type))),
+    [activeListingTypes, listings, performanceFixtureListings],
+  );
+  const spatialEventAggregation = useMemo(
+    () => aggregateEventsForSpatialDisplay(globeListings),
+    [globeListings],
+  );
+  const spatialGlobeListings = spatialEventAggregation.listings;
+  const resolveSpatialListingId = (listingId: string | null | undefined) =>
+    listingId ? spatialEventAggregation.representativeByListingId.get(listingId) ?? listingId : null;
+  const showHostMarkers = !performanceFixtureEnabled
+    && (!activeListingTypes.length || activeListingTypes.includes('promoter'));
+  const hostRuntimeEvents = useMemo(
+    () => showHostMarkers ? adaptOrganizationsToGlobeEvents(organizations) : [],
+    [organizations, showHostMarkers],
+  );
+  const hostDiscoveryPoints = useMemo(
+    () => showHostMarkers ? adaptOrganizationsToDiscoveryPoints(organizations) : [],
+    [organizations, showHostMarkers],
+  );
+  const hostMapPins = useMemo(() => hostRuntimeEvents.flatMap((event) => {
+    const organization = event.organization;
+    if (!organization) return [];
+    const region = organization.globePresence?.regions.find((candidate) =>
+      candidate.status !== 'inactive'
+      && candidate.latitude === event.lat
+      && candidate.longitude === event.lon,
+    );
+    if (!region) return [];
+    return [{
+      id: event.id,
+      type: 'promoter' as const,
+      name: organization.name,
+      location: [region.city, region.region, region.country].filter(Boolean).join(', '),
+      logoImageUrl: organization.logoImageUrl,
+      geopoint: {
+        latitude: event.lat,
+        longitude: event.lon,
+        address: {
+          city: region.city,
+          region: region.region,
+          country: region.country,
+        },
+      },
+    }];
+  }), [hostRuntimeEvents]);
+  const globeRuntimeEvents = useMemo(
+    () => performanceFixtureEnabled
+      ? adaptListingsToGlobeEvents(spatialGlobeListings)
+      : fixtureModeEnabled
+        ? buildGlobeScaleFixtureEvents(scaleFixtureId)
+        : [...adaptListingsToGlobeEvents(spatialGlobeListings), ...hostRuntimeEvents],
+    [fixtureModeEnabled, hostRuntimeEvents, performanceFixtureEnabled, scaleFixtureId, spatialGlobeListings],
+  );
+  const activeCountryIso3s = useMemo(
+    () => [...new Set(globeRuntimeEvents
+      .map((event) => String(event.countryIso3 ?? '').trim().toUpperCase())
+      .filter((iso3) => /^[A-Z]{3}$/.test(iso3)))],
+    [globeRuntimeEvents],
+  );
+  const visibleCountryRuntimeEvents = useMemo(() => {
+    const countryIso3 = countryDiscoveryScope?.iso3 ?? '';
+    if (!countryIso3) return [];
+    return globeRuntimeEvents.filter((event) => String(event.countryIso3 ?? '').trim().toUpperCase() === countryIso3);
+  }, [countryDiscoveryScope?.iso3, globeRuntimeEvents]);
+  const discoveryPoints = useMemo(
+    () => performanceFixtureEnabled
+      ? adaptListingsToDiscoveryPoints(globeListings)
+      : fixtureModeEnabled
+        ? buildGlobeScaleFixtureDiscoveryPoints(scaleFixtureId)
+        : [...adaptListingsToDiscoveryPoints(globeListings), ...hostDiscoveryPoints],
+    [fixtureModeEnabled, globeListings, hostDiscoveryPoints, performanceFixtureEnabled, scaleFixtureId],
+  );
+  const activityRegions = useMemo(
+    () => createActivityRegions(discoveryPoints),
+    [discoveryPoints],
+  );
+  const visibleCountryDiscoveryPoints = useMemo(() => {
+    if (!revealedCountryIso3) return [];
+    return discoveryPoints.filter((point) =>
+      resolveCountryIsoCodes(point.country).iso3 === revealedCountryIso3);
+  }, [discoveryPoints, revealedCountryIso3]);
+  const visibleCountryActivityRegions = useMemo(
+    () => createActivityRegions(visibleCountryDiscoveryPoints),
+    [visibleCountryDiscoveryPoints],
+  );
+  const globeStats = useMemo(() => {
+    const cityKeys = new Set(discoveryPoints.flatMap((point) => {
+      const city = String(point.city ?? '').trim();
+      if (!city) return [];
+      return [[city, point.region, point.country]
+        .map((value) => String(value ?? '').trim().toLowerCase())
+        .join('|')];
+    }));
+    return {
+      countryCount: activeCountryIso3s.length,
+      cityCount: cityKeys.size,
+      eventCount: globeListings.filter((listing) => listing.type === 'event').length,
+    };
+  }, [activeCountryIso3s.length, discoveryPoints, globeListings]);
+  const activeActivityRegion = useMemo(
+    () => visibleCountryActivityRegions.find((region) => region.id === activeActivityRegionId)
+      ?? activityRegions.find((region) => region.id === activeActivityRegionId)
+      ?? null,
+    [activityRegions, activeActivityRegionId, visibleCountryActivityRegions],
+  );
+  const heroArrivalPresets = useMemo(
+    () => devToolsEnabled ? getHeroArrivalPresets(customHeroArrivalPreset) : builtInHeroArrivalPresets,
+    [customHeroArrivalPreset, devToolsEnabled],
+  );
+  const countryDiscoveryScopeIso3 = countryDiscoveryScope?.iso3 ?? '';
+  const regionDiscoveryRailListings = useMemo(() => {
+    if (activeActivityRegion) {
+      const memberIds = new Set(activeActivityRegion.listingIds);
+      return globeListings.filter((listing) => memberIds.has(listing.id));
+    }
+    if (countryDiscoveryScopeIso3) {
+      return globeListings.filter((listing) =>
+        resolveCountryIsoCodes(getListingPhysicalAddress(listing).country).iso3 === countryDiscoveryScopeIso3);
+    }
+    return [];
+  }, [activeActivityRegion, countryDiscoveryScopeIso3, globeListings]);
+  const {
+    selectedListingId,
+    setSelectedListingId,
+    searchText,
+    setSearchText,
+    listingTypes,
+    setListingTypes,
+    selectedTags,
+    setSelectedTags,
+    filteredListings: filteredDiscoveryRailListings,
+  } = useExplorerState(regionDiscoveryRailListings, {
+    idleLimit: activeActivityRegion ? undefined : 6,
+  });
+  const { filteredListings: filteredMapListings } = useExplorerState(globeListings);
+  const spatialMapListings = useMemo(
+    () => aggregateEventsForSpatialDisplay(filteredMapListings).listings,
+    [filteredMapListings],
+  );
+  const mapViewportListings = useViewportDiscovery(filteredMapListings, mapViewportDiscovery, {
+    paddingRatio: 0.18,
+  });
+  const globeHeroSelectedListingId =
+    travelDestination?.type === 'listing' && ['planning', 'globe-travel', 'globe-arrived'].includes(travelPhase)
+      ? travelDestination.listingId
+      : null;
+  const detailListingId =
+    travelDestination?.type === 'listing'
+      ? travelDestination.listingId
+      : selectedListingId;
+  const displaySelectedListingId = detailListingId ?? globeHeroSelectedListingId;
+  const discoveryRailSelectedListingId = displaySelectedListingId;
+  const selectedPrivateMapListing = useMemo(
+    () => surfaceMode === 'map' && displaySelectedListingId
+      ? filteredMapListings.find((listing) =>
+          listing.id === displaySelectedListingId && isApproximateLocation(listing),
+        ) ?? null
+      : null,
+    [displaySelectedListingId, filteredMapListings, surfaceMode],
+  );
+  const mapNearbyRail = useMemo(() => {
+    const selectedListing = displaySelectedListingId
+      ? filteredMapListings.find((listing) => listing.id === displaySelectedListingId) ?? null
+      : null;
+    const selectedCoords = selectedListing ? getListingDisplayCoords(selectedListing) : null;
+    const center = selectedCoords ?? mapViewportDiscovery?.center ?? {
+      lng: camera.lng,
+      lat: camera.lat,
+    };
+    const ranked = filteredMapListings
+      .map((listing, index) => {
+        const coords = getListingDisplayCoords(listing);
+        const distanceMeters = coords ? distanceMetersBetween(center, coords) : null;
+        return {
+          listing,
+          index,
+          distanceMeters: distanceMeters ?? Number.POSITIVE_INFINITY,
+        };
+      })
+      .sort((a, b) => {
+        const distanceDelta = a.distanceMeters - b.distanceMeters;
+        if (Math.abs(distanceDelta) > 1) return distanceDelta;
+        return a.index - b.index;
+      })
+      .slice(0, 6);
+
+    return {
+      listings: ranked.map((item) => item.listing),
+      distanceLabels: Object.fromEntries(
+        ranked.map((item) => [
+          item.listing.id,
+          Number.isFinite(item.distanceMeters) ? formatApproxDistance(item.distanceMeters) : 'Nearby',
+        ]),
+      ) as Record<string, string>,
+    };
+  }, [camera.lat, camera.lng, displaySelectedListingId, filteredMapListings, mapViewportDiscovery?.center]);
+  const discoveryRailListings = surfaceMode === 'map'
+    ? mapNearbyRail.listings
+    : filteredDiscoveryRailListings;
+  const discoveryRailDistanceLabels = surfaceMode === 'map' ? mapNearbyRail.distanceLabels : {};
+  const discoveryRailRegionName = surfaceMode === 'map'
+    ? null
+    : activeActivityRegion?.name ?? countryDiscoveryScope?.name ?? null;
+  const discoveryRailTitle = surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+    ? 'Choose a country'
+    : undefined;
+  const discoveryRailEmptyMessage = surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+    ? 'Select a highlighted country to reveal its activity.'
+    : 'No nearby listings match the current filters.';
+  const discoveryRailIsUpdating = surfaceMode === 'map' && isMapViewportDiscoveryPending;
+  const hasExplorerDetails = Boolean(detailListingId || selectedOrganizationId);
+  const selectedListingIsGlobeEligible = useMemo(
+    () => Boolean(selectedListingId && globeListings.some((listing) => listing.id === selectedListingId)),
+    [globeListings, selectedListingId],
+  );
+  const showLocalViewHint =
+    surfaceMode === 'globe' &&
+    travelPhase === 'globe-arrived' &&
+    travelDestination?.type === 'listing' &&
+    Boolean(detailListingId);
+
+  useEffect(() => {
+    navigationStateRef.current = {
+      selectedListingId,
+      travelPhase,
+      travelDestination,
+    };
+  }, [selectedListingId, travelDestination, travelPhase]);
+
+  useEffect(() => {
+    globeListingsRef.current = globeListings;
+  }, [globeListings]);
+
+  useEffect(() => () => {
+    if (plannedTravelTimerRef.current !== null) window.clearTimeout(plannedTravelTimerRef.current);
+    if (countryPinRevealTimerRef.current !== null) window.clearTimeout(countryPinRevealTimerRef.current);
+  }, []);
+
+  if (!transitionControllerRef.current) {
+    transitionControllerRef.current = new ExplorerTransitionController(
+      surfaceMode,
+      prefersReducedMotion ? 0 : 800,
+    );
+  }
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches);
+    mediaQuery.addEventListener?.('change', handleChange);
+    return () => mediaQuery.removeEventListener?.('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    const nextSurface = location.pathname === '/map' ? 'map' : 'globe';
+    setSurfaceMode(nextSurface);
+    setCamera(
+      nextSurface === 'map' && camera.surface !== 'map'
+        ? DEFAULT_MAP_CAMERA
+        : { surface: nextSurface },
+    );
+  }, [camera.surface, location.pathname, setCamera, setSurfaceMode]);
+
+  useEffect(() => {
+    surfaceModeRef.current = surfaceMode;
+    if (surfaceMode !== 'globe') setHoveredCountry(null);
+    if (spatialDebugEnabled) {
+      setSpatialDebug((current) => ({
+        ...current,
+        surfaceMode,
+      }));
+    }
+  }, [spatialDebugEnabled, surfaceMode]);
+
+  useEffect(() => {
+    if (!spatialDebugEnabled) return;
+    setSpatialDebug((current) => ({
+      ...current,
+      transitionProgress: transitionFrame.progress,
+    }));
+  }, [spatialDebugEnabled, transitionFrame.progress]);
+
+  useEffect(() => {
+    detailPanelSettlesAtRef.current = performance.now() + DETAIL_PANEL_SETTLE_MS;
+  }, [detailListingId, selectedCountry, selectedListingId]);
+
+  useEffect(() => {
+    const controller = transitionControllerRef.current;
+    if (!controller) return;
+
+    const startedAt = performance.now();
+    const previousTarget = controller.getTarget();
+    controller.setTarget(surfaceMode, startedAt);
+    const direction = previousTarget === surfaceMode
+      ? null
+      : surfaceMode === 'map'
+        ? 'globe-to-map' as const
+        : 'map-to-globe' as const;
+    transitionDirectionRef.current = direction;
+    transitionStartedAtRef.current = startedAt;
+    if (direction) globeRef.current?.setTransitionActive(true);
+    let frameId = 0;
+    let mounted = true;
+
+    const tick = (now: number) => {
+      if (!mounted) return;
+      const nextFrame = controller.update(now);
+      setTransitionFrame(nextFrame);
+      if (controller.isAnimating()) {
+        frameId = window.requestAnimationFrame(tick);
+      } else if (direction) {
+        const durationMs = now - transitionStartedAtRef.current;
+        if (direction === 'globe-to-map') {
+          transitionMetricsRef.current.lastGlobeToMapDurationMs = durationMs;
+        } else {
+          transitionMetricsRef.current.lastMapToGlobeDurationMs = durationMs;
+          transitionMetricsRef.current.roundTrips += 1;
+        }
+        transitionDirectionRef.current = null;
+        globeRef.current?.setTransitionActive(false);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => {
+      mounted = false;
+      window.cancelAnimationFrame(frameId);
+      if (direction) globeRef.current?.setTransitionActive(false);
+    };
+  }, [surfaceMode]);
+
+  useEffect(() => {
+    if (isHero) return;
+    setDebugInfo({ label: 'Globe V1' });
+  }, [isHero, setDebugInfo]);
+
+  useEffect(() => {
+    if (isHero || runtimeState !== 'ready') return;
+    globeRef.current?.updateAtmosphereConfig(atmosphereTool);
+    if (!devToolsEnabled) return;
+    window.localStorage.setItem(ATMOSPHERE_TOOL_STORAGE_KEY, JSON.stringify(atmosphereTool));
+  }, [atmosphereTool, devToolsEnabled, isHero, runtimeState]);
+
+  useEffect(() => {
+    if (!devToolsEnabled || typeof window === 'undefined') return;
+    window.localStorage.setItem(HERO_COMPOSER_ENABLED_STORAGE_KEY, String(heroComposerEnabled));
+  }, [devToolsEnabled, heroComposerEnabled]);
+
+  useEffect(() => {
+    if (!devToolsEnabled || typeof window === 'undefined') return;
+    window.localStorage.setItem(HERO_COMPOSER_PROFILE_STORAGE_KEY, JSON.stringify(heroArrivalProfile));
+  }, [devToolsEnabled, heroArrivalProfile]);
+
+  useEffect(() => {
+    if (!devToolsEnabled || typeof window === 'undefined') return;
+    if (customHeroArrivalPreset) {
+      window.localStorage.setItem(HERO_COMPOSER_CUSTOM_PRESET_STORAGE_KEY, JSON.stringify(customHeroArrivalPreset));
+    }
+  }, [customHeroArrivalPreset, devToolsEnabled]);
+
+  useEffect(() => {
+    if (isHero || !devToolsEnabled || !heroComposerEnabled || runtimeState !== 'ready') return;
+    if (suppressNextHeroPreviewEffectRef.current) {
+      suppressNextHeroPreviewEffectRef.current = false;
+      return;
+    }
+    const snapshot = globeRef.current?.previewHeroArrivalProfile(heroArrivalProfile) ?? null;
+    setHeroComposerSnapshot(snapshot);
+  // Profile editing may preview the current shot, but venue selection/travel must
+  // remain owned by the navigation controller. Do not retrigger this effect when
+  // travelDestination changes or the dev preview will teleport the camera before
+  // the production focus animation begins.
+  }, [devToolsEnabled, heroArrivalProfile, heroComposerEnabled, isHero, runtimeState]);
+
+  useEffect(() => {
+    if (isHero || !devToolsEnabled || runtimeState !== 'ready') return;
+    globeRef.current?.updateAlignmentDebugConfig(alignmentDebug);
+  }, [alignmentDebug, devToolsEnabled, isHero, runtimeState]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready') return;
+    if (fixtureModeEnabled || performanceFixtureEnabled) {
+      globeRef.current?.updateEvents(globeRuntimeEvents);
+      globeRef.current?.updateActivityRegions(activityRegions);
+    } else {
+      globeRef.current?.setCountryActivityEvents(globeRuntimeEvents);
+      globeRef.current?.updateVisibleEvents(visibleCountryRuntimeEvents);
+      globeRef.current?.updateActivityRegions(visibleCountryActivityRegions);
+      // The Three.js runtime owns cluster -> direct-pin disclosure once a
+      // discovery marker is clicked. React only owns which country's data is
+      // available; it must not overwrite that runtime mode during navigation.
+    }
+    globeRef.current?.setCountryActivityCountries(activeCountryIso3s);
+  }, [
+    activeCountryIso3s,
+    activityRegions,
+    fixtureModeEnabled,
+    globeRuntimeEvents,
+    performanceFixtureEnabled,
+    runtimeState,
+    visibleCountryActivityRegions,
+    visibleCountryRuntimeEvents,
+  ]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready') return;
+    globeRef.current?.setCountryDiscoveryEmphasis(Boolean(
+      revealedCountryIso3 &&
+      !activeActivityRegionId &&
+      !detailListingId &&
+      !selectedOrganizationId
+    ));
+  }, [
+    activeActivityRegionId,
+    detailListingId,
+    revealedCountryIso3,
+    runtimeState,
+    selectedOrganizationId,
+  ]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready' || !fixtureModeEnabled) return;
+    globeRef.current?.updatePresentationConfig(globePresentation, { frameWorld: true });
+  }, [fixtureModeEnabled, globePresentation, runtimeState]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready' || !fixtureModeEnabled || !captureFixtureId || !activityRegions[0]) return;
+    const timer = window.setTimeout(() => {
+      globeRef.current?.selectActivityRegion(activityRegions[0].id);
+      if (Number.isFinite(captureDistance)) {
+        const fixture = getGlobeScaleFixture(scaleFixtureId);
+        globeRef.current?.setNavigationPose({
+          lng: fixture.center.longitude,
+          lat: fixture.center.latitude,
+          zoomIntent: 0.7,
+          distance: captureDistance,
+        });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [activityRegions, captureDistance, captureFixtureId, fixtureModeEnabled, globePresentation, runtimeState, scaleFixtureId]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready') return;
+    const shouldRenderGlobe = surfaceMode === 'globe' || transitionFrame.progress < 0.999;
+    if (shouldRenderGlobe) {
+      globeRef.current?.start();
+    } else {
+      globeRef.current?.stop();
+    }
+  }, [runtimeState, surfaceMode, transitionFrame.progress]);
+
+  useEffect(() => {
+    if (runtimeState !== 'ready') return;
+    const shouldSuppressIdleMotion =
+      surfaceMode === 'globe' &&
+      (
+        travelPhase !== 'idle' ||
+        Boolean(detailListingId || selectedListingId || selectedCountry || activeActivityRegionId)
+      );
+    globeRef.current?.setIdleMotionSuppressed(shouldSuppressIdleMotion);
+  }, [
+    activeActivityRegionId,
+    detailListingId,
+    runtimeState,
+    selectedCountry,
+    selectedListingId,
+    surfaceMode,
+    travelPhase,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBuildingAssets()
+      .then((assets) => {
+        if (!cancelled) setBuildingAssets(assets);
+      })
+      .catch(() => {
+        if (!cancelled) setBuildingAssets([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      isHero ||
+      runtimeState !== 'ready' ||
+      surfaceMode !== 'globe' ||
+      !selectedListingIsGlobeEligible ||
+      !selectedListingId
+    ) {
+      return;
+    }
+    const destination = navigationStateRef.current.travelDestination;
+    if (
+      destination?.type === 'listing' &&
+      destination.listingId === selectedListingId &&
+      ['globe-travel', 'globe-arrived'].includes(navigationStateRef.current.travelPhase)
+    ) {
+      return;
+    }
+    suppressNextGlobeSelectTravelRef.current = 'prevent-focus';
+    globeRef.current?.selectEvent(resolveSpatialListingId(selectedListingId) ?? selectedListingId);
+  }, [isHero, runtimeState, selectedListingId, selectedListingIsGlobeEligible]);
+
+  const clearPlannedTravelTimers = () => {
+    if (plannedTravelTimerRef.current !== null) {
+      window.clearTimeout(plannedTravelTimerRef.current);
+      plannedTravelTimerRef.current = null;
+    }
+  };
+
+  const clearCountryPinReveal = () => {
+    if (countryPinRevealTimerRef.current !== null) {
+      window.clearTimeout(countryPinRevealTimerRef.current);
+      countryPinRevealTimerRef.current = null;
+    }
+    setCountryDiscoveryScope(null);
+    setRevealedCountryIso3(null);
+  };
+
+  const isPlannedTravelActive = () =>
+    ['planning', 'globe-travel', 'traveling', 'blending', 'arriving'].includes(navigationStateRef.current.travelPhase);
+
+  const completeGlobeHeroArrival = () => {
+    const { travelDestination: destination, travelPhase: currentTravelPhase } = navigationStateRef.current;
+    if (!destination || !['planning', 'globe-travel'].includes(currentTravelPhase)) return;
+    clearPlannedTravelTimers();
+    const selectedId = destination.type === 'listing' ? destination.listingId : navigationStateRef.current.selectedListingId;
+    navigationStateRef.current = {
+      selectedListingId: selectedId,
+      travelDestination: destination,
+      travelPhase: 'globe-arrived',
+    };
+    if (destination.type === 'listing') {
+      setSelectedListingId(destination.listingId);
+    }
+    setTravelPhase('globe-arrived');
+  };
+
+  const buildListingDestination = (listingId: string): ExplorerDestination | null => {
+    const listing = globeListingsRef.current.find((candidate) => candidate.id === listingId) ?? null;
+    const coords = listing ? getListingDisplayCoords(listing) : null;
+    if (!listing || !coords) return null;
+    const authoredAsset = getBuildingAssetForListing(listing, buildingAssets);
+    const framing = buildListingMapFraming(listing, authoredAsset);
+    if (!framing) return null;
+    return {
+      type: 'listing',
+      listingId,
+      lat: coords.lat,
+      lng: coords.lng,
+      framing,
+    };
+  };
+
+  const enterLocalViewForListing = (listingId: string) => {
+    if (isHero) return;
+    const currentDestination = navigationStateRef.current.travelDestination;
+    const destination = currentDestination?.type === 'listing' && currentDestination.listingId === listingId
+      ? currentDestination
+      : buildListingDestination(listingId);
+    if (!destination || destination.type !== 'listing') return;
+    clearPlannedTravelTimers();
+    navigationStateRef.current = {
+      selectedListingId: listingId,
+      travelDestination: destination,
+      travelPhase: 'traveling',
+    };
+    setTravelDestination(destination);
+    setSelectedCountry(null);
+    setSelectedListingId(listingId);
+    setCamera({
+      surface: 'map',
+      lng: destination.lng,
+      lat: destination.lat,
+      zoom: destination.framing.zoom,
+      pitch: destination.framing.pitch,
+      bearing: destination.framing.bearing,
+    });
+    setTravelPhase('traveling');
+    setSurfaceMode('map');
+    navigate('/map', { replace: true });
+  };
+
+  const shouldEnterLocalViewOnListingClick = (listingId: string) =>
+    surfaceModeRef.current === 'globe' &&
+    navigationStateRef.current.selectedListingId === listingId &&
+    (
+      navigationStateRef.current.travelDestination?.type === 'listing' &&
+      navigationStateRef.current.travelDestination.listingId === listingId &&
+      ['globe-arrived', 'venue-explore'].includes(navigationStateRef.current.travelPhase)
+    );
+
+  const shouldRefocusWithinCurrentGlobeView = (listingId: string) =>
+    surfaceModeRef.current === 'globe' &&
+    navigationStateRef.current.selectedListingId !== listingId &&
+    ['globe-arrived', 'venue-explore'].includes(navigationStateRef.current.travelPhase);
+
+  const refocusWithinCurrentGlobeView = (listingId: string) => {
+    const destination = buildListingDestination(listingId);
+    if (!destination || destination.type !== 'listing') return;
+    clearPlannedTravelTimers();
+    navigationStateRef.current = {
+      selectedListingId: listingId,
+      travelDestination: destination,
+      travelPhase: 'globe-arrived',
+    };
+    setTravelDestination(destination);
+    setTravelPhase('globe-arrived');
+    setSelectedOrganizationId(null);
+    setSelectedListingId(listingId);
+    if (runtimeState === 'ready' && !globeEventSelectInProgressRef.current) {
+      suppressNextGlobeSelectTravelRef.current = 'prevent-focus';
+      const selectedEvent = globeRef.current?.selectEvent(resolveSpatialListingId(listingId) ?? listingId);
+      if (!selectedEvent) suppressNextGlobeSelectTravelRef.current = null;
+    }
+  };
+
+  const beginListingTravel = (listingId: string) => {
+    if (isHero) return;
+    const currentNavigation = navigationStateRef.current;
+    const isSameListingTravelActive =
+      currentNavigation.travelDestination?.type === 'listing' &&
+      currentNavigation.travelDestination.listingId === listingId &&
+      ['planning', 'globe-travel'].includes(currentNavigation.travelPhase);
+    if (isSameListingTravelActive) return;
+    if (shouldEnterLocalViewOnListingClick(listingId)) {
+      enterLocalViewForListing(listingId);
+      return;
+    }
+    if (shouldRefocusWithinCurrentGlobeView(listingId)) {
+      refocusWithinCurrentGlobeView(listingId);
+      return;
+    }
+    const destination = buildListingDestination(listingId);
+    if (!destination || destination.type !== 'listing') return;
+
+    clearPlannedTravelTimers();
+    navigationStateRef.current = {
+      selectedListingId: listingId,
+      travelDestination: destination,
+      travelPhase: 'planning',
+    };
+    setTravelDestination(destination);
+    setTravelPhase('planning');
+    setSelectedOrganizationId(null);
+    setSelectedListingId(listingId);
+    if (runtimeState === 'ready' && !globeEventSelectInProgressRef.current) {
+      suppressNextGlobeSelectTravelRef.current = 'allow-focus';
+      const selectedEvent = globeRef.current?.selectEvent(resolveSpatialListingId(listingId) ?? listingId);
+      if (!selectedEvent) suppressNextGlobeSelectTravelRef.current = null;
+    }
+    setCamera({
+      surface: 'globe',
+      lng: destination.lng,
+      lat: destination.lat,
+      zoom: destination.framing.zoom,
+      pitch: destination.framing.pitch,
+      bearing: destination.framing.bearing,
+    });
+    setSurfaceMode('globe');
+    navigationStateRef.current = {
+      selectedListingId: listingId,
+      travelDestination: destination,
+      travelPhase: 'globe-travel',
+    };
+    setTravelPhase('globe-travel');
+
+    plannedTravelTimerRef.current = window.setTimeout(() => {
+      completeGlobeHeroArrival();
+      plannedTravelTimerRef.current = null;
+    }, prefersReducedMotion
+      ? 0
+      : Math.max(
+        4600,
+        estimateGlobeTravelDurationMs({ lng: camera.lng, lat: camera.lat }, { lng: destination.lng, lat: destination.lat }) + GLOBE_TRAVEL_ARRIVAL_PAUSE_MS + 700,
+      ));
+  };
+
+  const beginAreaTravel = (region: ActivityRegion) => {
+    if (isHero) return;
+    clearPlannedTravelTimers();
+    const framing = buildListingDistributionFraming({
+      profile: 'region',
+      listingIds: region.listingIds,
+      listings: globeListingsRef.current,
+      fallbackCenter: { lng: region.longitude, lat: region.latitude },
+    });
+    const destination: ExplorerDestination = {
+      type: 'region',
+      id: region.id,
+      lat: framing.center.lat,
+      lng: framing.center.lng,
+      listingIds: region.listingIds,
+      framing,
+    };
+    setTravelDestination(destination);
+    setTravelPhase('planning');
+    setSelectedListingId(null);
+    setSelectedOrganizationId(null);
+    setActiveActivityRegionId(region.id);
+    setCamera({
+      surface: 'globe',
+      lng: framing.center.lng,
+      lat: framing.center.lat,
+      zoom: framing.kind === 'camera' ? framing.zoom : GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+      pitch: framing.pitch,
+      bearing: framing.bearing,
+    });
+    setSurfaceMode('globe');
+    setTravelPhase('globe-travel');
+
+    plannedTravelTimerRef.current = window.setTimeout(() => {
+      completeGlobeHeroArrival();
+      plannedTravelTimerRef.current = null;
+    }, prefersReducedMotion
+      ? 0
+      : Math.max(
+        4600,
+        estimateGlobeTravelDurationMs({ lng: camera.lng, lat: camera.lat }, framing.center) + GLOBE_TRAVEL_ARRIVAL_PAUSE_MS + 700,
+      ));
+  };
+
+  const explorerNavigationController = {
+    selectVenue: beginListingTravel,
+    selectRegion: beginAreaTravel,
+    enterLocalViewForVenue: enterLocalViewForListing,
+  };
+
+  beginListingTravelRef.current = explorerNavigationController.selectVenue;
+  beginAreaTravelRef.current = explorerNavigationController.selectRegion;
+  enterLocalViewForListingRef.current = explorerNavigationController.enterLocalViewForVenue;
+
+  const resolveCanonicalGlobeTarget = (snapshot: GlobeNavigationSnapshot) => {
+    const navigationState = navigationStateRef.current;
+    const selectedId = navigationState.travelDestination?.type === 'listing'
+      ? navigationState.travelDestination.listingId
+      : navigationState.selectedListingId;
+    const selectedListing = selectedId
+      ? globeListingsRef.current.find((listing) => listing.id === selectedId) ?? null
+      : null;
+    if (selectedListing) {
+      const coords = getListingDisplayCoords(selectedListing);
+      return {
+        lng: coords.lng,
+        lat: coords.lat,
+        targetSource: 'selected-listing' as const,
+      };
+    }
+    return {
+      lng: snapshot.lng,
+      lat: snapshot.lat,
+      targetSource: snapshot.targetSource,
+    };
+  };
+
+  const syncCameraFromGlobe = (snapshot: GlobeNavigationSnapshot) => {
+    if (isHero) return;
+    const now = performance.now();
+    const canonicalTarget = resolveCanonicalGlobeTarget(snapshot);
+    const mapZoom = zoomIntentToMapZoom(snapshot.zoomIntent);
+    if (hybridPrototype) setHybridZoomIntent(snapshot.zoomIntent);
+    const pose: ExplorerCameraPose = {
+      surface: surfaceModeRef.current,
+      lng: canonicalTarget.lng,
+      lat: canonicalTarget.lat,
+      zoom: mapZoom,
+      pitch: WORLD_PITCH,
+      bearing: WORLD_BEARING,
+    };
+    const shouldSyncCamera =
+      surfaceModeRef.current === 'globe' &&
+      !isPlannedTravelActive() &&
+      !transitionControllerRef.current?.isAnimating() &&
+      now - lastNavigationCameraSyncAtRef.current > 120;
+    if (spatialDebugEnabled) {
+      setSpatialDebug((current) => {
+        const canonical = { lng: canonicalTarget.lng, lat: canonicalTarget.lat };
+        const mapTarget = current.mapLng !== null && current.mapLat !== null
+          ? { lng: current.mapLng, lat: current.mapLat }
+          : null;
+        return {
+          ...current,
+          canonicalLng: canonicalTarget.lng,
+          canonicalLat: canonicalTarget.lat,
+          globeLng: snapshot.lng,
+          globeLat: snapshot.lat,
+          globeCameraDirectionLng: snapshot.cameraDirectionLng ?? null,
+          globeCameraDirectionLat: snapshot.cameraDirectionLat ?? null,
+          targetSource: canonicalTarget.targetSource,
+          deltaMeters: distanceMetersBetween(canonical, mapTarget),
+        };
+      });
+    }
+
+    if (shouldSyncCamera) {
+      lastNavigationCameraSyncAtRef.current = now;
+      setCamera(pose);
+    }
+  };
+
+  const syncCameraFromMap = (
+    mapCamera: ExplorerCameraPose,
+    meta: {
+      zoomDirection: 'in' | 'out' | 'none';
+      isUserZoomingOut: boolean;
+      isProgrammatic: boolean;
+    },
+  ) => {
+    if (isHero) return;
+    const now = performance.now();
+    const pose: ExplorerCameraPose = {
+      ...mapCamera,
+      surface: surfaceModeRef.current,
+      pitch: WORLD_PITCH,
+      bearing: Number.isFinite(mapCamera.bearing) ? mapCamera.bearing : WORLD_BEARING,
+    };
+    if (now - lastNavigationCameraSyncAtRef.current > 100) {
+      lastNavigationCameraSyncAtRef.current = now;
+      if (!isPlannedTravelActive()) setCamera(pose);
+    }
+
+    if (spatialDebugEnabled) {
+      setSpatialDebug((current) => {
+        const mapTarget = { lng: mapCamera.lng, lat: mapCamera.lat };
+        const canonical = current.canonicalLng !== null && current.canonicalLat !== null
+          ? { lng: current.canonicalLng, lat: current.canonicalLat }
+          : mapTarget;
+        return {
+          ...current,
+          canonicalLng: canonical.lng,
+          canonicalLat: canonical.lat,
+          mapLng: mapCamera.lng,
+          mapLat: mapCamera.lat,
+          targetSource: surfaceModeRef.current === 'map' ? 'map-center' : current.targetSource,
+          deltaMeters: distanceMetersBetween(canonical, mapTarget),
+        };
+      });
+    }
+
+    void meta;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const mountGlobe = async () => {
+      if (!containerRef.current) return;
+      if (graphicsCapability === 'unsupported') {
+        setRuntimeState('error');
+        setRuntimeError('WebGL 2 is unavailable.');
+        return;
+      }
+      try {
+        const module = await import('../src/features/globe/runtime/index.js');
+        if (cancelled || !containerRef.current) return;
+        const SwingSphereGlobe = module.SwingSphereGlobe as GlobeConstructor;
+        const globe = new SwingSphereGlobe(containerRef.current, {
+          events: [],
+          activityRegions: [],
+          config: globeRuntimeConfig,
+          onReady: () => {
+            if (!cancelled) setRuntimeState('ready');
+          },
+          onError: (error) => {
+            if (!cancelled) {
+              setRuntimeState('error');
+              setRuntimeError(error instanceof Error ? error.message : String(error));
+            }
+          },
+          onCountrySelect: (country) => {
+            if (isHero) return;
+            clearPlannedTravelTimers();
+            globeRef.current?.clearEventSelection();
+            if (countryPinRevealTimerRef.current !== null) {
+              window.clearTimeout(countryPinRevealTimerRef.current);
+              countryPinRevealTimerRef.current = null;
+            }
+            setRevealedCountryIso3(null);
+            setTravelDestination(null);
+            setTravelPhase('idle');
+            setSelectedCountry(country);
+            setSelectedListingId(null);
+            setSelectedOrganizationId(null);
+            setActiveActivityRegionId(null);
+
+            const countryIso3 = String(country?.iso3 ?? '').trim().toUpperCase();
+            if (!countryIso3) {
+              setCountryDiscoveryScope(null);
+              return;
+            }
+            setCountryDiscoveryScope({
+              iso3: countryIso3,
+              name: String(country?.name ?? countryIso3),
+            });
+            countryPinRevealTimerRef.current = window.setTimeout(() => {
+              setRevealedCountryIso3(countryIso3);
+              countryPinRevealTimerRef.current = null;
+            }, prefersReducedMotion ? 0 : COUNTRY_PIN_REVEAL_DELAY_MS);
+          },
+          onCountryHover: (country) => {
+            if (isHero) return;
+            setHoveredCountry(country);
+          },
+          onEventHover: () => undefined,
+          onEventSelect: (event) => {
+            if (isHero) return;
+            if (event.entityType === 'promoter' && event.organizationId) {
+              clearPlannedTravelTimers();
+              setSelectedCountry(null);
+              setSelectedListingId(null);
+              setSelectedOrganizationId(event.organizationId);
+              setTravelDestination(null);
+              setTravelPhase('globe-travel');
+              setCamera({
+                surface: 'globe',
+                lng: event.lon,
+                lat: event.lat,
+                zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+                pitch: WORLD_PITCH,
+                bearing: WORLD_BEARING,
+              });
+              setSurfaceMode('globe');
+              return;
+            }
+            setSelectedOrganizationId(null);
+            if (import.meta.env.DEV && event.listingId.startsWith('dev-scale:')) {
+              setSelectedCountry(null);
+              setSelectedListingId(null);
+              return;
+            }
+            if (suppressNextGlobeSelectTravelRef.current) {
+              const focusMode = suppressNextGlobeSelectTravelRef.current;
+              suppressNextGlobeSelectTravelRef.current = null;
+              return focusMode === 'prevent-focus' ? false : undefined;
+            }
+            if (shouldEnterLocalViewOnListingClick(event.listingId)) {
+              enterLocalViewForListingRef.current(event.listingId);
+              return false;
+            }
+            globeEventSelectInProgressRef.current = true;
+            beginListingTravelRef.current(event.listingId);
+            globeEventSelectInProgressRef.current = false;
+          },
+          onActivityRegionSelect: (region) => {
+            if (isHero) return;
+            beginAreaTravelRef.current(region);
+          },
+          onDiscoveryModeChange: (region) => {
+            if (isHero) return;
+            setActiveActivityRegionId(region?.id ?? null);
+          },
+          onNavigationChange: syncCameraFromGlobe,
+          onFocusArrival: () => {
+            if (isHero) return;
+            completeGlobeHeroArrival();
+          },
+          onSurfaceDoubleClick: () => {
+            if (isHero) return;
+            clearPlannedTravelTimers();
+            clearCountryPinReveal();
+            navigationStateRef.current = {
+              selectedListingId: null,
+              travelDestination: null,
+              travelPhase: 'idle',
+            };
+            setTravelDestination(null);
+            setTravelPhase('idle');
+            setSelectedListingId(null);
+            setSelectedOrganizationId(null);
+            setSelectedCountry(null);
+            setHoveredCountry(null);
+            setActiveActivityRegionId(null);
+          },
+          onContextLost: () => {
+            if (!cancelled) setRuntimeState('recovering');
+          },
+          onContextRestored: () => {
+            if (!cancelled) {
+              setRuntimeError(null);
+              setRuntimeState('ready');
+            }
+          },
+          onPerformanceSnapshot: (snapshot) => {
+            const nextTier = qualityControllerRef.current?.observe(snapshot) ?? null;
+            if (nextTier) {
+              globe.setQualityTier(nextTier);
+              setQualityTier(nextTier);
+            }
+            if (performanceToolsEnabled) {
+              const context = performanceContextRef.current;
+              const transitions = transitionMetricsRef.current;
+              setDevPerformanceSnapshot({
+                ...snapshot,
+                qualityTier: nextTier ?? snapshot.qualityTier,
+                explorerMode: context.explorerMode,
+                mapMounted: context.mapMounted,
+                graphicsCapability,
+                lastGlobeToMapDurationMs: transitions.lastGlobeToMapDurationMs,
+                lastMapToGlobeDurationMs: transitions.lastMapToGlobeDurationMs,
+                roundTrips: transitions.roundTrips,
+              });
+            }
+          },
+        });
+        globeRef.current = globe;
+        await globe.mount();
+        globe.setQualityTier(qualityControllerRef.current?.tier ?? qualityTier);
+      } catch (error) {
+        if (!cancelled) {
+          setRuntimeState('error');
+          setRuntimeError(error instanceof Error ? error.message : String(error));
+        }
+      }
+    };
+
+    void mountGlobe();
+
+    return () => {
+      cancelled = true;
+      globeRef.current?.dispose();
+      globeRef.current = null;
+    };
+  }, [graphicsCapability, globeRuntimeConfig]);
+
+  const resetAutomaticQuality = () => {
+    const nextTier = qualityControllerRef.current?.reset() ?? (graphicsCapability === 'webgl2-hardware' ? 'high' : 'low');
+    globeRef.current?.setQualityTier(nextTier);
+    setQualityTier(nextTier);
+  };
+
+  const closePanel = () => {
+    clearPlannedTravelTimers();
+    setTravelDestination(null);
+    setTravelPhase(surfaceModeRef.current === 'map' ? 'local-explore' : 'idle');
+    setSelectedListingId(null);
+    setSelectedOrganizationId(null);
+    if (surfaceModeRef.current === 'globe' && countryDiscoveryScope) {
+      // Country selection is navigation context now, not details-panel content.
+      // Closing a listing/host card should leave the user inside that country.
+      globeRef.current?.clearEventSelection();
+      return;
+    }
+    setSelectedCountry(null);
+    globeRef.current?.clearSelection();
+  };
+
+  const selectListing = (listingId: string) => {
+    explorerNavigationController.selectVenue(listingId);
+  };
+
+  const selectMapListing = (listingId: string) => {
+    const destination = buildListingDestination(listingId);
+    if (!destination || destination.type !== 'listing') return;
+    clearPlannedTravelTimers();
+    setTravelDestination(destination);
+    setTravelPhase('venue-explore');
+    setSelectedCountry(null);
+    setSelectedOrganizationId(null);
+    setSelectedListingId(listingId);
+    setCamera({
+      surface: 'map',
+      lng: destination.lng,
+      lat: destination.lat,
+      zoom: destination.framing.zoom,
+      pitch: destination.framing.pitch,
+      bearing: destination.framing.bearing,
+    });
+    setSurfaceMode('map');
+  };
+
+  const selectListingFromRail = (listingId: string) => {
+    setSelectedOrganizationId(null);
+    if (graphicsCapability === 'unsupported') {
+      setSelectedCountry(null);
+      setSelectedListingId(listingId);
+      return;
+    }
+    if (surfaceModeRef.current === 'map') {
+      selectMapListing(listingId);
+      return;
+    }
+    selectListing(listingId);
+  };
+
+  const selectHostFromRail = (organizationId: string) => {
+    const hostEvent = hostRuntimeEvents.find((event) => event.organizationId === organizationId);
+    if (!hostEvent) return;
+    clearPlannedTravelTimers();
+    setSelectedCountry(null);
+    setSelectedListingId(null);
+    setSelectedOrganizationId(organizationId);
+    setTravelDestination(null);
+    setTravelPhase('globe-travel');
+    globeRef.current?.selectEvent(hostEvent.id);
+    setCamera({
+      surface: 'globe',
+      lng: hostEvent.lon,
+      lat: hostEvent.lat,
+      zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+      pitch: WORLD_PITCH,
+      bearing: WORLD_BEARING,
+    });
+    setSurfaceMode('globe');
+  };
+
+  const handleVenueArrivalComplete = (listingId: string) => {
+    const destination = navigationStateRef.current.travelDestination;
+    if (destination?.type !== 'listing' || destination.listingId !== listingId) return;
+    setTravelPhase('venue-explore');
+  };
+
+  const setManualSurfaceMode = (mode: 'globe' | 'map') => {
+    clearPlannedTravelTimers();
+    if (mode === 'map') clearCountryPinReveal();
+    setTravelDestination(null);
+    setTravelPhase(mode === 'map' ? 'local-explore' : 'idle');
+    setCamera(mode === 'map' ? DEFAULT_MAP_CAMERA : { surface: 'globe' });
+    setSurfaceMode(mode);
+    navigate(mode === 'map' ? '/map' : '/globe');
+  };
+
+  const returnToWorld = () => {
+    clearPlannedTravelTimers();
+    clearCountryPinReveal();
+    navigationStateRef.current = {
+      selectedListingId: null,
+      travelDestination: null,
+      travelPhase: 'idle',
+    };
+    setTravelDestination(null);
+    setTravelPhase('idle');
+    setSelectedListingId(null);
+    setSelectedOrganizationId(null);
+    setSelectedCountry(null);
+    setActiveActivityRegionId(null);
+    globeRef.current?.returnToWorld();
+  };
+
+  const resetMapToWorld = () => {
+    clearPlannedTravelTimers();
+    clearCountryPinReveal();
+    setTravelDestination(null);
+    setTravelPhase('local-explore');
+    setSelectedListingId(null);
+    setSelectedOrganizationId(null);
+    setSelectedCountry(null);
+    setActiveActivityRegionId(null);
+    setCamera(DEFAULT_MAP_CAMERA);
+  };
+
+  const updateShellValue = (
+    shell: 'inner' | 'outer',
+    key: keyof AtmosphereShell,
+    value: number,
+  ) => {
+    setAtmosphereTool((current) => ({
+      ...current,
+      atmosphere: {
+        ...current.atmosphere,
+        [shell]: {
+          ...current.atmosphere[shell],
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateRimRadius = (value: number) => {
+    setAtmosphereTool((current) => ({
+      ...current,
+      crimsonRim: {
+        ...current.crimsonRim,
+        radius: value,
+      },
+    }));
+  };
+
+  const copyAtmosphereConfig = async () => {
+    await navigator.clipboard?.writeText(formatAtmosphereSnippet(atmosphereTool));
+  };
+
+  const copyHeroArrivalConfig = async () => {
+    await navigator.clipboard?.writeText(formatHeroArrivalSnippet(heroArrivalProfile));
+    setHeroComposerMessage('Copied hero profile JSON.');
+  };
+
+  const exportHeroArrivalConfig = () => {
+    const blob = new Blob([formatHeroArrivalSnippet(heroArrivalProfile)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'globe-hero-arrival-profile.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setHeroComposerMessage('Exported hero profile JSON.');
+  };
+
+  const resetHeroArrivalConfig = () => {
+    setPreviousHeroArrivalProfile(heroArrivalProfile);
+    setSelectedHeroPresetId('custom');
+    suppressNextHeroPreviewEffectRef.current = true;
+    setHeroArrivalProfile(defaultHeroArrivalProfile);
+    setHeroComposerSnapshot(globeRef.current?.animateHeroArrivalPreview(defaultHeroArrivalProfile) ?? null);
+    setHeroComposerMessage('Reset to runtime defaults.');
+  };
+
+  const previewHeroArrivalPreset = (preset: HeroArrivalPreset) => {
+    setPreviousHeroArrivalProfile(heroArrivalProfile);
+    setSelectedHeroPresetId(preset.id);
+    suppressNextHeroPreviewEffectRef.current = true;
+    setHeroArrivalProfile(preset.profile);
+    setHeroComposerSnapshot(globeRef.current?.animateHeroArrivalPreview(preset.profile) ?? null);
+    setHeroComposerMessage(`Previewing ${preset.name}.`);
+  };
+
+  const applySelectedHeroArrivalPreset = () => {
+    const preset = heroArrivalPresets.find((candidate) => candidate.id === selectedHeroPresetId);
+    if (!preset) return;
+    previewHeroArrivalPreset(preset);
+    setHeroComposerMessage(`Applied ${preset.name}.`);
+  };
+
+  const revertHeroArrivalPreset = () => {
+    if (!previousHeroArrivalProfile) {
+      setHeroComposerMessage('No previous hero profile to revert to.');
+      return;
+    }
+    suppressNextHeroPreviewEffectRef.current = true;
+    setHeroArrivalProfile(previousHeroArrivalProfile);
+    setHeroComposerSnapshot(globeRef.current?.animateHeroArrivalPreview(previousHeroArrivalProfile) ?? null);
+    setSelectedHeroPresetId('custom');
+    setHeroComposerMessage('Reverted to previous hero profile.');
+  };
+
+  const saveHeroArrivalAsCustom = () => {
+    const customPreset: HeroArrivalPreset = {
+      id: 'custom',
+      name: 'Custom',
+      description: 'Saved local custom hero shot.',
+      profile: heroArrivalProfile,
+    };
+    setCustomHeroArrivalPreset(customPreset);
+    setSelectedHeroPresetId('custom');
+    setHeroComposerMessage('Saved current profile as Custom.');
+  };
+
+  const captureCurrentHeroCamera = () => {
+    const captured = globeRef.current?.captureHeroArrivalProfile();
+    if (!captured) {
+      setHeroComposerMessage('Select a destination before capturing.');
+      return;
+    }
+    const nextProfile = mergeHeroArrivalProfile(heroArrivalProfile, captured);
+    setPreviousHeroArrivalProfile(heroArrivalProfile);
+    setSelectedHeroPresetId('custom');
+    suppressNextHeroPreviewEffectRef.current = true;
+    setHeroArrivalProfile(nextProfile);
+    setHeroComposerSnapshot(globeRef.current?.getHeroArrivalComposerSnapshot() ?? null);
+    setHeroComposerMessage('Captured current camera pose.');
+  };
+
+  const saveHeroArrivalConfig = async () => {
+    try {
+      const response = await fetch('/api/admin/globe/hero-arrival/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: heroArrivalProfile }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      setHeroComposerMessage('Saved to GlobeRuntimeConfig.js.');
+    } catch (error) {
+      setHeroComposerMessage(error instanceof Error ? `Save failed: ${error.message}` : 'Save failed.');
+    }
+  };
+
+  const copyAlignmentConfig = async () => {
+    await navigator.clipboard?.writeText(formatAlignmentSnippet(alignmentDebug));
+  };
+
+  const saveAlignmentConfig = (state: AlignmentDebugState) => {
+    const blob = new Blob([formatAlignmentSnippet(state)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'globe-alignment-debug-config.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const resetAlignmentDebug = () => setAlignmentDebug(defaultAlignmentDebugState);
+
+  const focusScaleCalibrationFixture = () => {
+    const region = activityRegions[0];
+    if (region) {
+      globeRef.current?.selectActivityRegion(region.id);
+      return;
+    }
+    const fixture = getGlobeScaleFixture(scaleFixtureId);
+    globeRef.current?.setNavigationPose({
+      lng: fixture.center.longitude,
+      lat: fixture.center.latitude,
+      zoomIntent: 0.72,
+    });
+  };
+
+  const labelCountry = hoveredCountry ?? selectedCountry;
+  const labelCountryIso3 = String(labelCountry?.iso3 ?? '').toUpperCase();
+  const labelCountryPresentationGroup = ADRIATIC_BALKANS_PRESENTATION_GROUP.members.includes(
+    labelCountryIso3 as (typeof ADRIATIC_BALKANS_PRESENTATION_GROUP.members)[number],
+  )
+    ? ADRIATIC_BALKANS_PRESENTATION_GROUP
+    : null;
+  const labelCountryName = labelCountryPresentationGroup?.label ?? labelCountry?.name ?? null;
+  const handleGlobePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const nextPointer = {
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+    };
+    countryPointerRef.current = nextPointer;
+    if (countryHoverLabelRef.current) {
+      countryHoverLabelRef.current.style.left = `${nextPointer.x}px`;
+      countryHoverLabelRef.current.style.top = `${nextPointer.y}px`;
+    }
+  };
+
+  if (variant === 'page') {
+    return (
+      <div className="ss-bg-geometric-muted relative h-full min-h-0 overflow-hidden bg-[#030407]">
+        <main className="absolute inset-0" aria-label="Globe discovery stage">
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_45%,rgba(255,58,85,0.08),transparent_42%),linear-gradient(180deg,rgba(3,4,7,0.08),rgba(3,4,7,0.22)_100%)]"
+            style={{ opacity: 0.35 + transitionFrame.veilOpacity }}
+          />
+          <div
+            onPointerMove={handleGlobePointerMove}
+            className={[
+              'absolute inset-0 z-[2]',
+              'origin-center transition-[opacity,transform,filter] duration-700 ease-out will-change-[opacity,transform,filter]',
+              surfaceMode === 'globe' ? 'pointer-events-auto' : 'pointer-events-none',
+            ].join(' ')}
+            style={{
+              opacity: transitionFrame.globeOpacity * (hybridPrototype ? 1 - hybridBlend : 1),
+              transform: `scale(${transitionFrame.globeScale})`,
+              filter: `blur(${transitionFrame.globeBlurPx}px) saturate(${surfaceMode === 'globe' ? 1 : 0.92}) contrast(${surfaceMode === 'globe' ? 1 : 0.96})`,
+            }}
+          >
+            <div ref={containerRef} className="absolute inset-0" aria-label="SwingSphere Globe V1" />
+            {labelCountryName ? (
+              <div
+                ref={countryHoverLabelRef}
+                className="pointer-events-none absolute z-40 -translate-x-1/2 -translate-y-[calc(100%+18px)] whitespace-nowrap rounded-full border border-white/20 bg-black/72 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white shadow-xl backdrop-blur-xl"
+                style={{ left: countryPointerRef.current.x, top: countryPointerRef.current.y }}
+              >
+                {labelCountryName}
+              </div>
+            ) : null}
+          </div>
+
+          {hybridPrototype && HybridGlobePrototypeLayer ? (
+            <React.Suspense fallback={null}>
+              <div className="pointer-events-none absolute inset-0 z-[3]">
+                <HybridGlobePrototypeLayer
+                  camera={{
+                    lng: camera.lng,
+                    lat: camera.lat,
+                    zoom: 0.8 + hybridZoomIntent * 6,
+                  }}
+                  fadeStart={hybridFadeStart}
+                  fadeEnd={hybridFadeEnd}
+                  interactive={hybridMapInteractive}
+                  onBlendChange={setHybridBlend}
+                  onCameraChange={(nextCamera) => {
+                    const nextZoomIntent = Math.max(0, Math.min(1, (nextCamera.zoom - 0.8) / 6));
+                    setHybridZoomIntent(nextZoomIntent);
+                    setCamera({
+                      surface: 'globe',
+                      lng: nextCamera.lng,
+                      lat: nextCamera.lat,
+                      zoom: zoomIntentToMapZoom(nextZoomIntent),
+                      pitch: WORLD_PITCH,
+                      bearing: WORLD_BEARING,
+                    });
+                    globeRef.current?.setNavigationPose({
+                      lng: nextCamera.lng,
+                      lat: nextCamera.lat,
+                      zoomIntent: nextZoomIntent,
+                    });
+                  }}
+                />
+              </div>
+            </React.Suspense>
+          ) : null}
+
+          {graphicsCapability === 'unsupported' ? (
+            <GraphicsFallback
+              listings={filteredDiscoveryRailListings}
+              onSelect={(listingId) => {
+                setSelectedCountry(null);
+                setSelectedListingId(listingId);
+              }}
+            />
+          ) : null}
+
+          <div
+            className={[
+              'absolute inset-0 z-[3]',
+              'origin-center transition-[opacity,transform,filter] duration-700 ease-out will-change-[opacity,transform,filter]',
+              surfaceMode === 'map' ? 'pointer-events-auto' : 'pointer-events-none',
+            ].join(' ')}
+            style={{
+              opacity: transitionFrame.mapOpacity,
+              transform: `scale(${transitionFrame.mapScale})`,
+              filter: `blur(${transitionFrame.mapBlurPx}px) saturate(${surfaceMode === 'map' ? 1.02 : 0.95}) contrast(${surfaceMode === 'map' ? 1 : 0.97})`,
+            }}
+          >
+            {shouldMountMap ? (
+              <React.Suspense fallback={<div className="h-full w-full bg-[#05070a]" aria-hidden="true" />}>
+                <FlatWorldMap
+                  listings={performanceFixtureListings ?? spatialMapListings}
+                  resolutionListings={performanceFixtureListings ?? listings}
+                  hostPins={performanceFixtureEnabled ? [] : hostMapPins}
+                  buildingAssets={buildingAssets}
+                  activityRegions={activityRegions}
+                  selectedId={resolveSpatialListingId(displaySelectedListingId)}
+                  onSelect={selectMapListing}
+                  onReset={resetMapToWorld}
+                  camera={camera}
+                  destinationFraming={travelDestination?.framing ?? null}
+                  onNavigationChange={syncCameraFromMap}
+                  onViewportChange={setMapViewportDiscovery}
+                  onViewportChangeState={({ isPending }) => setIsMapViewportDiscoveryPending(isPending)}
+                  onVenueArrivalComplete={handleVenueArrivalComplete}
+                  className="h-full w-full"
+                />
+              </React.Suspense>
+            ) : null}
+          </div>
+
+          {graphicsCapability !== 'unsupported' && runtimeState !== 'ready' && surfaceMode === 'globe' ? (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/35">
+              <div className="rounded-lg border border-gray-800 bg-black/80 px-4 py-3 text-sm text-gray-300 shadow-xl">
+                {runtimeState === 'loading'
+                  ? 'Loading Globe V1'
+                  : runtimeState === 'recovering'
+                    ? 'Restoring the globe…'
+                    : `Globe failed to load: ${runtimeError ?? 'Unknown error'}`}
+              </div>
+            </div>
+          ) : null}
+
+          <GlobeStageOverlays
+            variant="fullBleed"
+            stats={globeStats}
+            onCenter={returnToWorld}
+            onZoomIn={() => {
+              const snapshot = globeRef.current?.getNavigationSnapshot();
+              if (!snapshot) return;
+              globeRef.current?.setNavigationPose({
+                lng: snapshot.lng,
+                lat: snapshot.lat,
+                zoomIntent: Math.min(1, snapshot.zoomIntent + 0.12),
+              });
+            }}
+            onZoomOut={() => {
+              const snapshot = globeRef.current?.getNavigationSnapshot();
+              if (!snapshot) return;
+              globeRef.current?.setNavigationPose({
+                lng: snapshot.lng,
+                lat: snapshot.lat,
+                zoomIntent: Math.max(0, snapshot.zoomIntent - 0.12),
+              });
+            }}
+            onWorld={returnToWorld}
+          />
+
+          {showLocalViewHint ? (
+            <div className="pointer-events-none absolute bottom-[5.7rem] left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-300/20 bg-black/58 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-red-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-[20px] backdrop-saturate-150">
+              Click again to explore nearby
+            </div>
+          ) : null}
+        </main>
+
+        <MobileExplorerPrototype
+          surfaceMode={surfaceMode}
+          onSurfaceModeChange={setManualSurfaceMode}
+          listings={discoveryRailListings}
+          selectedListingId={detailListingId}
+          activeRegionName={discoveryRailRegionName}
+          searchText={searchText}
+          onSearchTextChange={setSearchText}
+          onSelectListing={selectListingFromRail}
+          onNavigate={navigate}
+          entityIndex={entityIndex ?? undefined}
+          isUpdating={discoveryRailIsUpdating}
+        />
+
+        <div className="pointer-events-none absolute inset-0 z-20 max-md:hidden">
+          <div className="pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(76px,9vh,84px)] w-[clamp(248px,17vw,292px)]">
+            <ExplorerFilterPanel
+              searchText={searchText}
+              onSearchTextChange={setSearchText}
+              listingTypes={listingTypes}
+              onListingTypesChange={setListingTypes}
+              selectedTags={selectedTags}
+              onSelectedTagsChange={setSelectedTags}
+              onOpenTutorial={() => window.dispatchEvent(new CustomEvent('swingsphere:open-globe-tour'))}
+            />
+          </div>
+
+          <aside className={`pointer-events-auto absolute right-[clamp(14px,1.25vw,22px)] top-[clamp(76px,9vh,84px)] w-[clamp(320px,22vw,388px)] origin-top transition-[bottom,opacity,transform] duration-300 ease-out ${hasExplorerDetails ? 'bottom-[clamp(14px,1.8vh,20px)] translate-x-0 opacity-100' : 'pointer-events-none bottom-[clamp(184px,22vh,210px)] translate-x-4 opacity-0'}`} aria-label="Listing details">
+            <ExplorerDetailsPanel
+              mode="floating"
+              onClose={closePanel}
+              selectedListingId={detailListingId}
+              selectedOrganizationId={selectedOrganizationId}
+              listings={listings}
+              organizations={organizations}
+              entityIndex={entityIndex ?? undefined}
+            />
+          </aside>
+
+          {selectedPrivateMapListing ? (
+            <div
+              className={`absolute bottom-[clamp(178px,22vh,202px)] flex justify-end transition-[right,opacity,transform] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}
+              aria-live="polite"
+            >
+              <div className="ss-glass ss-glass--liquid flex max-w-[440px] items-center gap-2.5 rounded-full border border-red-300/20 bg-[rgba(10,12,16,0.82)] px-4 py-2 text-[12px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_14px_34px_rgba(0,0,0,0.38)] backdrop-blur-[18px]">
+                <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-red-300" aria-hidden="true" />
+                <span>
+                  <strong className="font-semibold text-red-100">Private location</strong>
+                  <span className="text-gray-400"> · Exact address shared with approved members or confirmed guests.</span>
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
+            <ExplorerNearbyCarousel
+              listings={discoveryRailListings}
+              selectedListingId={discoveryRailSelectedListingId}
+              activeRegionName={discoveryRailRegionName}
+              title={discoveryRailTitle}
+              emptyMessage={discoveryRailEmptyMessage}
+              distanceLabels={discoveryRailDistanceLabels}
+              isUpdating={discoveryRailIsUpdating}
+              onSelectListing={selectListingFromRail}
+            />
+          </div>
+        </div>
+
+        {hybridPrototype ? (
+          <section className="pointer-events-auto absolute right-5 top-[84px] z-[90] w-[min(340px,calc(100vw-2.5rem))] rounded-2xl border border-white/12 bg-[rgba(7,9,13,0.9)] p-4 text-gray-100 shadow-2xl shadow-black/55 backdrop-blur-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-300">Option B prototype</p>
+            <h2 className="mt-1 text-base font-black">Three.js → MapLibre handoff</h2>
+            <p className="mt-2 text-xs leading-5 text-gray-400">Zoom the globe normally. The MapLibre globe fades in between the thresholds below, then takes over pointer input after the blend passes 72%.</p>
+            <div className="mt-4 space-y-3 text-xs">
+              <label className="block">
+                <span className="flex justify-between text-gray-300"><span>Fade starts</span><strong>{hybridFadeStart.toFixed(1)}</strong></span>
+                <input className="mt-1 w-full accent-red-500" type="range" min="0.8" max="5.5" step="0.1" value={hybridFadeStart} onChange={(event) => setHybridFadeStart(Math.min(Number(event.target.value), hybridFadeEnd - 0.2))} />
+              </label>
+              <label className="block">
+                <span className="flex justify-between text-gray-300"><span>Fade completes</span><strong>{hybridFadeEnd.toFixed(1)}</strong></span>
+                <input className="mt-1 w-full accent-red-500" type="range" min="1" max="6.8" step="0.1" value={hybridFadeEnd} onChange={(event) => setHybridFadeEnd(Math.max(Number(event.target.value), hybridFadeStart + 0.2))} />
+              </label>
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
+                <span>Current blend</span><strong className="text-red-200">{Math.round(hybridBlend * 100)}%</strong>
+              </div>
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
+                <span>Allow MapLibre input</span>
+                <input type="checkbox" checked={hybridMapInteractive} onChange={(event) => setHybridMapInteractive(event.target.checked)} className="h-4 w-4 accent-red-500" />
+              </label>
+            </div>
+          </section>
+        ) : null}
+        {devToolsEnabled && spatialDebugEnabled ? <SpatialDebugOverlay snapshot={spatialDebug} /> : null}
+        {performanceToolsEnabled && GlobePerformancePanel ? (
+          <React.Suspense fallback={null}>
+            <GlobePerformancePanel
+              snapshot={devPerformanceSnapshot}
+              onResetQuality={resetAutomaticQuality}
+            />
+          </React.Suspense>
+        ) : null}
+        {devToolsEnabled ? (
+          <>
+            <button
+              type="button"
+              data-testid="globe-scale-calibration-toggle"
+              onClick={() => setIsScaleCalibrationPanelOpen((current) => !current)}
+              className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive pointer-events-auto absolute right-6 top-[68px] z-[61] rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-red-100"
+            >
+              Scale Calibration
+            </button>
+            {isScaleCalibrationPanelOpen && GlobeScaleCalibrationPanel ? (
+              <React.Suspense fallback={null}>
+                <div className="pointer-events-auto absolute right-6 top-[132px] z-[60] w-[min(360px,calc(100vw-48px))]">
+                  <GlobeScaleCalibrationPanel
+                    value={globePresentation}
+                    fixtureId={scaleFixtureId}
+                    presets={GLOBE_PRESENTATION_PRESETS as Record<'current' | 'radiusOnly' | 'cameraOnly' | 'recommended', GlobePresentationConfig>}
+                    onChange={setGlobePresentation}
+                    onFixtureChange={setScaleFixtureId}
+                    onFocusFixture={focusScaleCalibrationFixture}
+                  />
+                </div>
+              </React.Suspense>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setHeroComposerEnabled((current) => !current)}
+              className={[
+                'ss-glass ss-glass--liquid pointer-events-auto absolute bottom-6 right-[5.5rem] z-50 rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em]',
+                heroComposerEnabled
+                  ? 'border-red-400/60 bg-red-500/15 text-red-100'
+                  : 'border-white/[0.08] bg-[rgba(8,10,14,0.68)] text-gray-300 hover:border-white/20',
+              ].join(' ')}
+            >
+              Hero Camera Composer
+            </button>
+            {heroComposerEnabled ? (
+              <>
+                {showHeroGuides ? <HeroCompositionGuides /> : null}
+                <div className="pointer-events-auto absolute bottom-24 right-6 z-50 w-[min(390px,calc(100vw-48px))]">
+                  <HeroArrivalComposerPanel
+                    profile={heroArrivalProfile}
+                    presets={heroArrivalPresets}
+                    selectedPresetId={selectedHeroPresetId}
+                    snapshot={heroComposerSnapshot}
+                    message={heroComposerMessage}
+                    showGuides={showHeroGuides}
+                    onShowGuidesChange={setShowHeroGuides}
+                    onChange={setHeroArrivalProfile}
+                    onManualEdit={() => setSelectedHeroPresetId('custom')}
+                    onPreviewPreset={previewHeroArrivalPreset}
+                    onApplyPreset={applySelectedHeroArrivalPreset}
+                    onRevert={revertHeroArrivalPreset}
+                    onSaveAsCustom={saveHeroArrivalAsCustom}
+                    onReset={resetHeroArrivalConfig}
+                    onSave={saveHeroArrivalConfig}
+                    onCopy={copyHeroArrivalConfig}
+                    onExport={exportHeroArrivalConfig}
+                    onCapture={captureCurrentHeroCamera}
+                  />
+                </div>
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`relative h-full min-h-0 overflow-hidden bg-[#050506] ${isHero ? 'pointer-events-none' : ''}`}>
+      <div
+        ref={containerRef}
+        className={['absolute inset-0', isSurface ? 'pointer-events-auto' : 'pointer-events-none'].join(' ')}
+        aria-label="SwingSphere Globe V1"
+      />
+
+      {variant === 'page' && runtimeState !== 'ready' ? (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/35">
+          <div className="rounded-lg border border-gray-800 bg-black/80 px-4 py-3 text-sm text-gray-300 shadow-xl">
+            {runtimeState === 'loading' ? 'Loading Globe V1' : `Globe failed to load: ${runtimeError ?? 'Unknown error'}`}
+          </div>
+        </div>
+      ) : null}
+
+      {variant === 'page' ? (
+        <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-xs rounded-lg border border-gray-800 bg-black/70 px-4 py-3 shadow-xl backdrop-blur-md">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">Globe V1 Integration</p>
+        <p className="mt-1 text-[11px] text-gray-500">Temporary mock listings: SF, LA, New York, London, Sydney.</p>
+        </div>
+      ) : null}
+
+      {variant === 'page' ? (
+        <div className="absolute bottom-4 left-4 z-20 w-[360px] max-w-[calc(100vw-2rem)] rounded-lg border border-gray-800 bg-black/85 text-gray-200 shadow-2xl backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setIsAtmospherePanelOpen((current) => !current)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-300"
+          >
+            <span>Atmosphere Tool</span>
+            <span className="text-gray-500">{isAtmospherePanelOpen ? 'Hide' : 'Show'}</span>
+          </button>
+          {isAtmospherePanelOpen ? (
+            <div className="max-h-[70vh] overflow-y-auto border-t border-gray-800 p-4">
+              <AtmosphereShellControls
+                title="Inner Shell"
+                shell={atmosphereTool.atmosphere.inner}
+                onChange={(key, value) => updateShellValue('inner', key, value)}
+              />
+              <AtmosphereShellControls
+                title="Outer Shell"
+                shell={atmosphereTool.atmosphere.outer}
+                onChange={(key, value) => updateShellValue('outer', key, value)}
+              />
+              <NumberControl
+                label="Rim radius"
+                value={atmosphereTool.crimsonRim.radius}
+                min={0.82}
+                max={1.12}
+                step={0.001}
+                onChange={updateRimRadius}
+              />
+              <pre className="mt-4 max-h-40 overflow-auto rounded-md border border-gray-800 bg-black/70 p-3 text-[11px] leading-4 text-gray-400">
+                {formatAtmosphereSnippet(atmosphereTool)}
+              </pre>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={copyAtmosphereConfig}
+                  className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/20"
+                >
+                  Copy Config
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAtmosphereTool(defaultAtmosphereToolState)}
+                  className="rounded-md border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-gray-800"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {variant === 'page' ? (
+        <ExplorerDetailsPanel
+          onClose={closePanel}
+          selectedListingId={detailListingId}
+          selectedOrganizationId={selectedOrganizationId}
+          listings={listings}
+          organizations={organizations}
+          entityIndex={entityIndex ?? undefined}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+export default ProductionGlobePage;
+
+const GraphicsFallback: React.FC<{
+  listings: Listing[];
+  onSelect: (listingId: string) => void;
+}> = ({ listings, onSelect }) => (
+  <section
+    className="absolute inset-0 z-[4] flex items-center justify-center px-6 py-20"
+    aria-labelledby="graphics-fallback-title"
+  >
+    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[rgba(8,10,14,0.9)] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.55)] sm:p-8">
+      <div className="flex items-start gap-4">
+        <div className="rounded-xl border border-red-300/20 bg-red-500/10 p-3 text-red-200">
+          <Globe2 className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-red-300/80">Directory mode</p>
+          <h1 id="graphics-fallback-title" className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+            Explore SwingSphere without the 3D globe
+          </h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-gray-400">
+            WebGL 2 is unavailable or hardware acceleration is disabled. Search and open listings here while the immersive view is unavailable.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        {listings.slice(0, 8).map((listing) => (
+          <button
+            key={listing.id}
+            type="button"
+            onClick={() => onSelect(listing.id)}
+            className="group flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.035] px-4 py-3 text-left transition-colors hover:border-red-300/25 hover:bg-red-500/[0.07] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+          >
+            <MapPin className="h-4 w-4 shrink-0 text-red-300/75" aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-gray-100">{listing.name}</span>
+              <span className="block truncate text-xs text-gray-500">{listing.location}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+const shellControls: Array<{
+  key: keyof AtmosphereShell;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+}> = [
+  { key: 'radius', label: 'radius', min: 0.82, max: 1.12, step: 0.001 },
+  { key: 'opacity', label: 'opacity', min: 0, max: 0.25, step: 0.001 },
+  { key: 'crimsonIntensity', label: 'crimsonIntensity', min: 0, max: 3, step: 0.001 },
+  { key: 'graphiteIntensity', label: 'graphiteIntensity', min: 0, max: 3, step: 0.001 },
+  { key: 'fresnelPower', label: 'fresnelPower', min: 0.1, max: 10, step: 0.001 },
+  { key: 'horizonFalloff', label: 'horizonFalloff', min: 0.1, max: 3, step: 0.001 },
+];
+
+const AtmosphereShellControls: React.FC<{
+  title: string;
+  shell: AtmosphereShell;
+  onChange: (key: keyof AtmosphereShell, value: number) => void;
+}> = ({ title, shell, onChange }) => (
+  <section className="mb-4">
+    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{title}</h3>
+    <div className="space-y-2">
+      {shellControls.map((control) => (
+        <NumberControl
+          key={control.key}
+          label={control.label}
+          value={shell[control.key]}
+          min={control.min}
+          max={control.max}
+          step={control.step}
+          onChange={(value) => onChange(control.key, value)}
+        />
+      ))}
+    </div>
+  </section>
+);
+
+const HeroArrivalComposerPanel: React.FC<{
+  profile: HeroArrivalProfile;
+  presets: HeroArrivalPreset[];
+  selectedPresetId: string;
+  snapshot: HeroComposerSnapshot | null;
+  message: string | null;
+  showGuides: boolean;
+  onShowGuidesChange: (show: boolean) => void;
+  onChange: React.Dispatch<React.SetStateAction<HeroArrivalProfile>>;
+  onManualEdit: () => void;
+  onPreviewPreset: (preset: HeroArrivalPreset) => void;
+  onApplyPreset: () => void;
+  onRevert: () => void;
+  onSaveAsCustom: () => void;
+  onReset: () => void;
+  onSave: () => void;
+  onCopy: () => void;
+  onExport: () => void;
+  onCapture: () => void;
+}> = ({
+  profile,
+  presets,
+  selectedPresetId,
+  snapshot,
+  message,
+  showGuides,
+  onShowGuidesChange,
+  onChange,
+  onManualEdit,
+  onPreviewPreset,
+  onApplyPreset,
+  onRevert,
+  onSaveAsCustom,
+  onReset,
+  onSave,
+  onCopy,
+  onExport,
+  onCapture,
+}) => {
+  const update = <K extends keyof HeroArrivalProfile>(key: K, value: HeroArrivalProfile[K]) => {
+    onManualEdit();
+    onChange((current) => ({ ...current, [key]: value }));
+  };
+  const updateComposition = <K extends keyof HeroArrivalProfile['heroComposition']>(
+    key: K,
+    value: HeroArrivalProfile['heroComposition'][K],
+  ) => {
+    onManualEdit();
+    onChange((current) => ({
+      ...current,
+      heroComposition: {
+        ...current.heroComposition,
+        [key]: value,
+      },
+    }));
+  };
+  const updateStage = <K extends keyof HeroArrivalProfile['heroStage']>(
+    key: K,
+    value: HeroArrivalProfile['heroStage'][K],
+  ) => {
+    onManualEdit();
+    onChange((current) => ({
+      ...current,
+      heroStage: {
+        ...current.heroStage,
+        [key]: value,
+      },
+    }));
+  };
+
+  return (
+    <section className="max-h-[calc(100vh-150px)] overflow-y-auto rounded-2xl border border-white/[0.1] bg-[rgba(8,10,14,0.74)] p-4 text-gray-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-[28px] backdrop-saturate-150">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-[0.22em] text-red-300">Hero Arrival Composer</h2>
+          <p className="mt-1 text-[11px] leading-4 text-gray-400">Select a destination, compose the final globe shot, then save the profile.</p>
+        </div>
+        <ToggleControl label="Guides" checked={showGuides} onChange={onShowGuidesChange} />
+      </div>
+
+      <section className="border-t border-white/[0.08] pt-3">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Presets</h3>
+          <span className="text-[10px] uppercase tracking-wide text-gray-500">Click to preview</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onPreviewPreset(preset)}
+              className={[
+                'rounded-lg border p-2 text-left transition-colors',
+                selectedPresetId === preset.id
+                  ? 'border-red-300/60 bg-red-500/15 text-red-50 shadow-[0_0_26px_rgba(239,68,68,0.12)]'
+                  : 'border-white/[0.08] bg-black/25 text-gray-300 hover:border-white/18 hover:bg-white/[0.05]',
+              ].join(' ')}
+            >
+              <span className="block text-[11px] font-bold uppercase tracking-wide">{preset.name}</span>
+              <span className="mt-1 block text-[10px] leading-4 text-gray-500">{preset.description}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <button type="button" onClick={onApplyPreset} className="rounded-md border border-red-400/50 bg-red-500/12 px-2 py-2 text-[11px] font-semibold text-red-100 hover:bg-red-500/20">Apply Preset</button>
+          <button type="button" onClick={onRevert} className="rounded-md border border-white/[0.1] bg-black/35 px-2 py-2 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.06]">Revert</button>
+          <button type="button" onClick={onSaveAsCustom} className="rounded-md border border-white/[0.1] bg-black/35 px-2 py-2 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.06]">Save Custom</button>
+        </div>
+      </section>
+
+      <div className="space-y-2 border-t border-white/[0.08] pt-3">
+        <label className="grid grid-cols-[7rem_1fr] items-center gap-2 text-[11px] text-gray-400">
+          <span>Camera Mode</span>
+          <select
+            value={profile.mode}
+            onChange={(event) => update('mode', event.target.value as HeroArrivalProfile['mode'])}
+            className="h-8 rounded border border-gray-700 bg-black/50 px-2 text-gray-200"
+          >
+            <option value="destinationTilt">Destination Tilt Camera</option>
+            <option value="legacy">Legacy Camera</option>
+          </select>
+        </label>
+        {profile.mode === 'destinationTilt' ? (
+          <>
+            <NumberControl label="Distance" value={profile.heroStage.distance} min={3.4} max={12} step={0.01} onChange={(value) => updateStage('distance', value)} />
+            <NumberControl label="Tilt Degrees" value={profile.heroStage.tiltDegrees} min={-45} max={45} step={0.25} onChange={(value) => updateStage('tiltDegrees', value)} />
+            <NumberControl label="Heading Deg" value={profile.heroStage.headingDegrees} min={-180} max={180} step={0.5} onChange={(value) => updateStage('headingDegrees', value)} />
+            <NumberControl label="Globe X" value={profile.heroStage.globeScreenX} min={0.1} max={0.9} step={0.005} onChange={(value) => updateStage('globeScreenX', value)} />
+            <NumberControl label="Globe Y" value={profile.heroStage.globeScreenY} min={0.1} max={0.9} step={0.005} onChange={(value) => updateStage('globeScreenY', value)} />
+            <NumberControl label="Label X" value={profile.heroStage.labelAnchorX} min={0.1} max={0.9} step={0.005} onChange={(value) => updateStage('labelAnchorX', value)} />
+            <NumberControl label="Label Y" value={profile.heroStage.labelAnchorY} min={0.1} max={0.9} step={0.005} onChange={(value) => updateStage('labelAnchorY', value)} />
+          </>
+        ) : (
+          <>
+            <NumberControl label="Camera Distance" value={profile.centerDistance} min={3.4} max={12} step={0.01} onChange={(value) => update('centerDistance', value)} />
+            <NumberControl label="Pitch / Vertical" value={profile.tangentOffset} min={-1.2} max={1.2} step={0.005} onChange={(value) => update('tangentOffset', value)} />
+            <NumberControl label="Yaw Offset" value={profile.sideOffset} min={-1.2} max={1.2} step={0.005} onChange={(value) => update('sideOffset', value)} />
+            <NumberControl label="Horizontal Offset" value={profile.horizontalOffset} min={-0.75} max={0.75} step={0.005} onChange={(value) => update('horizontalOffset', value)} />
+            <NumberControl label="Vertical Offset" value={profile.verticalOffset} min={-2} max={2} step={0.005} onChange={(value) => update('verticalOffset', value)} />
+            <NumberControl label="Look-at Offset" value={profile.lookAtOffset} min={-0.75} max={0.75} step={0.005} onChange={(value) => update('lookAtOffset', value)} />
+            <NumberControl label="Horizon Bias" value={profile.horizonBias} min={-0.75} max={0.75} step={0.005} onChange={(value) => update('horizonBias', value)} />
+            <NumberControl label="Screen X" value={profile.destinationScreenX} min={0.1} max={0.9} step={0.005} onChange={(value) => update('destinationScreenX', value)} />
+            <NumberControl label="Screen Y" value={profile.destinationScreenY} min={0.1} max={0.9} step={0.005} onChange={(value) => update('destinationScreenY', value)} />
+          </>
+        )}
+        <NumberControl label="Field of View" value={profile.fov} min={25} max={70} step={0.25} onChange={(value) => update('fov', value)} />
+        <NumberControl label="Arrival Duration" value={profile.durationMs} min={400} max={4500} step={25} onChange={(value) => update('durationMs', value)} />
+        <label className="grid grid-cols-[7rem_1fr] items-center gap-2 text-[11px] text-gray-400">
+          <span>Arrival Ease</span>
+          <select
+            value={profile.ease}
+            onChange={(event) => update('ease', event.target.value as HeroArrivalProfile['ease'])}
+            className="h-8 rounded border border-gray-700 bg-black/50 px-2 text-gray-200"
+          >
+            <option value="cinematic">cinematic</option>
+            <option value="cubic">cubic</option>
+            <option value="smooth">smooth</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-3 space-y-2 border-t border-white/[0.08] pt-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Hero Composition</h3>
+          <span className="text-[10px] uppercase tracking-wide text-gray-500">Label-centered</span>
+        </div>
+        <NumberControl label="Anchor X" value={profile.heroComposition.anchorX} min={0.1} max={0.9} step={0.005} onChange={(value) => updateComposition('anchorX', value)} />
+        <NumberControl label="Anchor Y" value={profile.heroComposition.anchorY} min={0.1} max={0.9} step={0.005} onChange={(value) => updateComposition('anchorY', value)} />
+        <NumberControl label="Tolerance px" value={profile.heroComposition.tolerancePx} min={1} max={20} step={1} onChange={(value) => updateComposition('tolerancePx', value)} />
+        <NumberControl label="Max Correction" value={profile.heroComposition.maxCorrectionDegrees} min={0} max={20} step={0.5} onChange={(value) => updateComposition('maxCorrectionDegrees', value)} />
+        <label className="grid grid-cols-[7rem_1fr] items-center gap-2 text-[11px] text-gray-400">
+          <span>Subject</span>
+          <select
+            value={profile.heroComposition.subject}
+            onChange={(event) => updateComposition('subject', event.target.value as HeroArrivalProfile['heroComposition']['subject'])}
+            className="h-8 rounded border border-gray-700 bg-black/50 px-2 text-gray-200"
+          >
+            <option value="label">label</option>
+            <option value="pin">pin</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={onCapture} className="rounded-md border border-red-400/50 bg-red-500/12 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-red-100 hover:bg-red-500/20">Capture Current Camera</button>
+        <button type="button" onClick={onSave} className="rounded-md border border-white/[0.1] bg-white/[0.06] px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-gray-100 hover:bg-white/[0.1]">Save Hero Profile</button>
+        <button type="button" onClick={onCopy} className="rounded-md border border-white/[0.1] bg-black/35 px-3 py-2 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.06]">Copy JSON</button>
+        <button type="button" onClick={onExport} className="rounded-md border border-white/[0.1] bg-black/35 px-3 py-2 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.06]">Export JSON</button>
+        <button type="button" onClick={onReset} className="col-span-2 rounded-md border border-white/[0.1] bg-black/35 px-3 py-2 text-[11px] font-semibold text-gray-300 hover:bg-white/[0.06]">Reset</button>
+      </div>
+
+      {message ? <p className="mt-3 rounded-md border border-white/[0.08] bg-black/30 px-3 py-2 text-[11px] text-gray-300">{message}</p> : null}
+
+      <HeroArrivalDebug snapshot={snapshot} profile={profile} />
+    </section>
+  );
+};
+
+const HeroArrivalDebug: React.FC<{
+  snapshot: HeroComposerSnapshot | null;
+  profile: HeroArrivalProfile;
+}> = ({ snapshot, profile }) => (
+  <section className="mt-4 border-t border-white/[0.08] pt-3">
+    <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Debug Info</h3>
+    <div className="space-y-2 text-[11px] text-gray-400">
+      <InspectorBlock
+        title="Live Camera"
+        rows={[
+          ['Position', snapshot?.cameraPosition.map((value) => value.toFixed(2)).join(', ') ?? 'n/a'],
+          ['Distance', snapshot ? snapshot.cameraDistance.toFixed(2) : 'n/a'],
+          ['Pitch', snapshot ? `${snapshot.pitch.toFixed(2)} deg` : 'n/a'],
+          ['Yaw', snapshot ? `${snapshot.yaw.toFixed(2)} deg` : 'n/a'],
+          ['FOV', snapshot ? snapshot.fov.toFixed(2) : profile.fov.toFixed(2)],
+          ['Screen', snapshot?.targetScreenPosition ? `${Math.round(snapshot.targetScreenPosition.x * 100)}%, ${Math.round(snapshot.targetScreenPosition.y * 100)}%` : 'select destination'],
+          ['Orbit Target', snapshot?.orbitTarget.map((value) => value.toFixed(2)).join(', ') ?? 'n/a'],
+        ]}
+      />
+    </div>
+    <pre className="mt-3 max-h-40 overflow-auto rounded-md border border-white/[0.08] bg-black/60 p-2.5 text-[10px] leading-4 text-gray-400">
+      {formatHeroArrivalSnippet(profile)}
+    </pre>
+  </section>
+);
+
+const HeroCompositionGuides: React.FC = () => (
+  <div className="pointer-events-none absolute inset-0 z-40">
+    <div className="absolute left-1/3 top-0 h-full w-px bg-white/10" />
+    <div className="absolute left-2/3 top-0 h-full w-px bg-white/10" />
+    <div className="absolute left-0 top-1/3 h-px w-full bg-white/10" />
+    <div className="absolute left-0 top-2/3 h-px w-full bg-white/10" />
+    <div className="absolute left-1/2 top-0 h-full w-px bg-red-300/18" />
+    <div className="absolute left-0 top-1/2 h-px w-full bg-red-300/18" />
+    <div className="absolute inset-x-[8%] inset-y-[12%] rounded-[2rem] border border-white/10" />
+  </div>
+);
+
+const GlobeAlignmentDebugPanel: React.FC<{
+  state: AlignmentDebugState;
+  onChange: React.Dispatch<React.SetStateAction<AlignmentDebugState>>;
+  onCopy: () => void;
+  onSave: () => void;
+  onReset: () => void;
+  pinHover: PinHoverDebug | null;
+  globeHover: GlobeHoverDebug | null;
+}> = ({ state, onChange, onCopy, onSave, onReset, pinHover, globeHover }) => (
+  <section className="max-h-[calc(100vh-120px)] overflow-y-auto rounded-2xl border border-white/[0.08] bg-[rgba(8,10,14,0.72)] p-3.5 text-gray-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_70px_rgba(0,0,0,0.48)] backdrop-blur-[24px] backdrop-saturate-150">
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-wide text-red-400">Globe Alignment Debug</h2>
+        <p className="mt-0.5 text-[11px] text-gray-500">Temporary transform overrides</p>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <LayerAlignmentControls
+        title="Land"
+        state={state.land}
+        onChange={(next) => onChange((current) => ({ ...current, land: next }))}
+      />
+      <LayerAlignmentControls
+        title="Country Atlas"
+        state={state.countryAtlas}
+        onChange={(next) => onChange((current) => ({ ...current, countryAtlas: next }))}
+      />
+      <PinAlignmentControls
+        state={state.pins}
+        onChange={(next) => onChange((current) => ({ ...current, pins: next }))}
+      />
+      <CameraTargetControls
+        state={state.cameraTargets}
+        onChange={(next) => onChange((current) => ({ ...current, cameraTargets: next }))}
+      />
+
+      <section className="border-t border-white/[0.08] pt-3">
+        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Visualization</h3>
+        <div className="space-y-2">
+          {(Object.keys(state.toggles) as Array<keyof AlignmentDebugToggles>).map((key) => (
+            <ToggleControl
+              key={key}
+              label={key}
+              checked={state.toggles[key]}
+              onChange={(checked) => onChange((current) => ({
+                ...current,
+                toggles: { ...current.toggles, [key]: checked },
+              }))}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="border-t border-white/[0.08] pt-3">
+        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Opacity</h3>
+        <NumberControl
+          label="ID opacity"
+          value={state.opacity.countryIdTexture}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={(value) => onChange((current) => ({ ...current, opacity: { ...current.opacity, countryIdTexture: value } }))}
+        />
+        <NumberControl
+          label="Atlas opacity"
+          value={state.opacity.visualAtlas}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={(value) => onChange((current) => ({ ...current, opacity: { ...current.opacity, visualAtlas: value } }))}
+        />
+        <NumberControl
+          label="Mask opacity"
+          value={state.opacity.highlightMask}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={(value) => onChange((current) => ({ ...current, opacity: { ...current.opacity, highlightMask: value } }))}
+        />
+      </section>
+
+      <AlignmentInspector pinHover={pinHover} globeHover={globeHover} />
+
+      <div className="grid grid-cols-3 gap-2 border-t border-white/[0.08] pt-3">
+        <button type="button" onClick={onCopy} className="rounded-md border border-red-500/50 bg-red-500/10 px-2 py-2 text-[11px] font-semibold text-red-200 hover:bg-red-500/20">Copy Config</button>
+        <button type="button" onClick={onSave} className="rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-2 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.08]">Save JSON</button>
+        <button type="button" onClick={onReset} className="rounded-md border border-white/[0.08] bg-black/30 px-2 py-2 text-[11px] font-semibold text-gray-300 hover:bg-white/[0.06]">Reset</button>
+      </div>
+    </div>
+
+    <pre className="mt-3 max-h-36 overflow-auto rounded-md border border-white/[0.08] bg-black/60 p-2.5 text-[10px] leading-4 text-gray-400">
+      {formatAlignmentSnippet(state)}
+    </pre>
+  </section>
+);
+
+const LayerAlignmentControls: React.FC<{
+  title: string;
+  state: LayerAlignmentState;
+  onChange: (state: LayerAlignmentState) => void;
+}> = ({ title, state, onChange }) => (
+  <section className="border-t border-white/[0.08] pt-3 first:border-t-0 first:pt-0">
+    <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">{title}</h3>
+    <div className="space-y-2">
+      <SignControl label="longitudeSign" value={state.longitudeSign} onChange={(value) => onChange({ ...state, longitudeSign: value })} />
+      <NumberControl label="lonOffset" value={state.longitudeOffsetDeg} min={-180} max={180} step={0.1} onChange={(value) => onChange({ ...state, longitudeOffsetDeg: value })} />
+      <NumberControl label="latOffset" value={state.latitudeOffsetDeg} min={-90} max={90} step={0.1} onChange={(value) => onChange({ ...state, latitudeOffsetDeg: value })} />
+      <ToggleControl label="flipU" checked={state.flipU} onChange={(checked) => onChange({ ...state, flipU: checked })} />
+      <ToggleControl label="flipV" checked={state.flipV} onChange={(checked) => onChange({ ...state, flipV: checked })} />
+    </div>
+  </section>
+);
+
+const PinAlignmentControls: React.FC<{
+  state: PinAlignmentState;
+  onChange: (state: PinAlignmentState) => void;
+}> = ({ state, onChange }) => (
+  <section className="border-t border-white/[0.08] pt-3">
+    <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Pins</h3>
+    <div className="space-y-2">
+      <SignControl label="longitudeSign" value={state.longitudeSign} onChange={(value) => onChange({ ...state, longitudeSign: value })} />
+      <NumberControl label="lonOffset" value={state.longitudeOffsetDeg} min={-180} max={180} step={0.1} onChange={(value) => onChange({ ...state, longitudeOffsetDeg: value })} />
+      <NumberControl label="latOffset" value={state.latitudeOffsetDeg} min={-90} max={90} step={0.1} onChange={(value) => onChange({ ...state, latitudeOffsetDeg: value })} />
+      <SignControl label="latitudeSign" value={state.latitudeSign} onChange={(value) => onChange({ ...state, latitudeSign: value })} />
+    </div>
+  </section>
+);
+
+const CameraTargetControls: React.FC<{
+  state: CameraTargetAlignmentState;
+  onChange: (state: CameraTargetAlignmentState) => void;
+}> = ({ state, onChange }) => (
+  <section className="border-t border-white/[0.08] pt-3">
+    <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Camera Targets</h3>
+    <div className="space-y-2">
+      <NumberControl label="lonOffset" value={state.longitudeOffsetDeg} min={-180} max={180} step={0.1} onChange={(value) => onChange({ ...state, longitudeOffsetDeg: value })} />
+      <NumberControl label="latOffset" value={state.latitudeOffsetDeg} min={-90} max={90} step={0.1} onChange={(value) => onChange({ ...state, latitudeOffsetDeg: value })} />
+    </div>
+  </section>
+);
+
+const AlignmentInspector: React.FC<{
+  pinHover: PinHoverDebug | null;
+  globeHover: GlobeHoverDebug | null;
+}> = ({ pinHover, globeHover }) => (
+  <section className="border-t border-white/[0.08] pt-3">
+    <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">Inspector</h3>
+    <div className="space-y-2 text-[11px] text-gray-400">
+      <InspectorBlock
+        title="Pin Hover"
+        rows={pinHover ? [
+          ['Event', pinHover.name],
+          ['Lat/Lon', `${pinHover.lat.toFixed(4)}, ${pinHover.lon.toFixed(4)}`],
+          ['ISO3', pinHover.countryIso3],
+          ['World', pinHover.worldPosition ? pinHover.worldPosition.map((value) => value.toFixed(3)).join(', ') : 'n/a'],
+        ] : [['Event', 'none']]}
+      />
+      <InspectorBlock
+        title="Globe Hover"
+        rows={globeHover ? [
+          ['UV', globeHover.uv ? `${globeHover.uv.u.toFixed(4)}, ${globeHover.uv.v.toFixed(4)}` : 'n/a'],
+          ['ID RGB', globeHover.rgb ? globeHover.rgb.join(', ') : 'n/a'],
+          ['Country', globeHover.country?.name ?? globeHover.country?.iso3 ?? 'none'],
+        ] : [['Country', 'none']]}
+      />
+    </div>
+  </section>
+);
+
+const InspectorBlock: React.FC<{
+  title: string;
+  rows: Array<[string, string]>;
+}> = ({ title, rows }) => (
+  <div className="rounded-md border border-white/[0.08] bg-black/25 p-2">
+    <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">{title}</div>
+    {rows.map(([label, value]) => (
+      <div key={label} className="grid grid-cols-[4rem_1fr] gap-2">
+        <span className="text-gray-500">{label}</span>
+        <span className="truncate text-gray-300">{value}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const SignControl: React.FC<{
+  label: string;
+  value: 1 | -1;
+  onChange: (value: 1 | -1) => void;
+}> = ({ label, value, onChange }) => (
+  <label className="grid grid-cols-[8.5rem_1fr] items-center gap-2 text-[11px] text-gray-400">
+    <span>{label}</span>
+    <select
+      value={value}
+      onChange={(event) => onChange(Number(event.target.value) as 1 | -1)}
+      className="h-8 rounded border border-gray-700 bg-black/50 px-2 text-gray-200"
+    >
+      <option value={1}>1</option>
+      <option value={-1}>-1</option>
+    </select>
+  </label>
+);
+
+const ToggleControl: React.FC<{
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}> = ({ label, checked, onChange }) => (
+  <label className="flex h-8 items-center justify-between gap-3 rounded-md border border-white/[0.08] bg-black/25 px-2.5 text-[11px] text-gray-300">
+    <span>{label}</span>
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="h-4 w-4 accent-red-500"
+    />
+  </label>
+);
+
+const NumberControl: React.FC<{
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}> = ({ label, value, min, max, step, onChange }) => (
+  <label className="grid grid-cols-[7rem_1fr_4.5rem] items-center gap-2 text-[11px] text-gray-400">
+    <span>{label}</span>
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(event) => onChange(Number(event.target.value))}
+      className="w-full accent-red-500"
+    />
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      value={Number(value.toFixed(3))}
+      onChange={(event) => onChange(Number(event.target.value))}
+      className="w-full rounded border border-gray-700 bg-black/50 px-2 py-1 text-right text-gray-200"
+    />
+  </label>
+);
+
+const formatCoordinate = (value: number | null) => (value === null ? 'n/a' : value.toFixed(5));
+const formatMeters = (value: number | null) => {
+  if (value === null) return 'n/a';
+  if (value >= 1000) return `${(value / 1000).toFixed(2)} km`;
+  return `${Math.round(value)} m`;
+};
+
+const SpatialDebugOverlay: React.FC<{ snapshot: SpatialDebugSnapshot }> = ({ snapshot }) => (
+  <div className="pointer-events-none absolute bottom-6 left-1/2 z-40 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-cyan-300/20 bg-black/75 p-3 text-[11px] leading-5 text-cyan-50 shadow-2xl shadow-black/45 backdrop-blur-md">
+    <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
+      <span className="font-semibold uppercase tracking-[0.2em] text-cyan-200">Spatial Debug</span>
+      <span className="text-cyan-200/70">{snapshot.surfaceMode} / {snapshot.transitionProgress.toFixed(2)}</span>
+    </div>
+    <div className="grid grid-cols-[8.5rem_1fr] gap-x-3 gap-y-1">
+      <span className="text-cyan-200/60">canonical</span>
+      <span>{formatCoordinate(snapshot.canonicalLat)}, {formatCoordinate(snapshot.canonicalLng)}</span>
+      <span className="text-cyan-200/60">globe center</span>
+      <span>{formatCoordinate(snapshot.globeLat)}, {formatCoordinate(snapshot.globeLng)}</span>
+      <span className="text-cyan-200/60">camera dir</span>
+      <span>{formatCoordinate(snapshot.globeCameraDirectionLat)}, {formatCoordinate(snapshot.globeCameraDirectionLng)}</span>
+      <span className="text-cyan-200/60">map center</span>
+      <span>{formatCoordinate(snapshot.mapLat)}, {formatCoordinate(snapshot.mapLng)}</span>
+      <span className="text-cyan-200/60">source</span>
+      <span>{snapshot.targetSource ?? 'n/a'}</span>
+      <span className="text-cyan-200/60">delta</span>
+      <span>{formatMeters(snapshot.deltaMeters)}</span>
+    </div>
+  </div>
+);
+
+const GlobeStageOverlays: React.FC<{
+  variant?: 'docked' | 'fullBleed';
+  stats?: { countryCount: number; cityCount: number; eventCount: number };
+  onCenter?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onWorld?: () => void;
+}> = ({
+  variant = 'docked',
+  stats = { countryCount: 0, cityCount: 0, eventCount: 0 },
+  onCenter,
+  onZoomIn,
+  onZoomOut,
+  onWorld,
+}) => (
+  <>
+    <div className={`ss-glass ss-glass--liquid pointer-events-none absolute z-10 hidden w-[clamp(132px,9vw,154px)] overflow-hidden rounded-2xl px-3.5 py-3 text-gray-300 md:block ${variant === 'fullBleed' ? 'bottom-[calc(clamp(154px,19vh,176px)+32px)] left-[calc(clamp(14px,1.25vw,22px)+clamp(248px,17vw,292px)+16px)]' : 'bottom-20 left-5'}`}>
+      <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-2.5">
+        <Globe2 className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
+        <div>
+          <div className="text-base font-semibold leading-none text-white">{stats.countryCount}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Countries</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2.5 border-b border-white/[0.08] py-2.5">
+        <MapPin className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
+        <div>
+          <div className="text-base font-semibold leading-none text-white">{stats.cityCount}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Cities</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2.5 pt-2.5">
+        <CalendarDays className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
+        <div>
+          <div className="text-base font-semibold leading-none text-white">{stats.eventCount}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Events</div>
+        </div>
+      </div>
+    </div>
+
+    <div className={`pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-8 text-sm text-gray-400 ${variant === 'fullBleed' ? 'bottom-8' : 'bottom-20'}`}>
+      <span className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-gray-500" aria-hidden="true" />
+        Drag to rotate
+      </span>
+      <span className="flex items-center gap-2">
+        <Clock3 className="h-4 w-4 text-gray-500" aria-hidden="true" />
+        Scroll to zoom
+      </span>
+      <span className="flex items-center gap-2">
+        <MapPin className="h-4 w-4 text-gray-500" aria-hidden="true" />
+        Click on pins or countries
+      </span>
+    </div>
+
+    <div className="pointer-events-auto absolute left-[calc(clamp(14px,1.25vw,22px)+clamp(248px,17vw,292px)+16px)] top-[clamp(76px,9vh,84px)] z-10 flex flex-col gap-2 max-md:hidden">
+      {[
+        { label: 'Center globe', icon: <Crosshair className="h-5 w-5" />, onClick: onCenter },
+        { label: 'Zoom in', icon: <Plus className="h-5 w-5" />, onClick: onZoomIn },
+        { label: 'Zoom out', icon: <Minus className="h-5 w-5" />, onClick: onZoomOut },
+        { label: 'World view', icon: <Globe2 className="h-5 w-5" />, onClick: onWorld },
+      ].map((control) => (
+        <button
+          key={control.label}
+          type="button"
+          onClick={control.onClick}
+          className="ss-glass ss-glass--liquid ss-glass--interactive flex h-11 w-11 items-center justify-center rounded-xl text-gray-100"
+          aria-label={control.label}
+        >
+          {control.icon}
+        </button>
+      ))}
+    </div>
+  </>
+);

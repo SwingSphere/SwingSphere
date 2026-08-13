@@ -1,0 +1,563 @@
+{
+  "target_url": "https://sites.research.google/languages/language-explorer/",
+  "status": 200,
+  "title": "Google Research Language Explorer",
+  "html_keyword_counts": {
+    "three": 0,
+    "webgl": 0,
+    "shader": 0,
+    "fragment": 0,
+    "vertex": 0,
+    "gl_Position": 0,
+    "gltf": 0,
+    "glb": 0,
+    "draco": 0,
+    "ktx2": 0,
+    "basis": 0,
+    "geojson": 0,
+    "topojson": 0,
+    "requestAnimationFrame": 0,
+    "OrbitControls": 0,
+    "PerspectiveCamera": 0,
+    "Scene": 0,
+    "Mesh": 0
+  },
+  "initial_interesting_urls": [
+    "https://sites.research.google/languages/language-explorer/assets/1KX9fEk5.css",
+    "https://sites.research.google/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/BjblsY1K.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/C2DW12fk.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/C_a8nfOC.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/CgFNmmkn.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/DFGMXVjE.css",
+    "https://sites.research.google/languages/language-explorer/assets/DbNk1PuX.css",
+    "https://sites.research.google/languages/language-explorer/assets/Dkg2SAQs.css",
+    "https://sites.research.google/languages/language-explorer/assets/DtqKTFO9.min.js",
+    "https://sites.research.google/languages/language-explorer/assets/sHKlBl1N.min.js",
+    "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/4511bb1515bed04a0a0bf3d5512fbea0ec273f6f.webm",
+    "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/62ca0d40373b029b5aea64aa840dfbc82d9779c7.mp4",
+    "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/fcf2bb49998b28c77ba39db0da2aa35d86786caf.webm"
+  ],
+  "js_bundle_count": 7,
+  "js_analysis": [
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+      "saved_to": "analysis_output\\scripts\\B1Ppr2Cb.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 2,
+        "fragment": 1,
+        "vertex": 1,
+        "gl_Position": 1,
+        "gltf": 0,
+        "glb": 0,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 0,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 0
+      },
+      "discovered_urls": [
+        "https://sites.research.google/languages/language-explorer/assets/,this.onMouseMove=this.onMouseMove.bin",
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/U-63NcXm.min.js"
+      ]
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/BjblsY1K.min.js",
+      "saved_to": "analysis_output\\scripts\\BjblsY1K.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 6,
+        "fragment": 3,
+        "vertex": 5,
+        "gl_Position": 1,
+        "gltf": 0,
+        "glb": 0,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 0,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 6
+      },
+      "discovered_urls": [
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js"
+      ]
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/C2DW12fk.min.js",
+      "saved_to": "analysis_output\\scripts\\C2DW12fk.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 0,
+        "fragment": 0,
+        "vertex": 0,
+        "gl_Position": 0,
+        "gltf": 0,
+        "glb": 0,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 0,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 0
+      },
+      "discovered_urls": [
+        "https://sites.research.google/languages/language-explorer/assets/,s.textContent=e.css",
+        "https://sites.research.google/languages/language-explorer/assets/.replaceSync(this.css",
+        "https://sites.research.google/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/BjblsY1K.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/CgFNmmkn.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/DtqKTFO9.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/e+=s.css",
+        "https://sites.research.google/languages/language-explorer/assets/t.css",
+        "https://sites.research.google/languages/language-explorer/assets/this.css",
+        "https://sites.research.google/languages/language-explorer/chunks/BqLAmBhB.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/U-63NcXm.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/fm4Ddfrf.min.js"
+      ]
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/C_a8nfOC.min.js",
+      "saved_to": "analysis_output\\scripts\\C_a8nfOC.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 0,
+        "fragment": 0,
+        "vertex": 0,
+        "gl_Position": 0,
+        "gltf": 0,
+        "glb": 0,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 0,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 0
+      },
+      "discovered_urls": []
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/CgFNmmkn.min.js",
+      "saved_to": "analysis_output\\scripts\\CgFNmmkn.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 0,
+        "fragment": 0,
+        "vertex": 0,
+        "gl_Position": 0,
+        "gltf": 0,
+        "glb": 0,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 0,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 3
+      },
+      "discovered_urls": [
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/U-63NcXm.min.js"
+      ]
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/DtqKTFO9.min.js",
+      "saved_to": "analysis_output\\scripts\\DtqKTFO9.min.js",
+      "keyword_counts": {
+        "three": 66,
+        "webgl": 269,
+        "shader": 210,
+        "fragment": 476,
+        "vertex": 484,
+        "gl_Position": 18,
+        "gltf": 0,
+        "glb": 4,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 4,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 1,
+        "Scene": 34,
+        "Mesh": 126
+      },
+      "discovered_urls": [
+        "https://sites.research.google/languages/language-explorer/assets/,C.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,M.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,P.__webglColorRenderbuffer=[],n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,R1.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,X!==null&&a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.documentMouseMove.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.handleClick.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.handleMouseMove.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.onMouseDown.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.setKeyboard.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,this.setMouse.bin",
+        "https://sites.research.google/languages/language-explorer/assets/0&&(a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/:n.morphTargets===!0&&i.bin",
+        "https://sites.research.google/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/BjblsY1K.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/CgFNmmkn.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/F3,this.js",
+        "https://sites.research.google/languages/language-explorer/assets/R1.bin",
+        "https://sites.research.google/languages/language-explorer/assets/Three.js",
+        "https://sites.research.google/languages/language-explorer/assets/a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/ae(this.onRaf.bin",
+        "https://sites.research.google/languages/language-explorer/assets/if(n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/three.js",
+        "https://sites.research.google/languages/language-explorer/assets/{R1.bin",
+        "https://sites.research.google/languages/language-explorer/assets/{if(a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/{n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}if(n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}n.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}}a.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}}}a.bin",
+        "https://sites.research.google/languages/language-explorer/chunks/BqLAmBhB.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/U-63NcXm.min.js"
+      ]
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/sHKlBl1N.min.js",
+      "saved_to": "analysis_output\\scripts\\sHKlBl1N.min.js",
+      "keyword_counts": {
+        "three": 0,
+        "webgl": 0,
+        "shader": 0,
+        "fragment": 0,
+        "vertex": 0,
+        "gl_Position": 0,
+        "gltf": 0,
+        "glb": 1,
+        "draco": 0,
+        "ktx2": 0,
+        "basis": 0,
+        "geojson": 0,
+        "topojson": 0,
+        "requestAnimationFrame": 2,
+        "OrbitControls": 0,
+        "PerspectiveCamera": 0,
+        "Scene": 0,
+        "Mesh": 0
+      },
+      "discovered_urls": [
+        "https://sites.research.google/fuzzy-search.js",
+        "https://sites.research.google/fuzzy-search.json",
+        "https://sites.research.google/languages/language-explorer/assets/,e._endFn=e._endListener.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,e._endTimers[t[k]]=setTimeout(e._ended.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,e._errorFn=e._errorListener.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,e._loadFn=e._loadListener.bin",
+        "https://sites.research.google/languages/language-explorer/assets/,z!==1/0&&(u._endTimers[s._id]=setTimeout(u._ended.bin",
+        "https://sites.research.google/languages/language-explorer/assets/.then(l=>l.js",
+        "https://sites.research.google/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/BjblsY1K.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/CgFNmmkn.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/DtqKTFO9.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_countries.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_endangerment.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_languages.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_number_of_speakers.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_regions.js",
+        "https://sites.research.google/languages/language-explorer/assets/all_scripts.js",
+        "https://sites.research.google/languages/language-explorer/assets/howler.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/4e4smam0.css",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/B1Ppr2Cb.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/BjblsY1K.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/CgFNmmkn.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/D1-geIIV.css",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/DbNk1PuX.css",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/DtqKTFO9.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/Dx3RJRGR.css",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/BqLAmBhB.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/CVfkMyKi.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/D0eycq2R.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/DUYT-R4X.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/U-63NcXm.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/fm4Ddfrf.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/chunks/i3yquKm8.min.js",
+        "https://sites.research.google/languages/language-explorer/assets/setTimeout(a._ended.bin",
+        "https://sites.research.google/languages/language-explorer/assets/}.bin",
+        "https://sites.research.google/languages/language-explorer/chunks/BqLAmBhB.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/CVfkMyKi.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/Ca8ypu82.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/D0eycq2R.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/DUYT-R4X.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/U-63NcXm.min.js",
+        "https://sites.research.google/languages/language-explorer/chunks/fm4Ddfrf.min.js",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/0633cb5760396fc9e55b2de5afe3b5787f7f4e6f.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/0c9dd1c507beb2bd5bcf692241cb068fe3cf2994.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/10bde3adfaa6a2a8df55bd716e59bd73e9f70854.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/12b61717e95eae3d03827baf9ee22d70395ce7b5.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/12d605a9c0a14b9de2c871c16af21c0e9131de0d.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/17c39f1f576b14cf7fc0557db53b4357058bd517.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/1806ed3ba7e692dd58cff2ae00f72a439129de0b.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/35b5e048b7138661a024d8be9010b0ee2f1c6277.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/3eec82465f08ae43fb1b4c888fd16b75d9bfa24c.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/42b6a9b08660d057fb6bf6da5c3d567435f5e895.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/4511bb1515bed04a0a0bf3d5512fbea0ec273f6f.webm",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/4b37a093e6bd191a9664a03453897e5a2f0ad18a.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/563dd4bed963ae6957360e7e80f02b10f0e7a193.wav",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/5a3ec1e2bf5c5e70d76939c8825f29b569781395.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/5af32c9670bf6583f96dc747d367d94a83f8d65e.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/60130aa297683ce90ba86b056e9263622ed15853.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/700a27aebe55c422bf00ff0bd51a6b70d9feb626.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/a5d9ad43f6798270fb1312730ab96361f5ef0ca2.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/a95cd5d0f2557f5bb7c07b7113bd5d152b745396.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/a9c8fc0e0b867d4315e050c08c9c7feef1bcb59d.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/ac3d0216e064c8efa1f400c9987d6d8af0c62712.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/ad0cca51c2f20eaeb43fa5f0ee524deb7802a829.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/b60d0a12b85f57a86070ea1e92cd9c5b4aa5a36c.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/b67bbdd1456db04b57d311e2ebe2db333d6f44a2.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/ce572d4027d08fca85ae6a28ceacf1b4153fa1f8.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/d2b971d230a84f695f15a77dcb530f4d049efc19.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/fc17ee961cf006ed51d3c4563163ecbb7f09bb80.mp3",
+        "https://storage.googleapis.com/gweb-mobius-cdn/research-language-explorer/uploads/fcf2bb49998b28c77ba39db0da2aa35d86786caf.webm"
+      ]
+    }
+  ],
+  "asset_downloads": [
+    {
+      "url": "https://sites.research.google/fuzzy-search.json",
+      "bucket": "data",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,C.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,M.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,P.__webglColorRenderbuffer=[],n.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,R1.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,X!==null&&a.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,a.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,e._endFn=e._endListener.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,e._endTimers[t[k]]=setTimeout(e._ended.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,e._errorFn=e._errorListener.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,e._loadFn=e._loadListener.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,n.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,s.textContent=e.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.documentMouseMove.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.handleClick.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.handleMouseMove.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.onMouseDown.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.onMouseMove=this.onMouseMove.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.setKeyboard.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,this.setMouse.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/,z!==1/0&&(u._endTimers[s._id]=setTimeout(u._ended.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/.replaceSync(this.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/0&&(a.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/1KX9fEk5.css",
+      "bucket": "styles",
+      "saved_to": "analysis_output\\styles\\1KX9fEk5.css",
+      "size_bytes": 83082
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/:n.morphTargets===!0&&i.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/DFGMXVjE.css",
+      "bucket": "styles",
+      "saved_to": "analysis_output\\styles\\DFGMXVjE.css",
+      "size_bytes": 2609
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/DbNk1PuX.css",
+      "bucket": "styles",
+      "saved_to": "analysis_output\\styles\\DbNk1PuX.css",
+      "size_bytes": 481
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/Dkg2SAQs.css",
+      "bucket": "styles",
+      "saved_to": "analysis_output\\styles\\Dkg2SAQs.css",
+      "size_bytes": 82602
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/R1.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/a.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/ae(this.onRaf.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/e+=s.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/if(n.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/4e4smam0.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/D1-geIIV.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/DbNk1PuX.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/languages/language-explorer/assets/Dx3RJRGR.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/n.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/setTimeout(a._ended.bin",
+      "bucket": "models",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "url": "https://sites.research.google/languages/language-explorer/assets/t.css",
+      "bucket": "styles",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ],
+  "totals": {
+    "interesting_urls_total": 117,
+    "downloaded_assets_total": 4
+  }
+}

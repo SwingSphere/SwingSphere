@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta
+    name="description"
+    content="A local, original recovery exhibit summarizing archived Google Research Language Explorer assets."
+  />
+  <title>Language Explorer Recovery Exhibit</title>
+  <style>
+    :root {
+      --ink: #f5f7ff;
+      --muted: #aeb7cc;
+      --dim: #77829a;
+      --blue: #7ca8ff;
+      --blue-strong: #4f86f7;
+      --cyan: #67e8f9;
+      --green: #65d6a8;
+      --amber: #f5c96a;
+      --red: #ff8b8b;
+      --panel: rgba(16, 21, 35, 0.82);
+      --panel-strong: #111727;
+      --line: rgba(183, 201, 255, 0.16);
+      --line-strong: rgba(183, 201, 255, 0.3);
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+      --radius: 22px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #070a12;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 72% 18%, rgba(70, 111, 221, 0.17), transparent 31rem),
+        radial-gradient(circle at 8% 55%, rgba(43, 191, 198, 0.08), transparent 28rem),
+        #070a12;
+    }
+
+    a { color: inherit; }
+
+    button, input { font: inherit; }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 20;
+      transform: translateY(-150%);
+      border-radius: 10px;
+      background: var(--ink);
+      color: #080b13;
+      padding: 10px 14px;
+      font-weight: 700;
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 76px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.86rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand-mark {
+      width: 31px;
+      aspect-ratio: 1;
+      border: 1px solid rgba(124, 168, 255, 0.55);
+      border-radius: 50%;
+      background:
+        linear-gradient(90deg, transparent 48%, rgba(124, 168, 255, 0.8) 49%, rgba(124, 168, 255, 0.8) 51%, transparent 52%),
+        linear-gradient(0deg, transparent 48%, rgba(103, 232, 249, 0.6) 49%, rgba(103, 232, 249, 0.6) 51%, transparent 52%);
+      box-shadow: inset 0 0 18px rgba(79, 134, 247, 0.28), 0 0 20px rgba(79, 134, 247, 0.13);
+    }
+
+    .status-pill, .eyebrow, .tag, .legend-item, .asset-kind {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: 0.04em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(101, 214, 168, 0.32);
+      border-radius: 999px;
+      background: rgba(101, 214, 168, 0.08);
+      color: #a8f1d2;
+      padding: 8px 12px;
+      font-size: 0.76rem;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(101, 214, 168, 0.8);
+    }
+
+    main { padding: 60px 0 80px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(390px, 0.98fr);
+      align-items: center;
+      gap: clamp(34px, 6vw, 84px);
+      min-height: 580px;
+      padding-bottom: 70px;
+    }
+
+    .eyebrow {
+      margin: 0 0 15px;
+      color: var(--cyan);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 24px;
+      font-size: clamp(2.75rem, 6.2vw, 5.65rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .lede {
+      max-width: 670px;
+      margin-bottom: 30px;
+      color: var(--muted);
+      font-size: clamp(1.02rem, 1.8vw, 1.22rem);
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      padding: 10px 16px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .button:hover { transform: translateY(-2px); border-color: rgba(124, 168, 255, 0.72); }
+    .button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+    .button.primary { background: var(--blue-strong); border-color: var(--blue-strong); color: white; }
+    .button.secondary { background: rgba(255, 255, 255, 0.035); }
+
+    .globe-stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 500px;
+      isolation: isolate;
+    }
+
+    .globe-stage::before {
+      content: "";
+      position: absolute;
+      inset: 5% 3%;
+      z-index: -2;
+      background-image: radial-gradient(rgba(214, 225, 255, 0.48) 0.7px, transparent 0.7px);
+      background-size: 31px 31px;
+      mask-image: radial-gradient(circle, black, transparent 72%);
+      opacity: 0.42;
+    }
+
+    .orbit {
+      position: absolute;
+      width: min(100%, 500px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(124, 168, 255, 0.16);
+      border-radius: 50%;
+      transform: rotate(-15deg) scaleY(0.42);
+      box-shadow: 0 0 40px rgba(124, 168, 255, 0.05);
+    }
+
+    .globe {
+      position: relative;
+      width: min(74vw, 366px);
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgba(154, 188, 255, 0.58);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 33% 27%, rgba(116, 234, 255, 0.6), transparent 4%),
+        radial-gradient(circle at 56% 67%, rgba(105, 211, 194, 0.5), transparent 8%),
+        radial-gradient(circle at 65% 36%, rgba(98, 151, 255, 0.8), transparent 23%),
+        radial-gradient(circle at 30% 70%, rgba(41, 74, 151, 0.95), transparent 32%),
+        radial-gradient(circle at 30% 28%, #243c7f, #0b1328 62%, #03050a 100%);
+      box-shadow:
+        inset -54px -25px 78px rgba(0, 0, 0, 0.86),
+        inset 18px 14px 45px rgba(105, 212, 255, 0.16),
+        0 0 50px rgba(79, 134, 247, 0.2),
+        0 0 110px rgba(79, 134, 247, 0.12);
+    }
+
+    .globe::before, .globe::after {
+      content: "";
+      position: absolute;
+      inset: -24%;
+      border: 1px solid rgba(147, 191, 255, 0.22);
+      border-radius: 50%;
+    }
+
+    .globe::before {
+      background: repeating-linear-gradient(90deg, transparent 0 34px, rgba(157, 203, 255, 0.13) 35px 36px);
+      transform: rotate(-12deg);
+      animation: drift 18s linear infinite;
+    }
+
+    .globe::after {
+      background: repeating-linear-gradient(0deg, transparent 0 34px, rgba(157, 203, 255, 0.11) 35px 36px);
+      transform: rotate(9deg);
+    }
+
+    .globe-dot {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 10px 3px var(--cyan);
+    }
+
+    .dot-a { top: 28%; left: 60%; }
+    .dot-b { top: 48%; left: 38%; width: 3px; height: 3px; }
+    .dot-c { top: 64%; left: 66%; width: 4px; height: 4px; box-shadow: 0 0 10px 3px var(--blue); }
+
+    .globe-caption {
+      position: absolute;
+      right: 0;
+      bottom: 9%;
+      max-width: 230px;
+      border: 1px solid var(--line-strong);
+      border-radius: 13px;
+      background: rgba(8, 12, 22, 0.88);
+      box-shadow: var(--shadow);
+      padding: 13px 15px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.5;
+    }
+
+    .globe-caption strong { display: block; margin-bottom: 3px; color: var(--amber); }
+
+    @keyframes drift { to { transform: rotate(348deg); } }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-block: 1px solid var(--line);
+      margin-bottom: 76px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 25px 22px;
+      border-right: 1px solid var(--line);
+    }
+
+    .metric:first-child { padding-left: 0; }
+    .metric:last-child { border-right: 0; }
+    .metric-value { display: block; margin-bottom: 5px; font-size: clamp(1.45rem, 3vw, 2.25rem); font-weight: 800; letter-spacing: -0.04em; }
+    .metric-label { color: var(--muted); font-size: 0.83rem; }
+
+    section { margin-bottom: 76px; scroll-margin-top: 24px; }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 0.7fr 1.3fr;
+      gap: 30px;
+      align-items: end;
+      margin-bottom: 28px;
+    }
+
+    h2 { margin-bottom: 0; font-size: clamp(2rem, 4vw, 3.3rem); line-height: 1.02; letter-spacing: -0.045em; }
+    .section-copy { max-width: 650px; margin: 0; color: var(--muted); line-height: 1.65; }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .filter-button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 13px;
+      cursor: pointer;
+    }
+
+    .filter-button[aria-pressed="true"] { border-color: rgba(124, 168, 255, 0.55); background: rgba(79, 134, 247, 0.14); color: white; }
+    .filter-button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .asset-card, .concept-card, .missing-card, .launch-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+    }
+
+    .asset-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      padding: 21px;
+    }
+
+    .asset-card[hidden] { display: none; }
+    .asset-kind { display: inline-block; margin-bottom: 10px; color: var(--cyan); font-size: 0.7rem; text-transform: uppercase; }
+    .asset-card h3 { margin-bottom: 8px; font-size: 1.03rem; overflow-wrap: anywhere; }
+    .asset-card p { margin-bottom: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
+    .asset-size { color: var(--dim); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.76rem; white-space: nowrap; }
+
+    .salvage-grid {
+      display: grid;
+      grid-template-columns: 0.92fr 1.08fr;
+      gap: 18px;
+    }
+
+    .score-card {
+      display: grid;
+      place-items: center;
+      min-height: 370px;
+      border: 1px solid rgba(124, 168, 255, 0.28);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at center, rgba(79, 134, 247, 0.13), transparent 54%),
+        var(--panel-strong);
+      text-align: center;
+      padding: 30px;
+    }
+
+    .score-ring {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 180px;
+      aspect-ratio: 1;
+      margin-bottom: 22px;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) 0 68%, rgba(255, 255, 255, 0.09) 68% 100%);
+      box-shadow: 0 0 45px rgba(101, 214, 168, 0.1);
+    }
+
+    .score-ring::before {
+      content: "";
+      width: 142px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #0d1321;
+    }
+
+    .score-text { position: absolute; }
+    .score-value { display: block; font-size: 2.6rem; font-weight: 850; letter-spacing: -0.06em; }
+    .score-label { color: var(--muted); font-size: 0.75rem; }
+    .score-card p { max-width: 350px; margin-bottom: 0; color: var(--muted); line-height: 1.6; }
+
+    .concept-list { display: grid; gap: 10px; }
+
+    .concept-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .concept-icon {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      aspect-ratio: 1;
+      border: 1px solid rgba(124, 168, 255, 0.27);
+      border-radius: 12px;
+      background: rgba(79, 134, 247, 0.08);
+      color: var(--blue);
+      font-weight: 850;
+    }
+
+    .concept-card h3 { margin-bottom: 3px; font-size: 0.98rem; }
+    .concept-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
+    .tag { border-radius: 999px; padding: 6px 9px; font-size: 0.66rem; text-transform: uppercase; }
+    .tag.high { background: rgba(101, 214, 168, 0.1); color: #a7efd0; }
+    .tag.medium { background: rgba(245, 201, 106, 0.1); color: #ffe0a0; }
+    .tag.low { background: rgba(255, 139, 139, 0.1); color: #ffb2b2; }
+
+    .missing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .missing-card { padding: 22px; }
+    .missing-index { display: block; margin-bottom: 18px; color: var(--red); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.72rem; }
+    .missing-card h3 { margin-bottom: 9px; font-size: 1rem; }
+    .missing-card p { margin-bottom: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
+
+    .launch-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 30px;
+      padding: clamp(24px, 5vw, 48px);
+      background:
+        linear-gradient(135deg, rgba(79, 134, 247, 0.13), transparent 48%),
+        var(--panel-strong);
+    }
+
+    .launch-card h2 { margin-bottom: 15px; font-size: clamp(1.8rem, 4vw, 3rem); }
+    .launch-card p { color: var(--muted); line-height: 1.65; }
+    .code-block {
+      align-self: center;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(3, 5, 10, 0.7);
+      padding: 18px;
+      color: #d9e7ff;
+      font: 0.78rem/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 22px;
+      color: var(--dim);
+      font-size: 0.7rem;
+    }
+
+    .legend-item::before { content: "●"; margin-right: 6px; }
+    .legend-item.recovered::before { color: var(--green); }
+    .legend-item.inferred::before { color: var(--amber); }
+    .legend-item.missing::before { color: var(--red); }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-top: 1px solid var(--line);
+      padding: 28px 0 38px;
+      color: var(--dim);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      .hero, .salvage-grid, .launch-card { grid-template-columns: 1fr; }
+      .hero { padding-top: 35px; }
+      .globe-stage { min-height: 430px; }
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .metric:nth-child(3) { padding-left: 0; }
+      .section-head { grid-template-columns: 1fr; align-items: start; }
+      .missing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 24px, 1180px); }
+      header { min-height: 66px; }
+      .status-pill { display: none; }
+      main { padding-top: 34px; }
+      .hero { min-height: auto; padding-bottom: 50px; }
+      .globe-stage { min-height: 360px; }
+      .globe { width: min(78vw, 300px); }
+      .globe-caption { right: 3%; bottom: 1%; max-width: 200px; }
+      .asset-grid, .missing-grid { grid-template-columns: 1fr; }
+      .summary-strip { margin-bottom: 58px; }
+      .metric { padding: 19px 14px; }
+      .concept-card { grid-template-columns: auto 1fr; }
+      .concept-card .tag { grid-column: 2; justify-self: start; }
+      footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to recovered material</a>
+
+  <div class="shell">
+    <header aria-label="Exhibit header">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Recovery exhibit</div>
+      <div class="status-pill">Local inspection only</div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Google Research Language Explorer · archive review</p>
+          <h1 id="page-title">What survived the scrape?</h1>
+          <p class="lede">
+            Eleven compiled assets reveal a polished globe experience, a language discovery interface,
+            and a strong visual system. This original exhibit explains what can be studied or rebuilt—and
+            what is still missing—without running the recovered site code.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#inventory">Inspect the archive</a>
+            <a class="button secondary" href="#missing">See what is missing</a>
+          </div>
+        </div>
+
+        <div class="globe-stage" role="img" aria-label="Original decorative placeholder globe. It is not the recovered Google globe and contains no recovered geography or language data.">
+          <div class="orbit" aria-hidden="true"></div>
+          <div class="globe" aria-hidden="true">
+            <span class="globe-dot dot-a"></span>
+            <span class="globe-dot dot-b"></span>
+            <span class="globe-dot dot-c"></span>
+          </div>
+          <div class="globe-caption">
+            <strong>Illustration only</strong>
+            Original CSS placeholder—not recovered geometry, shaders, or data.
+          </div>
+        </div>
+      </section>
+
+      <div class="summary-strip" aria-label="Recovery summary">
+        <div class="metric"><span class="metric-value">11</span><span class="metric-label">compiled files recovered</span></div>
+        <div class="metric"><span class="metric-value">2.17 MB</span><span class="metric-label">JavaScript and CSS</span></div>
+        <div class="metric"><span class="metric-value">8+</span><span class="metric-label">imported chunks absent</span></div>
+        <div class="metric"><span class="metric-value">0</span><span class="metric-label">complete runnable pages</span></div>
+      </div>
+
+      <section id="inventory" aria-labelledby="inventory-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">01 · recovered files</p>
+            <h2 id="inventory-title">Archive inventory</h2>
+          </div>
+          <p class="section-copy">
+            The files are minified production output, not editable source modules. Their names, sizes,
+            imports, strings, shaders, events, and CSS selectors still expose the system’s structure.
+          </p>
+        </div>
+
+        <div class="filter-bar" role="group" aria-label="Filter recovered assets">
+          <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All 11</button>
+          <button class="filter-button" type="button" data-filter="javascript" aria-pressed="false">JavaScript 7</button>
+          <button class="filter-button" type="button" data-filter="css" aria-pressed="false">CSS 4</button>
+        </div>
+
+        <div class="asset-grid" id="asset-grid">
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · globe runtime</span><h3>DtqKTFO9.min.js</h3><p>Three.js/WebGL engine, camera, rendering, bloom, country interaction, globe events, intro sequence, and shared view state.</p></div><span class="asset-size">1.42 MB</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · application</span><h3>sHKlBl1N.min.js</h3><p>Preact UI, routes, search, language and country views, filters, responsive navigation, modals, FAQ, and Howler audio.</p></div><span class="asset-size">545 KB</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · shader</span><h3>B1Ppr2Cb.min.js</h3><p>Animated glowing point layer with Perlin-style noise, wobble, radial sprites, dimming, and country-linked points.</p></div><span class="asset-size">9.2 KB</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · shader</span><h3>BjblsY1K.min.js</h3><p>Transparent textured sphere with a view-dependent rim/atmosphere opacity shader and fade controls.</p></div><span class="asset-size">4.4 KB</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · web component</span><h3>C2DW12fk.min.js</h3><p>Lit-based &lt;rle-globe&gt; wrapper that mounts the canvas, starts the intro, and bridges selection/highlight calls.</p></div><span class="asset-size">17.6 KB</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · geometry</span><h3>CgFNmmkn.min.js</h3><p>Small inner black sphere used as the visual globe core.</p></div><span class="asset-size">316 B</span></article>
+          <article class="asset-card" data-kind="javascript"><div><span class="asset-kind">JavaScript · navigation</span><h3>C_a8nfOC.min.js</h3><p>Hash-aware &lt;rle-header&gt; component that marks the active navigation link.</p></div><span class="asset-size">555 B</span></article>
+          <article class="asset-card" data-kind="css"><div><span class="asset-kind">CSS · application</span><h3>Dkg2SAQs.css</h3><p>Full component styling for the dark globe UI, search, filters, panels, controls, navigation, responsive layouts, and motion.</p></div><span class="asset-size">82.6 KB</span></article>
+          <article class="asset-card" data-kind="css"><div><span class="asset-kind">CSS · application + loader</span><h3>1KX9fEk5.css</h3><p>The same application stylesheet as Dkg2SAQs.css, plus the desktop preloader block.</p></div><span class="asset-size">83.1 KB</span></article>
+          <article class="asset-card" data-kind="css"><div><span class="asset-kind">CSS · preloader</span><h3>DbNk1PuX.css</h3><p>A fixed black desktop loading overlay with video, status text, and a fade-out state.</p></div><span class="asset-size">481 B</span></article>
+          <article class="asset-card" data-kind="css"><div><span class="asset-kind">CSS · foundation</span><h3>DFGMXVjE.css</h3><p>Global reset, responsive grid variables, Google Sans stacks, base controls, and reduced-motion behavior.</p></div><span class="asset-size">2.6 KB</span></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="salvage-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">02 · salvageability</p>
+            <h2 id="salvage-title">Useful as a blueprint</h2>
+          </div>
+          <p class="section-copy">
+            “Salvageable” here means understandable enough to inform an original rebuild. It does not mean
+            the recovered production files can or should be shipped as-is.
+          </p>
+        </div>
+
+        <div class="salvage-grid">
+          <div class="score-card">
+            <div class="score-ring" aria-label="Concept recovery score: 68 percent">
+              <div class="score-text"><span class="score-value">68%</span><span class="score-label">concept recovery</span></div>
+            </div>
+            <p>High confidence in the interface model and globe behaviors; low confidence in a faithful runnable restoration without the missing chunks and content.</p>
+          </div>
+
+          <div class="concept-list" aria-label="Recoverable system concepts">
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">G</span><div><h3>Globe rendering system</h3><p>Scene, camera, particles, atmosphere, country hover/select, labels, zoom, drag, and intro events are visible in code.</p></div><span class="tag high">High</span></article>
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">S</span><div><h3>Search and discovery model</h3><p>Fuzzy search, recent searches, routes, suggestions, alphabet browsing, and mini/detail views are identifiable.</p></div><span class="tag high">High</span></article>
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">F</span><div><h3>Language filter taxonomy</h3><p>Country, region, writing system, endangerment, and speaker-count filters are clearly represented.</p></div><span class="tag high">High</span></article>
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">U</span><div><h3>Responsive UI system</h3><p>Component roles, breakpoints, states, transitions, accessibility hooks, and visual hierarchy survive in CSS.</p></div><span class="tag high">High</span></article>
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">A</span><div><h3>Audio experience</h3><p>Playback controls and event sounds are understood, but the referenced recordings were not recovered.</p></div><span class="tag medium">Medium</span></article>
+            <article class="concept-card"><span class="concept-icon" aria-hidden="true">R</span><div><h3>Runnable restoration</h3><p>Imports, build graph, data payloads, geometry, and media are incomplete.</p></div><span class="tag low">Low</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="missing" aria-labelledby="missing-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">03 · gaps</p>
+            <h2 id="missing-title">What the scrape did not capture</h2>
+          </div>
+          <p class="section-copy">
+            These gaps prevent a faithful local run. Reconstructing them would require new implementation,
+            properly sourced data, and explicit licensing review—not guesswork around the archived bundles.
+          </p>
+        </div>
+
+        <div class="missing-grid">
+          <article class="missing-card"><span class="missing-index">MISSING / 01</span><h3>Imported code chunks</h3><p>At least eight referenced modules are absent, including shared Three.js, settings, routing, and lazy-loaded view chunks.</p></article>
+          <article class="missing-card"><span class="missing-index">MISSING / 02</span><h3>Language datasets</h3><p>The six named language, country, region, script, endangerment, and speaker-count datasets were referenced but not saved.</p></article>
+          <article class="missing-card"><span class="missing-index">MISSING / 03</span><h3>Country geometry</h3><p>The configured country mesh/JSON payload needed to render and raycast the actual globe is not present in the archive.</p></article>
+          <article class="missing-card"><span class="missing-index">MISSING / 04</span><h3>Audio and video</h3><p>Many language recordings, interface sounds, and intro media URLs were discovered, but the media itself was not recovered.</p></article>
+          <article class="missing-card"><span class="missing-index">MISSING / 05</span><h3>Page and build graph</h3><p>The HTML “snapshot” is only a 64-byte fetch representation. There is no complete document, manifest, source map set, or lockfile.</p></article>
+          <article class="missing-card"><span class="missing-index">MISSING / 06</span><h3>Content services</h3><p>No backend, editorial source, update workflow, analytics configuration, or authoritative licensing context was captured.</p></article>
+        </div>
+      </section>
+
+      <section class="launch-card" aria-labelledby="launch-title">
+        <div>
+          <p class="eyebrow">04 · local viewing</p>
+          <h2 id="launch-title">Open this exhibit locally</h2>
+          <p>
+            This page has no external dependencies and can be opened directly. For consistent browser behavior,
+            serve the workspace with any local static server and visit the path shown.
+          </p>
+          <div class="legend" aria-label="Evidence legend">
+            <span class="legend-item recovered">Recovered directly</span>
+            <span class="legend-item inferred">Inferred from code</span>
+            <span class="legend-item missing">Not recovered</span>
+          </div>
+        </div>
+        <div class="code-block" role="region" aria-label="Local launch commands" tabindex="0">cd G:\sites\GoogleGlobe
+python -m http.server 8000
+
+Open:
+http://localhost:8000/
+language-explorer-recovery-preview/</div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Original explanatory preview · no recovered Google code is executed</span>
+      <span>Evidence source: local <code>analysis_output</code> archive</span>
+    </footer>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll("[data-filter]");
+    const cards = document.querySelectorAll("[data-kind]");
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const filter = button.dataset.filter;
+        buttons.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+        cards.forEach((card) => {
+          card.hidden = filter !== "all" && card.dataset.kind !== filter;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

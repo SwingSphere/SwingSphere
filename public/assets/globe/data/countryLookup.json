@@ -1,0 +1,2657 @@
+{
+  "1": {
+    "eventActive": false,
+    "id": 1,
+    "iso2": "AF",
+    "iso3": "AFG",
+    "name": "Afghanistan",
+    "pixelCount": 8241,
+    "rgb": [
+      38,
+      92,
+      174
+    ],
+    "sourceName": "Afghanistan",
+    "sourceType": "Sovereign country"
+  },
+  "10": {
+    "eventActive": false,
+    "id": 10,
+    "iso2": "AT",
+    "iso3": "AUT",
+    "name": "Austria",
+    "pixelCount": 1327,
+    "rgb": [
+      116,
+      146,
+      201
+    ],
+    "sourceName": "Austria",
+    "sourceType": "Sovereign country"
+  },
+  "100": {
+    "eventActive": false,
+    "id": 100,
+    "iso2": "MG",
+    "iso3": "MDG",
+    "name": "Madagascar",
+    "pixelCount": 6585,
+    "rgb": [
+      131,
+      176,
+      216
+    ],
+    "sourceName": "Madagascar",
+    "sourceType": "Sovereign country"
+  },
+  "101": {
+    "eventActive": true,
+    "id": 101,
+    "iso2": "MX",
+    "iso3": "MEX",
+    "name": "Mexico",
+    "pixelCount": 22779,
+    "rgb": [
+      168,
+      12,
+      134
+    ],
+    "sourceName": "Mexico",
+    "sourceType": "Sovereign country"
+  },
+  "102": {
+    "eventActive": false,
+    "id": 102,
+    "iso2": "MK",
+    "iso3": "MKD",
+    "name": "North Macedonia",
+    "pixelCount": 358,
+    "rgb": [
+      205,
+      103,
+      52
+    ],
+    "sourceName": "North Macedonia",
+    "sourceType": "Sovereign country"
+  },
+  "103": {
+    "eventActive": false,
+    "id": 103,
+    "iso2": "ML",
+    "iso3": "MLI",
+    "name": "Mali",
+    "pixelCount": 13630,
+    "rgb": [
+      242,
+      194,
+      225
+    ],
+    "sourceName": "Mali",
+    "sourceType": "Sovereign country"
+  },
+  "104": {
+    "eventActive": false,
+    "id": 104,
+    "iso2": "MM",
+    "iso3": "MMR",
+    "name": "Myanmar",
+    "pixelCount": 7702,
+    "rgb": [
+      24,
+      30,
+      143
+    ],
+    "sourceName": "Myanmar",
+    "sourceType": "Sovereign country"
+  },
+  "105": {
+    "eventActive": false,
+    "id": 105,
+    "iso2": "ME",
+    "iso3": "MNE",
+    "name": "Montenegro",
+    "pixelCount": 196,
+    "rgb": [
+      61,
+      121,
+      61
+    ],
+    "sourceName": "Montenegro",
+    "sourceType": "Sovereign country"
+  },
+  "106": {
+    "eventActive": false,
+    "id": 106,
+    "iso2": "MN",
+    "iso3": "MNG",
+    "name": "Mongolia",
+    "pixelCount": 23599,
+    "rgb": [
+      98,
+      212,
+      234
+    ],
+    "sourceName": "Mongolia",
+    "sourceType": "Sovereign country"
+  },
+  "107": {
+    "eventActive": false,
+    "id": 107,
+    "iso2": "MZ",
+    "iso3": "MOZ",
+    "name": "Mozambique",
+    "pixelCount": 8987,
+    "rgb": [
+      135,
+      48,
+      152
+    ],
+    "sourceName": "Mozambique",
+    "sourceType": "Sovereign country"
+  },
+  "108": {
+    "eventActive": false,
+    "id": 108,
+    "iso2": "MR",
+    "iso3": "MRT",
+    "name": "Mauritania",
+    "pixelCount": 11804,
+    "rgb": [
+      172,
+      139,
+      70
+    ],
+    "sourceName": "Mauritania",
+    "sourceType": "Sovereign country"
+  },
+  "109": {
+    "eventActive": false,
+    "id": 109,
+    "iso2": "MW",
+    "iso3": "MWI",
+    "name": "Malawi",
+    "pixelCount": 1235,
+    "rgb": [
+      209,
+      230,
+      243
+    ],
+    "sourceName": "Malawi",
+    "sourceType": "Sovereign country"
+  },
+  "11": {
+    "eventActive": false,
+    "id": 11,
+    "iso2": "AZ",
+    "iso3": "AZE",
+    "name": "Azerbaijan",
+    "pixelCount": 1251,
+    "rgb": [
+      153,
+      237,
+      119
+    ],
+    "sourceName": "Azerbaijan",
+    "sourceType": "Sovereign country"
+  },
+  "110": {
+    "eventActive": false,
+    "id": 110,
+    "iso2": "MY",
+    "iso3": "MYS",
+    "name": "Malaysia",
+    "pixelCount": 3562,
+    "rgb": [
+      246,
+      66,
+      161
+    ],
+    "sourceName": "Malaysia",
+    "sourceType": "Sovereign country"
+  },
+  "111": {
+    "eventActive": false,
+    "id": 111,
+    "iso2": "NA",
+    "iso3": "NAM",
+    "name": "Namibia",
+    "pixelCount": 9454,
+    "rgb": [
+      28,
+      157,
+      79
+    ],
+    "sourceName": "Namibia",
+    "sourceType": "Sovereign country"
+  },
+  "112": {
+    "eventActive": false,
+    "id": 112,
+    "iso2": "NC",
+    "iso3": "NCL",
+    "name": "New Caledonia",
+    "pixelCount": 272,
+    "rgb": [
+      65,
+      248,
+      252
+    ],
+    "sourceName": "New Caledonia",
+    "sourceType": "Dependency"
+  },
+  "113": {
+    "eventActive": false,
+    "id": 113,
+    "iso2": "NE",
+    "iso3": "NER",
+    "name": "Niger",
+    "pixelCount": 13089,
+    "rgb": [
+      102,
+      84,
+      170
+    ],
+    "sourceName": "Niger",
+    "sourceType": "Sovereign country"
+  },
+  "114": {
+    "eventActive": false,
+    "id": 114,
+    "iso2": "NG",
+    "iso3": "NGA",
+    "name": "Nigeria",
+    "pixelCount": 9662,
+    "rgb": [
+      139,
+      175,
+      88
+    ],
+    "sourceName": "Nigeria",
+    "sourceType": "Sovereign country"
+  },
+  "115": {
+    "eventActive": false,
+    "id": 115,
+    "iso2": "NI",
+    "iso3": "NIC",
+    "name": "Nicaragua",
+    "pixelCount": 1394,
+    "rgb": [
+      176,
+      11,
+      6
+    ],
+    "sourceName": "Nicaragua",
+    "sourceType": "Sovereign country"
+  },
+  "116": {
+    "eventActive": false,
+    "id": 116,
+    "iso2": "NL",
+    "iso3": "NLD",
+    "name": "Netherlands",
+    "pixelCount": 692,
+    "rgb": [
+      213,
+      102,
+      179
+    ],
+    "sourceName": "Netherlands",
+    "sourceType": "Country"
+  },
+  "117": {
+    "eventActive": false,
+    "id": 117,
+    "iso2": "NP",
+    "iso3": "NPL",
+    "name": "Nepal",
+    "pixelCount": 1801,
+    "rgb": [
+      250,
+      193,
+      97
+    ],
+    "sourceName": "Nepal",
+    "sourceType": "Sovereign country"
+  },
+  "118": {
+    "eventActive": false,
+    "id": 118,
+    "iso2": "NZ",
+    "iso3": "NZL",
+    "name": "New Zealand",
+    "pixelCount": 3903,
+    "rgb": [
+      32,
+      29,
+      15
+    ],
+    "sourceName": "New Zealand",
+    "sourceType": "Country"
+  },
+  "119": {
+    "eventActive": false,
+    "id": 119,
+    "iso2": "OM",
+    "iso3": "OMN",
+    "name": "Oman",
+    "pixelCount": 3491,
+    "rgb": [
+      69,
+      120,
+      188
+    ],
+    "sourceName": "Oman",
+    "sourceType": "Sovereign country"
+  },
+  "12": {
+    "eventActive": false,
+    "id": 12,
+    "iso2": "BI",
+    "iso3": "BDI",
+    "name": "Burundi",
+    "pixelCount": 282,
+    "rgb": [
+      190,
+      73,
+      37
+    ],
+    "sourceName": "Burundi",
+    "sourceType": "Sovereign country"
+  },
+  "120": {
+    "eventActive": false,
+    "id": 120,
+    "iso2": "PK",
+    "iso3": "PAK",
+    "name": "Pakistan",
+    "pixelCount": 10609,
+    "rgb": [
+      106,
+      211,
+      106
+    ],
+    "sourceName": "Pakistan",
+    "sourceType": "Sovereign country"
+  },
+  "121": {
+    "eventActive": false,
+    "id": 121,
+    "iso2": "PA",
+    "iso3": "PAN",
+    "name": "Panama",
+    "pixelCount": 796,
+    "rgb": [
+      143,
+      47,
+      24
+    ],
+    "sourceName": "Panama",
+    "sourceType": "Sovereign country"
+  },
+  "122": {
+    "eventActive": false,
+    "id": 122,
+    "iso2": "PE",
+    "iso3": "PER",
+    "name": "Peru",
+    "pixelCount": 14052,
+    "rgb": [
+      180,
+      138,
+      197
+    ],
+    "sourceName": "Peru",
+    "sourceType": "Sovereign country"
+  },
+  "123": {
+    "eventActive": false,
+    "id": 123,
+    "iso2": "PH",
+    "iso3": "PHL",
+    "name": "Philippines",
+    "pixelCount": 3190,
+    "rgb": [
+      217,
+      229,
+      115
+    ],
+    "sourceName": "Philippines",
+    "sourceType": "Sovereign country"
+  },
+  "124": {
+    "eventActive": false,
+    "id": 124,
+    "iso2": "PG",
+    "iso3": "PNG",
+    "name": "Papua New Guinea",
+    "pixelCount": 4978,
+    "rgb": [
+      254,
+      65,
+      33
+    ],
+    "sourceName": "Papua New Guinea",
+    "sourceType": "Sovereign country"
+  },
+  "125": {
+    "eventActive": false,
+    "id": 125,
+    "iso2": "PL",
+    "iso3": "POL",
+    "name": "Poland",
+    "pixelCount": 5290,
+    "rgb": [
+      36,
+      156,
+      206
+    ],
+    "sourceName": "Poland",
+    "sourceType": "Sovereign country"
+  },
+  "126": {
+    "eventActive": false,
+    "id": 126,
+    "iso2": "PR",
+    "iso3": "PRI",
+    "name": "Puerto Rico",
+    "pixelCount": 100,
+    "rgb": [
+      73,
+      247,
+      124
+    ],
+    "sourceName": "Puerto Rico",
+    "sourceType": "Dependency"
+  },
+  "127": {
+    "eventActive": false,
+    "id": 127,
+    "iso2": "KP",
+    "iso3": "PRK",
+    "name": "North Korea",
+    "pixelCount": 1727,
+    "rgb": [
+      110,
+      83,
+      42
+    ],
+    "sourceName": "North Korea",
+    "sourceType": "Sovereign country"
+  },
+  "128": {
+    "eventActive": false,
+    "id": 128,
+    "iso2": "PT",
+    "iso3": "PRT",
+    "name": "Portugal",
+    "pixelCount": 1289,
+    "rgb": [
+      147,
+      174,
+      215
+    ],
+    "sourceName": "Portugal",
+    "sourceType": "Sovereign country"
+  },
+  "129": {
+    "eventActive": false,
+    "id": 129,
+    "iso2": "PY",
+    "iso3": "PRY",
+    "name": "Paraguay",
+    "pixelCount": 4573,
+    "rgb": [
+      184,
+      10,
+      133
+    ],
+    "sourceName": "Paraguay",
+    "sourceType": "Sovereign country"
+  },
+  "13": {
+    "eventActive": false,
+    "id": 13,
+    "iso2": "BE",
+    "iso3": "BEL",
+    "name": "Belgium",
+    "pixelCount": 508,
+    "rgb": [
+      227,
+      164,
+      210
+    ],
+    "sourceName": "Belgium",
+    "sourceType": "Sovereign country"
+  },
+  "130": {
+    "eventActive": false,
+    "id": 130,
+    "iso2": "PS",
+    "iso3": "PSE",
+    "name": "Palestine",
+    "pixelCount": 72,
+    "rgb": [
+      221,
+      101,
+      51
+    ],
+    "sourceName": "Palestine",
+    "sourceType": "Indeterminate"
+  },
+  "131": {
+    "eventActive": false,
+    "id": 131,
+    "iso2": "QA",
+    "iso3": "QAT",
+    "name": "Qatar",
+    "pixelCount": 126,
+    "rgb": [
+      3,
+      192,
+      224
+    ],
+    "sourceName": "Qatar",
+    "sourceType": "Sovereign country"
+  },
+  "132": {
+    "eventActive": false,
+    "id": 132,
+    "iso2": "RO",
+    "iso3": "ROU",
+    "name": "Romania",
+    "pixelCount": 3566,
+    "rgb": [
+      40,
+      28,
+      142
+    ],
+    "sourceName": "Romania",
+    "sourceType": "Sovereign country"
+  },
+  "133": {
+    "eventActive": false,
+    "id": 133,
+    "iso2": "RU",
+    "iso3": "RUS",
+    "name": "Russia",
+    "pixelCount": 380249,
+    "rgb": [
+      77,
+      119,
+      60
+    ],
+    "sourceName": "Russia",
+    "sourceType": "Sovereign country"
+  },
+  "134": {
+    "eventActive": false,
+    "id": 134,
+    "iso2": "RW",
+    "iso3": "RWA",
+    "name": "Rwanda",
+    "pixelCount": 246,
+    "rgb": [
+      114,
+      210,
+      233
+    ],
+    "sourceName": "Rwanda",
+    "sourceType": "Sovereign country"
+  },
+  "135": {
+    "eventActive": false,
+    "id": 135,
+    "iso2": "SA",
+    "iso3": "SAU",
+    "name": "Saudi Arabia",
+    "pixelCount": 22084,
+    "rgb": [
+      151,
+      46,
+      151
+    ],
+    "sourceName": "Saudi Arabia",
+    "sourceType": "Sovereign country"
+  },
+  "136": {
+    "eventActive": false,
+    "id": 136,
+    "iso2": "SD",
+    "iso3": "SDN",
+    "name": "Sudan",
+    "pixelCount": 20373,
+    "rgb": [
+      188,
+      137,
+      69
+    ],
+    "sourceName": "Sudan",
+    "sourceType": "Sovereign country"
+  },
+  "137": {
+    "eventActive": false,
+    "id": 137,
+    "iso2": "SN",
+    "iso3": "SEN",
+    "name": "Senegal",
+    "pixelCount": 2129,
+    "rgb": [
+      225,
+      228,
+      242
+    ],
+    "sourceName": "Senegal",
+    "sourceType": "Sovereign country"
+  },
+  "138": {
+    "eventActive": false,
+    "id": 138,
+    "iso2": "SB",
+    "iso3": "SLB",
+    "name": "Solomon Islands",
+    "pixelCount": 279,
+    "rgb": [
+      7,
+      64,
+      160
+    ],
+    "sourceName": "Solomon Is.",
+    "sourceType": "Sovereign country"
+  },
+  "139": {
+    "eventActive": false,
+    "id": 139,
+    "iso2": "SL",
+    "iso3": "SLE",
+    "name": "Sierra Leone",
+    "pixelCount": 819,
+    "rgb": [
+      44,
+      155,
+      78
+    ],
+    "sourceName": "Sierra Leone",
+    "sourceType": "Sovereign country"
+  },
+  "14": {
+    "eventActive": false,
+    "id": 14,
+    "iso2": "BJ",
+    "iso3": "BEN",
+    "name": "Benin",
+    "pixelCount": 1277,
+    "rgb": [
+      9,
+      255,
+      128
+    ],
+    "sourceName": "Benin",
+    "sourceType": "Sovereign country"
+  },
+  "140": {
+    "eventActive": false,
+    "id": 140,
+    "iso2": "SV",
+    "iso3": "SLV",
+    "name": "El Salvador",
+    "pixelCount": 230,
+    "rgb": [
+      81,
+      246,
+      251
+    ],
+    "sourceName": "El Salvador",
+    "sourceType": "Sovereign country"
+  },
+  "141": {
+    "eventActive": false,
+    "id": 141,
+    "iso2": "SO",
+    "iso3": "SOM",
+    "name": "Somalia",
+    "pixelCount": 5154,
+    "rgb": [
+      118,
+      82,
+      169
+    ],
+    "sourceName": "Somalia",
+    "sourceType": "Sovereign country"
+  },
+  "142": {
+    "eventActive": false,
+    "id": 142,
+    "iso2": "RS",
+    "iso3": "SRB",
+    "name": "Republic of Serbia",
+    "pixelCount": 1118,
+    "rgb": [
+      155,
+      173,
+      87
+    ],
+    "sourceName": "Serbia",
+    "sourceType": "Sovereign country"
+  },
+  "143": {
+    "eventActive": false,
+    "id": 143,
+    "iso2": "SS",
+    "iso3": "SSD",
+    "name": "South Sudan",
+    "pixelCount": 6612,
+    "rgb": [
+      192,
+      9,
+      5
+    ],
+    "sourceName": "S. Sudan",
+    "sourceType": "Sovereign country"
+  },
+  "144": {
+    "eventActive": false,
+    "id": 144,
+    "iso2": "SR",
+    "iso3": "SUR",
+    "name": "Suriname",
+    "pixelCount": 1538,
+    "rgb": [
+      229,
+      100,
+      178
+    ],
+    "sourceName": "Suriname",
+    "sourceType": "Sovereign country"
+  },
+  "145": {
+    "eventActive": false,
+    "id": 145,
+    "iso2": "SK",
+    "iso3": "SVK",
+    "name": "Slovakia",
+    "pixelCount": 754,
+    "rgb": [
+      11,
+      191,
+      96
+    ],
+    "sourceName": "Slovakia",
+    "sourceType": "Sovereign country"
+  },
+  "146": {
+    "eventActive": false,
+    "id": 146,
+    "iso2": "SI",
+    "iso3": "SVN",
+    "name": "Slovenia",
+    "pixelCount": 290,
+    "rgb": [
+      48,
+      27,
+      14
+    ],
+    "sourceName": "Slovenia",
+    "sourceType": "Sovereign country"
+  },
+  "147": {
+    "eventActive": false,
+    "id": 147,
+    "iso2": "SE",
+    "iso3": "SWE",
+    "name": "Sweden",
+    "pixelCount": 10324,
+    "rgb": [
+      85,
+      118,
+      187
+    ],
+    "sourceName": "Sweden",
+    "sourceType": "Sovereign country"
+  },
+  "148": {
+    "eventActive": false,
+    "id": 148,
+    "iso2": "SZ",
+    "iso3": "SWZ",
+    "name": "eSwatini",
+    "pixelCount": 210,
+    "rgb": [
+      122,
+      209,
+      105
+    ],
+    "sourceName": "eSwatini",
+    "sourceType": "Sovereign country"
+  },
+  "149": {
+    "eventActive": false,
+    "id": 149,
+    "iso2": "SY",
+    "iso3": "SYR",
+    "name": "Syria",
+    "pixelCount": 2370,
+    "rgb": [
+      159,
+      45,
+      23
+    ],
+    "sourceName": "Syria",
+    "sourceType": "Sovereign country"
+  },
+  "15": {
+    "eventActive": false,
+    "id": 15,
+    "iso2": "BF",
+    "iso3": "BFA",
+    "name": "Burkina Faso",
+    "pixelCount": 2936,
+    "rgb": [
+      46,
+      91,
+      46
+    ],
+    "sourceName": "Burkina Faso",
+    "sourceType": "Sovereign country"
+  },
+  "150": {
+    "eventActive": false,
+    "id": 150,
+    "iso2": "TD",
+    "iso3": "TCD",
+    "name": "Chad",
+    "pixelCount": 13907,
+    "rgb": [
+      196,
+      136,
+      196
+    ],
+    "sourceName": "Chad",
+    "sourceType": "Sovereign country"
+  },
+  "151": {
+    "eventActive": false,
+    "id": 151,
+    "iso2": "TG",
+    "iso3": "TGO",
+    "name": "Togo",
+    "pixelCount": 660,
+    "rgb": [
+      233,
+      227,
+      114
+    ],
+    "sourceName": "Togo",
+    "sourceType": "Sovereign country"
+  },
+  "152": {
+    "eventActive": false,
+    "id": 152,
+    "iso2": "TH",
+    "iso3": "THA",
+    "name": "Thailand",
+    "pixelCount": 5614,
+    "rgb": [
+      15,
+      63,
+      32
+    ],
+    "sourceName": "Thailand",
+    "sourceType": "Sovereign country"
+  },
+  "153": {
+    "eventActive": false,
+    "id": 153,
+    "iso2": "TJ",
+    "iso3": "TJK",
+    "name": "Tajikistan",
+    "pixelCount": 1870,
+    "rgb": [
+      52,
+      154,
+      205
+    ],
+    "sourceName": "Tajikistan",
+    "sourceType": "Sovereign country"
+  },
+  "154": {
+    "eventActive": false,
+    "id": 154,
+    "iso2": "TM",
+    "iso3": "TKM",
+    "name": "Turkmenistan",
+    "pixelCount": 6505,
+    "rgb": [
+      89,
+      245,
+      123
+    ],
+    "sourceName": "Turkmenistan",
+    "sourceType": "Sovereign country"
+  },
+  "155": {
+    "eventActive": false,
+    "id": 155,
+    "iso2": "TL",
+    "iso3": "TLS",
+    "name": "East Timor",
+    "pixelCount": 157,
+    "rgb": [
+      126,
+      81,
+      41
+    ],
+    "sourceName": "Timor-Leste",
+    "sourceType": "Sovereign country"
+  },
+  "156": {
+    "eventActive": false,
+    "id": 156,
+    "iso2": "TT",
+    "iso3": "TTO",
+    "name": "Trinidad and Tobago",
+    "pixelCount": 82,
+    "rgb": [
+      163,
+      172,
+      214
+    ],
+    "sourceName": "Trinidad and Tobago",
+    "sourceType": "Sovereign country"
+  },
+  "157": {
+    "eventActive": false,
+    "id": 157,
+    "iso2": "TN",
+    "iso3": "TUN",
+    "name": "Tunisia",
+    "pixelCount": 1996,
+    "rgb": [
+      200,
+      8,
+      132
+    ],
+    "sourceName": "Tunisia",
+    "sourceType": "Sovereign country"
+  },
+  "158": {
+    "eventActive": false,
+    "id": 158,
+    "iso2": "TR",
+    "iso3": "TUR",
+    "name": "Turkey",
+    "pixelCount": 10770,
+    "rgb": [
+      237,
+      99,
+      50
+    ],
+    "sourceName": "Turkey",
+    "sourceType": "Sovereign country"
+  },
+  "159": {
+    "eventActive": false,
+    "id": 159,
+    "iso2": "CN-TW",
+    "iso3": "TWN",
+    "name": "Taiwan",
+    "pixelCount": 395,
+    "rgb": [
+      19,
+      190,
+      223
+    ],
+    "sourceName": "Taiwan",
+    "sourceType": "Sovereign country"
+  },
+  "16": {
+    "eventActive": false,
+    "id": 16,
+    "iso2": "BD",
+    "iso3": "BGD",
+    "name": "Bangladesh",
+    "pixelCount": 1546,
+    "rgb": [
+      83,
+      182,
+      219
+    ],
+    "sourceName": "Bangladesh",
+    "sourceType": "Sovereign country"
+  },
+  "160": {
+    "eventActive": false,
+    "id": 160,
+    "iso2": "TZ",
+    "iso3": "TZA",
+    "name": "United Republic of Tanzania",
+    "pixelCount": 9873,
+    "rgb": [
+      56,
+      26,
+      141
+    ],
+    "sourceName": "Tanzania",
+    "sourceType": "Sovereign country"
+  },
+  "161": {
+    "eventActive": false,
+    "id": 161,
+    "iso2": "UG",
+    "iso3": "UGA",
+    "name": "Uganda",
+    "pixelCount": 2612,
+    "rgb": [
+      93,
+      117,
+      59
+    ],
+    "sourceName": "Uganda",
+    "sourceType": "Sovereign country"
+  },
+  "162": {
+    "eventActive": false,
+    "id": 162,
+    "iso2": "UA",
+    "iso3": "UKR",
+    "name": "Ukraine",
+    "pixelCount": 9169,
+    "rgb": [
+      130,
+      208,
+      232
+    ],
+    "sourceName": "Ukraine",
+    "sourceType": "Sovereign country"
+  },
+  "163": {
+    "eventActive": false,
+    "id": 163,
+    "iso2": "UY",
+    "iso3": "URY",
+    "name": "Uruguay",
+    "pixelCount": 2208,
+    "rgb": [
+      167,
+      44,
+      150
+    ],
+    "sourceName": "Uruguay",
+    "sourceType": "Sovereign country"
+  },
+  "164": {
+    "eventActive": true,
+    "id": 164,
+    "iso2": "US",
+    "iso3": "USA",
+    "name": "United States of America",
+    "pixelCount": 145349,
+    "rgb": [
+      204,
+      135,
+      68
+    ],
+    "sourceName": "United States of America",
+    "sourceType": "Country"
+  },
+  "165": {
+    "eventActive": false,
+    "id": 165,
+    "iso2": "UZ",
+    "iso3": "UZB",
+    "name": "Uzbekistan",
+    "pixelCount": 6494,
+    "rgb": [
+      241,
+      226,
+      241
+    ],
+    "sourceName": "Uzbekistan",
+    "sourceType": "Sovereign country"
+  },
+  "166": {
+    "eventActive": false,
+    "id": 166,
+    "iso2": "VE",
+    "iso3": "VEN",
+    "name": "Venezuela",
+    "pixelCount": 9656,
+    "rgb": [
+      23,
+      62,
+      159
+    ],
+    "sourceName": "Venezuela",
+    "sourceType": "Sovereign country"
+  },
+  "167": {
+    "eventActive": false,
+    "id": 167,
+    "iso2": "VN",
+    "iso3": "VNM",
+    "name": "Vietnam",
+    "pixelCount": 3665,
+    "rgb": [
+      60,
+      153,
+      77
+    ],
+    "sourceName": "Vietnam",
+    "sourceType": "Sovereign country"
+  },
+  "168": {
+    "eventActive": false,
+    "id": 168,
+    "iso2": "VU",
+    "iso3": "VUT",
+    "name": "Vanuatu",
+    "pixelCount": 86,
+    "rgb": [
+      97,
+      244,
+      250
+    ],
+    "sourceName": "Vanuatu",
+    "sourceType": "Sovereign country"
+  },
+  "169": {
+    "eventActive": false,
+    "id": 169,
+    "iso2": "YE",
+    "iso3": "YEM",
+    "name": "Yemen",
+    "pixelCount": 4994,
+    "rgb": [
+      134,
+      80,
+      168
+    ],
+    "sourceName": "Yemen",
+    "sourceType": "Sovereign country"
+  },
+  "17": {
+    "eventActive": false,
+    "id": 17,
+    "iso2": "BG",
+    "iso3": "BGR",
+    "name": "Bulgaria",
+    "pixelCount": 1567,
+    "rgb": [
+      120,
+      18,
+      137
+    ],
+    "sourceName": "Bulgaria",
+    "sourceType": "Sovereign country"
+  },
+  "170": {
+    "eventActive": false,
+    "id": 170,
+    "iso2": "ZA",
+    "iso3": "ZAF",
+    "name": "South Africa",
+    "pixelCount": 14655,
+    "rgb": [
+      171,
+      171,
+      86
+    ],
+    "sourceName": "South Africa",
+    "sourceType": "Sovereign country"
+  },
+  "171": {
+    "eventActive": false,
+    "id": 171,
+    "iso2": "ZM",
+    "iso3": "ZMB",
+    "name": "Zambia",
+    "pixelCount": 8168,
+    "rgb": [
+      208,
+      7,
+      4
+    ],
+    "sourceName": "Zambia",
+    "sourceType": "Sovereign country"
+  },
+  "172": {
+    "eventActive": false,
+    "id": 172,
+    "iso2": "ZW",
+    "iso3": "ZWE",
+    "name": "Zimbabwe",
+    "pixelCount": 4195,
+    "rgb": [
+      245,
+      98,
+      177
+    ],
+    "sourceName": "Zimbabwe",
+    "sourceType": "Sovereign country"
+  },
+  "173": {
+    "eventActive": true,
+    "id": 173,
+    "iso2": "",
+    "iso3": "FRA",
+    "name": "France",
+    "pixelCount": 9413,
+    "rgb": [
+      27,
+      189,
+      95
+    ],
+    "sourceName": "France",
+    "sourceType": "Country"
+  },
+  "174": {
+    "eventActive": false,
+    "id": 174,
+    "iso2": "",
+    "iso3": "KOS",
+    "name": "Kosovo",
+    "pixelCount": 160,
+    "rgb": [
+      64,
+      25,
+      13
+    ],
+    "sourceName": "Kosovo",
+    "sourceType": "Disputed"
+  },
+  "175": {
+    "eventActive": false,
+    "id": 175,
+    "iso2": "",
+    "iso3": "CYN",
+    "name": "Northern Cyprus",
+    "pixelCount": 46,
+    "rgb": [
+      101,
+      116,
+      186
+    ],
+    "sourceName": "N. Cyprus",
+    "sourceType": "Sovereign country"
+  },
+  "176": {
+    "eventActive": false,
+    "id": 176,
+    "iso2": "",
+    "iso3": "NOR",
+    "name": "Norway",
+    "pixelCount": 11710,
+    "rgb": [
+      138,
+      207,
+      104
+    ],
+    "sourceName": "Norway",
+    "sourceType": "Sovereign country"
+  },
+  "177": {
+    "eventActive": false,
+    "id": 177,
+    "iso2": "",
+    "iso3": "SOL",
+    "name": "Somaliland",
+    "pixelCount": 1799,
+    "rgb": [
+      175,
+      43,
+      22
+    ],
+    "sourceName": "Somaliland",
+    "sourceType": "Sovereign country"
+  },
+  "18": {
+    "eventActive": false,
+    "id": 18,
+    "iso2": "BS",
+    "iso3": "BHS",
+    "name": "The Bahamas",
+    "pixelCount": 175,
+    "rgb": [
+      157,
+      109,
+      55
+    ],
+    "sourceName": "Bahamas",
+    "sourceType": "Sovereign country"
+  },
+  "19": {
+    "eventActive": false,
+    "id": 19,
+    "iso2": "BA",
+    "iso3": "BIH",
+    "name": "Bosnia and Herzegovina",
+    "pixelCount": 736,
+    "rgb": [
+      194,
+      200,
+      228
+    ],
+    "sourceName": "Bosnia and Herz.",
+    "sourceType": "Sovereign country"
+  },
+  "2": {
+    "eventActive": false,
+    "id": 2,
+    "iso2": "AO",
+    "iso3": "AGO",
+    "name": "Angola",
+    "pixelCount": 13465,
+    "rgb": [
+      75,
+      183,
+      92
+    ],
+    "sourceName": "Angola",
+    "sourceType": "Sovereign country"
+  },
+  "20": {
+    "eventActive": false,
+    "id": 20,
+    "iso2": "BY",
+    "iso3": "BLR",
+    "name": "Belarus",
+    "pixelCount": 3696,
+    "rgb": [
+      231,
+      36,
+      146
+    ],
+    "sourceName": "Belarus",
+    "sourceType": "Sovereign country"
+  },
+  "21": {
+    "eventActive": false,
+    "id": 21,
+    "iso2": "BZ",
+    "iso3": "BLZ",
+    "name": "Belize",
+    "pixelCount": 259,
+    "rgb": [
+      13,
+      127,
+      64
+    ],
+    "sourceName": "Belize",
+    "sourceType": "Sovereign country"
+  },
+  "22": {
+    "eventActive": false,
+    "id": 22,
+    "iso2": "BO",
+    "iso3": "BOL",
+    "name": "Bolivia",
+    "pixelCount": 11971,
+    "rgb": [
+      50,
+      218,
+      237
+    ],
+    "sourceName": "Bolivia",
+    "sourceType": "Sovereign country"
+  },
+  "23": {
+    "eventActive": true,
+    "id": 23,
+    "iso2": "BR",
+    "iso3": "BRA",
+    "name": "Brazil",
+    "pixelCount": 91966,
+    "rgb": [
+      87,
+      54,
+      155
+    ],
+    "sourceName": "Brazil",
+    "sourceType": "Sovereign country"
+  },
+  "24": {
+    "eventActive": false,
+    "id": 24,
+    "iso2": "BN",
+    "iso3": "BRN",
+    "name": "Brunei",
+    "pixelCount": 114,
+    "rgb": [
+      124,
+      145,
+      73
+    ],
+    "sourceName": "Brunei",
+    "sourceType": "Sovereign country"
+  },
+  "25": {
+    "eventActive": false,
+    "id": 25,
+    "iso2": "BT",
+    "iso3": "BTN",
+    "name": "Bhutan",
+    "pixelCount": 463,
+    "rgb": [
+      161,
+      236,
+      246
+    ],
+    "sourceName": "Bhutan",
+    "sourceType": "Sovereign country"
+  },
+  "26": {
+    "eventActive": false,
+    "id": 26,
+    "iso2": "BW",
+    "iso3": "BWA",
+    "name": "Botswana",
+    "pixelCount": 6743,
+    "rgb": [
+      198,
+      72,
+      164
+    ],
+    "sourceName": "Botswana",
+    "sourceType": "Sovereign country"
+  },
+  "27": {
+    "eventActive": false,
+    "id": 27,
+    "iso2": "CF",
+    "iso3": "CAF",
+    "name": "Central African Republic",
+    "pixelCount": 6599,
+    "rgb": [
+      235,
+      163,
+      82
+    ],
+    "sourceName": "Central African Rep.",
+    "sourceType": "Sovereign country"
+  },
+  "28": {
+    "eventActive": true,
+    "id": 28,
+    "iso2": "CA",
+    "iso3": "CAN",
+    "name": "Canada",
+    "pixelCount": 222200,
+    "rgb": [
+      17,
+      254,
+      255
+    ],
+    "sourceName": "Canada",
+    "sourceType": "Sovereign country"
+  },
+  "29": {
+    "eventActive": false,
+    "id": 29,
+    "iso2": "CH",
+    "iso3": "CHE",
+    "name": "Switzerland",
+    "pixelCount": 709,
+    "rgb": [
+      54,
+      90,
+      173
+    ],
+    "sourceName": "Switzerland",
+    "sourceType": "Sovereign country"
+  },
+  "3": {
+    "eventActive": false,
+    "id": 3,
+    "iso2": "AL",
+    "iso3": "ALB",
+    "name": "Albania",
+    "pixelCount": 421,
+    "rgb": [
+      112,
+      19,
+      10
+    ],
+    "sourceName": "Albania",
+    "sourceType": "Sovereign country"
+  },
+  "30": {
+    "eventActive": false,
+    "id": 30,
+    "iso2": "CL",
+    "iso3": "CHL",
+    "name": "Chile",
+    "pixelCount": 11266,
+    "rgb": [
+      91,
+      181,
+      91
+    ],
+    "sourceName": "Chile",
+    "sourceType": "Sovereign country"
+  },
+  "31": {
+    "eventActive": true,
+    "id": 31,
+    "iso2": "CN",
+    "iso3": "CHN",
+    "name": "China",
+    "pixelCount": 123653,
+    "rgb": [
+      128,
+      17,
+      9
+    ],
+    "sourceName": "China",
+    "sourceType": "Country"
+  },
+  "32": {
+    "eventActive": false,
+    "id": 32,
+    "iso2": "CI",
+    "iso3": "CIV",
+    "name": "Ivory Coast",
+    "pixelCount": 3525,
+    "rgb": [
+      165,
+      108,
+      182
+    ],
+    "sourceName": "C\u00f4te d'Ivoire",
+    "sourceType": "Sovereign country"
+  },
+  "33": {
+    "eventActive": false,
+    "id": 33,
+    "iso2": "CM",
+    "iso3": "CMR",
+    "name": "Cameroon",
+    "pixelCount": 4890,
+    "rgb": [
+      202,
+      199,
+      100
+    ],
+    "sourceName": "Cameroon",
+    "sourceType": "Sovereign country"
+  },
+  "34": {
+    "eventActive": false,
+    "id": 34,
+    "iso2": "CD",
+    "iso3": "COD",
+    "name": "Democratic Republic of the Congo",
+    "pixelCount": 24593,
+    "rgb": [
+      239,
+      35,
+      18
+    ],
+    "sourceName": "Dem. Rep. Congo",
+    "sourceType": "Sovereign country"
+  },
+  "35": {
+    "eventActive": false,
+    "id": 35,
+    "iso2": "CG",
+    "iso3": "COG",
+    "name": "Republic of the Congo",
+    "pixelCount": 3586,
+    "rgb": [
+      21,
+      126,
+      191
+    ],
+    "sourceName": "Congo",
+    "sourceType": "Sovereign country"
+  },
+  "36": {
+    "eventActive": false,
+    "id": 36,
+    "iso2": "CO",
+    "iso3": "COL",
+    "name": "Colombia",
+    "pixelCount": 12178,
+    "rgb": [
+      58,
+      217,
+      109
+    ],
+    "sourceName": "Colombia",
+    "sourceType": "Sovereign country"
+  },
+  "37": {
+    "eventActive": false,
+    "id": 37,
+    "iso2": "CR",
+    "iso3": "CRI",
+    "name": "Costa Rica",
+    "pixelCount": 600,
+    "rgb": [
+      95,
+      53,
+      27
+    ],
+    "sourceName": "Costa Rica",
+    "sourceType": "Sovereign country"
+  },
+  "38": {
+    "eventActive": false,
+    "id": 38,
+    "iso2": "CU",
+    "iso3": "CUB",
+    "name": "Cuba",
+    "pixelCount": 1299,
+    "rgb": [
+      132,
+      144,
+      200
+    ],
+    "sourceName": "Cuba",
+    "sourceType": "Sovereignty"
+  },
+  "39": {
+    "eventActive": false,
+    "id": 39,
+    "iso2": "CY",
+    "iso3": "CYP",
+    "name": "Cyprus",
+    "pixelCount": 84,
+    "rgb": [
+      169,
+      235,
+      118
+    ],
+    "sourceName": "Cyprus",
+    "sourceType": "Sovereign country"
+  },
+  "4": {
+    "eventActive": false,
+    "id": 4,
+    "iso2": "AE",
+    "iso3": "ARE",
+    "name": "United Arab Emirates",
+    "pixelCount": 941,
+    "rgb": [
+      149,
+      110,
+      183
+    ],
+    "sourceName": "United Arab Emirates",
+    "sourceType": "Sovereign country"
+  },
+  "40": {
+    "eventActive": false,
+    "id": 40,
+    "iso2": "CZ",
+    "iso3": "CZE",
+    "name": "Czechia",
+    "pixelCount": 1311,
+    "rgb": [
+      206,
+      71,
+      36
+    ],
+    "sourceName": "Czechia",
+    "sourceType": "Sovereign country"
+  },
+  "41": {
+    "eventActive": true,
+    "id": 41,
+    "iso2": "DE",
+    "iso3": "DEU",
+    "name": "Germany",
+    "pixelCount": 5966,
+    "rgb": [
+      243,
+      162,
+      209
+    ],
+    "sourceName": "Germany",
+    "sourceType": "Sovereign country"
+  },
+  "42": {
+    "eventActive": false,
+    "id": 42,
+    "iso2": "DJ",
+    "iso3": "DJI",
+    "name": "Djibouti",
+    "pixelCount": 238,
+    "rgb": [
+      25,
+      253,
+      127
+    ],
+    "sourceName": "Djibouti",
+    "sourceType": "Sovereign country"
+  },
+  "43": {
+    "eventActive": false,
+    "id": 43,
+    "iso2": "DK",
+    "iso3": "DNK",
+    "name": "Denmark",
+    "pixelCount": 799,
+    "rgb": [
+      62,
+      89,
+      45
+    ],
+    "sourceName": "Denmark",
+    "sourceType": "Country"
+  },
+  "44": {
+    "eventActive": false,
+    "id": 44,
+    "iso2": "DO",
+    "iso3": "DOM",
+    "name": "Dominican Republic",
+    "pixelCount": 536,
+    "rgb": [
+      99,
+      180,
+      218
+    ],
+    "sourceName": "Dominican Rep.",
+    "sourceType": "Sovereign country"
+  },
+  "45": {
+    "eventActive": false,
+    "id": 45,
+    "iso2": "DZ",
+    "iso3": "DZA",
+    "name": "Algeria",
+    "pixelCount": 27676,
+    "rgb": [
+      136,
+      16,
+      136
+    ],
+    "sourceName": "Algeria",
+    "sourceType": "Sovereign country"
+  },
+  "46": {
+    "eventActive": false,
+    "id": 46,
+    "iso2": "EC",
+    "iso3": "ECU",
+    "name": "Ecuador",
+    "pixelCount": 2654,
+    "rgb": [
+      173,
+      107,
+      54
+    ],
+    "sourceName": "Ecuador",
+    "sourceType": "Sovereign country"
+  },
+  "47": {
+    "eventActive": false,
+    "id": 47,
+    "iso2": "EG",
+    "iso3": "EGY",
+    "name": "Egypt",
+    "pixelCount": 11728,
+    "rgb": [
+      210,
+      198,
+      227
+    ],
+    "sourceName": "Egypt",
+    "sourceType": "Sovereign country"
+  },
+  "48": {
+    "eventActive": false,
+    "id": 48,
+    "iso2": "ER",
+    "iso3": "ERI",
+    "name": "Eritrea",
+    "pixelCount": 1279,
+    "rgb": [
+      247,
+      34,
+      145
+    ],
+    "sourceName": "Eritrea",
+    "sourceType": "Sovereign country"
+  },
+  "49": {
+    "eventActive": false,
+    "id": 49,
+    "iso2": "EH",
+    "iso3": "ESH",
+    "name": "Western Sahara",
+    "pixelCount": 1136,
+    "rgb": [
+      29,
+      125,
+      63
+    ],
+    "sourceName": "W. Sahara",
+    "sourceType": "Indeterminate"
+  },
+  "5": {
+    "eventActive": false,
+    "id": 5,
+    "iso2": "AR",
+    "iso3": "ARG",
+    "name": "Argentina",
+    "pixelCount": 36218,
+    "rgb": [
+      186,
+      201,
+      101
+    ],
+    "sourceName": "Argentina",
+    "sourceType": "Sovereign country"
+  },
+  "50": {
+    "eventActive": false,
+    "id": 50,
+    "iso2": "ES",
+    "iso3": "ESP",
+    "name": "Spain",
+    "pixelCount": 6866,
+    "rgb": [
+      66,
+      216,
+      236
+    ],
+    "sourceName": "Spain",
+    "sourceType": "Sovereign country"
+  },
+  "51": {
+    "eventActive": false,
+    "id": 51,
+    "iso2": "EE",
+    "iso3": "EST",
+    "name": "Estonia",
+    "pixelCount": 912,
+    "rgb": [
+      103,
+      52,
+      154
+    ],
+    "sourceName": "Estonia",
+    "sourceType": "Sovereign country"
+  },
+  "52": {
+    "eventActive": false,
+    "id": 52,
+    "iso2": "ET",
+    "iso3": "ETH",
+    "name": "Ethiopia",
+    "pixelCount": 12093,
+    "rgb": [
+      140,
+      143,
+      72
+    ],
+    "sourceName": "Ethiopia",
+    "sourceType": "Sovereign country"
+  },
+  "53": {
+    "eventActive": false,
+    "id": 53,
+    "iso2": "FI",
+    "iso3": "FIN",
+    "name": "Finland",
+    "pixelCount": 8286,
+    "rgb": [
+      177,
+      234,
+      245
+    ],
+    "sourceName": "Finland",
+    "sourceType": "Country"
+  },
+  "54": {
+    "eventActive": false,
+    "id": 54,
+    "iso2": "FJ",
+    "iso3": "FJI",
+    "name": "Fiji",
+    "pixelCount": 215,
+    "rgb": [
+      214,
+      70,
+      163
+    ],
+    "sourceName": "Fiji",
+    "sourceType": "Sovereign country"
+  },
+  "55": {
+    "eventActive": false,
+    "id": 55,
+    "iso2": "FK",
+    "iso3": "FLK",
+    "name": "Falkland Islands",
+    "pixelCount": 270,
+    "rgb": [
+      251,
+      161,
+      81
+    ],
+    "sourceName": "Falkland Is.",
+    "sourceType": "Disputed"
+  },
+  "56": {
+    "eventActive": false,
+    "id": 56,
+    "iso2": "GA",
+    "iso3": "GAB",
+    "name": "Gabon",
+    "pixelCount": 2836,
+    "rgb": [
+      33,
+      252,
+      254
+    ],
+    "sourceName": "Gabon",
+    "sourceType": "Sovereign country"
+  },
+  "57": {
+    "eventActive": true,
+    "id": 57,
+    "iso2": "GB",
+    "iso3": "GBR",
+    "name": "United Kingdom",
+    "pixelCount": 4450,
+    "rgb": [
+      70,
+      88,
+      172
+    ],
+    "sourceName": "United Kingdom",
+    "sourceType": "Country"
+  },
+  "58": {
+    "eventActive": false,
+    "id": 58,
+    "iso2": "GE",
+    "iso3": "GEO",
+    "name": "Georgia",
+    "pixelCount": 964,
+    "rgb": [
+      107,
+      179,
+      90
+    ],
+    "sourceName": "Georgia",
+    "sourceType": "Sovereign country"
+  },
+  "59": {
+    "eventActive": false,
+    "id": 59,
+    "iso2": "GH",
+    "iso3": "GHA",
+    "name": "Ghana",
+    "pixelCount": 2609,
+    "rgb": [
+      144,
+      15,
+      8
+    ],
+    "sourceName": "Ghana",
+    "sourceType": "Sovereign country"
+  },
+  "6": {
+    "eventActive": false,
+    "id": 6,
+    "iso2": "AM",
+    "iso3": "ARM",
+    "name": "Armenia",
+    "pixelCount": 397,
+    "rgb": [
+      223,
+      37,
+      19
+    ],
+    "sourceName": "Armenia",
+    "sourceType": "Sovereign country"
+  },
+  "60": {
+    "eventActive": false,
+    "id": 60,
+    "iso2": "GN",
+    "iso3": "GIN",
+    "name": "Guinea",
+    "pixelCount": 2570,
+    "rgb": [
+      181,
+      106,
+      181
+    ],
+    "sourceName": "Guinea",
+    "sourceType": "Sovereign country"
+  },
+  "61": {
+    "eventActive": false,
+    "id": 61,
+    "iso2": "GM",
+    "iso3": "GMB",
+    "name": "Gambia",
+    "pixelCount": 156,
+    "rgb": [
+      218,
+      197,
+      99
+    ],
+    "sourceName": "Gambia",
+    "sourceType": "Sovereign country"
+  },
+  "62": {
+    "eventActive": false,
+    "id": 62,
+    "iso2": "GW",
+    "iso3": "GNB",
+    "name": "Guinea-Bissau",
+    "pixelCount": 390,
+    "rgb": [
+      255,
+      33,
+      17
+    ],
+    "sourceName": "Guinea-Bissau",
+    "sourceType": "Sovereign country"
+  },
+  "63": {
+    "eventActive": false,
+    "id": 63,
+    "iso2": "GQ",
+    "iso3": "GNQ",
+    "name": "Equatorial Guinea",
+    "pixelCount": 283,
+    "rgb": [
+      37,
+      124,
+      190
+    ],
+    "sourceName": "Eq. Guinea",
+    "sourceType": "Sovereign country"
+  },
+  "64": {
+    "eventActive": false,
+    "id": 64,
+    "iso2": "GR",
+    "iso3": "GRC",
+    "name": "Greece",
+    "pixelCount": 1805,
+    "rgb": [
+      74,
+      215,
+      108
+    ],
+    "sourceName": "Greece",
+    "sourceType": "Sovereign country"
+  },
+  "65": {
+    "eventActive": false,
+    "id": 65,
+    "iso2": "GL",
+    "iso3": "GRL",
+    "name": "Greenland",
+    "pixelCount": 87672,
+    "rgb": [
+      111,
+      51,
+      26
+    ],
+    "sourceName": "Greenland",
+    "sourceType": "Country"
+  },
+  "66": {
+    "eventActive": false,
+    "id": 66,
+    "iso2": "GT",
+    "iso3": "GTM",
+    "name": "Guatemala",
+    "pixelCount": 1201,
+    "rgb": [
+      148,
+      142,
+      199
+    ],
+    "sourceName": "Guatemala",
+    "sourceType": "Sovereign country"
+  },
+  "67": {
+    "eventActive": false,
+    "id": 67,
+    "iso2": "GY",
+    "iso3": "GUY",
+    "name": "Guyana",
+    "pixelCount": 2209,
+    "rgb": [
+      185,
+      233,
+      117
+    ],
+    "sourceName": "Guyana",
+    "sourceType": "Sovereign country"
+  },
+  "68": {
+    "eventActive": false,
+    "id": 68,
+    "iso2": "HN",
+    "iso3": "HND",
+    "name": "Honduras",
+    "pixelCount": 1252,
+    "rgb": [
+      222,
+      69,
+      35
+    ],
+    "sourceName": "Honduras",
+    "sourceType": "Sovereign country"
+  },
+  "69": {
+    "eventActive": false,
+    "id": 69,
+    "iso2": "HR",
+    "iso3": "HRV",
+    "name": "Croatia",
+    "pixelCount": 870,
+    "rgb": [
+      4,
+      160,
+      208
+    ],
+    "sourceName": "Croatia",
+    "sourceType": "Sovereign country"
+  },
+  "7": {
+    "eventActive": false,
+    "id": 7,
+    "iso2": "AQ",
+    "iso3": "ATA",
+    "name": "Antarctica",
+    "pixelCount": 778495,
+    "rgb": [
+      5,
+      128,
+      192
+    ],
+    "sourceName": "Antarctica",
+    "sourceType": "Indeterminate"
+  },
+  "70": {
+    "eventActive": false,
+    "id": 70,
+    "iso2": "HT",
+    "iso3": "HTI",
+    "name": "Haiti",
+    "pixelCount": 332,
+    "rgb": [
+      41,
+      251,
+      126
+    ],
+    "sourceName": "Haiti",
+    "sourceType": "Sovereign country"
+  },
+  "71": {
+    "eventActive": false,
+    "id": 71,
+    "iso2": "HU",
+    "iso3": "HUN",
+    "name": "Hungary",
+    "pixelCount": 1435,
+    "rgb": [
+      78,
+      87,
+      44
+    ],
+    "sourceName": "Hungary",
+    "sourceType": "Sovereign country"
+  },
+  "72": {
+    "eventActive": false,
+    "id": 72,
+    "iso2": "ID",
+    "iso3": "IDN",
+    "name": "Indonesia",
+    "pixelCount": 19237,
+    "rgb": [
+      115,
+      178,
+      217
+    ],
+    "sourceName": "Indonesia",
+    "sourceType": "Sovereign country"
+  },
+  "73": {
+    "eventActive": true,
+    "id": 73,
+    "iso2": "IN",
+    "iso3": "IND",
+    "name": "India",
+    "pixelCount": 36092,
+    "rgb": [
+      152,
+      14,
+      135
+    ],
+    "sourceName": "India",
+    "sourceType": "Sovereign country"
+  },
+  "74": {
+    "eventActive": false,
+    "id": 74,
+    "iso2": "IE",
+    "iso3": "IRL",
+    "name": "Ireland",
+    "pixelCount": 1035,
+    "rgb": [
+      189,
+      105,
+      53
+    ],
+    "sourceName": "Ireland",
+    "sourceType": "Sovereign country"
+  },
+  "75": {
+    "eventActive": false,
+    "id": 75,
+    "iso2": "IR",
+    "iso3": "IRN",
+    "name": "Iran",
+    "pixelCount": 20135,
+    "rgb": [
+      226,
+      196,
+      226
+    ],
+    "sourceName": "Iran",
+    "sourceType": "Sovereign country"
+  },
+  "76": {
+    "eventActive": false,
+    "id": 76,
+    "iso2": "IQ",
+    "iso3": "IRQ",
+    "name": "Iraq",
+    "pixelCount": 5491,
+    "rgb": [
+      8,
+      32,
+      144
+    ],
+    "sourceName": "Iraq",
+    "sourceType": "Sovereign country"
+  },
+  "77": {
+    "eventActive": false,
+    "id": 77,
+    "iso2": "IS",
+    "iso3": "ISL",
+    "name": "Iceland",
+    "pixelCount": 2642,
+    "rgb": [
+      45,
+      123,
+      62
+    ],
+    "sourceName": "Iceland",
+    "sourceType": "Sovereign country"
+  },
+  "78": {
+    "eventActive": false,
+    "id": 78,
+    "iso2": "IL",
+    "iso3": "ISR",
+    "name": "Israel",
+    "pixelCount": 292,
+    "rgb": [
+      82,
+      214,
+      235
+    ],
+    "sourceName": "Israel",
+    "sourceType": "Disputed"
+  },
+  "79": {
+    "eventActive": false,
+    "id": 79,
+    "iso2": "IT",
+    "iso3": "ITA",
+    "name": "Italy",
+    "pixelCount": 4523,
+    "rgb": [
+      119,
+      50,
+      153
+    ],
+    "sourceName": "Italy",
+    "sourceType": "Sovereign country"
+  },
+  "8": {
+    "eventActive": false,
+    "id": 8,
+    "iso2": "TF",
+    "iso3": "ATF",
+    "name": "French Southern and Antarctic Lands",
+    "pixelCount": 188,
+    "rgb": [
+      42,
+      219,
+      110
+    ],
+    "sourceName": "Fr. S. Antarctic Lands",
+    "sourceType": "Dependency"
+  },
+  "80": {
+    "eventActive": false,
+    "id": 80,
+    "iso2": "JM",
+    "iso3": "JAM",
+    "name": "Jamaica",
+    "pixelCount": 139,
+    "rgb": [
+      156,
+      141,
+      71
+    ],
+    "sourceName": "Jamaica",
+    "sourceType": "Sovereign country"
+  },
+  "81": {
+    "eventActive": false,
+    "id": 81,
+    "iso2": "JO",
+    "iso3": "JOR",
+    "name": "Jordan",
+    "pixelCount": 1082,
+    "rgb": [
+      193,
+      232,
+      244
+    ],
+    "sourceName": "Jordan",
+    "sourceType": "Sovereign country"
+  },
+  "82": {
+    "eventActive": false,
+    "id": 82,
+    "iso2": "JP",
+    "iso3": "JPN",
+    "name": "Japan",
+    "pixelCount": 5406,
+    "rgb": [
+      230,
+      68,
+      162
+    ],
+    "sourceName": "Japan",
+    "sourceType": "Sovereign country"
+  },
+  "83": {
+    "eventActive": false,
+    "id": 83,
+    "iso2": "KZ",
+    "iso3": "KAZ",
+    "name": "Kazakhstan",
+    "pixelCount": 42861,
+    "rgb": [
+      12,
+      159,
+      80
+    ],
+    "sourceName": "Kazakhstan",
+    "sourceType": "Sovereignty"
+  },
+  "84": {
+    "eventActive": false,
+    "id": 84,
+    "iso2": "KE",
+    "iso3": "KEN",
+    "name": "Kenya",
+    "pixelCount": 6294,
+    "rgb": [
+      49,
+      250,
+      253
+    ],
+    "sourceName": "Kenya",
+    "sourceType": "Sovereign country"
+  },
+  "85": {
+    "eventActive": false,
+    "id": 85,
+    "iso2": "KG",
+    "iso3": "KGZ",
+    "name": "Kyrgyzstan",
+    "pixelCount": 2743,
+    "rgb": [
+      86,
+      86,
+      171
+    ],
+    "sourceName": "Kyrgyzstan",
+    "sourceType": "Sovereign country"
+  },
+  "86": {
+    "eventActive": false,
+    "id": 86,
+    "iso2": "KH",
+    "iso3": "KHM",
+    "name": "Cambodia",
+    "pixelCount": 1975,
+    "rgb": [
+      123,
+      177,
+      89
+    ],
+    "sourceName": "Cambodia",
+    "sourceType": "Sovereign country"
+  },
+  "87": {
+    "eventActive": false,
+    "id": 87,
+    "iso2": "KR",
+    "iso3": "KOR",
+    "name": "South Korea",
+    "pixelCount": 1302,
+    "rgb": [
+      160,
+      13,
+      7
+    ],
+    "sourceName": "South Korea",
+    "sourceType": "Sovereign country"
+  },
+  "88": {
+    "eventActive": false,
+    "id": 88,
+    "iso2": "KW",
+    "iso3": "KWT",
+    "name": "Kuwait",
+    "pixelCount": 214,
+    "rgb": [
+      197,
+      104,
+      180
+    ],
+    "sourceName": "Kuwait",
+    "sourceType": "Sovereign country"
+  },
+  "89": {
+    "eventActive": false,
+    "id": 89,
+    "iso2": "LA",
+    "iso3": "LAO",
+    "name": "Laos",
+    "pixelCount": 2537,
+    "rgb": [
+      234,
+      195,
+      98
+    ],
+    "sourceName": "Laos",
+    "sourceType": "Sovereign country"
+  },
+  "9": {
+    "eventActive": true,
+    "id": 9,
+    "iso2": "AU",
+    "iso3": "AUS",
+    "name": "Australia",
+    "pixelCount": 90102,
+    "rgb": [
+      79,
+      55,
+      28
+    ],
+    "sourceName": "Australia",
+    "sourceType": "Country"
+  },
+  "90": {
+    "eventActive": false,
+    "id": 90,
+    "iso2": "LB",
+    "iso3": "LBN",
+    "name": "Lebanon",
+    "pixelCount": 130,
+    "rgb": [
+      16,
+      31,
+      16
+    ],
+    "sourceName": "Lebanon",
+    "sourceType": "Sovereign country"
+  },
+  "91": {
+    "eventActive": false,
+    "id": 91,
+    "iso2": "LR",
+    "iso3": "LBR",
+    "name": "Liberia",
+    "pixelCount": 1060,
+    "rgb": [
+      53,
+      122,
+      189
+    ],
+    "sourceName": "Liberia",
+    "sourceType": "Sovereign country"
+  },
+  "92": {
+    "eventActive": false,
+    "id": 92,
+    "iso2": "LY",
+    "iso3": "LBY",
+    "name": "Libya",
+    "pixelCount": 19368,
+    "rgb": [
+      90,
+      213,
+      107
+    ],
+    "sourceName": "Libya",
+    "sourceType": "Sovereign country"
+  },
+  "93": {
+    "eventActive": false,
+    "id": 93,
+    "iso2": "LK",
+    "iso3": "LKA",
+    "name": "Sri Lanka",
+    "pixelCount": 712,
+    "rgb": [
+      127,
+      49,
+      25
+    ],
+    "sourceName": "Sri Lanka",
+    "sourceType": "Sovereign country"
+  },
+  "94": {
+    "eventActive": false,
+    "id": 94,
+    "iso2": "LS",
+    "iso3": "LSO",
+    "name": "Lesotho",
+    "pixelCount": 330,
+    "rgb": [
+      164,
+      140,
+      198
+    ],
+    "sourceName": "Lesotho",
+    "sourceType": "Sovereign country"
+  },
+  "95": {
+    "eventActive": false,
+    "id": 95,
+    "iso2": "LT",
+    "iso3": "LTU",
+    "name": "Lithuania",
+    "pixelCount": 1178,
+    "rgb": [
+      201,
+      231,
+      116
+    ],
+    "sourceName": "Lithuania",
+    "sourceType": "Sovereign country"
+  },
+  "96": {
+    "eventActive": false,
+    "id": 96,
+    "iso2": "LU",
+    "iso3": "LUX",
+    "name": "Luxembourg",
+    "pixelCount": 42,
+    "rgb": [
+      238,
+      67,
+      34
+    ],
+    "sourceName": "Luxembourg",
+    "sourceType": "Sovereign country"
+  },
+  "97": {
+    "eventActive": false,
+    "id": 97,
+    "iso2": "LV",
+    "iso3": "LVA",
+    "name": "Latvia",
+    "pixelCount": 1231,
+    "rgb": [
+      20,
+      158,
+      207
+    ],
+    "sourceName": "Latvia",
+    "sourceType": "Sovereign country"
+  },
+  "98": {
+    "eventActive": false,
+    "id": 98,
+    "iso2": "MA",
+    "iso3": "MAR",
+    "name": "Morocco",
+    "pixelCount": 7205,
+    "rgb": [
+      57,
+      249,
+      125
+    ],
+    "sourceName": "Morocco",
+    "sourceType": "Sovereign country"
+  },
+  "99": {
+    "eventActive": false,
+    "id": 99,
+    "iso2": "MD",
+    "iso3": "MDA",
+    "name": "Moldova",
+    "pixelCount": 506,
+    "rgb": [
+      94,
+      85,
+      43
+    ],
+    "sourceName": "Moldova",
+    "sourceType": "Sovereign country"
+  }
+}

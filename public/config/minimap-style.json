@@ -1,0 +1,34 @@
+{
+  "layers": {
+    "boundary": {
+      "enabled": true,
+      "color": "#d7b27b",
+      "opacity": 0.6,
+      "strokeWidth": 1.4,
+      "fillOpacity": 0.6
+    },
+    "districts": {
+      "enabled": true,
+      "color": "#a97c3e",
+      "opacity": 0.28,
+      "strokeWidth": 0.7,
+      "fillOpacity": 0.18
+    },
+    "roads": {
+      "enabled": false,
+      "color": "#e8d7bb",
+      "opacity": 0.16,
+      "strokeWidth": 0.7
+    },
+    "pin": {
+      "enabled": true,
+      "color": "#f3e6cf",
+      "opacity": 1,
+      "strokeWidth": 1.2,
+      "dotRadius": 7,
+      "glowRadius": 16,
+      "glowOpacity": 0.6
+    }
+  },
+  "districtColorMode": "single"
+}

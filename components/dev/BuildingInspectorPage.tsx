@@ -1,0 +1,4778 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import maplibregl, { type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { ArrowLeft, Copy, Search } from 'lucide-react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as api from '../../lib/api';
+import { isDevRouteEnabled } from '../../lib/devRoutes';
+import {
+  formatListingPhysicalAddress,
+  getBuildingAssetForListing as getCompatibilityBuildingAssetForListing,
+  getListingPhysicalAddress,
+  getListingPhysicalCityLabel,
+  getVenueForListing,
+  type EntityCollections,
+} from '../../lib/entityCompatibility';
+import { getListingCanonicalCoords } from '../../lib/explorerMarkers';
+import type {
+  BuildingAsset,
+  Listing,
+  OrganizationData,
+  OrganizationVenueRelationship,
+  VenueData,
+} from '../../types';
+import { buildBuildingsSource, findSelectedBuilding, getBuildingsSourceId, venueArrival } from '../maps/venueArrival';
+import { swingMapStyle } from '../maps/mapStyle';
+
+const DEFAULT_FEATURE_ID = '13581200';
+const DEFAULT_TWIST_LAT = 37.8055766;
+const DEFAULT_TWIST_LNG = -122.4132692;
+const SOURCE_LAYER = 'building';
+const VIEWBOX_SIZE = 1000;
+const VIEWBOX_PADDING = 56;
+const EXTRUDE_HEIGHT_METERS = 5;
+const BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT = 10000;
+const DEFAULT_NEIGHBORHOOD_RADIUS_METERS = 100;
+const EXPANDED_NEIGHBORHOOD_RADII_METERS = [150, 250] as const;
+
+const LANDMARK_TESTS: LandmarkTestRecord[] = [
+  {
+    id: 'salesforce-tower',
+    name: 'Salesforce Tower',
+    city: 'San Francisco',
+    latitude: 37.78978,
+    longitude: -122.39697,
+    expectedHeightMeters: 326,
+    expectedFootprint: 'Tall tower podium footprint near Mission St and Fremont St.',
+  },
+  {
+    id: 'transamerica-pyramid',
+    name: 'Transamerica Pyramid',
+    city: 'San Francisco',
+    latitude: 37.79518,
+    longitude: -122.40278,
+    expectedHeightMeters: 260,
+    expectedFootprint: 'Triangular tower footprint in the Financial District.',
+  },
+  {
+    id: 'empire-state-building',
+    name: 'Empire State Building',
+    city: 'New York',
+    latitude: 40.74844,
+    longitude: -73.98566,
+    expectedHeightMeters: 381,
+    expectedFootprint: 'Large stepped tower footprint on Fifth Avenue.',
+  },
+  {
+    id: 'flatiron-building',
+    name: 'Flatiron Building',
+    city: 'New York',
+    latitude: 40.74106,
+    longitude: -73.98970,
+    expectedHeightMeters: 87,
+    expectedFootprint: 'Narrow triangular footprint at Broadway and Fifth Avenue.',
+  },
+  {
+    id: 'ferry-building',
+    name: 'Ferry Building',
+    city: 'San Francisco',
+    latitude: 37.79549,
+    longitude: -122.39370,
+    expectedHeightMeters: 75,
+    expectedFootprint: 'Long waterfront market hall footprint with central tower.',
+  },
+  {
+    id: 'one-world-trade-center',
+    name: 'One World Trade Center',
+    city: 'New York',
+    latitude: 40.71274,
+    longitude: -74.01338,
+    expectedHeightMeters: 541,
+    expectedFootprint: 'Large tower footprint at the World Trade Center site.',
+  },
+];
+
+const buildingInspectorDiagnosticsEnabled = () =>
+  typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV);
+
+const logBuildingInspector = (label: string, details?: Record<string, unknown>) => {
+  if (!buildingInspectorDiagnosticsEnabled()) return;
+  console.info(`[BuildingInspector] ${label}`, details ?? {});
+};
+
+const assertBuildingInspectorLoopLimit = (
+  label: string,
+  count: number,
+  details: Record<string, unknown>,
+) => {
+  if (!buildingInspectorDiagnosticsEnabled()) return;
+  if (count <= BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT) return;
+  console.error(`[BuildingInspector] loop limit exceeded: ${label}`, {
+    count,
+    limit: BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT,
+    ...details,
+  });
+  throw new Error(`[BuildingInspector] loop limit exceeded: ${label}`);
+};
+
+const getProviderFeatureLabel = (index: number): string => {
+  let value = index;
+  let label = '';
+  do {
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+  return `Feature ${label}`;
+};
+
+const BLANK_STYLE: StyleSpecification = {
+  version: 8,
+  name: 'Building Inspector Blank',
+  sources: {},
+  layers: [
+    {
+      id: 'background',
+      type: 'background',
+      paint: {
+        'background-color': '#050608',
+      },
+    },
+  ],
+};
+
+type Bounds = [number, number, number, number];
+type DiagnosticMetric = number | null;
+
+type BuildingResolution = {
+  featureId: string;
+  source: string | null;
+  sourceLayer: string | null;
+  fragments: MapGeoJSONFeature[];
+  duplicateGroups: DuplicateSummary[];
+  primaryTile: string;
+  rawGeoJSON: GeoJSON.FeatureCollection<GeoJSON.Geometry, Record<string, unknown>>;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+  bbox: Bounds | null;
+  polygonCount: DiagnosticMetric;
+  ringCount: DiagnosticMetric;
+  vertexCount: DiagnosticMetric;
+  fragmentCount: number;
+  disconnectedPieces: DiagnosticMetric;
+  metricsStatus: 'ready' | 'skipped';
+};
+
+type FragmentRecord = {
+  featureId: string;
+  tile: string;
+  source: string | null;
+  sourceLayer: string | null;
+  geometryType: string;
+  centroid: [number, number] | null;
+  distanceFromTwistMeters: number | null;
+  bbox: Bounds | null;
+  areaMeters: number;
+  polygonCount: DiagnosticMetric;
+  ringCount: DiagnosticMetric;
+  vertexCount: DiagnosticMetric;
+  disconnectedPieces: DiagnosticMetric;
+};
+
+type PolygonRecord = {
+  polygonIndex: number;
+  geometry: GeoJSON.Polygon;
+  areaMeters: number;
+  bbox: Bounds | null;
+  ringCount: number;
+  vertexCount: number;
+  renderHeightMeters: number | null;
+  renderMinHeightMeters: number | null;
+  providerFeatureId: string | null;
+  localRings: Array<Array<[number, number]>>;
+  geoJson: GeoJSON.Feature<GeoJSON.Polygon, Record<string, unknown>>;
+};
+
+type SelectionSummary = {
+  count: number;
+  indices: number[];
+  areaMeters: number;
+  bbox: Bounds | null;
+  vertexCount: number;
+  ringCount: number;
+  maxRenderHeightMeters: number | null;
+  avgRenderHeightMeters: number | null;
+  geoJson: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>> | null;
+};
+
+type SceneMeshEntry = {
+  record: PolygonRecord;
+  mesh: THREE.Mesh;
+  outline: THREE.LineSegments;
+  edges: THREE.EdgesGeometry;
+  material: THREE.MeshStandardMaterial;
+  outlineMaterial: THREE.LineBasicMaterial;
+};
+
+type DuplicateSummary = {
+  featureId: string;
+  fragmentCount: number;
+  disconnectedPieces: DiagnosticMetric;
+  tileSet: string[];
+};
+
+type ForensicReport = {
+  selectedFeatureId: string;
+  returnedFeatureCount: number;
+  selectedTileCount: number;
+  selectedUniqueCentroids: number;
+  loadedFeatureCount: number;
+  loadedUniqueIdCount: number;
+  duplicateIdEntries: Array<{ featureId: string; count: number }>;
+  rawFeatureDumpLines: string[];
+  fragmentLines: string[];
+  unionSummaryLines: string[];
+};
+
+type RenderedPolygon = {
+  d: string;
+  fill: string;
+  stroke: string;
+};
+
+type BuildingAssetFilter = 'all' | 'missing' | 'has';
+type ResolverFailureStatus =
+  | 'FEATURE_FOUND'
+  | 'FEATURE_NOT_IN_TILE'
+  | 'FEATURE_IN_ADJACENT_TILE'
+  | 'EMPTY_GEOMETRY'
+  | 'INVALID_GEOMETRY'
+  | 'UNSUPPORTED_GEOMETRY'
+  | 'NO_PROVIDER_FEATURE'
+  | 'OUTSIDE_RADIUS'
+  | 'PROVIDER_SYNC_MISMATCH';
+
+type ResolverStepStatus = 'idle' | 'running' | 'success' | 'failed' | 'skipped';
+
+type ResolverStep = {
+  section: 'Venue' | 'Provider' | 'Neighborhood' | 'Geometry' | 'Asset';
+  label: string;
+  status: ResolverStepStatus;
+  detail?: string;
+};
+
+type ResolverState = {
+  failure: ResolverFailureStatus | null;
+  suggestions: string[];
+  providerTileFeatureCount: number;
+  neighborhoodFeatureCount: number;
+  radiusMeters: number;
+  steps: ResolverStep[];
+};
+
+type ProviderCandidate = {
+  featureId: string;
+  feature: MapGeoJSONFeature;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  distanceMeters: number | null;
+  polygonCount: number;
+  source: string | null;
+  sourceLayer: string | null;
+};
+
+type WorkspacePolygon = {
+  id: string;
+  geometry: GeoJSON.Polygon;
+  bbox: Bounds | null;
+  distanceMeters: number | null;
+  renderHeightMeters: number | null;
+  renderMinHeightMeters: number | null;
+  providerFeatureId: string | null;
+  source: string | null;
+  sourceLayer: string | null;
+};
+
+type WorkspaceBuildingGroup = {
+  id: string;
+  label: string;
+  polygonCount: number;
+  providerFeatureIds: string[];
+  distanceMeters: number | null;
+  areaMeters: number;
+  bbox: Bounds | null;
+  maxRenderHeightMeters: number | null;
+  avgRenderHeightMeters: number | null;
+};
+
+type WorkspaceGeometryResult = {
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+  polygons: WorkspacePolygon[];
+  buildings: WorkspaceBuildingGroup[];
+  providerFeatureIds: string[];
+  providerTileFeatureCount: number;
+  radiusMeters: number;
+};
+
+type PolygonRecordMetadata = {
+  renderHeightMeters?: number | null;
+  renderMinHeightMeters?: number | null;
+  providerFeatureId?: string | null;
+};
+
+type LandmarkTestRecord = {
+  id: string;
+  name: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  expectedHeightMeters: number;
+  expectedFootprint: string;
+};
+
+type NeighborhoodCacheResult = {
+  candidates: ProviderCandidate[];
+  providerTileFeatureCount: number;
+  radiusMeters: number;
+};
+
+type ListingWithBuildingAssetFields = Listing & {
+  providerFeatureId?: unknown;
+  buildingFeatureId?: unknown;
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const formatNumber = (value: number | null | undefined, digits = 2): string => {
+  if (!isFiniteNumber(value)) return 'n/a';
+  return value.toLocaleString('en-US', {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: value >= 1000 || Number.isInteger(value) ? 0 : Math.min(2, digits),
+  });
+};
+
+const formatBounds = (bounds: Bounds | null): string => {
+  if (!bounds) return 'n/a';
+  const [minLng, minLat, maxLng, maxLat] = bounds;
+  return `${minLng.toFixed(6)}, ${minLat.toFixed(6)} | ${maxLng.toFixed(6)}, ${maxLat.toFixed(6)}`;
+};
+
+const formatMeters = (value: number | null | undefined): string => {
+  if (!isFiniteNumber(value)) return 'n/a';
+  if (Math.abs(value) >= 1000) return `${formatNumber(value / 1000, 2)} km`;
+  return `${formatNumber(value, 1)} m`;
+};
+
+const parseProviderMeters = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const parsed = Number.parseFloat(value.replace(/[^\d.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getProviderRenderHeight = (feature: MapGeoJSONFeature): number | null => {
+  const properties = feature.properties ?? {};
+  return parseProviderMeters(properties.render_height) ??
+    parseProviderMeters(properties.height) ??
+    parseProviderMeters(properties['building:height']);
+};
+
+const getProviderRenderMinHeight = (feature: MapGeoJSONFeature): number | null => {
+  const properties = feature.properties ?? {};
+  return parseProviderMeters(properties.render_min_height) ??
+    parseProviderMeters(properties.min_height) ??
+    parseProviderMeters(properties['building:min_height']);
+};
+
+const averageMetric = (values: Array<number | null | undefined>): number | null => {
+  const finiteValues = values.filter(isFiniteNumber);
+  if (!finiteValues.length) return null;
+  return finiteValues.reduce((total, value) => total + value, 0) / finiteValues.length;
+};
+
+const maxMetric = (values: Array<number | null | undefined>): number | null => {
+  const finiteValues = values.filter(isFiniteNumber);
+  if (!finiteValues.length) return null;
+  return Math.max(...finiteValues);
+};
+
+const minMetric = (values: Array<number | null | undefined>): number | null => {
+  const finiteValues = values.filter(isFiniteNumber);
+  if (!finiteValues.length) return null;
+  return Math.min(...finiteValues);
+};
+
+const formatDiagnosticMetric = (value: DiagnosticMetric | undefined): string =>
+  typeof value === 'number' && Number.isFinite(value) ? String(value) : 'Skipped';
+
+const formatPolygonCountLabel = (value: DiagnosticMetric | undefined): string =>
+  typeof value === 'number' && Number.isFinite(value) ? `${value} polygon${value === 1 ? '' : 's'}` : 'metrics skipped';
+
+const createResolverState = (
+  overrides: Partial<ResolverState> = {},
+): ResolverState => ({
+  failure: null,
+  suggestions: [],
+  providerTileFeatureCount: 0,
+  neighborhoodFeatureCount: 0,
+  radiusMeters: DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
+  steps: [
+    { section: 'Venue', label: 'Coordinates', status: 'idle' },
+    { section: 'Venue', label: 'Address', status: 'idle' },
+    { section: 'Provider', label: 'Tile loaded', status: 'idle' },
+    { section: 'Provider', label: 'Feature found', status: 'idle' },
+    { section: 'Provider', label: 'Adjacent tiles', status: 'idle' },
+    { section: 'Neighborhood', label: 'Nearby features', status: 'idle' },
+    { section: 'Neighborhood', label: 'Expanded radius', status: 'idle' },
+    { section: 'Geometry', label: 'Polygon extracted', status: 'idle' },
+    { section: 'Geometry', label: 'Editable mesh built', status: 'idle' },
+    { section: 'Asset', label: 'Building asset', status: 'idle' },
+  ],
+  ...overrides,
+});
+
+const updateResolverStep = (
+  state: ResolverState,
+  section: ResolverStep['section'],
+  label: string,
+  status: ResolverStepStatus,
+  detail?: string,
+): ResolverState => ({
+  ...state,
+  steps: state.steps.map((step) =>
+    step.section === section && step.label === label
+      ? { ...step, status, detail }
+      : step,
+  ),
+});
+
+const resolverFailureSuggestions = (failure: ResolverFailureStatus | null): string[] => {
+  switch (failure) {
+    case 'FEATURE_NOT_IN_TILE':
+      return ['Load Adjacent Tiles', 'Expand Radius', 'Manual Feature ID', 'Inspect OSM'];
+    case 'FEATURE_IN_ADJACENT_TILE':
+      return ['Load Adjacent Tiles', 'Manual Feature ID'];
+    case 'EMPTY_GEOMETRY':
+      return ['Provider may be out of sync with OpenStreetMap.', 'Manual Feature ID'];
+    case 'INVALID_GEOMETRY':
+    case 'UNSUPPORTED_GEOMETRY':
+      return ['Manual Feature ID', 'Inspect OSM'];
+    case 'NO_PROVIDER_FEATURE':
+      return ['Manual Feature ID', 'Inspect OSM'];
+    case 'OUTSIDE_RADIUS':
+      return ['Expand Radius', 'Manual Feature ID'];
+    case 'PROVIDER_SYNC_MISMATCH':
+      return ['Provider may be out of sync with OpenStreetMap.', 'Inspect OSM'];
+    default:
+      return [];
+  }
+};
+
+const createVenueResolverState = (
+  listing: Listing,
+  coords: { lng: number; lat: number },
+  hasAsset: boolean,
+  collections: EntityCollections = {},
+): ResolverState => {
+  let state = createResolverState();
+  state = updateResolverStep(state, 'Venue', 'Coordinates', 'success', `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`);
+  state = updateResolverStep(state, 'Venue', 'Address', 'success', formatListingAddress(listing, collections) || 'Available');
+  state = updateResolverStep(state, 'Asset', 'Building asset', hasAsset ? 'success' : 'skipped', hasAsset ? 'Saved asset available' : 'Missing');
+  return state;
+};
+
+const formatListingAddress = (
+  listing: Listing,
+  collections: EntityCollections = {},
+): string => formatListingPhysicalAddress(listing, collections);
+
+const getListingCityLabel = (
+  listing: Listing,
+  collections: EntityCollections = {},
+): string => getListingPhysicalCityLabel(listing, collections);
+
+const getListingProviderFeatureId = (listing: Listing): string | null => {
+  const futureListing = listing as ListingWithBuildingAssetFields;
+  const value = futureListing.providerFeatureId ?? futureListing.buildingFeatureId;
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+};
+
+const createLandmarkListing = (landmark: LandmarkTestRecord): Listing => ({
+  id: `landmark-test-${landmark.id}`,
+  type: 'club',
+  name: landmark.name,
+  description_short: `Developer landmark validation fixture for ${landmark.name}.`,
+  location: `${landmark.name}, ${landmark.city}`,
+  contactEmail: 'dev@swingsphere.local',
+  geopoint: {
+    latitude: landmark.latitude,
+    longitude: landmark.longitude,
+    address: {
+      addressLine1: landmark.name,
+      city: landmark.city,
+      region: landmark.city === 'New York' ? 'NY' : 'CA',
+      country: 'USA',
+    },
+  },
+  schedule: [],
+  generalAmenities: [],
+  status: 'approved',
+  postedByUserId: 'developer-landmark-tests',
+});
+
+const getBuildingAssetForListing = (
+  listing: Listing | null,
+  assets: BuildingAsset[],
+  venues: VenueData[] = [],
+  listings: Listing[] = [],
+  organizations: OrganizationData[] = [],
+  relationships: OrganizationVenueRelationship[] = [],
+): BuildingAsset | null => {
+  if (!listing) return null;
+  if (venues.length || listings.length || organizations.length || relationships.length) {
+    return getCompatibilityBuildingAssetForListing(listing, assets, { venues, listings, organizations, relationships });
+  }
+  const authoredAssetId = listing.buildingAssetId;
+  if (authoredAssetId) {
+    const exactMatch = assets.find((asset) => asset.id === authoredAssetId);
+    if (exactMatch) return exactMatch;
+  }
+  return assets.find((asset) => asset.listingId === listing.id) ?? null;
+};
+
+const getGeometrySignature = (geometry: GeoJSON.Geometry | null | undefined): string =>
+  geometry ? stringifyGeoJSON(geometry) : '';
+
+const waitForMapIdle = (map: MapLibreMap, timeoutMs = 3000): Promise<'idle' | 'timeout'> => {
+  const startedAt = performance.now();
+  logBuildingInspector('waitForMapIdle:enter', { timeoutMs });
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeoutId = 0;
+    const finish = (result: 'idle' | 'timeout') => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      map.off('idle', handleIdle);
+      logBuildingInspector('waitForMapIdle:exit', {
+        result,
+        elapsedMs: performance.now() - startedAt,
+      });
+      resolve(result);
+    };
+    const handleIdle = () => finish('idle');
+    map.once('idle', handleIdle);
+    timeoutId = window.setTimeout(() => finish('timeout'), timeoutMs);
+  });
+};
+
+const stringifyGeoJSON = (value: unknown): string =>
+  JSON.stringify(
+    value,
+    (_key, current) => {
+      if (typeof current === 'number') {
+        return Number.isFinite(current) ? Number(current.toFixed(8)) : null;
+      }
+      return current;
+    },
+    2,
+  );
+
+const copyText = async (text: string): Promise<boolean> => {
+  if (!navigator?.clipboard?.writeText) return false;
+  await navigator.clipboard.writeText(text);
+  return true;
+};
+
+const toRadians = (value: number): number => (value * Math.PI) / 180;
+
+const toLocalMeters = (
+  point: [number, number],
+  origin: { lng: number; lat: number },
+): { x: number; y: number } => {
+  const metersPerDegreeLng = 111320 * Math.cos(toRadians(origin.lat));
+  return {
+    x: (point[0] - origin.lng) * metersPerDegreeLng,
+    y: (point[1] - origin.lat) * 110540,
+  };
+};
+
+const flattenCoords = (coords: unknown, points: number[][]): void => {
+  if (!Array.isArray(coords)) return;
+  if (coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+    points.push(coords as number[]);
+    return;
+  }
+  coords.forEach((child) => flattenCoords(child, points));
+};
+
+const collectCoordinatePoints = (geometry: GeoJSON.Geometry | null | undefined): number[][] => {
+  if (!geometry || !('coordinates' in geometry)) return [];
+  const points: number[][] = [];
+  flattenCoords(geometry.coordinates, points);
+  return points;
+};
+
+const getCoordinateSamples = (geometry: GeoJSON.Geometry | null | undefined, limit = 5): string[] => {
+  const points = collectCoordinatePoints(geometry).slice(0, limit);
+  return points.map((point) => JSON.stringify(point));
+};
+
+const getCoordinateCount = (geometry: GeoJSON.Geometry | null | undefined): number => collectCoordinatePoints(geometry).length;
+
+const getMetadataMatches = (feature: MapGeoJSONFeature): string[] => {
+  const propertyKeys = Object.keys(feature.properties ?? {});
+  const allKeys = [...Object.keys(feature), ...propertyKeys];
+  const normalizedKeys = new Set(allKeys);
+  const matched = new Set<string>();
+  const exactKeys = ['osm_id', 'building', 'building:part', 'relation', 'kind', 'class', 'type'];
+
+  for (const key of exactKeys) {
+    if (normalizedKeys.has(key)) matched.add(key);
+  }
+
+  for (const key of allKeys) {
+    if (/osm|building|relation|kind|class|type/i.test(key)) {
+      matched.add(key);
+    }
+  }
+
+  return Array.from(matched).sort();
+};
+
+const buildPolygonRecords = (
+  geometry: GeoJSON.Geometry | null | undefined,
+  originOverride?: [number, number] | null,
+  metadataByPolygon: PolygonRecordMetadata[] = [],
+): PolygonRecord[] => {
+  logBuildingInspector('buildPolygonRecords:enter', {
+    geometryType: geometry?.type ?? null,
+    coordinateCount: getCoordinateCount(geometry),
+    hasOriginOverride: Boolean(originOverride),
+  });
+  const polygons = collectPolygons(geometry);
+  const origin = originOverride ?? getGeometryCenter(geometry);
+  if (!polygons.length || !origin) {
+    logBuildingInspector('buildPolygonRecords:exit empty', {
+      geometryType: geometry?.type ?? null,
+      coordinateCount: getCoordinateCount(geometry),
+      polygonCount: polygons.length,
+      hasOrigin: Boolean(origin),
+    });
+    return [];
+  }
+
+  let polygonIterations = 0;
+  const records = polygons.map((polygon, polygonIndex) => {
+    polygonIterations += 1;
+    assertBuildingInspectorLoopLimit('buildPolygonRecords.polygonLoop', polygonIterations, {
+      polygonCount: polygons.length,
+    });
+    const geometryPolygon: GeoJSON.Polygon = {
+      type: 'Polygon',
+      coordinates: polygon,
+    };
+    let ringIterations = 0;
+    let coordinateIterations = 0;
+    const localRings = polygon.map((ring) =>
+      {
+        ringIterations += 1;
+        assertBuildingInspectorLoopLimit('buildPolygonRecords.ringLoop', ringIterations, {
+          polygonIndex,
+          ringCount: polygon.length,
+        });
+        return ring.map((coordinate) => {
+          coordinateIterations += 1;
+          assertBuildingInspectorLoopLimit('buildPolygonRecords.coordinateLoop', coordinateIterations, {
+            polygonIndex,
+            ringCount: polygon.length,
+          });
+          const local = toLocalMeters(coordinate as [number, number], { lng: origin[0], lat: origin[1] });
+          return [local.x, local.y] as [number, number];
+        })
+        .filter((point, index, points) => {
+          const previous = points[index - 1];
+          return !previous || previous[0] !== point[0] || previous[1] !== point[1];
+        });
+      },
+    );
+    const ringCount = polygon.length;
+    const vertexCount = polygon.reduce((total, ring) => total + ring.length, 0);
+    const metadata = metadataByPolygon[polygonIndex] ?? {};
+    logBuildingInspector('buildPolygonRecords:polygon extracted', {
+      polygonIndex,
+      ringCount,
+      vertexCount,
+      renderHeightMeters: metadata.renderHeightMeters ?? null,
+      localRingCount: localRings.length,
+      localVertexCount: localRings.reduce((total, ring) => total + ring.length, 0),
+    });
+
+    return {
+      polygonIndex,
+      geometry: geometryPolygon,
+      areaMeters: getFootprintAreaMeters(geometryPolygon),
+      bbox: getGeometryBBox(geometryPolygon),
+      ringCount,
+      vertexCount,
+      renderHeightMeters: metadata.renderHeightMeters ?? null,
+      renderMinHeightMeters: metadata.renderMinHeightMeters ?? null,
+      providerFeatureId: metadata.providerFeatureId ?? null,
+      localRings,
+      geoJson: {
+        type: 'Feature',
+        id: polygonIndex,
+        properties: {
+          polygon_index: polygonIndex,
+          area_meters: getFootprintAreaMeters(geometryPolygon),
+          ring_count: ringCount,
+          vertex_count: vertexCount,
+          render_height: metadata.renderHeightMeters ?? null,
+          render_min_height: metadata.renderMinHeightMeters ?? null,
+          provider_feature_id: metadata.providerFeatureId ?? null,
+        },
+        geometry: geometryPolygon,
+      },
+    };
+  });
+  logBuildingInspector('buildPolygonRecords:exit', {
+    geometryType: geometry?.type ?? null,
+    coordinateCount: getCoordinateCount(geometry),
+    polygonCount: polygons.length,
+    polygonIterations,
+    recordCount: records.length,
+  });
+  return records;
+};
+
+const buildReferencePolygonRecords = (
+  features: MapGeoJSONFeature[],
+  editableFeatureId: string,
+  origin: [number, number] | null,
+): PolygonRecord[] => {
+  logBuildingInspector('buildReferencePolygonRecords:enter', {
+    featureCount: features.length,
+    editableFeatureId,
+    hasOrigin: Boolean(origin),
+  });
+  if (!origin) {
+    logBuildingInspector('buildReferencePolygonRecords:exit missing origin', {
+      featureCount: features.length,
+      editableFeatureId,
+    });
+    return [];
+  }
+  let featureIterations = 0;
+  const referencePolygons = features
+    .filter((feature) => {
+      featureIterations += 1;
+      assertBuildingInspectorLoopLimit('buildReferencePolygonRecords.featureLoop', featureIterations, {
+        featureCount: features.length,
+        editableFeatureId,
+      });
+      if (feature.id === undefined || feature.id === null) return true;
+      return String(feature.id) !== editableFeatureId;
+    })
+    .flatMap((feature) => collectPolygons(feature.geometry))
+    .slice(0, 180);
+
+  if (!referencePolygons.length) {
+    logBuildingInspector('buildReferencePolygonRecords:exit empty', {
+      featureIterations,
+      referencePolygonCount: 0,
+    });
+    return [];
+  }
+  const geometry: GeoJSON.MultiPolygon = {
+    type: 'MultiPolygon',
+    coordinates: referencePolygons,
+  };
+  const records = buildPolygonRecords(geometry, origin);
+  logBuildingInspector('buildReferencePolygonRecords:exit', {
+    featureIterations,
+    referencePolygonCount: referencePolygons.length,
+    recordCount: records.length,
+  });
+  return records;
+};
+
+const getFeatureIdString = (feature: MapGeoJSONFeature): string | null => {
+  if (feature.id === undefined || feature.id === null) return null;
+  return String(feature.id);
+};
+
+const buildScopedNeighborhoodCache = (
+  features: MapGeoJSONFeature[],
+  editableGeometry: GeoJSON.Polygon | GeoJSON.MultiPolygon | null,
+  editableFeatureId: string,
+  radiusMeters = DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
+): NeighborhoodCacheResult => {
+  const editableCenter = getGeometryCenter(editableGeometry);
+  const editablePoint = editableCenter ? { lng: editableCenter[0], lat: editableCenter[1] } : null;
+  logBuildingInspector('scopedNeighborhoodCache:enter', {
+    featureCount: features.length,
+    editableFeatureId,
+    hasEditablePoint: Boolean(editablePoint),
+    radiusMeters,
+  });
+  const byId = new Map<string, ProviderCandidate>();
+  let iterations = 0;
+  for (const feature of features) {
+    iterations += 1;
+    assertBuildingInspectorLoopLimit('groupProviderFeatures.featureLoop', iterations, {
+      featureCount: features.length,
+      candidateCount: byId.size,
+    });
+    const featureId = getFeatureIdString(feature);
+    const geometry = feature.geometry;
+    if (!featureId || !geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) continue;
+    const center = getGeometryCenter(geometry);
+    const distanceMeters = editablePoint && center
+      ? haversineMeters(editablePoint, { lng: center[0], lat: center[1] })
+      : null;
+    const boundsDistanceMeters = editablePoint ? getBoundsDistanceMeters(getGeometryBBox(geometry), editablePoint) : null;
+    const isEditable = featureId === editableFeatureId;
+    const isWithinRadius = isEditable || (
+      boundsDistanceMeters !== null
+        ? boundsDistanceMeters <= radiusMeters
+        : distanceMeters !== null && distanceMeters <= radiusMeters
+    );
+    if (!isWithinRadius) continue;
+    const metrics = getBaseFeatureMetrics(geometry);
+    const candidate: ProviderCandidate = {
+      featureId,
+      feature,
+      geometry,
+      distanceMeters,
+      polygonCount: metrics.polygonCount,
+      source: feature.source ?? null,
+      sourceLayer: feature.sourceLayer ?? null,
+    };
+    const existing = byId.get(featureId);
+    if (!existing || (candidate.distanceMeters ?? Number.POSITIVE_INFINITY) < (existing.distanceMeters ?? Number.POSITIVE_INFINITY)) {
+      byId.set(featureId, candidate);
+    }
+  }
+  const candidates = Array.from(byId.values()).sort((a, b) =>
+    (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY)
+    || a.featureId.localeCompare(b.featureId),
+  );
+  logBuildingInspector('groupProviderFeatures:exit', {
+    iterations,
+    featureCount: features.length,
+    candidateCount: candidates.length,
+    radiusMeters,
+  });
+  return {
+    candidates,
+    providerTileFeatureCount: features.length,
+    radiusMeters,
+  };
+};
+
+const getBoundsCenter = (bounds: Bounds | null): [number, number] | null => {
+  if (!bounds) return null;
+  return [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
+};
+
+const boundsTouchOrOverlapMeters = (
+  a: Bounds | null,
+  b: Bounds | null,
+  origin: { lng: number; lat: number },
+  toleranceMeters = 0.75,
+): boolean => {
+  if (!a || !b) return false;
+  const toExtent = (bounds: Bounds) => {
+    const min = toLocalMeters([bounds[0], bounds[1]], origin);
+    const max = toLocalMeters([bounds[2], bounds[3]], origin);
+    return {
+      minX: Math.min(min.x, max.x) - toleranceMeters,
+      maxX: Math.max(min.x, max.x) + toleranceMeters,
+      minY: Math.min(min.y, max.y) - toleranceMeters,
+      maxY: Math.max(min.y, max.y) + toleranceMeters,
+    };
+  };
+  const first = toExtent(a);
+  const second = toExtent(b);
+  return first.minX <= second.maxX &&
+    first.maxX >= second.minX &&
+    first.minY <= second.maxY &&
+    first.maxY >= second.minY;
+};
+
+const buildWorkspaceGeometryFromFeatures = (
+  features: MapGeoJSONFeature[],
+  center: { lng: number; lat: number },
+  radiusMeters = DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
+): WorkspaceGeometryResult => {
+  logBuildingInspector('workspaceGeometry:enter', {
+    featureCount: features.length,
+    center,
+    radiusMeters,
+  });
+
+  const polygons: WorkspacePolygon[] = [];
+  let featureIterations = 0;
+  let polygonIterations = 0;
+
+  for (const feature of features) {
+    featureIterations += 1;
+    assertBuildingInspectorLoopLimit('workspaceGeometry.featureLoop', featureIterations, {
+      featureCount: features.length,
+      polygonCount: polygons.length,
+    });
+
+    const providerFeatureId = getFeatureIdString(feature);
+    const renderHeightMeters = getProviderRenderHeight(feature);
+    const renderMinHeightMeters = getProviderRenderMinHeight(feature);
+    const featurePolygons = collectPolygons(feature.geometry);
+    featurePolygons.forEach((coordinates, localPolygonIndex) => {
+      polygonIterations += 1;
+      assertBuildingInspectorLoopLimit('workspaceGeometry.polygonLoop', polygonIterations, {
+        featureCount: features.length,
+        polygonCount: polygons.length,
+      });
+      const geometry: GeoJSON.Polygon = {
+        type: 'Polygon',
+        coordinates,
+      };
+      const bbox = getGeometryBBox(geometry);
+      const distanceMeters = getBoundsDistanceMeters(bbox, center);
+      if (distanceMeters === null || distanceMeters > radiusMeters) return;
+      polygons.push({
+        id: `${providerFeatureId ?? 'featureless'}:${localPolygonIndex}:${polygons.length}`,
+        geometry,
+        bbox,
+        distanceMeters,
+        renderHeightMeters,
+        renderMinHeightMeters,
+        providerFeatureId,
+        source: feature.source ?? null,
+        sourceLayer: feature.sourceLayer ?? null,
+      });
+    });
+  }
+
+  polygons.sort((a, b) =>
+    (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY)
+    || a.id.localeCompare(b.id),
+  );
+
+  const visited = new Set<number>();
+  const groups: WorkspacePolygon[][] = [];
+  let groupingComparisons = 0;
+  for (let index = 0; index < polygons.length; index += 1) {
+    if (visited.has(index)) continue;
+    const group: WorkspacePolygon[] = [];
+    const stack = [index];
+    visited.add(index);
+
+    while (stack.length) {
+      const current = stack.pop();
+      if (current === undefined) continue;
+      const currentPolygon = polygons[current];
+      group.push(currentPolygon);
+
+      for (let nextIndex = 0; nextIndex < polygons.length; nextIndex += 1) {
+        groupingComparisons += 1;
+        assertBuildingInspectorLoopLimit('workspaceGeometry.groupingComparisons', groupingComparisons, {
+          polygonCount: polygons.length,
+          groupCount: groups.length,
+        });
+        if (visited.has(nextIndex)) continue;
+        if (boundsTouchOrOverlapMeters(currentPolygon.bbox, polygons[nextIndex].bbox, center)) {
+          visited.add(nextIndex);
+          stack.push(nextIndex);
+        }
+      }
+    }
+
+    groups.push(group);
+  }
+
+  groups.sort((a, b) => {
+    const distanceA = Math.min(...a.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY));
+    const distanceB = Math.min(...b.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY));
+    return distanceA - distanceB;
+  });
+
+  const buildings = groups.map((group, index): WorkspaceBuildingGroup => {
+    const providerFeatureIds = Array.from(new Set(group
+      .map((polygon) => polygon.providerFeatureId)
+      .filter((value): value is string => Boolean(value))));
+    const bbox = buildAggregateBounds(group);
+    const renderHeights = group.map((polygon) => polygon.renderHeightMeters);
+    return {
+      id: `workspace-building-${index + 1}`,
+      label: `Building ${index + 1}`,
+      polygonCount: group.length,
+      providerFeatureIds,
+      distanceMeters: Math.min(...group.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY)),
+      areaMeters: group.reduce((total, polygon) => total + getFootprintAreaMeters(polygon.geometry), 0),
+      bbox,
+      maxRenderHeightMeters: maxMetric(renderHeights),
+      avgRenderHeightMeters: averageMetric(renderHeights),
+    };
+  });
+
+  const coordinates = polygons.map((polygon) => polygon.geometry.coordinates);
+  const geometry = coordinates.length === 1
+    ? {
+        type: 'Polygon' as const,
+        coordinates: coordinates[0],
+      }
+    : coordinates.length > 1
+      ? {
+          type: 'MultiPolygon' as const,
+          coordinates,
+        }
+      : null;
+
+  const providerFeatureIds = Array.from(new Set(polygons
+    .map((polygon) => polygon.providerFeatureId)
+    .filter((value): value is string => Boolean(value))));
+
+  logBuildingInspector('workspaceGeometry:exit', {
+    featureIterations,
+    polygonIterations,
+    workspacePolygonCount: polygons.length,
+    buildingCount: buildings.length,
+    providerFeatureIdCount: providerFeatureIds.length,
+    groupingComparisons,
+    radiusMeters,
+  });
+
+  return {
+    geometry,
+    polygons,
+    buildings,
+    providerFeatureIds,
+    providerTileFeatureCount: features.length,
+    radiusMeters,
+  };
+};
+
+const buildWorkspaceProviderCandidates = (
+  features: MapGeoJSONFeature[],
+  workspace: WorkspaceGeometryResult,
+  center: { lng: number; lat: number },
+): ProviderCandidate[] => {
+  const providerIds = new Set(workspace.providerFeatureIds);
+  const candidates: ProviderCandidate[] = [];
+  const seen = new Set<string>();
+  let iterations = 0;
+
+  for (const feature of features) {
+    iterations += 1;
+    assertBuildingInspectorLoopLimit('workspaceProviderCandidates.featureLoop', iterations, {
+      featureCount: features.length,
+      candidateCount: candidates.length,
+    });
+    const featureId = getFeatureIdString(feature);
+    if (!featureId || !providerIds.has(featureId) || seen.has(featureId)) continue;
+    const geometry = feature.geometry;
+    if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) continue;
+    const metrics = getBaseFeatureMetrics(geometry);
+    const featureCenter = getGeometryCenter(geometry);
+    candidates.push({
+      featureId,
+      feature,
+      geometry,
+      distanceMeters: featureCenter ? haversineMeters(center, { lng: featureCenter[0], lat: featureCenter[1] }) : null,
+      polygonCount: metrics.polygonCount,
+      source: feature.source ?? null,
+      sourceLayer: feature.sourceLayer ?? null,
+    });
+    seen.add(featureId);
+  }
+
+  return candidates.sort((a, b) =>
+    (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY)
+    || a.featureId.localeCompare(b.featureId),
+  );
+};
+
+const buildRawFeatureDump = (feature: MapGeoJSONFeature, index: number): string[] => {
+  const geometry = feature.geometry;
+  const propertyKeys = Object.keys(feature.properties ?? {});
+  const rawKeys = Object.keys(feature);
+  const coordinateCount = getCoordinateCount(geometry);
+  const coordinateSamples = getCoordinateSamples(geometry);
+  const geometryType = geometry?.type ?? 'n/a';
+  const isPolygon = geometryType === 'Polygon';
+  const isMultiPolygon = geometryType === 'MultiPolygon';
+  const metadataMatches = getMetadataMatches(feature);
+
+  return [
+    `Feature ${index}`,
+    `feature.id: ${feature.id === undefined || feature.id === null ? 'n/a' : String(feature.id)}`,
+    `feature.type: ${feature.type ?? 'n/a'}`,
+    `feature.geometry.type: ${geometryType}`,
+    `raw object keys: ${rawKeys.length ? rawKeys.join(', ') : 'n/a'}`,
+    `property keys: ${propertyKeys.length ? propertyKeys.join(', ') : 'n/a'}`,
+    'feature.properties:',
+    stringifyGeoJSON(feature.properties ?? {}),
+    'raw feature object:',
+    stringifyGeoJSON(feature),
+    `first five coordinate arrays: ${coordinateSamples.length ? coordinateSamples.join(' | ') : 'n/a'}`,
+    `total coordinate count: ${coordinateCount}`,
+    `polygon or multipolygon: ${isPolygon ? 'Polygon' : isMultiPolygon ? 'MultiPolygon' : 'neither'}`,
+    `has osm_id / building / building:part / relation / kind / class / type metadata: ${metadataMatches.length ? 'yes' : 'no'}`,
+    `matched metadata keys: ${metadataMatches.length ? metadataMatches.join(', ') : 'n/a'}`,
+  ];
+};
+
+const getGeometryBBox = (geometry: GeoJSON.Geometry | null | undefined): Bounds | null => {
+  if (!geometry) return null;
+  const points: number[][] = [];
+  flattenCoords((geometry as GeoJSON.Geometry).coordinates, points);
+  if (!points.length) return null;
+  let minLng = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  points.forEach(([lng, lat]) => {
+    minLng = Math.min(minLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLng = Math.max(maxLng, lng);
+    maxLat = Math.max(maxLat, lat);
+  });
+  return [minLng, minLat, maxLng, maxLat];
+};
+
+const getGeometryCenter = (geometry: GeoJSON.Geometry | null | undefined): [number, number] | null => {
+  const bounds = getGeometryBBox(geometry);
+  if (!bounds) return null;
+  return [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
+};
+
+const getGeometrySpanMeters = (bounds: Bounds | null): { widthMeters: number; heightMeters: number } | null => {
+  if (!bounds) return null;
+  const [minLng, minLat, maxLng, maxLat] = bounds;
+  const centerLat = (minLat + maxLat) / 2;
+  const origin = { lng: (minLng + maxLng) / 2, lat: centerLat };
+  const widthMeters = Math.abs(toLocalMeters([maxLng, centerLat], origin).x - toLocalMeters([minLng, centerLat], origin).x);
+  const heightMeters = Math.abs(toLocalMeters([origin.lng, maxLat], origin).y - toLocalMeters([origin.lng, minLat], origin).y);
+  return { widthMeters, heightMeters };
+};
+
+const getBoundsDistanceMeters = (
+  bounds: Bounds | null,
+  point: { lng: number; lat: number },
+): number | null => {
+  if (!bounds) return null;
+  const [minLng, minLat, maxLng, maxLat] = bounds;
+  const closestLng = Math.min(maxLng, Math.max(minLng, point.lng));
+  const closestLat = Math.min(maxLat, Math.max(minLat, point.lat));
+  return haversineMeters(point, { lng: closestLng, lat: closestLat });
+};
+
+const collectPolygons = (geometry: GeoJSON.Geometry | null | undefined): number[][][][] => {
+  if (!geometry) return [];
+  if (geometry.type === 'Polygon') return [geometry.coordinates as number[][][]];
+  if (geometry.type === 'MultiPolygon') return geometry.coordinates as number[][][][];
+  return [];
+};
+
+const haversineMeters = (a: { lng: number; lat: number }, b: { lng: number; lat: number }): number => {
+  const earthRadiusMeters = 6371008.8;
+  const toRadiansLocal = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRadiansLocal(b.lat - a.lat);
+  const dLng = toRadiansLocal(b.lng - a.lng);
+  const lat1 = toRadiansLocal(a.lat);
+  const lat2 = toRadiansLocal(b.lat);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
+  return 2 * earthRadiusMeters * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+const getFeatureTile = (feature: MapGeoJSONFeature): string => {
+  const anyFeature = feature as MapGeoJSONFeature & { _z?: number; _x?: number; _y?: number };
+  if (
+    typeof anyFeature._z === 'number' &&
+    typeof anyFeature._x === 'number' &&
+    typeof anyFeature._y === 'number'
+  ) {
+    return `${anyFeature._z}/${anyFeature._x}/${anyFeature._y}`;
+  }
+  return 'n/a';
+};
+
+const ringSegments = (ring: number[][]): Array<[number[], number[]]> => {
+  const segments: Array<[number[], number[]]> = [];
+  for (let i = 0; i < ring.length; i += 1) {
+    const current = ring[i];
+    const next = ring[(i + 1) % ring.length];
+    if (current && next) segments.push([current, next]);
+  }
+  return segments;
+};
+
+const orientation = (a: number[], b: number[], c: number[]): number => {
+  const value = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1]);
+  if (Math.abs(value) < 1e-12) return 0;
+  return value > 0 ? 1 : 2;
+};
+
+const pointOnSegment = (a: number[], b: number[], c: number[]): boolean =>
+  b[0] <= Math.max(a[0], c[0]) &&
+  b[0] >= Math.min(a[0], c[0]) &&
+  b[1] <= Math.max(a[1], c[1]) &&
+  b[1] >= Math.min(a[1], c[1]);
+
+const segmentsIntersect = (
+  a1: number[],
+  a2: number[],
+  b1: number[],
+  b2: number[],
+): boolean => {
+  const o1 = orientation(a1, a2, b1);
+  const o2 = orientation(a1, a2, b2);
+  const o3 = orientation(b1, b2, a1);
+  const o4 = orientation(b1, b2, a2);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && pointOnSegment(a1, b1, a2)) return true;
+  if (o2 === 0 && pointOnSegment(a1, b2, a2)) return true;
+  if (o3 === 0 && pointOnSegment(b1, a1, b2)) return true;
+  if (o4 === 0 && pointOnSegment(b1, a2, b2)) return true;
+  return false;
+};
+
+const pointInRing = (point: [number, number], ring: number[][]): boolean => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const xi = ring[i]?.[0];
+    const yi = ring[i]?.[1];
+    const xj = ring[j]?.[0];
+    const yj = ring[j]?.[1];
+    if (!isFiniteNumber(xi) || !isFiniteNumber(yi) || !isFiniteNumber(xj) || !isFiniteNumber(yj)) {
+      continue;
+    }
+    const intersects =
+      yi > point[1] !== yj > point[1] &&
+      point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+};
+
+const pointInPolygon = (point: [number, number], polygon: number[][][]): boolean => {
+  if (!polygon.length || !pointInRing(point, polygon[0])) return false;
+  return !polygon.slice(1).some((hole) => pointInRing(point, hole));
+};
+
+const polygonsIntersect = (a: number[][][][], b: number[][][][]): boolean => {
+  for (const polygonA of a) {
+    for (const polygonB of b) {
+      for (const ringA of polygonA) {
+        for (const ringB of polygonB) {
+          for (const [a1, a2] of ringSegments(ringA)) {
+            for (const [b1, b2] of ringSegments(ringB)) {
+              if (segmentsIntersect(a1, a2, b1, b2)) return true;
+            }
+          }
+          if (ringA[0] && pointInPolygon(ringA[0] as [number, number], polygonB)) return true;
+          if (ringB[0] && pointInPolygon(ringB[0] as [number, number], polygonA)) return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+const countConnectedPieces = (polygons: number[][][][]): number => {
+  logBuildingInspector('countConnectedPieces:enter', { polygonCount: polygons.length });
+  if (!polygons.length) return 0;
+  const visited = new Set<number>();
+  let pieces = 0;
+  let comparisons = 0;
+
+  for (let i = 0; i < polygons.length; i += 1) {
+    assertBuildingInspectorLoopLimit('countConnectedPieces.outerLoop', i + 1, {
+      polygonCount: polygons.length,
+      pieces,
+    });
+    if (visited.has(i)) continue;
+    pieces += 1;
+    const stack = [i];
+    visited.add(i);
+
+    while (stack.length) {
+      const current = stack.pop();
+      if (current === undefined) continue;
+      for (let j = 0; j < polygons.length; j += 1) {
+        comparisons += 1;
+        assertBuildingInspectorLoopLimit('countConnectedPieces.comparisons', comparisons, {
+          polygonCount: polygons.length,
+          pieces,
+          current,
+          j,
+        });
+        if (visited.has(j)) continue;
+        if (polygonsIntersect([polygons[current]], [polygons[j]])) {
+          visited.add(j);
+          stack.push(j);
+        }
+      }
+    }
+  }
+
+  logBuildingInspector('countConnectedPieces:exit', {
+    polygonCount: polygons.length,
+    pieces,
+    comparisons,
+  });
+  return pieces;
+};
+
+const ringAreaMeters = (ring: number[][], origin: { lng: number; lat: number }): number => {
+  if (ring.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < ring.length; i += 1) {
+    const current = toLocalMeters(ring[i] as [number, number], origin);
+    const next = toLocalMeters(ring[(i + 1) % ring.length] as [number, number], origin);
+    area += current.x * next.y - next.x * current.y;
+  }
+  return Math.abs(area) / 2;
+};
+
+const getFootprintAreaMeters = (geometry: GeoJSON.Geometry | null | undefined): number => {
+  const polygons = collectPolygons(geometry);
+  const center = getGeometryCenter(geometry);
+  if (!polygons.length || !center) return 0;
+  const origin = { lng: center[0], lat: center[1] };
+  return polygons.reduce((total, polygon) => {
+    if (!polygon.length) return total;
+    const outerArea = ringAreaMeters(polygon[0], origin);
+    const holeArea = polygon.slice(1).reduce((holeTotal, ring) => holeTotal + ringAreaMeters(ring, origin), 0);
+    return total + Math.max(0, outerArea - holeArea);
+  }, 0);
+};
+
+const buildAggregateBounds = (items: Array<{ bbox: Bounds | null }>): Bounds | null => {
+  let minLng = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+
+  for (const item of items) {
+    const bounds = item.bbox;
+    if (!bounds) continue;
+    minLng = Math.min(minLng, bounds[0]);
+    minLat = Math.min(minLat, bounds[1]);
+    maxLng = Math.max(maxLng, bounds[2]);
+    maxLat = Math.max(maxLat, bounds[3]);
+  }
+
+  if (![minLng, minLat, maxLng, maxLat].every(Number.isFinite)) return null;
+  return [minLng, minLat, maxLng, maxLat];
+};
+
+const countUniqueCentroids = (items: Array<{ centroid: [number, number] | null }>): number => {
+  const centroids = new Set<string>();
+  for (const item of items) {
+    if (!item.centroid) continue;
+    centroids.add(`${item.centroid[0].toFixed(6)},${item.centroid[1].toFixed(6)}`);
+  }
+  return centroids.size;
+};
+
+const countUniqueIds = (features: MapGeoJSONFeature[]): number => {
+  const ids = new Set<string>();
+  for (const feature of features) {
+    if (feature.id === undefined || feature.id === null) continue;
+    ids.add(String(feature.id));
+  }
+  return ids.size;
+};
+
+const buildForensicReport = (
+  selectedFeatureId: string,
+  allFeatures: MapGeoJSONFeature[],
+  fragmentRecords: FragmentRecord[],
+  duplicateSummaries: DuplicateSummary[],
+  resolution: BuildingResolution | null,
+): ForensicReport => {
+  const selectedTiles = new Set(fragmentRecords.map((fragment) => fragment.tile).filter((tile) => tile !== 'n/a'));
+  const centroidEntries = fragmentRecords.filter((fragment) => fragment.centroid);
+  const aggregateBounds = buildAggregateBounds(fragmentRecords);
+  const span = getGeometrySpanMeters(aggregateBounds);
+  const maxSeparationMeters = centroidEntries.reduce((maxDistance, current, index) => {
+    if (!current.centroid) return maxDistance;
+    for (let i = index + 1; i < centroidEntries.length; i += 1) {
+      const other = centroidEntries[i];
+      if (!other.centroid) continue;
+      maxDistance = Math.max(
+        maxDistance,
+        haversineMeters(
+          { lng: current.centroid[0], lat: current.centroid[1] },
+          { lng: other.centroid[0], lat: other.centroid[1] },
+        ),
+      );
+    }
+    return maxDistance;
+  }, 0);
+
+  const fragmentLines = fragmentRecords.length
+    ? fragmentRecords.map((fragment, index) => {
+        const distance = fragment.distanceFromTwistMeters ? formatMeters(fragment.distanceFromTwistMeters) : 'n/a';
+        const centroid = fragment.centroid ? `${fragment.centroid[1].toFixed(6)}, ${fragment.centroid[0].toFixed(6)}` : 'n/a';
+        return [
+          `Fragment ${index + 1}`,
+          `Tile: ${fragment.tile}`,
+          `BBox: ${formatBounds(fragment.bbox)}`,
+          `Centroid: ${centroid}`,
+          `Area: ${formatNumber(fragment.areaMeters, 0)} m²`,
+          `Polygon count: ${formatDiagnosticMetric(fragment.polygonCount)}`,
+          `Disconnected pieces: ${formatDiagnosticMetric(fragment.disconnectedPieces)}`,
+          `Distance from focus: ${distance}`,
+        ].join('\n');
+      })
+    : ['No fragments returned for this feature id.'];
+
+  const unionSummaryLines = [
+    `Total fragments: ${fragmentRecords.length}`,
+    `Unique tiles: ${selectedTiles.size}`,
+    `Total polygons: ${formatDiagnosticMetric(resolution?.polygonCount)}`,
+    `Disconnected polygons: ${formatDiagnosticMetric(resolution?.disconnectedPieces)}`,
+    `Union bounding box: ${formatBounds(aggregateBounds)}`,
+    `Width: ${span ? formatMeters(span.widthMeters) : 'n/a'}`,
+    `Height: ${span ? formatMeters(span.heightMeters) : 'n/a'}`,
+    `Maximum fragment separation: ${maxSeparationMeters ? formatMeters(maxSeparationMeters) : 'n/a'}`,
+  ];
+
+  const duplicateIdEntries = duplicateSummaries.map((entry) => ({
+    featureId: entry.featureId,
+    count: entry.fragmentCount,
+  }));
+  const matchingRawFeatures = allFeatures.filter((feature) => {
+    if (feature.id === undefined || feature.id === null) return false;
+    return String(feature.id) === selectedFeatureId;
+  });
+  const rawFeatureDumpLines = matchingRawFeatures.length
+    ? matchingRawFeatures.flatMap((feature, index) => [
+        ...buildRawFeatureDump(feature, index + 1),
+        '',
+      ])
+    : ['No raw features matched this feature id in the loaded source window.'];
+
+  return {
+    selectedFeatureId,
+    returnedFeatureCount: fragmentRecords.length,
+    selectedTileCount: selectedTiles.size,
+    selectedUniqueCentroids: countUniqueCentroids(fragmentRecords),
+    loadedFeatureCount: allFeatures.length,
+    loadedUniqueIdCount: countUniqueIds(allFeatures),
+    duplicateIdEntries,
+    rawFeatureDumpLines,
+    fragmentLines,
+    unionSummaryLines,
+  };
+};
+
+type FeatureMetrics = {
+  polygonCount: number;
+  ringCount: number;
+  vertexCount: number;
+  geometryType: string;
+  disconnectedPieces: DiagnosticMetric;
+  metricsStatus: 'ready' | 'skipped';
+};
+
+const getBaseFeatureMetrics = (geometry: GeoJSON.Geometry | null | undefined): Omit<FeatureMetrics, 'disconnectedPieces' | 'metricsStatus'> => {
+  const polygons = collectPolygons(geometry);
+  const polygonCount = polygons.length;
+  const ringCount = polygons.reduce((total, polygon) => total + polygon.length, 0);
+  const vertexCount = polygons.reduce(
+    (total, polygon) => total + polygon.reduce((polygonTotal, ring) => polygonTotal + ring.length, 0),
+    0,
+  );
+  const geometryType =
+    geometry?.type === 'Polygon'
+      ? 'Polygon'
+      : geometry?.type === 'MultiPolygon'
+        ? 'MultiPolygon'
+        : 'Unknown';
+
+  return {
+    polygonCount,
+    ringCount,
+    vertexCount,
+    geometryType,
+  };
+};
+
+const getFeatureMetrics = (geometry: GeoJSON.Geometry | null | undefined): FeatureMetrics => {
+  const baseMetrics = getBaseFeatureMetrics(geometry);
+  const polygons = collectPolygons(geometry);
+  let disconnectedPieces: DiagnosticMetric = null;
+  let metricsStatus: FeatureMetrics['metricsStatus'] = 'ready';
+  try {
+    disconnectedPieces = countConnectedPieces(polygons);
+  } catch (error) {
+    metricsStatus = 'skipped';
+    logBuildingInspector('getFeatureMetrics:diagnostic skipped', {
+      ...baseMetrics,
+      error,
+    });
+  }
+
+  return {
+    ...baseMetrics,
+    disconnectedPieces,
+    metricsStatus,
+  };
+};
+
+const getFragmentRecord = (feature: MapGeoJSONFeature): FragmentRecord | null => {
+  if (!feature.geometry) return null;
+  const metrics = getFeatureMetrics(feature.geometry);
+  const centroid = getGeometryCenter(feature.geometry);
+  return {
+    featureId: feature.id === undefined || feature.id === null ? 'unknown' : String(feature.id),
+    tile: getFeatureTile(feature),
+    source: feature.source ?? null,
+    sourceLayer: feature.sourceLayer ?? null,
+    geometryType: feature.geometry.type,
+    centroid,
+    distanceFromTwistMeters: centroid
+      ? haversineMeters({ lng: DEFAULT_TWIST_LNG, lat: DEFAULT_TWIST_LAT }, { lng: centroid[0], lat: centroid[1] })
+      : null,
+    bbox: getGeometryBBox(feature.geometry),
+    areaMeters: getFootprintAreaMeters(feature.geometry),
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    disconnectedPieces: metrics.disconnectedPieces,
+  };
+};
+
+const buildDuplicateSummaries = (features: MapGeoJSONFeature[]): DuplicateSummary[] => {
+  logBuildingInspector('buildDuplicateSummaries:enter', { featureCount: features.length });
+  const grouped = new Map<string, MapGeoJSONFeature[]>();
+  let iterations = 0;
+  for (const feature of features) {
+    iterations += 1;
+    assertBuildingInspectorLoopLimit('buildDuplicateSummaries.featureLoop', iterations, {
+      featureCount: features.length,
+      groupedCount: grouped.size,
+    });
+    if (feature.id === undefined || feature.id === null) continue;
+    const key = String(feature.id);
+    const current = grouped.get(key) ?? [];
+    current.push(feature);
+    grouped.set(key, current);
+  }
+
+  const summaries = Array.from(grouped.entries())
+    .filter(([, fragments]) => fragments.length > 1)
+    .map(([featureId, fragments]) => {
+      const geometry = buildMergedGeometry(fragments);
+      const metrics = getFeatureMetrics(geometry);
+      return {
+        featureId,
+        fragmentCount: fragments.length,
+        disconnectedPieces: metrics.disconnectedPieces,
+        tileSet: Array.from(new Set(fragments.map((fragment) => getFeatureTile(fragment)))).sort(),
+      };
+    })
+    .sort((a, b) => b.fragmentCount - a.fragmentCount || a.featureId.localeCompare(b.featureId));
+  logBuildingInspector('buildDuplicateSummaries:exit', {
+    iterations,
+    groupedCount: grouped.size,
+    duplicateCount: summaries.length,
+  });
+  return summaries;
+};
+
+const scoreFragment = (fragment: MapGeoJSONFeature, focusPoint: { lng: number; lat: number }): number => {
+  const geometry = fragment.geometry;
+  if (!geometry) return Number.POSITIVE_INFINITY;
+  const polygons = collectPolygons(geometry);
+  const point: [number, number] = [focusPoint.lng, focusPoint.lat];
+  for (const polygon of polygons) {
+    if (pointInPolygon(point, polygon)) return 0;
+  }
+  const center = getGeometryCenter(geometry);
+  if (!center) return Number.POSITIVE_INFINITY;
+  return haversineMeters(focusPoint, { lng: center[0], lat: center[1] });
+};
+
+const choosePrimaryFragment = (
+  fragments: MapGeoJSONFeature[],
+  focusPoint: { lng: number; lat: number },
+): MapGeoJSONFeature | null => {
+  if (!fragments.length) return null;
+  return [...fragments].sort((a, b) => {
+    const scoreA = scoreFragment(a, focusPoint);
+    const scoreB = scoreFragment(b, focusPoint);
+    if (scoreA !== scoreB) return scoreA - scoreB;
+    const areaA = getFootprintAreaMeters(a.geometry);
+    const areaB = getFootprintAreaMeters(b.geometry);
+    return areaB - areaA;
+  })[0] ?? null;
+};
+
+const buildMergedGeometry = (
+  fragments: MapGeoJSONFeature[],
+): GeoJSON.Polygon | GeoJSON.MultiPolygon | null => {
+  const polygons: number[][][][] = [];
+  for (const fragment of fragments) {
+    polygons.push(...collectPolygons(fragment.geometry));
+  }
+  if (!polygons.length) return null;
+  if (polygons.length === 1) {
+    return {
+      type: 'Polygon',
+      coordinates: polygons[0],
+    };
+  }
+  return {
+    type: 'MultiPolygon',
+    coordinates: polygons,
+  };
+};
+
+const buildRawGeoJSON = (
+  fragments: MapGeoJSONFeature[],
+): GeoJSON.FeatureCollection<GeoJSON.Geometry, Record<string, unknown>> => ({
+  type: 'FeatureCollection',
+  features: fragments
+    .filter((fragment) => Boolean(fragment.geometry))
+    .map((fragment) => ({
+      type: 'Feature',
+      id: fragment.id,
+      properties: {
+        ...(fragment.properties ?? {}),
+        source: fragment.source ?? null,
+        sourceLayer: fragment.sourceLayer ?? null,
+      },
+      geometry: fragment.geometry as GeoJSON.Geometry,
+    })),
+});
+
+const buildResolution = (featureId: string, fragments: MapGeoJSONFeature[]): BuildingResolution | null => {
+  logBuildingInspector('buildResolution:enter', {
+    featureId,
+    fragmentCount: fragments.length,
+  });
+  if (!fragments.length) {
+    logBuildingInspector('buildResolution:exit empty fragments', { featureId });
+    return null;
+  }
+  const primaryFragment = choosePrimaryFragment(fragments, { lng: DEFAULT_TWIST_LNG, lat: DEFAULT_TWIST_LAT });
+  if (!primaryFragment?.geometry) {
+    logBuildingInspector('buildResolution:exit missing primary geometry', {
+      featureId,
+      fragmentCount: fragments.length,
+      fragmentGeometryTypes: fragments.map((fragment) => fragment.geometry?.type ?? 'missing'),
+    });
+    return null;
+  }
+  logBuildingInspector('buildResolution:primary fragment', {
+    featureId,
+    primaryTile: getFeatureTile(primaryFragment),
+    geometryType: primaryFragment.geometry.type,
+    coordinateCount: getCoordinateCount(primaryFragment.geometry),
+    source: primaryFragment.source ?? null,
+    sourceLayer: primaryFragment.sourceLayer ?? null,
+  });
+  const geometry = primaryFragment.geometry.type === 'Polygon' || primaryFragment.geometry.type === 'MultiPolygon'
+    ? primaryFragment.geometry
+    : null;
+  if (!geometry) {
+    logBuildingInspector('buildResolution:exit unsupported geometry', {
+      featureId,
+      geometryType: primaryFragment.geometry.type,
+    });
+    return null;
+  }
+  const metrics = getBaseFeatureMetrics(geometry);
+  const extractedPolygons = collectPolygons(geometry);
+  logBuildingInspector('buildResolution:geometry extraction', {
+    featureId,
+    geometryType: geometry.type,
+    coordinateCount: getCoordinateCount(geometry),
+    extractedPolygonCount: extractedPolygons.length,
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    disconnectedPieces: 'skipped before render',
+  });
+  const result = {
+    featureId,
+    source: primaryFragment.source ?? null,
+    sourceLayer: primaryFragment.sourceLayer ?? null,
+    fragments: [primaryFragment],
+    duplicateGroups: [],
+    primaryTile: getFeatureTile(primaryFragment),
+    rawGeoJSON: buildRawGeoJSON([primaryFragment]),
+    geometry,
+    bbox: getGeometryBBox(geometry),
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    fragmentCount: fragments.length,
+    disconnectedPieces: null,
+    metricsStatus: 'skipped' as const,
+  };
+  logBuildingInspector('buildResolution:exit', {
+    featureId,
+    fragmentCount: fragments.length,
+    geometryType: geometry.type,
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    disconnectedPieces: null,
+    metricsStatus: 'skipped',
+  });
+  return result;
+};
+
+const buildResolutionFromWorkspace = (
+  seedFeatureId: string,
+  workspace: WorkspaceGeometryResult,
+  fragments: MapGeoJSONFeature[],
+): BuildingResolution | null => {
+  if (!workspace.geometry) return null;
+  const metrics = getBaseFeatureMetrics(workspace.geometry);
+  return {
+    featureId: `workspace:${seedFeatureId}`,
+    source: 'SwingSphere Workspace Geometry',
+    sourceLayer: SOURCE_LAYER,
+    fragments,
+    duplicateGroups: [],
+    primaryTile: fragments[0] ? getFeatureTile(fragments[0]) : 'workspace',
+    rawGeoJSON: {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        id: `workspace:${seedFeatureId}`,
+        properties: {
+          seedProviderFeatureId: seedFeatureId,
+          providerFeatureIds: workspace.providerFeatureIds,
+          radiusMeters: workspace.radiusMeters,
+          workspacePolygonCount: workspace.polygons.length,
+          workspaceBuildingCount: workspace.buildings.length,
+        },
+        geometry: workspace.geometry,
+      }],
+    },
+    geometry: workspace.geometry,
+    bbox: getGeometryBBox(workspace.geometry),
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    fragmentCount: workspace.polygons.length,
+    disconnectedPieces: null,
+    metricsStatus: 'skipped',
+  };
+};
+
+const buildResolutionFromAsset = (asset: BuildingAsset): BuildingResolution => {
+  const metrics = getBaseFeatureMetrics(asset.geometry);
+  return {
+    featureId: asset.id,
+    source: 'SwingSphere Building Asset',
+    sourceLayer: null,
+    fragments: [],
+    duplicateGroups: [],
+    primaryTile: 'saved asset',
+    rawGeoJSON: {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        id: asset.id,
+        properties: {
+          listingId: asset.listingId,
+          providerSource: asset.provider.source,
+          providerFeatureIds: asset.provider.featureIds,
+          createdAt: asset.capture.createdAt,
+          updatedAt: asset.capture.updatedAt,
+          version: asset.version,
+        },
+        geometry: asset.geometry,
+      }],
+    },
+    geometry: asset.geometry,
+    bbox: getGeometryBBox(asset.geometry),
+    polygonCount: metrics.polygonCount,
+    ringCount: metrics.ringCount,
+    vertexCount: metrics.vertexCount,
+    fragmentCount: 1,
+    disconnectedPieces: null,
+    metricsStatus: 'skipped',
+  };
+};
+
+const buildGeometryRender = (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon | null): RenderedPolygon[] => {
+  if (!geometry) return [];
+  const polygons = collectPolygons(geometry);
+  if (!polygons.length) return [];
+
+  const bounds = getGeometryBBox(geometry);
+  if (!bounds) return [];
+
+  const [minLng, minLat, maxLng, maxLat] = bounds;
+  const width = Math.max(maxLng - minLng, 1e-9);
+  const height = Math.max(maxLat - minLat, 1e-9);
+  const scale = Math.min(
+    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / width,
+    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / height,
+  );
+  const drawnWidth = width * scale;
+  const drawnHeight = height * scale;
+  const offsetX = (VIEWBOX_SIZE - drawnWidth) / 2;
+  const offsetY = (VIEWBOX_SIZE - drawnHeight) / 2;
+  const project = (coordinate: [number, number]) => [
+    offsetX + (coordinate[0] - minLng) * scale,
+    VIEWBOX_SIZE - offsetY - (coordinate[1] - minLat) * scale,
+  ];
+
+  const palette = ['#ff4b4b', '#ff9c4a', '#58d7ff', '#9c7cff', '#55d6a9', '#ffd166'];
+
+  return polygons.map((polygon, index) => {
+    const path = polygon
+      .filter((ring) => ring.length >= 2)
+      .map((ring) => {
+        const coords = ring
+          .map((coordinate, coordinateIndex) => {
+            const [x, y] = project([coordinate[0], coordinate[1]]);
+            return `${coordinateIndex === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+          })
+          .join(' ');
+        return `${coords} Z`;
+      })
+      .join(' ');
+
+    const color = palette[index % palette.length];
+    return {
+      d: path,
+      fill: color,
+      stroke: color,
+    };
+  });
+};
+
+const stripClosingPoint = (ring: Array<[number, number]>): Array<[number, number]> => {
+  if (ring.length < 2) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) {
+    return ring.slice(0, -1);
+  }
+  return ring;
+};
+
+const ringToShapePoints = (ring: Array<[number, number]>): THREE.Vector2[] =>
+  stripClosingPoint(ring)
+    .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]))
+    .map((point) => new THREE.Vector2(point[0], point[1]));
+
+const buildExtrudedPolygonGeometry = (record: PolygonRecord): THREE.ExtrudeGeometry | null => {
+  const [outerRing, ...holes] = record.localRings;
+  if (!outerRing || outerRing.length < 3) {
+    logBuildingInspector('buildExtrudedPolygonGeometry:exit invalid outer ring', {
+      polygonIndex: record.polygonIndex,
+      localRingCount: record.localRings.length,
+      outerRingLength: outerRing?.length ?? 0,
+      ringCount: record.ringCount,
+      vertexCount: record.vertexCount,
+    });
+    return null;
+  }
+
+  let contour = ringToShapePoints(outerRing);
+  if (contour.length < 3) {
+    logBuildingInspector('buildExtrudedPolygonGeometry:exit invalid contour', {
+      polygonIndex: record.polygonIndex,
+      outerRingLength: outerRing.length,
+      contourLength: contour.length,
+      ringCount: record.ringCount,
+      vertexCount: record.vertexCount,
+    });
+    return null;
+  }
+  if (!THREE.ShapeUtils.isClockWise(contour)) {
+    contour = [...contour].reverse();
+  }
+
+  const shape = new THREE.Shape(contour);
+  for (const hole of holes) {
+    let holePoints = ringToShapePoints(hole);
+    if (holePoints.length < 3) continue;
+    if (THREE.ShapeUtils.isClockWise(holePoints)) {
+      holePoints = [...holePoints].reverse();
+    }
+    shape.holes.push(new THREE.Path(holePoints));
+  }
+
+  const extrusionHeight = record.renderHeightMeters && record.renderHeightMeters > 0
+    ? record.renderHeightMeters
+    : EXTRUDE_HEIGHT_METERS;
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: extrusionHeight,
+    bevelEnabled: false,
+    steps: 1,
+    curveSegments: 1,
+  });
+  logBuildingInspector('buildExtrudedPolygonGeometry:exit', {
+    polygonIndex: record.polygonIndex,
+    extrusionHeight,
+    renderMinHeightMeters: record.renderMinHeightMeters,
+    contourLength: contour.length,
+    holeCount: shape.holes.length,
+    attributePositionCount: geometry.attributes.position?.count ?? 0,
+  });
+  return geometry;
+};
+
+const buildPolygonSceneBounds = (records: PolygonRecord[]): THREE.Box3 | null => {
+  const bounds = new THREE.Box3();
+  let hasPoint = false;
+  for (const record of records) {
+    for (const ring of record.localRings) {
+      for (const [x, z] of stripClosingPoint(ring)) {
+        bounds.expandByPoint(new THREE.Vector3(x, record.renderHeightMeters ?? EXTRUDE_HEIGHT_METERS, -z));
+        bounds.expandByPoint(new THREE.Vector3(x, 0, -z));
+        hasPoint = true;
+      }
+    }
+  }
+  return hasPoint ? bounds : null;
+};
+
+const buildSelectionSummary = (records: PolygonRecord[]): SelectionSummary => {
+  const indices = records.map((record) => record.polygonIndex).sort((a, b) => a - b);
+  const displayIndices = indices.map((index) => index + 1);
+  const areaMeters = records.reduce((total, record) => total + record.areaMeters, 0);
+  const vertexCount = records.reduce((total, record) => total + record.vertexCount, 0);
+  const ringCount = records.reduce((total, record) => total + record.ringCount, 0);
+  const bbox = buildAggregateBounds(records);
+  const renderHeights = records.map((record) => record.renderHeightMeters);
+  const maxRenderHeightMeters = maxMetric(renderHeights);
+  const avgRenderHeightMeters = averageMetric(renderHeights);
+  const geoJson = records.length
+    ? {
+        type: 'Feature' as const,
+        id: records.length === 1 ? displayIndices[0] : `selection-${displayIndices.join('-')}`,
+        properties: {
+          selected_polygon_count: records.length,
+          polygon_indices: displayIndices,
+          polygon_indices_zero_based: indices,
+          area_meters: areaMeters,
+          ring_count: ringCount,
+          vertex_count: vertexCount,
+          max_render_height: maxRenderHeightMeters,
+          avg_render_height: avgRenderHeightMeters,
+        },
+        geometry: records.length === 1
+          ? records[0].geometry
+          : {
+              type: 'MultiPolygon' as const,
+              coordinates: records.map((record) => record.geometry.coordinates),
+            },
+      }
+    : null;
+
+  return {
+    count: records.length,
+    indices,
+    areaMeters,
+    bbox,
+    vertexCount,
+    ringCount,
+    maxRenderHeightMeters,
+    avgRenderHeightMeters,
+    geoJson,
+  };
+};
+
+const exportGeoJSONFeature = (feature: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>, fileName: string): void => {
+  const blob = new Blob([stringifyGeoJSON(feature)], { type: 'application/geo+json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const disposeSceneMeshEntries = (entries: SceneMeshEntry[]): void => {
+  for (const entry of entries) {
+    entry.edges.dispose();
+    entry.material.dispose();
+    entry.outlineMaterial.dispose();
+    entry.mesh.geometry.dispose();
+  }
+};
+
+const applySceneMeshStyles = (
+  entries: SceneMeshEntry[],
+  hoveredPolygonIndex: number | null,
+  selectedPolygonIndices: Set<number>,
+  isolateSelected: boolean,
+): void => {
+  for (const entry of entries) {
+    const hasSelection = selectedPolygonIndices.size > 0;
+    const isSelected = selectedPolygonIndices.has(entry.record.polygonIndex);
+    const isHovered = entry.record.polygonIndex === hoveredPolygonIndex;
+    const isDimmed = isolateSelected && hasSelection && !isSelected;
+    const baseColor = new THREE.Color(
+      isSelected ? '#37d97a' : isHovered && !isDimmed ? '#f1c35a' : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
+    );
+    entry.material.color.copy(baseColor);
+    entry.material.emissive.set(isSelected ? '#10301c' : isHovered && !isDimmed ? '#231c08' : '#000000');
+    entry.material.opacity = isDimmed ? 0.08 : isSelected ? 0.95 : isHovered ? 0.9 : 0.82;
+    entry.mesh.visible = !isolateSelected || !hasSelection || isSelected;
+    entry.material.needsUpdate = true;
+
+    entry.outline.visible = !isDimmed && (isHovered || isSelected);
+    entry.outlineMaterial.color.set(isSelected ? '#7dff99' : '#ffffff');
+    entry.outlineMaterial.opacity = isSelected ? 0.95 : 0.45;
+    entry.outlineMaterial.needsUpdate = true;
+  }
+};
+
+const frameSceneBounds = (
+  bounds: THREE.Box3,
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+): void => {
+  const center = bounds.getCenter(new THREE.Vector3());
+  const size = bounds.getSize(new THREE.Vector3());
+  const maxDimension = Math.max(size.x, size.y, size.z, 1);
+  const distance = maxDimension * 1.8;
+  controls.target.copy(center);
+  camera.position.set(center.x + distance, center.y + distance * 0.8, center.z + distance);
+  camera.near = Math.max(0.1, maxDimension / 100);
+  camera.far = Math.max(1000, maxDimension * 20);
+  camera.updateProjectionMatrix();
+  controls.minDistance = Math.max(2, maxDimension * 0.2);
+  controls.maxDistance = Math.max(50, maxDimension * 12);
+  controls.update();
+};
+
+const buildMeshEntriesBounds = (entries: SceneMeshEntry[]): THREE.Box3 | null => {
+  const bounds = new THREE.Box3();
+  let hasMesh = false;
+  for (const entry of entries) {
+    bounds.expandByObject(entry.mesh);
+    hasMesh = true;
+  }
+  return hasMesh ? bounds : null;
+};
+
+type BuildingInspectorPageProps = {
+  embedded?: boolean;
+  listings?: Listing[];
+  venues?: VenueData[];
+  organizations?: OrganizationData[];
+  relationships?: OrganizationVenueRelationship[];
+  buildingAssets?: BuildingAsset[];
+  onBuildingAssetSaved?: (asset: BuildingAsset, listing: Listing | null) => void;
+  onListingLocationSaved?: (listing: Listing) => void;
+};
+
+const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
+  embedded = false,
+  listings: listingsProp,
+  venues: venuesProp,
+  organizations: organizationsProp,
+  relationships: relationshipsProp,
+  buildingAssets: buildingAssetsProp,
+  onBuildingAssetSaved,
+  onListingLocationSaved,
+}) => {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const sceneContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const mapReferenceMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const modelGroupRef = useRef<THREE.Group | null>(null);
+  const referenceGroupRef = useRef<THREE.Group | null>(null);
+  const venueMarkerGroupRef = useRef<THREE.Group | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
+  const meshEntriesRef = useRef<SceneMeshEntry[]>([]);
+  const referenceMeshEntriesRef = useRef<SceneMeshEntry[]>([]);
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const pointerRef = useRef(new THREE.Vector2());
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const pendingSelectAllRef = useRef(false);
+  const featureIdInputRef = useRef(DEFAULT_FEATURE_ID);
+  const [featureIdInput, setFeatureIdInput] = useState(DEFAULT_FEATURE_ID);
+  const [resolution, setResolution] = useState<BuildingResolution | null>(null);
+  const [fragmentRecords, setFragmentRecords] = useState<FragmentRecord[]>([]);
+  const [duplicateSummaries, setDuplicateSummaries] = useState<DuplicateSummary[]>([]);
+  const [loadedFeatureCount, setLoadedFeatureCount] = useState(0);
+  const [loadedUniqueIdCount, setLoadedUniqueIdCount] = useState(0);
+  const [forensicReport, setForensicReport] = useState<ForensicReport | null>(null);
+  const [status, setStatus] = useState('Ready. Load geometry to inspect the selected feature id.');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<string | null>(null);
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState<number | null>(null);
+  const [selectedPolygonIndices, setSelectedPolygonIndices] = useState<number[]>([]);
+  const [isolateSelected, setIsolateSelected] = useState(false);
+  const [showVenueMarker, setShowVenueMarker] = useState(true);
+  const [showNearbyBuildings, setShowNearbyBuildings] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showFullProviderTileCache, setShowFullProviderTileCache] = useState(false);
+  const [referencePolygonRecords, setReferencePolygonRecords] = useState<PolygonRecord[]>([]);
+  const [providerCandidates, setProviderCandidates] = useState<ProviderCandidate[]>([]);
+  const [fullProviderTileCandidates, setFullProviderTileCandidates] = useState<ProviderCandidate[]>([]);
+  const [workspaceBuildings, setWorkspaceBuildings] = useState<WorkspaceBuildingGroup[]>([]);
+  const [workspaceProviderFeatureIds, setWorkspaceProviderFeatureIds] = useState<string[]>([]);
+  const [workspacePolygonMetadata, setWorkspacePolygonMetadata] = useState<PolygonRecordMetadata[]>([]);
+  const [selectedLandmarkId, setSelectedLandmarkId] = useState(LANDMARK_TESTS[0]?.id ?? '');
+  const [landmarkValidation, setLandmarkValidation] = useState<LandmarkTestRecord | null>(null);
+  const [landmarkListing, setLandmarkListing] = useState<Listing | null>(null);
+  const [showRawProviderGeometry, setShowRawProviderGeometry] = useState(false);
+  const [resolverState, setResolverState] = useState<ResolverState>(() => createResolverState());
+  const [hoveredCandidateId, setHoveredCandidateId] = useState<string | null>(null);
+  const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
+  const [hiddenProviderFeatureIds, setHiddenProviderFeatureIds] = useState<string[]>([]);
+  const [soloProviderFeatureId, setSoloProviderFeatureId] = useState<string | null>(null);
+  const [providerWasManuallyCorrected, setProviderWasManuallyCorrected] = useState(false);
+  const [venueSearch, setVenueSearch] = useState('');
+  const [assetFilter, setAssetFilter] = useState<BuildingAssetFilter>('missing');
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  const [resolvedVenueFeatureId, setResolvedVenueFeatureId] = useState<string | null>(null);
+  const [savedGeometrySignature, setSavedGeometrySignature] = useState('');
+  const [assetStatusMessage, setAssetStatusMessage] = useState<string | null>(null);
+  const [localListings, setLocalListings] = useState<Listing[]>([]);
+  const [localBuildingAssets, setLocalBuildingAssets] = useState<BuildingAsset[]>([]);
+  const listings = listingsProp ?? localListings;
+  const venues = venuesProp ?? [];
+  const organizations = organizationsProp ?? [];
+  const relationships = relationshipsProp ?? [];
+  const buildingAssets = buildingAssetsProp ?? localBuildingAssets;
+  const semv2Collections = useMemo(
+    () => ({ listings, venues, organizations, relationships }),
+    [listings, organizations, relationships, venues],
+  );
+
+  const selectedVenue = useMemo(
+    () => listings.find((listing) => listing.id === selectedVenueId) ??
+      (landmarkListing?.id === selectedVenueId ? landmarkListing : null),
+    [landmarkListing, listings, selectedVenueId],
+  );
+  const selectedVenueAsset = useMemo(
+    () => getBuildingAssetForListing(selectedVenue, buildingAssets, venues, listings, organizations, relationships),
+    [buildingAssets, listings, organizations, relationships, selectedVenue, venues],
+  );
+  const selectedVenueCoords = useMemo(
+    () => selectedVenue ? getListingCanonicalCoords(selectedVenue, semv2Collections) : null,
+    [selectedVenue, semv2Collections],
+  );
+  const filteredVenues = useMemo(() => {
+    const query = venueSearch.trim().toLowerCase();
+    return listings
+      .filter((listing) => {
+        const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
+        if (assetFilter === 'missing' && hasAsset) return false;
+        if (assetFilter === 'has' && !hasAsset) return false;
+        if (!query) return true;
+        const haystack = [
+          listing.name,
+          listing.type,
+          listing.location,
+          getListingCityLabel(listing, semv2Collections),
+          getListingPhysicalAddress(listing, semv2Collections).addressLine1,
+          getListingPhysicalAddress(listing, semv2Collections).postalCode,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(query);
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [assetFilter, buildingAssets, listings, organizations, relationships, semv2Collections, venueSearch, venues]);
+  const venueStats = useMemo(() => {
+    const withAssets = listings.filter((listing) => getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships)).length;
+    return {
+      total: listings.length,
+      missing: listings.length - withAssets,
+      withAssets,
+    };
+  }, [buildingAssets, listings, organizations, relationships, venues]);
+
+  const polygonRecords = useMemo(() => {
+    const geometry = resolution?.geometry ?? null;
+    const records = buildPolygonRecords(geometry, getGeometryCenter(geometry), workspacePolygonMetadata);
+    logBuildingInspector('polygonRecords:memo exit', {
+      hasResolution: Boolean(resolution),
+      featureId: resolution?.featureId ?? null,
+      geometryType: geometry?.type ?? null,
+      coordinateCount: getCoordinateCount(geometry),
+      recordCount: records.length,
+    });
+    return records;
+  }, [resolution, workspacePolygonMetadata]);
+  const sceneOrigin = useMemo(
+    () => getGeometryCenter(resolution?.geometry ?? null),
+    [resolution?.geometry],
+  );
+  const rawGeoJSONText = useMemo(
+    () => (resolution ? stringifyGeoJSON(resolution.rawGeoJSON) : ''),
+    [resolution],
+  );
+  const selectedPolygonIndexSet = useMemo(
+    () => new Set(selectedPolygonIndices),
+    [selectedPolygonIndices],
+  );
+  const selectedPolygonRecords = useMemo(
+    () => selectedPolygonIndices.map((index) => polygonRecords[index]).filter((record): record is PolygonRecord => Boolean(record)),
+    [polygonRecords, selectedPolygonIndices],
+  );
+  const selectedSummary = useMemo(
+    () => buildSelectionSummary(selectedPolygonRecords),
+    [selectedPolygonRecords],
+  );
+  const selectedPolygonGeoJSONText = useMemo(
+    () => (selectedSummary.geoJson ? stringifyGeoJSON(selectedSummary.geoJson) : ''),
+    [selectedSummary.geoJson],
+  );
+  const selectedGeometrySignature = useMemo(
+    () => getGeometrySignature(selectedSummary.geoJson?.geometry),
+    [selectedSummary.geoJson?.geometry],
+  );
+  const saveStateLabel = useMemo(() => {
+    if (selectedSummary.count > 0) {
+      return selectedGeometrySignature && selectedGeometrySignature === savedGeometrySignature ? 'Saved' : 'Unsaved Changes';
+    }
+    return selectedVenueAsset ? 'Saved asset available' : 'Never Saved';
+  }, [savedGeometrySignature, selectedGeometrySignature, selectedSummary.count, selectedVenueAsset]);
+  const selectedMetrics = useMemo(
+    () => getBaseFeatureMetrics(resolution?.geometry ?? null),
+    [resolution?.geometry],
+  );
+  const currentEditableFeatureId = resolution?.source === 'SwingSphere Building Asset'
+    ? resolvedVenueFeatureId ?? selectedVenueAsset?.provider.featureIds[0] ?? resolution?.featureId ?? null
+    : resolution?.featureId ?? null;
+  const hiddenProviderFeatureIdSet = useMemo(
+    () => new Set(hiddenProviderFeatureIds),
+    [hiddenProviderFeatureIds],
+  );
+  const displayedProviderCandidates = showFullProviderTileCache ? fullProviderTileCandidates : providerCandidates;
+  const focusedProviderFeature = useMemo(
+    () => displayedProviderCandidates.find((candidate) => candidate.featureId === pendingCandidateId) ?? null,
+    [displayedProviderCandidates, pendingCandidateId],
+  );
+  const promotedCandidate = useMemo(
+    () => focusedProviderFeature && focusedProviderFeature.featureId !== currentEditableFeatureId ? focusedProviderFeature : null,
+    [currentEditableFeatureId, focusedProviderFeature],
+  );
+  const providerNeighborhoodRows = useMemo(
+    () => displayedProviderCandidates.map((candidate, index) => {
+      const isEditable = candidate.featureId === currentEditableFeatureId;
+      const isHidden = hiddenProviderFeatureIdSet.has(candidate.featureId);
+      const isSolo = soloProviderFeatureId === candidate.featureId;
+      const isVisible = soloProviderFeatureId ? isSolo : !isHidden;
+      return {
+        candidate,
+        label: getProviderFeatureLabel(index),
+        isEditable,
+        isHidden,
+        isSolo,
+        isVisible,
+      };
+    }),
+    [currentEditableFeatureId, displayedProviderCandidates, hiddenProviderFeatureIdSet, soloProviderFeatureId],
+  );
+  const providerNeighborhoodSummary = useMemo(() => {
+    const visible = providerNeighborhoodRows.filter((row) => row.isVisible).length;
+    const editable = providerNeighborhoodRows.find((row) => row.isEditable);
+    return {
+      providerTile: resolverState.providerTileFeatureCount || fullProviderTileCandidates.length,
+      neighborhoodCache: providerCandidates.length,
+      loaded: providerNeighborhoodRows.length,
+      visible,
+      hidden: providerNeighborhoodRows.length - visible,
+      editableLabel: editable?.label ?? 'n/a',
+    };
+  }, [fullProviderTileCandidates.length, providerCandidates.length, providerNeighborhoodRows, resolverState.providerTileFeatureCount]);
+  const workspaceSummary = useMemo(() => ({
+    radiusMeters: resolverState.radiusMeters || DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
+    providerTile: resolverState.providerTileFeatureCount || loadedFeatureCount,
+    buildings: workspaceBuildings.length,
+    polygons: polygonRecords.length,
+    visible: isolateSelected && selectedSummary.count ? selectedSummary.count : polygonRecords.length,
+    selected: selectedSummary.count,
+    providerFeatureIds: workspaceProviderFeatureIds,
+  }), [
+    isolateSelected,
+    loadedFeatureCount,
+    polygonRecords.length,
+    resolverState.providerTileFeatureCount,
+    resolverState.radiusMeters,
+    selectedSummary.count,
+    workspaceBuildings.length,
+    workspaceProviderFeatureIds,
+  ]);
+  const fragmentSummary = useMemo(() => {
+    const bounds = buildAggregateBounds(fragmentRecords);
+    const span = getGeometrySpanMeters(bounds);
+    return {
+      bounds,
+      span,
+      uniqueTiles: new Set(fragmentRecords.map((fragment) => fragment.tile).filter((tile) => tile !== 'n/a')).size,
+      uniqueCentroids: countUniqueCentroids(fragmentRecords),
+    };
+  }, [fragmentRecords]);
+
+  useEffect(() => {
+    featureIdInputRef.current = featureIdInput;
+  }, [featureIdInput]);
+
+  useEffect(() => {
+    if (embedded || listingsProp || buildingAssetsProp) return;
+    let cancelled = false;
+    Promise.all([api.getListings(), api.getBuildingAssets()])
+      .then(([nextListings, nextAssets]) => {
+        if (cancelled) return;
+        setLocalListings(nextListings);
+        setLocalBuildingAssets(nextAssets);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLocalListings([]);
+        setLocalBuildingAssets([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [buildingAssetsProp, embedded, listingsProp]);
+
+  useEffect(() => {
+    const candidateIds = new Set(providerCandidates.map((candidate) => candidate.featureId));
+    setHiddenProviderFeatureIds((current) => current.filter((featureId) => candidateIds.has(featureId)));
+    setSoloProviderFeatureId((current) => (current && candidateIds.has(current) ? current : null));
+    setPendingCandidateId((current) => (current && candidateIds.has(current) ? current : null));
+  }, [providerCandidates]);
+
+  useEffect(() => {
+    if (!showFullProviderTileCache || fullProviderTileCandidates.length || !resolution?.geometry) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const allFeatures = map.querySourceFeatures(getBuildingsSourceId(), {
+      sourceLayer: SOURCE_LAYER,
+    }) as MapGeoJSONFeature[];
+    const fullCache = buildScopedNeighborhoodCache(
+      allFeatures,
+      resolution.geometry,
+      resolution.featureId,
+      Number.POSITIVE_INFINITY,
+    );
+    setFullProviderTileCandidates(fullCache.candidates);
+    setResolverState((current) => ({
+      ...current,
+      providerTileFeatureCount: fullCache.providerTileFeatureCount,
+    }));
+  }, [fullProviderTileCandidates.length, resolution?.featureId, resolution?.geometry, showFullProviderTileCache]);
+
+  const frameSelected = () => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls || !selectedPolygonRecords.length) return;
+    const selectedEntries = meshEntriesRef.current.filter((entry) => selectedPolygonIndexSet.has(entry.record.polygonIndex));
+    const bounds = buildMeshEntriesBounds(selectedEntries);
+    if (!bounds) return;
+    frameSceneBounds(bounds, camera, controls);
+  };
+
+  const frameVenue = () => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls || !selectedVenueCoords || !sceneOrigin) return;
+    const local = toLocalMeters(
+      [selectedVenueCoords.lng, selectedVenueCoords.lat],
+      { lng: sceneOrigin[0], lat: sceneOrigin[1] },
+    );
+    const target = new THREE.Vector3(local.x, 0, -local.y);
+    controls.target.copy(target);
+    camera.position.set(target.x + 70, target.y + 60, target.z + 70);
+    camera.near = 0.1;
+    camera.far = 3000;
+    camera.updateProjectionMatrix();
+    controls.update();
+  };
+
+  const frameProviderFeature = (candidate: ProviderCandidate) => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls || !sceneOrigin) return;
+    const records = buildPolygonRecords(candidate.geometry, sceneOrigin);
+    const bounds = buildPolygonSceneBounds(records);
+    if (!bounds) return;
+    frameSceneBounds(bounds, camera, controls);
+    setPendingCandidateId(candidate.featureId);
+    setHoveredCandidateId(candidate.featureId);
+  };
+
+  const toggleProviderFeatureVisibility = (featureId: string) => {
+    setHiddenProviderFeatureIds((current) => {
+      if (current.includes(featureId)) return current.filter((item) => item !== featureId);
+      return [...current, featureId];
+    });
+  };
+
+  const toggleProviderFeatureSolo = (featureId: string) => {
+    setSoloProviderFeatureId((current) => (current === featureId ? null : featureId));
+    setPendingCandidateId(featureId);
+    setHoveredCandidateId(featureId);
+  };
+
+  useEffect(() => {
+    const container = sceneContainerRef.current;
+    if (!container) return;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#050608');
+
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
+    camera.position.set(28, 24, 28);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(container.clientWidth || 1, container.clientHeight || 1, false);
+    renderer.setClearColor(0x050608, 1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.touchAction = 'none';
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambient);
+
+    const directional = new THREE.DirectionalLight(0xffffff, 1.9);
+    directional.position.set(24, 42, 18);
+    scene.add(directional);
+
+    const fillLight = new THREE.DirectionalLight(0x8ca2ff, 0.55);
+    fillLight.position.set(-22, 16, -18);
+    scene.add(fillLight);
+
+    const grid = new THREE.GridHelper(1600, 80, 0x4a4d55, 0x23262d);
+    grid.position.y = 0;
+    scene.add(grid);
+    gridRef.current = grid;
+
+    const axes = new THREE.AxesHelper(14);
+    scene.add(axes);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.rotateSpeed = 0.7;
+    controls.panSpeed = 0.7;
+    controls.zoomSpeed = 0.85;
+    controls.target.set(0, 0, 0);
+
+    const resize = () => {
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const entries = meshEntriesRef.current;
+      const candidateEntries = referenceMeshEntriesRef.current;
+      if (!entries.length && !candidateEntries.length) {
+        setHoveredPolygonIndex(null);
+        setHoveredCandidateId(null);
+        return;
+      }
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerRef.current.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      raycasterRef.current.setFromCamera(pointerRef.current, camera);
+      const intersections = raycasterRef.current.intersectObjects(entries.map((entry) => entry.mesh), false);
+      const nextHovered = intersections.length
+        ? (intersections[0]?.object.userData?.polygonIndex as number | undefined) ?? null
+        : null;
+      setHoveredPolygonIndex((current) => (current === nextHovered ? current : nextHovered));
+      if (nextHovered !== null) {
+        setHoveredCandidateId(null);
+        return;
+      }
+      const candidateIntersections = raycasterRef.current.intersectObjects(candidateEntries.map((entry) => entry.mesh), false);
+      const nextCandidate = candidateIntersections.length
+        ? (candidateIntersections[0]?.object.userData?.providerFeatureId as string | undefined) ?? null
+        : null;
+      setHoveredCandidateId((current) => (current === nextCandidate ? current : nextCandidate));
+    };
+
+    const onPointerLeave = () => {
+      setHoveredPolygonIndex(null);
+      setHoveredCandidateId(null);
+    };
+
+    const onClick = (event: MouseEvent) => {
+      const entries = meshEntriesRef.current;
+      const candidateEntries = referenceMeshEntriesRef.current;
+      if (!entries.length && !candidateEntries.length) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerRef.current.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      raycasterRef.current.setFromCamera(pointerRef.current, camera);
+      const intersections = raycasterRef.current.intersectObjects(entries.map((entry) => entry.mesh), false);
+      const polygonIndex = intersections[0]?.object.userData?.polygonIndex;
+      if (typeof polygonIndex === 'number') {
+        const shouldToggle = event.shiftKey || event.ctrlKey || event.metaKey;
+        setSelectedPolygonIndices((current) => {
+          if (!shouldToggle) return [polygonIndex];
+          if (current.includes(polygonIndex)) {
+            return current.filter((index) => index !== polygonIndex);
+          }
+          return [...current, polygonIndex].sort((a, b) => a - b);
+        });
+        setHoveredPolygonIndex(polygonIndex);
+        setPendingCandidateId(null);
+        return;
+      }
+
+      const candidateIntersections = raycasterRef.current.intersectObjects(candidateEntries.map((entry) => entry.mesh), false);
+      const providerFeatureId = candidateIntersections[0]?.object.userData?.providerFeatureId;
+      if (typeof providerFeatureId === 'string') {
+        setPendingCandidateId(providerFeatureId);
+        setHoveredCandidateId(providerFeatureId);
+      }
+    };
+
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerleave', onPointerLeave);
+    renderer.domElement.addEventListener('click', onClick);
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(container);
+    resize();
+
+    const animate = () => {
+      animationFrameRef.current = window.requestAnimationFrame(animate);
+      controls.update();
+      const marker = venueMarkerGroupRef.current;
+      if (marker?.visible) {
+        const pulse = marker.getObjectByName('venue-pulse-ring') as THREE.Mesh | undefined;
+        const pulseMaterial = pulse?.material as THREE.MeshBasicMaterial | undefined;
+        if (pulse && pulseMaterial) {
+          const phase = (Math.sin(performance.now() * 0.003) + 1) / 2;
+          const scale = 1 + phase * 1.15;
+          pulse.scale.set(scale, scale, scale);
+          pulseMaterial.opacity = 0.18 + (1 - phase) * 0.52;
+        }
+      }
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    rendererRef.current = renderer;
+    sceneRef.current = scene;
+    cameraRef.current = camera;
+    controlsRef.current = controls;
+    resizeObserverRef.current = resizeObserver;
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener('pointermove', onPointerMove);
+      renderer.domElement.removeEventListener('pointerleave', onPointerLeave);
+      renderer.domElement.removeEventListener('click', onClick);
+      controls.dispose();
+      disposeSceneMeshEntries(meshEntriesRef.current);
+      disposeSceneMeshEntries(referenceMeshEntriesRef.current);
+      meshEntriesRef.current = [];
+      referenceMeshEntriesRef.current = [];
+      modelGroupRef.current?.removeFromParent();
+      referenceGroupRef.current?.removeFromParent();
+      venueMarkerGroupRef.current?.removeFromParent();
+      modelGroupRef.current = null;
+      referenceGroupRef.current = null;
+      venueMarkerGroupRef.current = null;
+      gridRef.current = null;
+      renderer.dispose();
+      container.removeChild(renderer.domElement);
+      rendererRef.current = null;
+      sceneRef.current = null;
+      cameraRef.current = null;
+      controlsRef.current = null;
+      resizeObserverRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    logBuildingInspector('renderEditableGeometry:enter', {
+      polygonRecordCount: polygonRecords.length,
+      selectedPolygonCount: selectedPolygonIndices.length,
+    });
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const renderer = rendererRef.current;
+    if (!scene || !camera || !controls || !renderer) {
+      logBuildingInspector('renderEditableGeometry:exit missing scene refs');
+      return;
+    }
+
+    disposeSceneMeshEntries(meshEntriesRef.current);
+    meshEntriesRef.current = [];
+    if (modelGroupRef.current) {
+      scene.remove(modelGroupRef.current);
+      modelGroupRef.current = null;
+    }
+
+    if (!polygonRecords.length) {
+      controls.target.set(0, 0, 0);
+      camera.position.set(28, 24, 28);
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+      setSelectedPolygonIndices([]);
+      setHoveredPolygonIndex(null);
+      if (resolution) {
+        setResolverState((current) => ({
+          ...updateResolverStep(current, 'Geometry', 'Editable mesh built', 'failed', 'No polygon records available'),
+          failure: 'EMPTY_GEOMETRY',
+          suggestions: resolverFailureSuggestions('EMPTY_GEOMETRY'),
+        }));
+      }
+      logBuildingInspector('renderEditableGeometry:exit empty');
+      return;
+    }
+
+    const group = new THREE.Group();
+    const entries: SceneMeshEntry[] = [];
+    let renderIterations = 0;
+    let skippedMeshCount = 0;
+
+    polygonRecords.forEach((record) => {
+      renderIterations += 1;
+      assertBuildingInspectorLoopLimit('renderEditableGeometry.recordLoop', renderIterations, {
+        polygonRecordCount: polygonRecords.length,
+      });
+      const geometry = buildExtrudedPolygonGeometry(record);
+      if (!geometry) {
+        skippedMeshCount += 1;
+        logBuildingInspector('renderEditableGeometry:mesh skipped', {
+          polygonIndex: record.polygonIndex,
+          ringCount: record.ringCount,
+          vertexCount: record.vertexCount,
+          localRingCount: record.localRings.length,
+          localVertexCount: record.localRings.reduce((total, ring) => total + ring.length, 0),
+        });
+        return;
+      }
+
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#5cc8ff'),
+        roughness: 0.7,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.82,
+        side: THREE.DoubleSide,
+      });
+      const outlineMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.45,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.userData = {
+        polygonIndex: record.polygonIndex,
+        record,
+      };
+
+      const edges = new THREE.EdgesGeometry(geometry, 18);
+      const outline = new THREE.LineSegments(edges, outlineMaterial);
+      outline.visible = false;
+      outline.renderOrder = 2;
+      mesh.add(outline);
+
+      entries.push({ record, mesh, outline, edges, material, outlineMaterial });
+      group.add(mesh);
+    });
+
+    scene.add(group);
+    modelGroupRef.current = group;
+    meshEntriesRef.current = entries;
+    group.visible = currentEditableFeatureId
+      ? soloProviderFeatureId
+        ? soloProviderFeatureId === currentEditableFeatureId
+        : !hiddenProviderFeatureIdSet.has(currentEditableFeatureId)
+      : true;
+    applySceneMeshStyles(entries, hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected);
+
+    const bounds = buildMeshEntriesBounds(entries);
+    if (bounds) {
+      frameSceneBounds(bounds, camera, controls);
+    } else {
+      controls.target.set(0, 0, 0);
+    }
+
+    renderer.render(scene, camera);
+    setSelectedPolygonIndices([]);
+    setHoveredPolygonIndex(null);
+    logBuildingInspector('renderEditableGeometry:exit', {
+      polygonRecordCount: polygonRecords.length,
+      meshEntryCount: entries.length,
+      renderIterations,
+      skippedMeshCount,
+      groupVisible: group.visible,
+      currentEditableFeatureId,
+      soloProviderFeatureId,
+      hiddenProviderFeatureCount: hiddenProviderFeatureIdSet.size,
+    });
+    setResolverState((current) => ({
+      ...updateResolverStep(
+        current,
+        'Geometry',
+        'Editable mesh built',
+        entries.length ? 'success' : 'failed',
+        entries.length ? `${entries.length} editable mesh${entries.length === 1 ? '' : 'es'}` : 'No editable meshes created',
+      ),
+      failure: entries.length ? current.failure : 'INVALID_GEOMETRY',
+      suggestions: entries.length ? current.suggestions : resolverFailureSuggestions('INVALID_GEOMETRY'),
+    }));
+  }, [polygonRecords]);
+
+  useEffect(() => {
+    applySceneMeshStyles(meshEntriesRef.current, hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected);
+  }, [hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected]);
+
+  useEffect(() => {
+    if (!modelGroupRef.current || !currentEditableFeatureId) return;
+    modelGroupRef.current.visible = soloProviderFeatureId
+      ? soloProviderFeatureId === currentEditableFeatureId
+      : !hiddenProviderFeatureIdSet.has(currentEditableFeatureId);
+  }, [currentEditableFeatureId, hiddenProviderFeatureIdSet, soloProviderFeatureId]);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      gridRef.current.visible = showGrid;
+    }
+  }, [showGrid]);
+
+  useEffect(() => {
+    logBuildingInspector('renderReferenceGeometry:enter', {
+      providerCandidateCount: displayedProviderCandidates.length,
+      currentEditableFeatureId,
+    });
+    const scene = sceneRef.current;
+    if (!scene) {
+      logBuildingInspector('renderReferenceGeometry:exit missing scene');
+      return;
+    }
+
+    disposeSceneMeshEntries(referenceMeshEntriesRef.current);
+    referenceMeshEntriesRef.current = [];
+    if (referenceGroupRef.current) {
+      scene.remove(referenceGroupRef.current);
+      referenceGroupRef.current = null;
+    }
+    const renderCandidates = showRawProviderGeometry ? displayedProviderCandidates.filter((candidate) => {
+      if (candidate.featureId === currentEditableFeatureId) return false;
+      if (soloProviderFeatureId) return candidate.featureId === soloProviderFeatureId;
+      return !hiddenProviderFeatureIdSet.has(candidate.featureId);
+    }) : [];
+    if (!renderCandidates.length || !sceneOrigin) {
+      logBuildingInspector('renderReferenceGeometry:exit empty', {
+        renderCandidateCount: renderCandidates.length,
+        hasSceneOrigin: Boolean(sceneOrigin),
+      });
+      return;
+    }
+
+    const group = new THREE.Group();
+    const entries: SceneMeshEntry[] = [];
+    let candidateIterations = 0;
+    let polygonIterations = 0;
+    renderCandidates.forEach((candidate) => {
+      candidateIterations += 1;
+      assertBuildingInspectorLoopLimit('renderReferenceGeometry.candidateLoop', candidateIterations, {
+        renderCandidateCount: renderCandidates.length,
+      });
+      const candidatePolygonCount = collectPolygons(candidate.geometry).length;
+      const records = buildPolygonRecords(
+        candidate.geometry,
+        sceneOrigin,
+        Array.from({ length: candidatePolygonCount }, () => ({
+          renderHeightMeters: getProviderRenderHeight(candidate.feature),
+          renderMinHeightMeters: getProviderRenderMinHeight(candidate.feature),
+          providerFeatureId: candidate.featureId,
+        })),
+      );
+      records.forEach((record) => {
+        polygonIterations += 1;
+        assertBuildingInspectorLoopLimit('renderReferenceGeometry.polygonLoop', polygonIterations, {
+          renderCandidateCount: renderCandidates.length,
+          candidateIterations,
+        });
+        const geometry = buildExtrudedPolygonGeometry(record);
+        if (!geometry) return;
+        const isHovered = hoveredCandidateId === candidate.featureId;
+        const isPending = pendingCandidateId === candidate.featureId;
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(isPending ? '#f1c35a' : isHovered ? '#c7d0dc' : '#8b929c'),
+        roughness: 0.9,
+        metalness: 0,
+        transparent: true,
+        opacity: isPending ? 0.42 : isHovered ? 0.28 : 0.12,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const outlineMaterial = new THREE.LineBasicMaterial({
+        color: isPending ? 0xf1c35a : isHovered ? 0xffffff : 0x9aa1aa,
+        transparent: true,
+        opacity: isPending ? 0.82 : isHovered ? 0.55 : 0.28,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.userData = { referenceOnly: true, providerFeatureId: candidate.featureId };
+
+      const edges = new THREE.EdgesGeometry(geometry, 18);
+      const outline = new THREE.LineSegments(edges, outlineMaterial);
+      outline.visible = true;
+      mesh.add(outline);
+      entries.push({ record, mesh, outline, edges, material, outlineMaterial });
+      group.add(mesh);
+      });
+    });
+
+    group.visible = showNearbyBuildings && showRawProviderGeometry;
+    scene.add(group);
+    referenceGroupRef.current = group;
+    referenceMeshEntriesRef.current = entries;
+    logBuildingInspector('renderReferenceGeometry:exit', {
+      renderCandidateCount: renderCandidates.length,
+      candidateIterations,
+      polygonIterations,
+      meshEntryCount: entries.length,
+    });
+  }, [
+    currentEditableFeatureId,
+    hiddenProviderFeatureIdSet,
+    hoveredCandidateId,
+    pendingCandidateId,
+    displayedProviderCandidates,
+    sceneOrigin,
+    showRawProviderGeometry,
+    soloProviderFeatureId,
+  ]);
+
+  useEffect(() => {
+    if (referenceGroupRef.current) {
+      referenceGroupRef.current.visible = showNearbyBuildings && showRawProviderGeometry;
+    }
+  }, [showNearbyBuildings, showRawProviderGeometry]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    if (venueMarkerGroupRef.current) {
+      scene.remove(venueMarkerGroupRef.current);
+      venueMarkerGroupRef.current.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        mesh.geometry?.dispose?.();
+        const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(material)) material.forEach((item) => item.dispose());
+        else material?.dispose?.();
+      });
+      venueMarkerGroupRef.current = null;
+    }
+    if (!selectedVenueCoords || !sceneOrigin) return;
+
+    const local = toLocalMeters(
+      [selectedVenueCoords.lng, selectedVenueCoords.lat],
+      { lng: sceneOrigin[0], lat: sceneOrigin[1] },
+    );
+    const group = new THREE.Group();
+    group.position.set(local.x, 0.18, -local.y);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(28, 0.65, 8, 64),
+      new THREE.MeshBasicMaterial({ color: 0xff4d5e, transparent: true, opacity: 0.95 }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+
+    const pulseRing = new THREE.Mesh(
+      new THREE.TorusGeometry(38, 0.45, 8, 96),
+      new THREE.MeshBasicMaterial({ color: 0xff4d5e, transparent: true, opacity: 0.65, depthWrite: false }),
+    );
+    pulseRing.name = 'venue-pulse-ring';
+    pulseRing.rotation.x = Math.PI / 2;
+    group.add(pulseRing);
+
+    const beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 0.9, 90, 12),
+      new THREE.MeshBasicMaterial({ color: 0xff4d5e, transparent: true, opacity: 0.72, depthWrite: false }),
+    );
+    beacon.position.y = 45;
+    group.add(beacon);
+
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(4.5, 20, 14),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.98, depthWrite: false }),
+    );
+    cap.position.y = 92;
+    group.add(cap);
+
+    group.visible = showVenueMarker;
+    scene.add(group);
+    venueMarkerGroupRef.current = group;
+  }, [sceneOrigin, selectedVenue]);
+
+  useEffect(() => {
+    if (venueMarkerGroupRef.current) {
+      venueMarkerGroupRef.current.visible = showVenueMarker;
+    }
+  }, [showVenueMarker]);
+
+  useEffect(() => {
+    if (!pendingSelectAllRef.current || !polygonRecords.length) return;
+    pendingSelectAllRef.current = false;
+    setSelectedPolygonIndices(polygonRecords.map((record) => record.polygonIndex));
+  }, [polygonRecords]);
+
+  const resolveFeature = async (
+    featureIdOverride?: string,
+    options: { useWorkspace?: boolean; workspaceCenter?: { lng: number; lat: number } } = {},
+  ) => {
+    const startedAt = performance.now();
+    const map = mapRef.current;
+    const featureId = (featureIdOverride ?? featureIdInputRef.current).trim();
+    logBuildingInspector('resolveFeature:enter', {
+      featureId,
+      hasMap: Boolean(map),
+      hasOverride: Boolean(featureIdOverride),
+    });
+    if (!map) {
+      setStatus('Map is not ready yet.');
+      logBuildingInspector('resolveFeature:exit missing map', { featureId });
+      return;
+    }
+    if (!featureId) {
+      setStatus('Enter a feature id first.');
+      logBuildingInspector('resolveFeature:exit missing feature id');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingPhase(`Loading feature ${featureId}`);
+    try {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      const deadline = Date.now() + 8000;
+      let allFeatures: MapGeoJSONFeature[] = [];
+      let fragments: MapGeoJSONFeature[] = [];
+      let scanIterations = 0;
+
+      while (Date.now() < deadline) {
+        scanIterations += 1;
+        assertBuildingInspectorLoopLimit('resolveFeature.scanLoop', scanIterations, {
+          featureId,
+          loadedFeatureCount: allFeatures.length,
+          fragmentCount: fragments.length,
+        });
+        setLoadingPhase('Scanning source features');
+        logBuildingInspector('querySourceFeatures:enter', {
+          featureId,
+          scanIterations,
+          sourceId: getBuildingsSourceId(),
+          sourceLayer: SOURCE_LAYER,
+        });
+        allFeatures = map.querySourceFeatures(getBuildingsSourceId(), {
+          sourceLayer: SOURCE_LAYER,
+        }) as MapGeoJSONFeature[];
+        logBuildingInspector('querySourceFeatures:exit', {
+          featureId,
+          scanIterations,
+          featureCount: allFeatures.length,
+        });
+        let fragmentFilterIterations = 0;
+        fragments = allFeatures.filter((feature) => {
+          fragmentFilterIterations += 1;
+          assertBuildingInspectorLoopLimit('resolveFeature.fragmentFilterLoop', fragmentFilterIterations, {
+            featureId,
+            featureCount: allFeatures.length,
+          });
+          if (feature.id === undefined || feature.id === null) return false;
+          return String(feature.id) === featureId;
+        });
+        logBuildingInspector('resolveFeature:fragment filter exit', {
+          featureId,
+          scanIterations,
+          fragmentFilterIterations,
+          fragmentCount: fragments.length,
+          fragmentGeometryTypes: Array.from(new Set(fragments.map((fragment) => fragment.geometry?.type ?? 'missing'))),
+          fragmentCoordinateCounts: fragments.map((fragment) => getCoordinateCount(fragment.geometry)),
+          fragmentTiles: fragments.map((fragment) => getFeatureTile(fragment)),
+        });
+        if (fragments.length) break;
+
+        setLoadingPhase('Waiting for source tiles');
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
+      }
+
+      setLoadingPhase(`Filtering feature ${featureId}`);
+      logBuildingInspector('resolveFeature:located feature summary', {
+        featureId,
+        located: fragments.length > 0,
+        fragmentCount: fragments.length,
+        fragmentGeometryTypes: Array.from(new Set(fragments.map((fragment) => fragment.geometry?.type ?? 'missing'))),
+        fragmentMetrics: fragments.map((fragment, index) => {
+          const metrics = getBaseFeatureMetrics(fragment.geometry);
+          return {
+            index,
+            id: fragment.id === undefined || fragment.id === null ? null : String(fragment.id),
+            tile: getFeatureTile(fragment),
+            geometryType: fragment.geometry?.type ?? null,
+            coordinateCount: getCoordinateCount(fragment.geometry),
+            polygonCount: metrics.polygonCount,
+            ringCount: metrics.ringCount,
+            vertexCount: metrics.vertexCount,
+          };
+        }),
+      });
+      setLoadingPhase('Building geometry');
+      const next = buildResolution(featureId, fragments);
+      setLoadedFeatureCount(allFeatures.length);
+      setLoadedUniqueIdCount(countUniqueIds(allFeatures));
+      setProviderCandidates([]);
+      setFullProviderTileCandidates([]);
+      setWorkspaceBuildings([]);
+      setWorkspaceProviderFeatureIds([]);
+      setWorkspacePolygonMetadata([]);
+      setResolverState((current) => ({
+        ...updateResolverStep(current, 'Provider', 'Tile loaded', allFeatures.length ? 'success' : 'failed', `${allFeatures.length} provider tile features`),
+        providerTileFeatureCount: allFeatures.length,
+      }));
+      setHiddenProviderFeatureIds([]);
+      setSoloProviderFeatureId(null);
+      if (!next) {
+        setResolution(null);
+        setReferencePolygonRecords([]);
+        setWorkspaceBuildings([]);
+        setWorkspaceProviderFeatureIds([]);
+        setWorkspacePolygonMetadata([]);
+        setFragmentRecords([]);
+        setDuplicateSummaries([]);
+        setForensicReport(null);
+        const failure: ResolverFailureStatus = fragments.length ? 'UNSUPPORTED_GEOMETRY' : 'FEATURE_NOT_IN_TILE';
+        setResolverState((current) => ({
+          ...updateResolverStep(
+            updateResolverStep(
+              updateResolverStep(current, 'Provider', 'Feature found', fragments.length ? 'success' : 'failed', fragments.length ? `Feature ${featureId}` : 'Feature not in loaded provider tile'),
+              'Provider',
+              'Adjacent tiles',
+              fragments.length ? 'skipped' : 'failed',
+              fragments.length ? 'Not needed' : 'Adjacent tile loading unavailable in current source window',
+            ),
+            'Geometry',
+            'Polygon extracted',
+            'failed',
+            fragments.length ? 'Unsupported or empty provider geometry' : 'No provider feature geometry',
+          ),
+          failure,
+          suggestions: resolverFailureSuggestions(failure),
+          providerTileFeatureCount: allFeatures.length,
+          neighborhoodFeatureCount: 0,
+        }));
+        setStatus(`Feature id ${featureId} was not returned by the OpenFreeMap building source before the wait window expired.`);
+        return;
+      }
+
+      const workspace = options.useWorkspace && options.workspaceCenter
+        ? buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, DEFAULT_NEIGHBORHOOD_RADIUS_METERS)
+        : null;
+      const editableResolution = workspace?.geometry
+        ? buildResolutionFromWorkspace(featureId, workspace, fragments) ?? next
+        : next;
+
+      setWorkspaceBuildings(workspace?.buildings ?? []);
+      setWorkspaceProviderFeatureIds(workspace?.providerFeatureIds ?? []);
+      setWorkspacePolygonMetadata(workspace?.polygons.map((polygon) => ({
+        renderHeightMeters: polygon.renderHeightMeters,
+        renderMinHeightMeters: polygon.renderMinHeightMeters,
+        providerFeatureId: polygon.providerFeatureId,
+      })) ?? []);
+      setResolution(editableResolution);
+      logBuildingInspector('resolveFeature:setResolution', {
+        featureId,
+        useWorkspace: Boolean(workspace?.geometry),
+        geometryType: editableResolution.geometry?.type ?? null,
+        polygonCount: editableResolution.polygonCount,
+        ringCount: editableResolution.ringCount,
+        vertexCount: editableResolution.vertexCount,
+        fragmentCount: editableResolution.fragmentCount,
+        workspaceBuildingCount: workspace?.buildings.length ?? 0,
+        metricsStatus: editableResolution.metricsStatus,
+      });
+      setReferencePolygonRecords([]);
+      setPendingCandidateId(null);
+      setHoveredCandidateId(null);
+      setFragmentRecords([]);
+      setDuplicateSummaries([]);
+      setForensicReport(null);
+      setResolverState((current) =>
+        updateResolverStep(
+          updateResolverStep(
+            updateResolverStep(current, 'Provider', 'Feature found', 'success', `Feature ${featureId}`),
+            'Provider',
+            'Adjacent tiles',
+            'skipped',
+            'Not needed',
+          ),
+          'Geometry',
+          'Polygon extracted',
+          editableResolution.polygonCount ? 'success' : 'failed',
+          editableResolution.polygonCount ? `${formatPolygonCountLabel(editableResolution.polygonCount)}` : 'Provider returned empty geometry',
+        ),
+      );
+      setStatus(
+        workspace?.geometry
+          ? `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace.`
+          : `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}. Diagnostics pending.`,
+      );
+      window.setTimeout(() => {
+        logBuildingInspector('resolveFeature:deferred diagnostics enter', {
+          featureId,
+          featureCount: allFeatures.length,
+          fragmentCount: fragments.length,
+        });
+        try {
+          setLoadingPhase('Computing optional diagnostics');
+          const nextFragmentRecords = fragments
+            .map(getFragmentRecord)
+            .filter((entry): entry is FragmentRecord => Boolean(entry));
+          if (workspace?.geometry) {
+            const nextDuplicateSummaries = buildDuplicateSummaries(fragments);
+            const rawProviderCandidates = options.workspaceCenter
+              ? buildWorkspaceProviderCandidates(allFeatures, workspace, options.workspaceCenter)
+              : [];
+            setReferencePolygonRecords([]);
+            setFragmentRecords(nextFragmentRecords);
+            setDuplicateSummaries(nextDuplicateSummaries);
+            setProviderCandidates(rawProviderCandidates);
+            setFullProviderTileCandidates([]);
+            setForensicReport(buildForensicReport(featureId, fragments, nextFragmentRecords, nextDuplicateSummaries, editableResolution));
+            setResolverState((current) => ({
+              ...updateResolverStep(
+                updateResolverStep(current, 'Neighborhood', 'Nearby features', 'success', `${workspace.buildings.length} building group(s), ${workspace.polygons.length} editable polygon(s) within ${workspace.radiusMeters}m`),
+                'Neighborhood',
+                'Expanded radius',
+                'skipped',
+                `${workspace.radiusMeters}m workspace loaded`,
+              ),
+              providerTileFeatureCount: workspace.providerTileFeatureCount,
+              neighborhoodFeatureCount: workspace.polygons.length,
+              radiusMeters: workspace.radiusMeters,
+              failure: null,
+              suggestions: [],
+            }));
+            setStatus(
+              `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace.`,
+            );
+            logBuildingInspector('resolveFeature:workspace diagnostics exit', {
+              featureId,
+              fragmentRecordCount: nextFragmentRecords.length,
+              workspaceBuildingCount: workspace.buildings.length,
+              workspacePolygonCount: workspace.polygons.length,
+            });
+            return;
+          }
+          let scopedCache = buildScopedNeighborhoodCache(
+            allFeatures,
+            next.geometry,
+            featureId,
+            DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
+          );
+          for (const expandedRadius of EXPANDED_NEIGHBORHOOD_RADII_METERS) {
+            const nonEditableCount = scopedCache.candidates.filter((candidate) => candidate.featureId !== featureId).length;
+            if (nonEditableCount > 0) break;
+            scopedCache = buildScopedNeighborhoodCache(allFeatures, next.geometry, featureId, expandedRadius);
+          }
+          const fullTileCache = showFullProviderTileCache
+            ? buildScopedNeighborhoodCache(allFeatures, next.geometry, featureId, Number.POSITIVE_INFINITY).candidates
+            : [];
+          const scopedFeatures = scopedCache.candidates.map((candidate) => candidate.feature);
+          const nextDuplicateSummaries = buildDuplicateSummaries(scopedFeatures);
+          setReferencePolygonRecords(buildReferencePolygonRecords(scopedFeatures, featureId, getGeometryCenter(next.geometry)));
+          setFragmentRecords(nextFragmentRecords);
+          setDuplicateSummaries(nextDuplicateSummaries);
+          setProviderCandidates(scopedCache.candidates);
+          setFullProviderTileCandidates(fullTileCache);
+          setForensicReport(buildForensicReport(featureId, scopedFeatures, nextFragmentRecords, nextDuplicateSummaries, next));
+          setResolverState((current) => ({
+            ...updateResolverStep(
+              updateResolverStep(current, 'Neighborhood', 'Nearby features', 'success', `${scopedCache.candidates.length} nearby features within ${scopedCache.radiusMeters}m`),
+              'Neighborhood',
+              'Expanded radius',
+              scopedCache.radiusMeters > DEFAULT_NEIGHBORHOOD_RADIUS_METERS ? 'success' : 'skipped',
+              scopedCache.radiusMeters > DEFAULT_NEIGHBORHOOD_RADIUS_METERS ? `Expanded to ${scopedCache.radiusMeters}m` : `${DEFAULT_NEIGHBORHOOD_RADIUS_METERS}m was sufficient`,
+            ),
+            providerTileFeatureCount: scopedCache.providerTileFeatureCount,
+            neighborhoodFeatureCount: scopedCache.candidates.length,
+            radiusMeters: scopedCache.radiusMeters,
+            failure: null,
+            suggestions: [],
+          }));
+          setStatus(
+            `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}, disconnected pieces ${formatDiagnosticMetric(next.disconnectedPieces)}.`,
+          );
+          logBuildingInspector('resolveFeature:deferred diagnostics exit', {
+            featureId,
+            fragmentRecordCount: nextFragmentRecords.length,
+            duplicateSummaryCount: nextDuplicateSummaries.length,
+            providerCandidateCount: scopedCache.candidates.length,
+          });
+        } catch (error) {
+          logBuildingInspector('resolveFeature:deferred diagnostics skipped', {
+            featureId,
+            error,
+          });
+          setStatus(
+            `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}. Optional metrics skipped.`,
+          );
+          setResolverState((current) => ({
+            ...updateResolverStep(current, 'Neighborhood', 'Nearby features', 'skipped', 'Optional diagnostics skipped'),
+            suggestions: ['Manual Feature ID'],
+          }));
+        } finally {
+          setLoadingPhase(null);
+        }
+      }, 0);
+      logBuildingInspector('resolveFeature:exit', {
+        featureId,
+        scanIterations,
+        loadedFeatureCount: allFeatures.length,
+        fragmentCount: fragments.length,
+        elapsedMs: performance.now() - startedAt,
+      });
+    } catch (error) {
+      logBuildingInspector('resolveFeature:error', {
+        featureId,
+        error,
+        elapsedMs: performance.now() - startedAt,
+      });
+      throw error;
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const loadVenueGeometry = async (listing: Listing) => {
+    const startedAt = performance.now();
+    logBuildingInspector('loadVenueGeometry:enter', {
+      listingId: listing.id,
+      listingName: listing.name,
+      saveStateLabel,
+    });
+    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection?')) {
+      logBuildingInspector('loadVenueGeometry:exit cancelled unsaved changes', { listingId: listing.id });
+      return;
+    }
+    const map = mapRef.current;
+    if (!map) {
+      setStatus('Map is not ready yet. Try again after the building source loads.');
+      logBuildingInspector('loadVenueGeometry:exit missing map', { listingId: listing.id });
+      return;
+    }
+
+    const coords = getListingCanonicalCoords(listing, semv2Collections);
+    const savedAsset = getBuildingAssetForListing(
+      listing,
+      buildingAssets,
+      venues,
+      listings,
+      organizations,
+      relationships,
+    );
+    if (!coords) {
+      setStatus(`Cannot resolve ${listing.name}: listing coordinates are missing.`);
+      logBuildingInspector('loadVenueGeometry:exit missing canonical coords', { listingId: listing.id });
+      return;
+    }
+    logBuildingInspector('loadVenueGeometry:canonical coords', {
+      listingId: listing.id,
+      lng: coords.lng,
+      lat: coords.lat,
+    });
+
+    if (!listing.id.startsWith('landmark-test-')) {
+      setLandmarkValidation(null);
+      setLandmarkListing(null);
+    }
+    setSelectedVenueId(listing.id);
+    setResolvedVenueFeatureId(null);
+    setSavedGeometrySignature(getGeometrySignature(savedAsset?.geometry));
+    setAssetStatusMessage(null);
+    setResolution(null);
+    setReferencePolygonRecords([]);
+    setProviderCandidates([]);
+    setFullProviderTileCandidates([]);
+    setWorkspaceBuildings([]);
+    setWorkspaceProviderFeatureIds([]);
+    setWorkspacePolygonMetadata([]);
+    setResolverState(createVenueResolverState(
+      listing,
+      coords,
+      Boolean(savedAsset),
+      semv2Collections,
+    ));
+    setHiddenProviderFeatureIds([]);
+    setSoloProviderFeatureId(null);
+    setPendingCandidateId(null);
+    setHoveredCandidateId(null);
+    setProviderWasManuallyCorrected(false);
+    setFragmentRecords([]);
+    setDuplicateSummaries([]);
+    setForensicReport(null);
+    setSelectedPolygonIndices([]);
+    setHoveredPolygonIndex(null);
+    setIsLoading(true);
+    setLoadingPhase(`Loading venue ${listing.name}`);
+
+    try {
+      logBuildingInspector('loadVenueGeometry:jumpTo enter', {
+        listingId: listing.id,
+        lng: coords.lng,
+        lat: coords.lat,
+        zoom: 18.2,
+      });
+      map.jumpTo({
+        center: [coords.lng, coords.lat],
+        zoom: 18.2,
+      });
+      logBuildingInspector('loadVenueGeometry:jumpTo exit', { listingId: listing.id });
+      setLoadingPhase('Waiting for venue building tiles');
+      const idleResult = await waitForMapIdle(map);
+      setResolverState((current) =>
+        updateResolverStep(
+          current,
+          'Provider',
+          'Tile loaded',
+          idleResult === 'idle' ? 'success' : 'skipped',
+          idleResult === 'idle' ? 'Provider tile idle' : 'Timed out; continuing',
+        ),
+      );
+      if (idleResult === 'timeout') {
+        setStatus(`Map tiles did not become idle for ${listing.name}; continuing with provider lookup.`);
+      }
+      if (savedAsset) {
+        loadSavedBuildingAsset(savedAsset, listing.name);
+        setResolverState((current) => ({
+          ...updateResolverStep(current, 'Asset', 'Saved asset loaded', 'success', `${savedAsset.capture.polygonCount} polygon(s)`),
+          failure: null,
+          suggestions: [],
+        }));
+        logBuildingInspector('loadVenueGeometry:exit saved asset', {
+          listingId: listing.id,
+          assetId: savedAsset.id,
+          polygonCount: savedAsset.capture.polygonCount,
+          elapsedMs: performance.now() - startedAt,
+        });
+        return;
+      }
+
+      setLoadingPhase('Resolving venue building with Venue Arrival');
+      const savedProviderFeatureId = null;
+      logBuildingInspector('findSelectedBuilding:enter', {
+        listingId: listing.id,
+        savedProviderFeatureId,
+      });
+      const match = savedProviderFeatureId ? { buildingId: savedProviderFeatureId } : findSelectedBuilding(map, listing, venueArrival, coords);
+      logBuildingInspector('findSelectedBuilding:exit', {
+        listingId: listing.id,
+        savedProviderFeatureId,
+        buildingId: match?.buildingId ?? null,
+      });
+      if (!match?.buildingId) {
+        setResolverState((current) => ({
+          ...updateResolverStep(current, 'Provider', 'Feature found', 'failed', 'No provider feature resolved'),
+          failure: 'NO_PROVIDER_FEATURE',
+          suggestions: resolverFailureSuggestions('NO_PROVIDER_FEATURE'),
+        }));
+        setStatus(`No provider building feature was resolved for ${listing.name}. Use Advanced lookup for manual inspection.`);
+        logBuildingInspector('loadVenueGeometry:exit no provider feature', {
+          listingId: listing.id,
+          elapsedMs: performance.now() - startedAt,
+        });
+        return;
+      }
+
+      setResolvedVenueFeatureId(match.buildingId);
+      setResolverState((current) =>
+        updateResolverStep(current, 'Provider', 'Feature found', 'success', `Feature ${match.buildingId}`),
+      );
+      setFeatureIdInput(match.buildingId);
+      featureIdInputRef.current = match.buildingId;
+      setStatus(`${savedProviderFeatureId ? 'Using saved provider feature' : `Resolved ${listing.name} to provider feature`} ${match.buildingId}. Loading geometry.`);
+      await resolveFeature(match.buildingId, { useWorkspace: true, workspaceCenter: coords });
+      logBuildingInspector('loadVenueGeometry:exit', {
+        listingId: listing.id,
+        buildingId: match.buildingId,
+        elapsedMs: performance.now() - startedAt,
+      });
+    } catch (error) {
+      logBuildingInspector('loadVenueGeometry:error', {
+        listingId: listing.id,
+        error,
+        elapsedMs: performance.now() - startedAt,
+      });
+      throw error;
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const loadLandmarkTest = async () => {
+    const landmark = LANDMARK_TESTS.find((item) => item.id === selectedLandmarkId) ?? LANDMARK_TESTS[0];
+    if (!landmark) return;
+    const listing = createLandmarkListing(landmark);
+    setLandmarkListing(listing);
+    setLandmarkValidation(landmark);
+    await loadVenueGeometry(listing);
+  };
+
+  const loadSavedBuildingAsset = (
+    asset: BuildingAsset | null = selectedVenueAsset,
+    venueName: string = selectedVenue?.name ?? 'selected venue',
+  ) => {
+    if (!asset) {
+      setAssetStatusMessage('No saved building asset exists for this venue yet.');
+      return;
+    }
+    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection with the saved asset?')) {
+      return;
+    }
+
+    setResolution(buildResolutionFromAsset(asset));
+    setReferencePolygonRecords([]);
+    setProviderCandidates([]);
+    setFullProviderTileCandidates([]);
+    setWorkspaceBuildings([]);
+    setWorkspaceProviderFeatureIds(asset.provider.featureIds);
+    setWorkspacePolygonMetadata([]);
+    setHiddenProviderFeatureIds([]);
+    setSoloProviderFeatureId(null);
+    setPendingCandidateId(null);
+    setHoveredCandidateId(null);
+    setFragmentRecords([]);
+    setDuplicateSummaries([]);
+    setForensicReport(null);
+    setResolvedVenueFeatureId(asset.provider.featureIds[0] ?? null);
+    setFeatureIdInput(asset.provider.featureIds[0] ?? featureIdInput);
+    featureIdInputRef.current = asset.provider.featureIds[0] ?? featureIdInputRef.current;
+    setSavedGeometrySignature(getGeometrySignature(asset.geometry));
+    setAssetStatusMessage(`Loaded saved building asset updated ${new Date(asset.capture.updatedAt).toLocaleString()}.`);
+    setStatus(`Loaded saved building asset for ${venueName}: ${asset.capture.polygonCount} polygon(s).`);
+    pendingSelectAllRef.current = true;
+  };
+
+  const promoteCandidateToEditable = (candidate: ProviderCandidate | null = promotedCandidate) => {
+    if (!candidate) return;
+    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection with this provider candidate?')) {
+      return;
+    }
+    const next = buildResolution(candidate.featureId, [candidate.feature]);
+    if (!next) {
+      setAssetStatusMessage(`Candidate ${candidate.featureId} could not be converted into editable geometry.`);
+      return;
+    }
+    setResolution(next);
+    setResolvedVenueFeatureId(candidate.featureId);
+    setFeatureIdInput(candidate.featureId);
+    featureIdInputRef.current = candidate.featureId;
+    setSelectedPolygonIndices([]);
+    setHoveredPolygonIndex(null);
+    setPendingCandidateId(null);
+    setHoveredCandidateId(null);
+    setProviderWasManuallyCorrected(true);
+    setWorkspaceBuildings([]);
+    setWorkspaceProviderFeatureIds([candidate.featureId]);
+    setWorkspacePolygonMetadata([]);
+    setReferencePolygonRecords(
+      buildReferencePolygonRecords(
+        displayedProviderCandidates.map((item) => item.feature),
+        candidate.featureId,
+        getGeometryCenter(next.geometry),
+      ),
+    );
+    setFragmentRecords([getFragmentRecord(candidate.feature)].filter((entry): entry is FragmentRecord => Boolean(entry)));
+    setForensicReport(null);
+    setStatus(`Promoted nearby provider candidate ${candidate.featureId} to editable geometry.`);
+  };
+
+  const saveSelectedBuildingAsset = async () => {
+    if (!selectedVenue) {
+      setAssetStatusMessage('Select a venue before saving a building asset.');
+      return;
+    }
+    if (!selectedSummary.geoJson?.geometry) {
+      setAssetStatusMessage('Select one or more footprints before saving.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const providerFeatureIds = Array.from(new Set([
+      resolvedVenueFeatureId,
+      resolution?.featureId,
+      ...workspaceProviderFeatureIds,
+      ...fragmentRecords.map((fragment) => fragment.featureId),
+    ].filter((value): value is string => Boolean(
+      value &&
+      !value.startsWith('building-asset-') &&
+      !value.startsWith('workspace:'),
+    ))));
+    const renderHeightMeters = selectedSummary.maxRenderHeightMeters ??
+      venueArrival.buildingFallbackHeight * venueArrival.selectedBuilding.heightBoost;
+    const renderMinHeightMeters = minMetric(selectedPolygonRecords.map((record) => record.renderMinHeightMeters)) ?? 0;
+    const existingAsset = selectedVenueAsset;
+    const resolvedVenueId = getVenueForListing(selectedVenue, { listings, venues, organizations, relationships })?.id;
+    const asset: BuildingAsset = {
+      id: existingAsset?.id ?? `building-asset-${selectedVenue.id}`,
+      listingId: selectedVenue.id,
+      venueId: existingAsset?.venueId ?? resolvedVenueId,
+      version: 1,
+      provider: {
+        source: providerWasManuallyCorrected
+          ? `${resolution?.source ?? 'OpenFreeMap'} (manually corrected)`
+          : resolution?.source ?? 'OpenFreeMap',
+        featureIds: providerFeatureIds,
+      },
+      geometry: selectedSummary.geoJson.geometry,
+      renderHeightMeters,
+      renderMinHeightMeters,
+      capture: {
+        createdAt: existingAsset?.capture.createdAt ?? now,
+        updatedAt: now,
+        polygonCount: selectedSummary.count,
+        ringCount: selectedSummary.ringCount,
+        vertexCount: selectedSummary.vertexCount,
+      },
+    };
+
+    setIsLoading(true);
+    setLoadingPhase('Saving building asset');
+    setAssetStatusMessage(null);
+    try {
+      const saved = await api.saveBuildingAsset(selectedVenue.id, asset);
+      setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
+      setAssetStatusMessage(`Saved building asset at ${new Date(saved.asset.capture.updatedAt).toLocaleString()}.`);
+      setStatus(`Saved building asset for ${selectedVenue.name}: ${saved.asset.capture.polygonCount} polygon(s).`);
+      setLocalBuildingAssets((current) => {
+        const index = current.findIndex((item) => item.id === saved.asset.id);
+        if (index < 0) return [...current, saved.asset];
+        const next = [...current];
+        next[index] = saved.asset;
+        return next;
+      });
+      if (saved.listing) {
+        setLocalListings((current) => current.map((item) => (item.id === saved.listing?.id ? saved.listing : item)));
+      }
+      onBuildingAssetSaved?.(saved.asset, saved.listing);
+    } catch (error) {
+      setAssetStatusMessage((error as Error).message || 'Failed to save building asset.');
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const movePinToSelectedBuilding = async () => {
+    if (!selectedVenue) {
+      setAssetStatusMessage('Select a venue before moving its pin.');
+      return;
+    }
+    const geometry = selectedSummary.geoJson?.geometry ?? selectedVenueAsset?.geometry;
+    const center = getGeometryCenter(geometry ?? null);
+    if (!center) {
+      setAssetStatusMessage('Select or load a saved building before moving the pin.');
+      return;
+    }
+
+    const [longitude, latitude] = center;
+    const updatedListing: Listing = {
+      ...selectedVenue,
+      geopoint: {
+        ...selectedVenue.geopoint,
+        latitude,
+        longitude,
+      },
+    };
+
+    setIsLoading(true);
+    setLoadingPhase('Moving venue pin');
+    setAssetStatusMessage(null);
+    try {
+      const saved = await api.saveListing(updatedListing);
+      setLocalListings((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      onListingLocationSaved?.(saved);
+      setAssetStatusMessage(`Moved venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`);
+      setStatus(`Moved ${saved.name}'s display pin to the center of the selected building.`);
+    } catch (error) {
+      setAssetStatusMessage((error as Error).message || 'Failed to move the venue pin.');
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = async (label: string, value: string) => {
+    try {
+      const ok = await copyText(value);
+      setCopiedLabel(ok ? label : `${label} unavailable`);
+    } catch {
+      setCopiedLabel(`Copy failed: ${label}`);
+    }
+    window.setTimeout(() => setCopiedLabel(null), 1800);
+  };
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: swingMapStyle,
+      center: [DEFAULT_TWIST_LNG, DEFAULT_TWIST_LAT],
+      zoom: 18.2,
+      minZoom: 3,
+      maxZoom: 20,
+      attributionControl: false,
+      interactive: true,
+    });
+    mapRef.current = map;
+
+    map.on('load', () => {
+      map.addSource(getBuildingsSourceId(), buildBuildingsSource());
+      map.addLayer({
+        id: 'building-inspector-loader',
+        type: 'fill',
+        source: getBuildingsSourceId(),
+        'source-layer': SOURCE_LAYER,
+        paint: {
+          'fill-color': '#ffffff',
+          'fill-opacity': 0,
+        },
+      });
+      map.once('idle', () => {
+        setStatus('Building source ready. Select a venue to resolve its provider geometry.');
+      });
+    });
+
+    return () => {
+      mapReferenceMarkerRef.current?.remove();
+      mapReferenceMarkerRef.current = null;
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedVenueCoords) return;
+
+    const lngLat: [number, number] = [selectedVenueCoords.lng, selectedVenueCoords.lat];
+    map.jumpTo({ center: lngLat, zoom: Math.max(map.getZoom(), 17.4) });
+
+    if (!mapReferenceMarkerRef.current) {
+      const markerElement = document.createElement('div');
+      markerElement.className = 'h-4 w-4 rounded-full border-2 border-white bg-red-500 shadow-[0_0_0_5px_rgba(239,68,68,0.22)]';
+      mapReferenceMarkerRef.current = new maplibregl.Marker({ element: markerElement, anchor: 'center' })
+        .setLngLat(lngLat)
+        .addTo(map);
+    } else {
+      mapReferenceMarkerRef.current.setLngLat(lngLat);
+    }
+  }, [selectedVenueCoords]);
+
+  if (!embedded && !isDevRouteEnabled()) {
+    return <Navigate to="/" replace />;
+  }
+
+  const shellClassName = embedded
+    ? 'relative h-[calc(100vh-4rem)] min-h-[42rem] overflow-hidden rounded-2xl border border-gray-200 bg-[#050608] text-zinc-100 shadow-lg'
+    : 'relative h-screen min-h-[44rem] overflow-hidden bg-[#050608] text-zinc-100';
+  const sidebarClassName = embedded
+    ? 'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b0f]/94 shadow-2xl shadow-black/40 backdrop-blur-xl'
+    : 'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b0f]/94 shadow-2xl shadow-black/40 backdrop-blur-xl';
+  const resolverStatusPanel = (
+    <details className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl" open>
+      <summary className="cursor-pointer select-none">
+        <div className="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-3 align-middle">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-50">Resolver Status</h2>
+            <p className="mt-0.5 text-[11px] text-zinc-500">
+              {resolverState.failure ?? 'Resolution pipeline ready'}
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
+            {resolverState.neighborhoodFeatureCount} nearby
+          </span>
+        </div>
+      </summary>
+      <div className="mt-3 space-y-3">
+        {(['Venue', 'Provider', 'Neighborhood', 'Geometry', 'Asset'] as ResolverStep['section'][]).map((section) => (
+          <div key={section} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{section}</div>
+            <div className="mt-2 space-y-1.5">
+              {resolverState.steps.filter((step) => step.section === section).map((step) => {
+                const marker =
+                  step.status === 'success' ? 'OK'
+                    : step.status === 'failed' ? 'X'
+                      : step.status === 'running' ? '..'
+                        : step.status === 'skipped' ? '-'
+                          : 'o';
+                const colorClass =
+                  step.status === 'success' ? 'text-emerald-200'
+                    : step.status === 'failed' ? 'text-red-200'
+                      : step.status === 'running' ? 'text-amber-200'
+                        : 'text-zinc-500';
+                return (
+                  <div key={`${step.section}-${step.label}`} className={`flex items-start gap-2 text-[11px] ${colorClass}`}>
+                    <span className="mt-px w-3 shrink-0">{marker}</span>
+                    <span className="min-w-0">
+                      <span className="text-zinc-200">{step.label}</span>
+                      {step.detail ? <span className="block truncate text-zinc-500">{step.detail}</span> : null}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {resolverState.failure ? (
+        <div className="mt-3 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2">
+          <div className="text-[11px] font-semibold text-red-100">{resolverState.failure}</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {resolverState.suggestions.map((suggestion) => (
+              <span key={suggestion} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-zinc-200">
+                {suggestion}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </details>
+  );
+  const providerNeighborhoodManager = (
+    <details className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl" open>
+      <summary className="cursor-pointer select-none">
+        <div className="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-3 align-middle">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-50">Workspace</h2>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
+            Local building geometry inside the authoring radius.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
+          {workspaceSummary.selected} selected
+        </span>
+        </div>
+      </summary>
+      <div className="mt-3 grid grid-cols-4 gap-2 text-[11px] text-zinc-400">
+        <MiniStat label="Radius" value={`${workspaceSummary.radiusMeters}m`} />
+        <MiniStat label="Buildings" value={String(workspaceSummary.buildings)} />
+        <MiniStat label="Polygons" value={String(workspaceSummary.polygons)} />
+        <MiniStat label="Selected" value={String(workspaceSummary.selected)} />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
+        <MiniStat label="Provider Tile" value={String(workspaceSummary.providerTile)} />
+        <MiniStat label="Visible" value={String(workspaceSummary.visible)} />
+      </div>
+      <div className="mt-3 max-h-[min(34rem,calc(100vh-18rem))] space-y-2 overflow-y-auto pr-1">
+        {workspaceBuildings.length ? workspaceBuildings.map((building) => {
+          return (
+            <div
+              key={building.id}
+              className="rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 text-[11px] text-zinc-300"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-zinc-100">{building.label}</div>
+                  <div className="mt-0.5 text-zinc-500">
+                    {building.polygonCount} polygon{building.polygonCount === 1 ? '' : 's'} | {formatMeters(building.distanceMeters)}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right text-zinc-500">
+                  {formatNumber(building.areaMeters, 0)} m²
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <MiniStat label="Max height" value={formatMeters(building.maxRenderHeightMeters)} />
+                <MiniStat label="Avg height" value={formatMeters(building.avgRenderHeightMeters)} />
+              </div>
+              <details className="mt-2">
+                <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Developer provenance
+                </summary>
+                <div className="mt-1 break-words text-[10px] leading-4 text-zinc-500">
+                  Provider feature IDs: {building.providerFeatureIds.length ? building.providerFeatureIds.join(', ') : 'n/a'}
+                </div>
+                <div className="mt-1 text-[10px] text-zinc-600">
+                  BBox: {formatBounds(building.bbox)}
+                </div>
+              </details>
+            </div>
+          );
+        }) : (
+          <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-3 text-[11px] text-zinc-500">
+            Load a venue to build the local authoring workspace.
+          </div>
+        )}
+      </div>
+      <details className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+        <summary className="cursor-pointer select-none text-[11px] font-semibold text-zinc-300">
+          Developer Diagnostics
+        </summary>
+        <div className="mt-2 space-y-2 text-[11px] text-zinc-500">
+          <Row label="Provider tile features" value={String(providerNeighborhoodSummary.providerTile)} />
+          <Row label="Scoped provider candidates" value={String(providerNeighborhoodSummary.neighborhoodCache)} />
+          <Row label="Provider feature IDs" value={workspaceSummary.providerFeatureIds.length ? workspaceSummary.providerFeatureIds.join(', ') : 'n/a'} />
+          <label className="inline-flex items-center gap-2 rounded-md border border-white/5 bg-white/5 px-2 py-2 text-zinc-300">
+            <input
+              type="checkbox"
+              checked={showFullProviderTileCache}
+              onChange={(event) => setShowFullProviderTileCache(event.target.checked)}
+              className="h-3.5 w-3.5 accent-zinc-300"
+            />
+            Show full provider tile cache
+          </label>
+          <label className="inline-flex items-center gap-2 rounded-md border border-white/5 bg-white/5 px-2 py-2 text-zinc-300">
+            <input
+              type="checkbox"
+              checked={showRawProviderGeometry}
+              onChange={(event) => setShowRawProviderGeometry(event.target.checked)}
+              className="h-3.5 w-3.5 accent-amber-300"
+            />
+            Show Raw Provider Geometry
+          </label>
+        </div>
+      </details>
+    </details>
+  );
+  const selectionWorkspacePanel = (
+    <details
+      className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl"
+      open
+    >
+      <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">
+        Selection & Asset
+      </summary>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
+        <MiniStat label="Selected" value={String(selectedSummary.count)} />
+        <MiniStat label="Editable" value={String(polygonRecords.length)} />
+        <MiniStat label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} mÂ²` : 'n/a'} />
+        <MiniStat label="Vertices" value={String(selectedSummary.vertexCount)} />
+        <MiniStat label="Max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
+        <MiniStat label="Avg height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} />
+      </div>
+      <div className="mt-3 space-y-2 text-xs text-zinc-300">
+        <Row label="Geometry" value={selectedMetrics.geometryType} />
+        <Row label="Indices" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'n/a'} />
+        <Row label="BBox" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} />
+        <Row label="Asset state" value={saveStateLabel} />
+      </div>
+      {assetStatusMessage ? (
+        <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-300">
+          {assetStatusMessage}
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+          <input
+            type="checkbox"
+            checked={isolateSelected}
+            onChange={(event) => setIsolateSelected(event.target.checked)}
+            className="h-3.5 w-3.5 accent-emerald-400"
+          />
+          Isolate
+        </label>
+        <button
+          type="button"
+          disabled={!selectedSummary.count}
+          onClick={frameSelected}
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Frame
+        </button>
+        <button
+          type="button"
+          disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
+          onClick={() => void saveSelectedBuildingAsset()}
+          className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Save Building
+        </button>
+        <button
+          type="button"
+          disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
+          onClick={() => void movePinToSelectedBuilding()}
+          className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Move Pin to Building
+        </button>
+        <button
+          type="button"
+          disabled={!selectedVenueAsset || isLoading}
+          onClick={() => loadSavedBuildingAsset()}
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Reload
+        </button>
+      </div>
+    </details>
+  );
+  const venueSummaryPanel = selectedVenue ? (
+    <details
+      className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl"
+      open
+    >
+      <summary className="cursor-pointer select-none">
+        <div className="inline-flex w-[calc(100%-1rem)] items-start justify-between gap-3 align-middle">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-zinc-50">Venue Summary</h2>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-500">{selectedVenue.name}</p>
+          </div>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={(event) => {
+              event.preventDefault();
+              void loadVenueGeometry(selectedVenue);
+            }}
+            className="shrink-0 rounded-lg border border-red-500/40 bg-red-500/20 px-2.5 py-1.5 text-[11px] font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Load geometry
+          </button>
+        </div>
+      </summary>
+      <div className="mt-3 space-y-2 text-xs text-zinc-300">
+        <Row label="Listing type" value={selectedVenue.type} />
+        <Row label="Address" value={formatListingAddress(selectedVenue, semv2Collections)} />
+        <Row
+          label="Coordinates"
+          value={selectedVenueCoords ? `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}` : 'Not resolved'}
+        />
+        <Row
+          label="Provider feature ID"
+          value={resolvedVenueFeatureId ?? getListingProviderFeatureId(selectedVenue) ?? resolution?.featureId ?? 'Not resolved yet'}
+        />
+        <Row
+          label="Building asset"
+          value={selectedVenueAsset ? 'Has asset' : 'Missing asset'}
+        />
+        {selectedVenueAsset && (
+          <Row
+            label="Asset updated"
+            value={new Date(selectedVenueAsset.capture.updatedAt).toLocaleString()}
+          />
+        )}
+        {selectedVenueAsset && (
+          <Row
+            label="Asset polygons"
+            value={String(selectedVenueAsset.capture.polygonCount)}
+          />
+        )}
+        <Row
+          label="Editor state"
+          value={saveStateLabel}
+        />
+      </div>
+    </details>
+  ) : null;
+
+  const menuPanelClassName = 'absolute left-0 top-[calc(100%+0.5rem)] z-50 max-h-[min(42rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#08090d]/98 p-3 shadow-2xl shadow-black/60 backdrop-blur-xl';
+  const menuSummaryClassName = 'cursor-pointer list-none rounded-lg px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden';
+
+  return (
+    <main className={shellClassName}>
+      <style>{`
+        @keyframes loading-bar {
+          0% { transform: translateX(-140%); }
+          100% { transform: translateX(240%); }
+        }
+        .building-inspector-sidebar > :nth-child(n+3) { display: none; }
+      `}</style>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,76,76,0.08),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_30%)]" />
+
+      <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
+        <header className="relative z-40 flex min-h-12 shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-[#0a0b0f]/96 px-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="mr-3 flex min-w-0 items-center gap-2 px-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.7)]" />
+            <span className="truncate text-sm font-semibold text-zinc-100">Building Inspector</span>
+          </div>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>File</summary>
+            <div className={menuPanelClassName}>
+              <div className="space-y-2">
+                <button type="button" disabled={!selectedVenue || !selectedSummary.geoJson || isLoading} onClick={() => void saveSelectedBuildingAsset()} className="w-full rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-2 text-left text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-50">Save Building</button>
+                <button type="button" disabled={!selectedVenueAsset || isLoading} onClick={() => loadSavedBuildingAsset()} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-white/10 disabled:opacity-50">Reload Saved Building</button>
+                <Link to={embedded ? '/dev/building-inspector' : '/map'} className="block rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10">{embedded ? 'Open full studio' : 'Back to map'}</Link>
+              </div>
+            </div>
+          </details>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>View</summary>
+            <div className={menuPanelClassName}>
+              <div className="space-y-2 text-xs text-zinc-200">
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showVenueMarker} onChange={(event) => setShowVenueMarker(event.target.checked)} className="accent-red-400" />Venue marker</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showNearbyBuildings} onChange={(event) => setShowNearbyBuildings(event.target.checked)} />Nearby buildings</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />Grid</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={isolateSelected} onChange={(event) => setIsolateSelected(event.target.checked)} className="accent-emerald-400" />Isolate selected</label>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button type="button" disabled={!selectedSummary.count} onClick={frameSelected} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame selection</button>
+                  <button type="button" disabled={!selectedVenue || !sceneOrigin} onClick={frameVenue} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame venue</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>Venue</summary>
+            <div className={menuPanelClassName}>{venueSummaryPanel ?? <p className="p-2 text-xs text-zinc-500">Select a venue from the left panel.</p>}</div>
+          </details>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>Selection</summary>
+            <div className={menuPanelClassName}>{selectionWorkspacePanel}</div>
+          </details>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>Workspace</summary>
+            <div className={menuPanelClassName}>{providerNeighborhoodManager}</div>
+          </details>
+
+          <details className="group relative">
+            <summary className={menuSummaryClassName}>Diagnostics</summary>
+            <div className={menuPanelClassName}>
+              {resolverStatusPanel}
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="text-xs font-semibold text-zinc-100">Current status</div>
+                <p className="mt-2 text-[11px] leading-5 text-zinc-400">{status}</p>
+              </div>
+            </div>
+          </details>
+
+          <div className="ml-auto hidden min-w-0 items-center gap-3 px-3 text-[11px] text-zinc-500 md:flex">
+            <span className="max-w-64 truncate">{selectedVenue?.name ?? 'No venue selected'}</span>
+            <span className={saveStateLabel === 'Saved' ? 'text-emerald-300' : 'text-amber-200'}>{saveStateLabel}</span>
+          </div>
+        </header>
+
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] gap-3">
+      <aside className={`building-inspector-sidebar ${sidebarClassName}`}>
+        <div className="border-b border-white/10 px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-red-300/80">
+                {embedded ? 'Admin tool' : 'Internal tool'}
+              </p>
+              <h1 className="mt-1 text-lg font-semibold text-zinc-50">Building Inspector</h1>
+            </div>
+            {!embedded && (
+              <Link
+                to="/map"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/10"
+              >
+                <ArrowLeft size={14} />
+                Back to map
+              </Link>
+            )}
+            {embedded && (
+              <Link
+                to="/dev/building-inspector"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/10"
+              >
+                Open Studio
+              </Link>
+            )}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-zinc-400">
+            Inspect loaded building geometry, select one or more footprint meshes, and export authoring-ready GeoJSON.
+          </p>
+          <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+            Vector tile feature IDs may be generated by the tile provider and may not directly match OpenStreetMap way IDs.
+          </p>
+        </div>
+
+        {(
+          <section className="border-b border-white/10 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-zinc-50">Select venue</h2>
+                <p className="mt-1 text-[11px] leading-5 text-zinc-500">
+                  Choose an existing club or event. The inspector resolves provider geometry behind the scenes.
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-1 text-right text-[11px] text-zinc-400">
+                <div className="text-zinc-500">Missing assets</div>
+                <div className="font-semibold text-zinc-100">{venueStats.missing}</div>
+              </div>
+            </div>
+
+            <label className="mt-3 block space-y-1">
+              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Search venue</span>
+              <input
+                value={venueSearch}
+                onChange={(event) => setVenueSearch(event.target.value)}
+                className="h-10 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-red-400/60"
+                placeholder="Search by name, city, address, or type"
+              />
+            </label>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {([
+                ['all', `All ${venueStats.total}`],
+                ['missing', `Missing ${venueStats.missing}`],
+                ['has', `Has asset ${venueStats.withAssets}`],
+              ] as Array<[BuildingAssetFilter, string]>).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAssetFilter(value)}
+                  className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition-colors ${
+                    assetFilter === value
+                      ? 'border-red-400/50 bg-red-500/20 text-red-100'
+                      : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
+              {filteredVenues.length ? filteredVenues.slice(0, 80).map((listing) => {
+                const isSelected = selectedVenueId === listing.id;
+                const asset = getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships);
+                return (
+                  <button
+                    key={listing.id}
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => void loadVenueGeometry(listing)}
+                    className={`w-full rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                      isSelected
+                        ? 'border-red-400/50 bg-red-500/15'
+                        : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-semibold text-zinc-100">{listing.name}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                        listing.type === 'club' ? 'bg-sky-500/15 text-sky-200' : 'bg-amber-500/15 text-amber-200'
+                      }`}>
+                        {listing.type}
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate text-[11px] text-zinc-500">{getListingCityLabel(listing, semv2Collections)}</div>
+                    <div className="mt-1 flex items-center justify-between gap-3 text-[11px]">
+                      <span className="truncate text-zinc-400">{formatListingAddress(listing, semv2Collections)}</span>
+                      <span className={asset ? 'text-emerald-300' : 'text-red-200'}>
+                        {asset ? 'Has asset' : 'Missing asset'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              }) : (
+                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-xs text-zinc-500">
+                  No venues match the current filters.
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <details className="border-b border-white/10" open={!embedded}>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 transition-colors hover:text-zinc-200">
+            Landmark Tests
+          </summary>
+          <div className="px-4 pb-4">
+            <p className="text-[11px] leading-5 text-zinc-500">
+              Developer validation fixtures. Loading a landmark uses the same venue resolver and workspace pipeline as ordinary venues.
+            </p>
+            <div className="mt-3 space-y-2">
+              {LANDMARK_TESTS.map((landmark) => (
+                <label
+                  key={landmark.id}
+                  className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
+                    selectedLandmarkId === landmark.id
+                      ? 'border-amber-300/45 bg-amber-400/12 text-amber-100'
+                      : 'border-white/10 bg-black/20 text-zinc-300 hover:bg-white/10'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="building-inspector-landmark"
+                    checked={selectedLandmarkId === landmark.id}
+                    onChange={() => setSelectedLandmarkId(landmark.id)}
+                    className="mt-0.5 h-3.5 w-3.5 accent-amber-300"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-zinc-100">{landmark.name}</span>
+                    <span className="mt-0.5 block text-[11px] text-zinc-500">
+                      {landmark.city} | expected {formatMeters(landmark.expectedHeightMeters)}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={isLoading || !selectedLandmarkId}
+              onClick={() => void loadLandmarkTest()}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-300/35 bg-amber-400/15 px-3 py-2 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-400/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Search size={14} className={isLoading ? 'animate-spin' : ''} />
+              {isLoading ? 'Loading landmark' : 'Load Landmark'}
+            </button>
+            {landmarkValidation ? (
+              <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-[11px] text-zinc-400">
+                <Row label="Expected footprint" value={landmarkValidation.expectedFootprint} />
+                <Row label="Expected height" value={formatMeters(landmarkValidation.expectedHeightMeters)} />
+                <Row label="Rendered max height" value={formatMeters(workspaceBuildings.length ? maxMetric(workspaceBuildings.map((building) => building.maxRenderHeightMeters)) : selectedSummary.maxRenderHeightMeters)} />
+                <Row label="Selected max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
+                <Row label="Provider polygons loaded" value={String(providerCandidates.reduce((total, candidate) => total + candidate.polygonCount, 0))} />
+                <Row label="Workspace polygons" value={String(workspaceSummary.polygons)} />
+                <Row label="Building groups" value={String(workspaceSummary.buildings)} />
+                <Row label="Selected building" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'None'} />
+                <Row label="Bounding box" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : formatBounds(resolution?.bbox ?? null)} />
+                <Row label="Polygon count" value={String(selectedSummary.count || polygonRecords.length)} />
+                <Row label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'Select polygons to measure'} />
+              </div>
+            ) : null}
+          </div>
+        </details>
+
+        <details className="border-b border-white/10" open={!embedded}>
+          <summary className="cursor-pointer select-none px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 transition-colors hover:text-zinc-200">
+            Advanced provider feature lookup
+          </summary>
+          <form
+            className="px-4 pb-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void resolveFeature();
+            }}
+          >
+            <label className="space-y-1">
+              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Feature id</span>
+              <div className="flex gap-2">
+                <input
+                  value={featureIdInput}
+                  onChange={(event) => setFeatureIdInput(event.target.value)}
+                  className="h-10 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-red-400/60"
+                  placeholder="13581200"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/20 px-3 text-sm text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Search size={14} className={isLoading ? 'animate-spin' : ''} />
+                  {isLoading ? 'Loading' : 'Load'}
+                </button>
+              </div>
+            </label>
+            <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+              Manual feature ID lookup is an advanced provider workflow. This view does not load basemaps, roads, labels, or nearby buildings.
+            </p>
+            {isLoading && (
+              <div className="mt-3 space-y-2 rounded-lg border border-red-500/25 bg-black/25 px-3 py-3">
+                <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-400">
+                  <span>{loadingPhase ?? 'Loading feature'}</span>
+                  <span className="text-red-200">working</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-red-400 to-transparent"
+                    style={{ animation: 'loading-bar 1.1s ease-in-out infinite' }}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="mt-3 border-t border-white/10 pt-3">
+              <button
+                type="button"
+                disabled={!selectedSummary.geoJson}
+                onClick={() => {
+                  if (!selectedSummary.geoJson) return;
+                  const suffix = selectedSummary.count === 1
+                    ? `polygon-${selectedSummary.indices[0] + 1}`
+                    : `multipolygon-${selectedSummary.indices.map((index) => index + 1).join('-')}`;
+                  exportGeoJSONFeature(
+                    selectedSummary.geoJson,
+                    `building-${resolution?.featureId ?? featureIdInput}-${suffix}.geojson`,
+                  );
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Export selected GeoJSON
+              </button>
+              <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+                GeoJSON export is retained for development checks. The primary workflow is Save Building.
+              </p>
+            </div>
+          </form>
+        </details>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <section className="rounded-xl border border-red-500/20 bg-red-500/8 p-3">
+            <div className="text-sm font-semibold text-red-100">Status</div>
+            <p className="mt-2 text-xs leading-5 text-zinc-300">{status}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Feature id</div>
+                <div className="mt-1 text-zinc-100">{resolution?.featureId ?? featureIdInput}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Loaded source</div>
+                <div className="mt-1 text-zinc-100">{resolution?.source ?? 'n/a'}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Source-layer</div>
+                <div className="mt-1 text-zinc-100">{resolution?.sourceLayer ?? SOURCE_LAYER}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Primary tile</div>
+                <div className="mt-1 text-zinc-100">{resolution?.primaryTile ?? 'n/a'}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Returned features</div>
+                <div className="mt-1 text-zinc-100">{forensicReport?.returnedFeatureCount ?? 0}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Model polygons</div>
+                <div className="mt-1 text-zinc-100">{polygonRecords.length}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Provider tile</div>
+                <div className="mt-1 text-zinc-100">{loadedFeatureCount}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Unique loaded ids</div>
+                <div className="mt-1 text-zinc-100">{loadedUniqueIdCount}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
+                <div className="text-zinc-500">Reference polygons</div>
+                <div className="mt-1 text-zinc-100">{referencePolygonRecords.length}</div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-zinc-50">Workspace</h2>
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
+                {workspaceSummary.radiusMeters}m
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
+              <MiniStat label="Buildings" value={String(workspaceSummary.buildings)} />
+              <MiniStat label="Editable polygons" value={String(workspaceSummary.polygons)} />
+              <MiniStat label="Selected polygons" value={String(workspaceSummary.selected)} />
+              <MiniStat label="Provider tile" value={String(workspaceSummary.providerTile)} />
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-zinc-500">
+              The authoring workspace is built from flattened provider polygons near the venue. Provider IDs are provenance only.
+            </p>
+          </section>
+
+          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3" open>
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Selection Inspector</summary>
+            <div className="mt-3 space-y-2 text-xs text-zinc-300">
+              <Row label="Geometry type" value={selectedMetrics.geometryType} />
+              <Row label="Selected count" value={String(selectedSummary.count)} />
+              <Row label="Selected indices" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'n/a'} />
+              <Row label="Combined area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'n/a'} />
+              <Row label="Combined bbox" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} />
+              <Row label="Max render height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
+              <Row label="Avg render height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} />
+              <Row label="Ring count" value={String(selectedSummary.ringCount)} />
+              <Row label="Total vertices" value={String(selectedSummary.vertexCount)} />
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+                <input
+                  type="checkbox"
+                  checked={isolateSelected}
+                  onChange={(event) => setIsolateSelected(event.target.checked)}
+                  className="h-3.5 w-3.5 accent-emerald-400"
+                />
+                Isolate selected
+              </label>
+              <button
+                type="button"
+                disabled={!selectedSummary.count}
+                onClick={frameSelected}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Frame selected
+              </button>
+              <button
+                type="button"
+                disabled={!selectedVenue || !sceneOrigin}
+                onClick={frameVenue}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Frame Venue
+              </button>
+              <button
+                type="button"
+                disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
+                onClick={() => void saveSelectedBuildingAsset()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Save Building
+              </button>
+              <button
+                type="button"
+                disabled={!selectedVenueAsset || isLoading}
+                onClick={() => loadSavedBuildingAsset()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reload Saved Building
+              </button>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-400">
+              Asset state: <span className="font-semibold text-zinc-100">{saveStateLabel}</span>
+              {assetStatusMessage ? <div className="mt-1 text-zinc-300">{assetStatusMessage}</div> : null}
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+                <input
+                  type="checkbox"
+                  checked={showVenueMarker}
+                  onChange={(event) => setShowVenueMarker(event.target.checked)}
+                  className="h-3.5 w-3.5 accent-red-400"
+                />
+                Venue Marker
+              </label>
+              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+                <input
+                  type="checkbox"
+                  checked={showNearbyBuildings}
+                  onChange={(event) => setShowNearbyBuildings(event.target.checked)}
+                  className="h-3.5 w-3.5 accent-zinc-300"
+                />
+                Nearby Buildings
+              </label>
+              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+                <input
+                  type="checkbox"
+                  checked={showGrid}
+                  onChange={(event) => setShowGrid(event.target.checked)}
+                  className="h-3.5 w-3.5 accent-zinc-300"
+                />
+                Grid
+              </label>
+            </div>
+
+            <p className="mt-3 text-[11px] leading-5 text-zinc-500">
+              Hover to preview. Click to replace selection. Shift-click or Ctrl-click to add or remove footprints.
+            </p>
+          </details>
+
+          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Selected polygon GeoJSON</summary>
+            <pre className="mt-3 max-h-[30rem] overflow-auto rounded-lg border border-white/10 bg-black/30 p-3 text-[11px] leading-5 text-zinc-300 whitespace-pre-wrap">
+              {selectedPolygonGeoJSONText || 'Click a footprint to preview its GeoJSON here.'}
+            </pre>
+          </details>
+
+          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Developer Diagnostics</summary>
+            <div className="mt-3 space-y-3">
+          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Raw querySourceFeatures() dump</summary>
+            <pre className="mt-3 max-h-[24rem] overflow-auto rounded-lg border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-zinc-300 whitespace-pre-wrap">
+{forensicReport
+  ? [
+      `Feature ID: ${forensicReport.selectedFeatureId}`,
+      `Returned features: ${forensicReport.returnedFeatureCount}`,
+      `Unique tiles: ${forensicReport.selectedTileCount}`,
+      `Unique centroids: ${forensicReport.selectedUniqueCentroids}`,
+      `Loaded features: ${forensicReport.loadedFeatureCount}`,
+      `Unique loaded ids: ${forensicReport.loadedUniqueIdCount}`,
+      '',
+      ...forensicReport.rawFeatureDumpLines,
+    ].join('\n')
+  : 'Load a feature id to print the raw source objects here.'}
+            </pre>
+          </details>
+
+          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Fragments</summary>
+            <div className="mt-3 space-y-2">
+              {fragmentRecords.length ? fragmentRecords.map((fragment, index) => (
+                <div
+                  key={`${fragment.featureId}-${fragment.tile}-${index}`}
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    resolution?.primaryTile === fragment.tile && resolution.featureId === fragment.featureId
+                      ? 'border-red-400/40 bg-red-500/10 text-zinc-200'
+                      : 'border-white/10 bg-black/20 text-zinc-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-zinc-100">
+                      Fragment {index + 1}{' '}
+                      {resolution?.primaryTile === fragment.tile && resolution.featureId === fragment.featureId ? '(rendered)' : ''}
+                    </div>
+                    <div className="text-zinc-500">{fragment.tile}</div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
+                    <MiniStat label="Geometry" value={fragment.geometryType} />
+                    <MiniStat label="Polygon count" value={formatDiagnosticMetric(fragment.polygonCount)} />
+                    <MiniStat label="Ring count" value={formatDiagnosticMetric(fragment.ringCount)} />
+                    <MiniStat label="Vertices" value={formatDiagnosticMetric(fragment.vertexCount)} />
+                    <MiniStat label="Area" value={`${formatNumber(fragment.areaMeters, 0)} m²`} />
+                    <MiniStat label="Centroid" value={fragment.centroid ? `${fragment.centroid[1].toFixed(6)}, ${fragment.centroid[0].toFixed(6)}` : 'n/a'} />
+                    <MiniStat label="Distance from Twist" value={fragment.distanceFromTwistMeters ? formatMeters(fragment.distanceFromTwistMeters) : 'n/a'} />
+                    <MiniStat label="BBox" value={formatBounds(fragment.bbox)} />
+                    <MiniStat label="Disconnected pieces" value={formatDiagnosticMetric(fragment.disconnectedPieces)} />
+                  </div>
+                </div>
+              )) : (
+                <p className="text-xs text-zinc-500">Load a feature id to see its returned fragments.</p>
+              )}
+            </div>
+          </details>
+
+          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Raw GeoJSON</summary>
+            <pre className="mt-3 max-h-[32rem] overflow-auto rounded-lg border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-zinc-300">
+              {rawGeoJSONText || 'Load a feature id to print the loaded raw GeoJSON fragments here.'}
+            </pre>
+          </details>
+
+          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Duplicate ids in view</summary>
+            <div className="mt-3 space-y-2">
+              {duplicateSummaries.length ? duplicateSummaries.slice(0, 25).map((item) => (
+                <div key={item.featureId} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-300">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-zinc-100">{item.featureId}</div>
+                    <div className="text-zinc-500">{item.fragmentCount} fragments</div>
+                  </div>
+                  <div className="mt-1 text-zinc-500">
+                    Connected pieces: {formatDiagnosticMetric(item.disconnectedPieces)}
+                  </div>
+                  <div className="mt-1 break-words text-zinc-400">
+                    Tiles: {item.tileSet.join(', ')}
+                  </div>
+                </div>
+              )) : (
+                <p className="text-xs text-zinc-500">No duplicate feature ids were returned by the current source window.</p>
+              )}
+            </div>
+          </details>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <section className="relative min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl shadow-black/30">
+        <div ref={sceneContainerRef} className="h-full w-full" />
+        <div className="absolute right-4 top-4 z-30 w-[min(24rem,calc(100%-2rem))] overflow-hidden rounded-xl border border-white/15 bg-[#08090d]/95 shadow-2xl shadow-black/50">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <div>
+              <div className="text-[11px] font-semibold text-zinc-100">Street reference</div>
+              <div className="text-[10px] text-zinc-500">Same venue coordinate with roads and labels</div>
+            </div>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-400">Map</span>
+          </div>
+          <div ref={mapContainerRef} className="h-64 w-full bg-[#050608]" />
+        </div>
+        {!resolution?.geometry && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="max-w-md rounded-2xl border border-white/10 bg-black/30 px-6 py-5 text-center text-sm text-zinc-400 backdrop-blur-md">
+              Select a venue to load provider geometry, or use Advanced tools for manual provider lookup.
+            </div>
+          </div>
+        )}
+        {focusedProviderFeature ? (
+          <div className="pointer-events-none absolute bottom-24 left-1/2 z-30 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2">
+            <div className="pointer-events-auto rounded-2xl border border-amber-300/35 bg-[#08090d]/95 p-3 shadow-2xl shadow-black/50 backdrop-blur-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
+                    Provider building
+                  </div>
+                  <div className="mt-1 break-all font-mono text-sm font-semibold text-zinc-50">
+                    {focusedProviderFeature.featureId}
+                  </div>
+                  <div className="mt-1 text-[11px] text-zinc-500">
+                    {focusedProviderFeature.polygonCount} polygon{focusedProviderFeature.polygonCount === 1 ? '' : 's'} · {formatMeters(focusedProviderFeature.distanceMeters)} from the venue pin
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingCandidateId(null);
+                    setHoveredCandidateId(null);
+                  }}
+                  className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => frameProviderFeature(focusedProviderFeature)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10"
+                >
+                  Frame building
+                </button>
+                <button
+                  type="button"
+                  onClick={() => promoteCandidateToEditable(focusedProviderFeature)}
+                  className="rounded-lg border border-amber-300/40 bg-amber-400/15 px-3 py-2 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-400/25"
+                >
+                  Edit this building
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCopy('Provider feature ID', focusedProviderFeature.featureId)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10"
+                >
+                  {copiedLabel === 'Provider feature ID' ? 'Copied ID' : 'Copy ID'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        <div className="pointer-events-none absolute inset-x-4 bottom-4">
+          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-[#08090d]/90 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-zinc-100">
+                  {selectedVenue?.name ?? 'No venue selected'}
+                </div>
+                <div className="mt-1 text-[11px] text-zinc-500">
+                  {saveStateLabel} | Selected {selectedSummary.count} | Editable {polygonRecords.length} | Reference {referencePolygonRecords.length}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!selectedSummary.count}
+                  onClick={frameSelected}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Frame Selection
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedVenue || !sceneOrigin}
+                  onClick={frameVenue}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Frame Venue
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
+                  onClick={() => void saveSelectedBuildingAsset()}
+                  className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isLoading && loadingPhase === 'Saving building asset' ? 'Saving...' : saveStateLabel === 'Saved' ? 'Saved' : 'Save Building'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
+                  onClick={() => void movePinToSelectedBuilding()}
+                  className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-3 py-2 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isLoading && loadingPhase === 'Moving venue pin' ? 'Moving Pin...' : 'Move Pin to Building'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedVenueAsset || isLoading}
+                  onClick={() => loadSavedBuildingAsset()}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Reload
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+const buildOutlinePath = (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon): string => {
+  const bounds = getGeometryBBox(geometry);
+  if (!bounds) return '';
+  const [minLng, minLat, maxLng, maxLat] = bounds;
+  const width = Math.max(maxLng - minLng, 1e-9);
+  const height = Math.max(maxLat - minLat, 1e-9);
+  const scale = Math.min(
+    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / width,
+    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / height,
+  );
+  const drawnWidth = width * scale;
+  const drawnHeight = height * scale;
+  const offsetX = (VIEWBOX_SIZE - drawnWidth) / 2;
+  const offsetY = (VIEWBOX_SIZE - drawnHeight) / 2;
+  const project = (coordinate: [number, number]) => [
+    offsetX + (coordinate[0] - minLng) * scale,
+    VIEWBOX_SIZE - offsetY - (coordinate[1] - minLat) * scale,
+  ];
+
+  return collectPolygons(geometry)
+    .map((polygon) =>
+      polygon
+        .filter((ring) => ring.length >= 2)
+        .map((ring) => {
+          const coords = ring
+            .map((coordinate, coordinateIndex) => {
+              const [x, y] = project([coordinate[0], coordinate[1]]);
+              return `${coordinateIndex === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+            })
+            .join(' ');
+          return `${coords} Z`;
+        })
+        .join(' '),
+    )
+    .join(' ');
+};
+
+const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+    <span className="text-zinc-500">{label}</span>
+    <span className="max-w-[60%] text-right text-zinc-100">{value}</span>
+  </div>
+);
+
+const MiniStat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div className="rounded-md border border-white/5 bg-white/5 px-2 py-2">
+    <div className="text-zinc-500">{label}</div>
+    <div className="mt-0.5 text-zinc-100">{value}</div>
+  </div>
+);
+
+export default BuildingInspectorPage;

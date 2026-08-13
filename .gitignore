@@ -1,0 +1,58 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Environment / secrets
+.env
+.env.*
+!.env.example
+SupaBase.txt
+
+# Generated / temp
+.codex-temp/
+.wrangler/
+tmp/
+*.tmp
+
+# TypeScript/build outputs
+tsc_out.txt
+tsc_output.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Supabase local temp
+supabase/.temp/
+
+# Retired Geo tool assets and generated output
+public/geo/_archive/
+public/geo/country/
+tools/.geo_cache/
+tools/.geo_boundary_builder/
+
+# Accidental Windows device-name artifact
+/NUL
+
+# OS / shortcuts
+*.lnk

@@ -1,0 +1,10 @@
+-- SUPERSEDED — do not deploy.
+--
+-- This early badge/founder draft predated SwingSphere's private-by-default member
+-- profile model and organization achievement requirements. Its concepts were
+-- replaced by:
+--
+--   supabase/migrations/20260808053500_badges_achievements_founders.sql
+--
+-- Keep this marker in pending-migrations so the obsolete draft is not mistaken
+-- for an unapplied production migration.
