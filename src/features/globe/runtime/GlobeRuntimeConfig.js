@@ -54,8 +54,8 @@ export const DEFAULT_GLOBE_RUNTIME_CONFIG = {
     currentTier: "high",
     highBloom: {
       strength: 1.512,
-      radius: 0.397,
-      threshold: 0.3
+      radius: 0.44,
+      threshold: 0.14
     }
   },
   orbitControls: {
@@ -155,7 +155,7 @@ export const DEFAULT_GLOBE_RUNTIME_CONFIG = {
   },
   crimsonRim: {
     radius: 0.979,
-    rimStrength: 0.906,
+    rimStrength: 2,
     rimOpacity: 0.066,
     rimWidth: 1,
     rimFeather: 6,
@@ -163,20 +163,36 @@ export const DEFAULT_GLOBE_RUNTIME_CONFIG = {
   },
   bloom: {
     strength: 1.512,
-    radius: 0.397,
-    threshold: 0.3
+    radius: 0.44,
+    threshold: 0.14,
+    resolutionScale: 0.6
+  },
+  renderEffects: {
+    backgroundGradient: true,
+    backgroundHaze: false,
+    backgroundGlow: false,
+    innerAtmosphere: false,
+    outerAtmosphere: false,
+    crimsonRimShell: true,
+    bloom: true,
+    graphiteFacet: false,
+    landEmissive: false,
+    oceanEmissive: false
   },
   lights: {
-    ambient: { color: "#2a2a2e", intensity: 1.25 },
-    hemisphere: { skyColor: "#f0f0f0", groundColor: "#333338", intensity: 4.45 },
-    directionalKey: { color: "#d0d0d0", intensity: 2.35, x: -4.4, y: 5.2, z: 5.8 },
-    softKey: { enabled: false, color: "#a8a8aa", intensity: 1.25, x: 2.8, y: 3.2, z: 4.4 },
-    fill: { color: "#9a9a9c", intensity: 2.35, x: 4.2, y: 1.4, z: 2.5 },
-    undersideFill: { color: "#5f5b62", intensity: 1.72, x: 0.5, y: -3.2, z: 2.8 },
-    rearFill: { enabled: false, color: "#76767a", intensity: 1.2, x: -2.4, y: -0.5, z: -4.8 },
-    crimsonRim: { color: "#c51d34", intensity: 1.7, x: -4.8, y: 1.8, z: -3.4 },
-    crimsonBack: { color: "#c51d34", intensity: 4.63, x: 7.57, y: -0.69, z: -8 },
-    crimsonBounce: { enabled: false, color: "#c51d34", intensity: 1.16, x: 8, y: -8, z: -8 }
+    ambient: { enabled: false, color: "#2a2a2e", intensity: 1.25},
+    hemisphere: { enabled: true, skyColor: "#f0f0f0", groundColor: "#333338", intensity: 4.45},
+    directionalKey: { enabled: true, color: "#d0d0d0", intensity: 2.35, x: -4.4, y: 5.2, z: 5.8},
+    softKey: { enabled: false, color: "#a8a8aa", intensity: 1.25, x: 2.8, y: 3.2, z: 4.4},
+    fill: { enabled: true, color: "#9a9a9c", intensity: 2.35, x: 4.2, y: 1.4, z: 2.5},
+    undersideFill: { enabled: false, color: "#5f5b62", intensity: 1.72, x: 0.5, y: -3.2, z: 2.8},
+    rearFill: { enabled: false, color: "#76767a", intensity: 1.2, x: -2.4, y: -0.5, z: -4.8},
+    // One broad crimson source replaces the former separate rim + back lights.
+    // The direction is biased toward the stronger back light while retaining a lateral component
+    // so low-poly edge facets can still catch the sunrise-like crimson flare.
+    crimsonRim: { enabled: true, color: "#c51d34", intensity: 5.6, x: 4.25, y: 0.15, z: -6.8},
+    crimsonBack: { enabled: false, color: "#c51d34", intensity: 4.63, x: 7.57, y: -0.69, z: -8},
+    crimsonBounce: { enabled: false, color: "#c51d34", intensity: 1.16, x: 8, y: -8, z: -8}
   },
   materials: {
     land: {

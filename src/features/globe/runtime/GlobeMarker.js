@@ -146,6 +146,7 @@ export class GlobeMarker {
     this.currentLengthScale = 1;
     this.currentLift = 0;
     this.currentDistanceScale = 1;
+    this.currentActiveReveal = 1;
     this.arrivalPulse = 0;
     this.heroTargetEmphasis = false;
     this.savedHalo = null;
@@ -198,26 +199,45 @@ export class GlobeMarker {
     this.baseGlow.position.y = 0.004;
     this.baseGlow.renderOrder = 7;
 
-    this.hitTarget = new THREE.Mesh(
-      new THREE.CylinderGeometry(
-        style.hitRadius,
-        style.hitRadius,
-        this.totalStemHeight + style.hitHeightExtra,
-        10,
-        1,
-        false
-      ),
-      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false })
-    );
-    this.hitTarget.position.y = this.stemCenterY;
+    const flatIdleMarkerExperiment = markerType === "listing"
+      ? config?.pinPlacement?.flatIdleMarkerExperiment ?? null
+      : null;
+    this.flatIdleMarker = flatIdleMarkerExperiment?.enabled
+      ? createFlatIdleMarkerSprite(style, variant, flatIdleMarkerExperiment)
+      : null;
+    this.currentActiveReveal = this.flatIdleMarker ? 0 : 1;
+
+    if (this.flatIdleMarker) {
+      this.flatIdleMarker.position.y = style.surfaceOffset + style.tipRadius * 0.42;
+      this.flatIdleMarker.renderOrder = 11;
+      this.hitTarget = this.flatIdleMarker;
+    } else {
+      this.hitTarget = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          style.hitRadius,
+          style.hitRadius,
+          this.totalStemHeight + style.hitHeightExtra,
+          10,
+          1,
+          false
+        ),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false })
+      );
+      this.hitTarget.position.y = this.stemCenterY;
+    }
     this.hitTarget.userData.markerId = id;
     this.hitTarget.userData.regionId = id;
 
     this.label = markerType === "listing"
-      ? createVenueLabelDomSet(labelTitle, labelSubtitle, labelCountryIso2, labelLogoUrl, labelOverlayRoot, style)
+      ? createVenueLabelDomSet(id, labelTitle, labelSubtitle, labelCountryIso2, labelLogoUrl, labelOverlayRoot, style)
       : createCanvasLabelSprite(labelTitle, labelSubtitle, style, labelLogoUrl);
 
     this.wrapper.add(this.stem, this.baseGlow, this.tip);
+    if (this.flatIdleMarker) {
+      this.stem.visible = false;
+      this.tip.visible = false;
+      this.baseGlow.visible = false;
+    }
     if (this.label.sprite) {
       this.label.sprite.position.y = style.baseStemHeight + getMarkerVisualFootprintClearance(style);
       this.label.sprite.renderOrder = markerType === "region" ? 22 : 20;
@@ -242,6 +262,8 @@ export class GlobeMarker {
   }) {
     const style = this.style;
     this.heroTargetEmphasis = Boolean(heroTarget);
+    const flatIdleMode = Boolean(this.flatIdleMarker);
+    const targetActiveReveal = flatIdleMode && (selected || hovered) ? 1 : flatIdleMode ? 0 : 1;
     const targetOpacity = selected ? style.selectedOpacity : hovered ? style.hoverOpacity : style.idleOpacity;
     this.arrivalPulse = selected
       ? Math.max(0, this.arrivalPulse - delta * 0.82)
@@ -286,33 +308,57 @@ export class GlobeMarker {
     this.currentScale = THREE.MathUtils.lerp(this.currentScale, targetScale, alpha);
     this.currentLengthScale = THREE.MathUtils.lerp(this.currentLengthScale, targetLengthScale, alpha);
     this.currentLift = THREE.MathUtils.lerp(this.currentLift, targetLift, alpha);
+    this.currentActiveReveal = THREE.MathUtils.lerp(this.currentActiveReveal, targetActiveReveal, alpha);
+
+    const activeReveal = flatIdleMode ? smootherstep(this.currentActiveReveal) : 1;
+    const stemReveal = flatIdleMode ? THREE.MathUtils.lerp(0.06, 1, activeReveal) : 1;
+    const activeTipScale = flatIdleMode ? THREE.MathUtils.lerp(0.62, 1, activeReveal) : 1;
 
     this.wrapper.position.y = style.surfaceOffset + this.currentLift;
     this.wrapper.scale.set(this.currentScale * visualScale, 1, this.currentScale * visualScale);
-    this.stem.scale.set(1, this.currentLengthScale * visualScale, 1);
-    this.stem.position.y = this.stemCenterY * this.currentLengthScale * visualScale;
-    this.tip.position.y = style.baseStemHeight * this.currentLengthScale * visualScale;
-    this.tip.scale.set(this.currentScale, this.currentScale * visualScale, this.currentScale);
+    this.stem.scale.set(1, this.currentLengthScale * visualScale * stemReveal, 1);
+    this.stem.position.y = this.stemCenterY * this.currentLengthScale * visualScale * stemReveal;
+    this.tip.position.y = style.baseStemHeight * this.currentLengthScale * visualScale * stemReveal;
+    this.tip.scale.set(
+      this.currentScale * activeTipScale,
+      this.currentScale * visualScale * activeTipScale,
+      this.currentScale * activeTipScale
+    );
     this.baseGlow.scale.setScalar(this.currentScale * (selected ? (heroTarget ? 1.65 : 1.35) : hovered ? 1.15 : 0.85));
     this.#updateSavedHalo(saved, presentationOpacity);
-    this.hitTarget.scale.set(style.hitScale, Math.max(1, this.currentLengthScale * visualScale), style.hitScale);
-    this.hitTarget.position.y = style.surfaceOffset + this.stemCenterY * this.currentLengthScale * visualScale;
-    this.hitTarget.visible = presentationOpacity > 0.01;
+
+    if (this.flatIdleMarker) {
+      const baseScale = this.flatIdleMarker.userData.baseFlatScale ?? style.tipRadius * 3.6;
+      const markerScale = selected ? 1.16 : hovered ? 1.1 : 1;
+      this.flatIdleMarker.scale.set(baseScale * markerScale, baseScale * markerScale, 1);
+      this.flatIdleMarker.material.opacity = presentationOpacity * this.currentOpacity * THREE.MathUtils.lerp(1, 0.42, activeReveal);
+      this.flatIdleMarker.visible = presentationOpacity > 0.01;
+    } else {
+      this.hitTarget.scale.set(style.hitScale, Math.max(1, this.currentLengthScale * visualScale), style.hitScale);
+      this.hitTarget.position.y = style.surfaceOffset + this.stemCenterY * this.currentLengthScale * visualScale;
+      this.hitTarget.visible = presentationOpacity > 0.01;
+    }
 
     this.stem.material.color.set(selected ? style.stemSelectedColor : style.stemEmissive);
     this.tip.material.color.set(selected ? style.tipSelectedColor : hovered ? style.tipHoverColor : style.tipColor);
     this.baseGlow.material.color.set(style.glowColor);
     this.stem.material.opacity = presentationOpacity * this.currentOpacity * (
       selected || hovered ? style.stemActiveOpacityFactor : style.stemIdleOpacityFactor
-    );
-    this.tip.material.opacity = presentationOpacity * this.currentOpacity;
+    ) * activeReveal;
+    this.tip.material.opacity = presentationOpacity * this.currentOpacity * activeReveal;
     this.baseGlow.material.opacity = presentationOpacity * (this.currentOpacity * (
       selected
         ? style.glowSelectedOpacityFactor * (heroTarget ? 1.45 : 1)
         : hovered
           ? style.glowHoverOpacityFactor
           : style.glowIdleOpacityFactor
-    ) + (selected ? arrivalEmphasis * 0.035 : 0));
+    ) + (selected ? arrivalEmphasis * 0.035 : 0)) * activeReveal;
+    if (flatIdleMode) {
+      const activeGeometryVisible = activeReveal > 0.015;
+      this.stem.visible = activeGeometryVisible;
+      this.tip.visible = activeGeometryVisible;
+      this.baseGlow.visible = activeGeometryVisible;
+    }
 
     const forceLabel = Boolean(this.config?.pinPlacement?.showEventLabels);
     const targetSelectedLabelOpacity = !style.showLabel
@@ -530,6 +576,67 @@ function smootherstep(value) {
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
+function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 96;
+  canvas.height = 96;
+  const context = canvas.getContext("2d");
+  const center = 48;
+  const radius = 26;
+  const fill = new THREE.Color(style.tipColor).getStyle();
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.save();
+  context.shadowColor = fill;
+  context.shadowBlur = 15;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
+  context.fillStyle = fill;
+  context.strokeStyle = "rgba(255,255,255,0.92)";
+  context.lineWidth = 4;
+  context.lineJoin = "round";
+
+  context.beginPath();
+  if (variant === "club") {
+    context.moveTo(center, center - radius - 2);
+    context.lineTo(center + radius + 2, center);
+    context.lineTo(center, center + radius + 2);
+    context.lineTo(center - radius - 2, center);
+    context.closePath();
+  } else if (variant === "promoter") {
+    const size = radius * 1.75;
+    const x = center - size / 2;
+    const y = center - size / 2;
+    context.rect(x, y, size, size);
+  } else {
+    context.arc(center, center, radius, 0, Math.PI * 2);
+  }
+  context.fill();
+  context.shadowBlur = 0;
+  context.stroke();
+  context.restore();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+    opacity: style.idleOpacity,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  const baseScale = style.tipRadius * (Number(experiment.sizeScale) || 3.6);
+  sprite.scale.set(baseScale, baseScale, 1);
+  sprite.userData.baseFlatScale = baseScale;
+  return sprite;
+}
+
 function createTipGeometry(style, variant) {
   if (variant === "club") {
     const geometry = new THREE.OctahedronGeometry(style.tipRadius, 0);
@@ -686,9 +793,14 @@ function createVenueLabelSpriteSet(title, subtitle, logoUrl, styleOverrides = {}
   };
 }
 
-function createVenueLabelDomSet(title, subtitle, countryIso2, logoUrl, root, style = DEFAULT_MARKER_STYLE) {
+function createVenueLabelDomSet(markerId, title, subtitle, countryIso2, logoUrl, root, style = DEFAULT_MARKER_STYLE) {
   const selectedElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, true);
   const hoverElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, false);
+  selectedElement.dataset.markerId = String(markerId);
+  selectedElement.setAttribute('role', 'link');
+  selectedElement.setAttribute('aria-label', `Open ${title}`);
+  selectedElement.tabIndex = 0;
+  hoverElement.dataset.markerId = String(markerId);
   const mountRoot = root ?? document.body;
   mountRoot.append(selectedElement, hoverElement);
 
@@ -733,7 +845,7 @@ function createVenueLabelDomSet(title, subtitle, countryIso2, logoUrl, root, sty
   };
 }
 
-function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, selected) {
+export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, selected) {
   const element = document.createElement("div");
   element.className = selected ? "globe-venue-label globe-venue-label--selected" : "globe-venue-label globe-venue-label--hover";
   Object.assign(element.style, {
@@ -757,6 +869,7 @@ function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, selected
       : "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 10px 26px rgba(0,0,0,0.34)",
     color: "#fff",
     pointerEvents: "auto",
+    cursor: selected ? "pointer" : "default",
     filter: "none",
     mixBlendMode: "normal",
     textShadow: "none",

@@ -173,9 +173,29 @@ export const getBuildingAssetForListing = (
   collections: EntityCollections = {},
 ): BuildingAsset | null => {
   if (!listing) return null;
-  const venueId = getVenueForListing(listing, collections)?.id;
+  const venue = getVenueForListing(listing, collections);
+  const venueId = venue?.id;
+  const { listings } = defaultCollections(collections);
+
+  // Physical building geometry belongs to the Venue, not to each event that
+  // happens there. Prefer the Venue's explicit asset pointer when one exists.
+  if (venue?.buildingAssetId) {
+    const explicitVenueAsset = assets.find((asset) => asset.id === venue.buildingAssetId);
+    if (explicitVenueAsset) return explicitVenueAsset;
+  }
+
   if (venueId) {
-    const venueMatch = assets.find((asset) => asset.venueId === venueId);
+    // Older canonical club assets predate venueId on BuildingAsset. Infer their
+    // venue through the source listing so every event at that Venue can reuse
+    // the same geometry instead of creating a duplicate event-owned asset.
+    const canonicalVenueAsset = assets.find((asset) => {
+      if (getBuildingAssetVenueId(asset, collections) !== venueId) return false;
+      const sourceListing = listings.find((candidate) => candidate.id === asset.listingId);
+      return sourceListing?.type === 'club';
+    });
+    if (canonicalVenueAsset) return canonicalVenueAsset;
+
+    const venueMatch = assets.find((asset) => getBuildingAssetVenueId(asset, collections) === venueId);
     if (venueMatch) return venueMatch;
   }
 

@@ -15,6 +15,7 @@ type AdminBuildingInspectorProps = {
   organizations: OrganizationData[];
   relationships: OrganizationVenueRelationship[];
   onUpdateListing: (listing: Listing) => void;
+  onUpdateVenue: (venue: VenueData) => void;
 };
 
 const AdminBuildingInspector: React.FC<AdminBuildingInspectorProps> = ({
@@ -23,6 +24,7 @@ const AdminBuildingInspector: React.FC<AdminBuildingInspectorProps> = ({
   organizations,
   relationships,
   onUpdateListing,
+  onUpdateVenue,
 }) => {
   const [buildingAssets, setBuildingAssets] = useState<BuildingAsset[]>([]);
 
@@ -50,6 +52,7 @@ const AdminBuildingInspector: React.FC<AdminBuildingInspectorProps> = ({
         relationships={relationships}
         buildingAssets={buildingAssets}
         onListingLocationSaved={onUpdateListing}
+        onVenueLocationSaved={onUpdateVenue}
         onBuildingAssetSaved={(asset, listing) => {
           setBuildingAssets((current) => {
             const index = current.findIndex((item) => item.id === asset.id);

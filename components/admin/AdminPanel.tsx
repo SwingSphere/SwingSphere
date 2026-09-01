@@ -523,6 +523,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onUpdateListing={(updated) =>
                             setListings((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
                         }
+                        onUpdateVenue={handleVenueSaved}
                     />
                 );
             default:

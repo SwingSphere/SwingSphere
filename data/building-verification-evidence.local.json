@@ -1,0 +1,3862 @@
+[
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 2841 la moordrecht south holland netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.9923702,
+      "lng": 4.6587441
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:34:55.036Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 21
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bg12m2-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 62.850470206235634,
+      "pinToCentroidMeters": 67.21645849163693,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1rqlsh6-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 102.82815875583312,
+      "pinToCentroidMeters": 107.20681892709237,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 62.9m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "listingName": "Ice Lounge Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:37:31.119Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 10
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.724510268891331,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 19.045053355689053,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-insolitam-spa-bogota",
+    "venueId": null,
+    "listingName": "Insolitam Spa",
+    "normalizedAddress": "calle 82 19a 05 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.665153,
+      "lng": -74.0520138
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:38:22.956Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 28,
+      "individualFootprintCount": 196
+    },
+    "outcome": "ambiguous",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1yh4pif-1-4",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "9-86, Calle 81, El Nogal, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "9-86",
+        "road": "Calle 81",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 39.8046890557319,
+      "pinToCentroidMeters": 68.89063130645924,
+      "score": 67.66666666666666,
+      "confidence": 0.6766666666666665,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-rjmyke-1-8",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "82-16, Carrera 10, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "82-16",
+        "road": "Carrera 10",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.451278096408242,
+      "pinToCentroidMeters": 27.533332580828908,
+      "score": 62,
+      "confidence": 0.62,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 5.666666666666657,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "top two footprints are separated by only 5.7 points"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-interspa-bogota",
+    "venueId": null,
+    "listingName": "InterSpa",
+    "normalizedAddress": "carrera 18 no 78 50 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.6669,
+      "lng": -74.0586
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:39:10.590Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 28,
+      "individualFootprintCount": 137
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-p7doyi-1-6",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 52.98987805965342,
+      "pinToCentroidMeters": 70.62685605297897,
+      "score": 57,
+      "confidence": 0.57,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-ymo95b-1-4",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 70.42996582554294,
+      "pinToCentroidMeters": 87.21130204103558,
+      "score": 37,
+      "confidence": 0.49,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 20,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road table view cape town 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.8306066,
+      "lng": 18.5103547
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:40:03.128Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 3,
+      "individualFootprintCount": 14
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-vvjn2j-1-11",
+      "providerFeatureIds": [
+        "112492580"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "KFC, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 222.83208535021214,
+      "pinToCentroidMeters": 234.05267453989427,
+      "score": 29,
+      "confidence": 0.41,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-tra89f-1-4",
+      "providerFeatureIds": [
+        "112492580"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 62.04879226423123,
+      "pinToCentroidMeters": 78.13851239278442,
+      "score": 0,
+      "confidence": 0.09,
+      "reasons": [
+        "house number conflicts (238)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 29,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 222.8m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lussuria-bangkok",
+    "venueId": null,
+    "listingName": "Lussuria Club",
+    "normalizedAddress": "785 5 pracha uthit road samsen nok huai khwang bangkok 10310 thailand",
+    "canonicalCoordinate": {
+      "lat": 13.769269,
+      "lng": 100.5902428
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.86,
+    "evaluatedAt": "2026-08-17T00:40:45.890Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 30,
+      "individualFootprintCount": 35
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-xrwvoc-1-4",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 91.82780228623233,
+      "pinToCentroidMeters": 113.35998751587579,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "postal code matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-w3tmvo-1-7",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "ซอยประชาอุทิศ 23, แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "road": "ซอยประชาอุทิศ 23",
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 94.36970256853176,
+      "pinToCentroidMeters": 106.41025961169366,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 91.8m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-dalliance-columbia",
+    "venueId": null,
+    "listingName": "Club Dalliance",
+    "normalizedAddress": "1100 first avenue south columbia sc 29209 united states",
+    "canonicalCoordinate": {
+      "lat": 33.9472104,
+      "lng": -80.9855402
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.92,
+    "evaluatedAt": "2026-08-17T00:43:28.735Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 7
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-7sp9ho-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "First Avenue, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "First Avenue",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.452199269294272,
+      "pinToCentroidMeters": 53.92830923605684,
+      "score": 40.33333333333333,
+      "confidence": 0.40333333333333327,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name is similar",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ue4gbc-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "The Boulevard, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "The Boulevard",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 30.628662166243117,
+      "pinToCentroidMeters": 48.65438635108979,
+      "score": 17,
+      "confidence": 0.17,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 23.33333333333333,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-colette-houston",
+    "venueId": null,
+    "listingName": "Colette - Houston",
+    "normalizedAddress": "1319 cypress creek parkway suite 190 houston texas 77090 united states",
+    "canonicalCoordinate": {
+      "lat": 30.0124282662,
+      "lng": -95.4491339996
+    },
+    "coordinateProvenance": "official_club_embedded_map",
+    "coordinateConfidence": 0.98,
+    "evaluatedAt": "2026-08-17T00:44:21.501Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 6,
+      "individualFootprintCount": 31
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1wshlhb-1-4",
+      "providerFeatureIds": [
+        "2589379180"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Ella Boulevard, Harris County, Texas, 77090, United States",
+      "addressComponents": {
+        "road": "Ella Boulevard",
+        "region": "Texas",
+        "postalCode": "77090",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.634820118177489,
+      "pinToCentroidMeters": 46.648499166047635,
+      "score": 15,
+      "confidence": 0.15,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1pamqaz-1-4",
+      "providerFeatureIds": [
+        "55866150"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Ella Boulevard, Harris County, Texas, 77090, United States",
+      "addressComponents": {
+        "road": "Ella Boulevard",
+        "region": "Texas",
+        "postalCode": "77090",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 15.061589531281912,
+      "pinToCentroidMeters": 42.49358198520203,
+      "score": 15,
+      "confidence": 0.15,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-coliseum-mexico-city",
+    "venueId": null,
+    "listingName": "Coliseum Club",
+    "normalizedAddress": "avenida rio rhin 76 cuauhtemoc ciudad de mexico 06500 mexico",
+    "canonicalCoordinate": {
+      "lat": 19.4315054,
+      "lng": -99.1650994
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:45:09.011Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 236,
+      "individualFootprintCount": 311
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-121zbgx-1-4",
+      "providerFeatureIds": [
+        "135364590"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Camarón Buchon, Calle Río Pánuco, Cuauhtémoc, Condesa, Ciudad de México, Cuauhtémoc, Ciudad de México, 06500, México",
+      "addressComponents": {
+        "road": "Calle Río Pánuco",
+        "city": "Ciudad de México",
+        "region": "Ciudad de México",
+        "postalCode": "06500",
+        "country": "México"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.53473051065913,
+      "pinToCentroidMeters": 23.331227185682458,
+      "score": 32.666666666666664,
+      "confidence": 0.32666666666666666,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qyvxpo-1-4",
+      "providerFeatureIds": [
+        "135364590"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Camarón Buchon, Calle Río Pánuco, Cuauhtémoc, Condesa, Ciudad de México, Cuauhtémoc, Ciudad de México, 06500, México",
+      "addressComponents": {
+        "road": "Calle Río Pánuco",
+        "city": "Ciudad de México",
+        "region": "Ciudad de México",
+        "postalCode": "06500",
+        "country": "México"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 12.736115352918098,
+      "pinToCentroidMeters": 20.010994209178335,
+      "score": 32.666666666666664,
+      "confidence": 0.32666666666666666,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "listingName": "Ice Lounge Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:45:59.927Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 10
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.724510268891331,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 19.045053355689053,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-interspa-bogota",
+    "venueId": null,
+    "listingName": "InterSpa",
+    "normalizedAddress": "carrera 18 no 78 50 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.6669,
+      "lng": -74.0586
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:46:04.035Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 28,
+      "individualFootprintCount": 137
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-p7doyi-1-6",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 52.98987805965342,
+      "pinToCentroidMeters": 70.62685605297897,
+      "score": 57,
+      "confidence": 0.57,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-ymo95b-1-4",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 70.42996582554294,
+      "pinToCentroidMeters": 87.21130204103558,
+      "score": 37,
+      "confidence": 0.49,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 20,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ],
+    "review": {
+      "disposition": "accept_recommended_building",
+      "reviewedAt": "2026-08-17T00:46:39.780Z",
+      "note": "Recommended footprint selected; Save Building remains an explicit canonical write."
+    }
+  },
+  {
+    "version": 1,
+    "listingId": "club-club-joi-la",
+    "venueId": "venue-club-club-joi-la",
+    "listingName": "Club Joi",
+    "normalizedAddress": "810 s santa fe avenue los angeles ca 90021 usa",
+    "canonicalCoordinate": {
+      "lat": 34.0343,
+      "lng": -118.2336
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": null,
+    "evaluatedAt": "2026-08-17T00:46:36.778Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 64,
+      "individualFootprintCount": 92
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-c1i6ai-1-4",
+      "providerFeatureIds": [
+        "63630390"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Wilson Street, Arts District, Downtown, Los Angeles, Los Angeles County, California, 90021, United States",
+      "addressComponents": {
+        "road": "Wilson Street",
+        "city": "Los Angeles",
+        "region": "California",
+        "postalCode": "90021",
+        "country": "United States"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 15.500428270253613,
+      "score": 42,
+      "confidence": 0.42,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-i4n7qr-1-4",
+      "providerFeatureIds": [
+        "2030087270"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Wilson Street, Arts District, Downtown, Los Angeles, Los Angeles County, California, 90021, United States",
+      "addressComponents": {
+        "road": "Wilson Street",
+        "city": "Los Angeles",
+        "region": "California",
+        "postalCode": "90021",
+        "country": "United States"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 16.291869962875893,
+      "score": 42,
+      "confidence": 0.42,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-sweet-buenos-aires",
+    "venueId": null,
+    "listingName": "Sweet Club",
+    "normalizedAddress": "chacabuco 162 san telmo buenos aires argentina",
+    "canonicalCoordinate": {
+      "lat": -34.6183321,
+      "lng": -58.3758568
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:47:24.148Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 58,
+      "individualFootprintCount": 422
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-arc0q3-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "890, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "890",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 4.629193460588102,
+      "pinToCentroidMeters": 11.023247774163169,
+      "score": 21,
+      "confidence": 0.21,
+      "reasons": [
+        "house number conflicts (890)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-924xx8-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "874, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "874",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 11.139514868545012,
+      "pinToCentroidMeters": 20.258906769888213,
+      "score": 14,
+      "confidence": 0.14,
+      "reasons": [
+        "house number conflicts (874)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 7,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-twist-sf",
+    "venueId": "venue-club-twist-sf",
+    "listingName": "Twist SF",
+    "normalizedAddress": "387 bay street san francisco california 94133 united states",
+    "canonicalCoordinate": {
+      "lat": 37.8055766,
+      "lng": -122.4132692
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.95,
+    "evaluatedAt": "2026-08-17T00:48:23.727Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 107,
+      "individualFootprintCount": 223
+    },
+    "outcome": "ambiguous",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1jooo3k-1-4",
+      "providerFeatureIds": [
+        "13610630"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      "addressComponents": {
+        "road": "Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 9.338234081974136,
+      "score": 68,
+      "confidence": 0.68,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ul5w1h-1-7",
+      "providerFeatureIds": [
+        "13610630"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "New Thai Elephant, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      "addressComponents": {
+        "road": "Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 0.8049215735709605,
+      "pinToCentroidMeters": 22.08722880350328,
+      "score": 68,
+      "confidence": 0.68,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "top two footprints are separated by only 0.0 points"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 2841 la moordrecht south holland netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.9923702,
+      "lng": 4.6587441
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:49:58.969Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 21
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bg12m2-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 63.90079500184933,
+      "pinToCentroidMeters": 67.21645849163693,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1rqlsh6-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 103.37735488975298,
+      "pinToCentroidMeters": 107.20681892709237,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 63.9m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "listingName": "Ice Lounge Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:50:06.913Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 10
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-insolitam-spa-bogota",
+    "venueId": null,
+    "listingName": "Insolitam Spa",
+    "normalizedAddress": "calle 82 19a 05 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.665153,
+      "lng": -74.0520138
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:50:18.592Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 28,
+      "individualFootprintCount": 196
+    },
+    "outcome": "ambiguous",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1yh4pif-1-4",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "9-86, Calle 81, El Nogal, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "9-86",
+        "road": "Calle 81",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 49.85389239884635,
+      "pinToCentroidMeters": 68.89063130645924,
+      "score": 67.66666666666666,
+      "confidence": 0.6766666666666665,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-rjmyke-1-8",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "82-16, Carrera 10, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "82-16",
+        "road": "Carrera 10",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.904366258114374,
+      "pinToCentroidMeters": 27.533332580828908,
+      "score": 62,
+      "confidence": 0.62,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 5.666666666666657,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "top two footprints are separated by only 5.7 points"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-interspa-bogota",
+    "venueId": null,
+    "listingName": "InterSpa",
+    "normalizedAddress": "carrera 18 no 78 50 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.6669,
+      "lng": -74.0586
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:50:30.126Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 28,
+      "individualFootprintCount": 137
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-p7doyi-1-6",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 55.51722696769482,
+      "pinToCentroidMeters": 70.62685605297897,
+      "score": 57,
+      "confidence": 0.57,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-ymo95b-1-4",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "80-6, Carrera 16A, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "80-6",
+        "road": "Carrera 16A",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 75.58563016654787,
+      "pinToCentroidMeters": 87.21130204103558,
+      "score": 37,
+      "confidence": 0.49,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 20,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road table view cape town 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.8306066,
+      "lng": 18.5103547
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:50:48.501Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 3,
+      "individualFootprintCount": 14
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-vvjn2j-1-11",
+      "providerFeatureIds": [
+        "112492580"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "KFC, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 226.76393566642562,
+      "pinToCentroidMeters": 234.05267453989427,
+      "score": 29,
+      "confidence": 0.41,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-tra89f-1-4",
+      "providerFeatureIds": [
+        "112492580"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 64.0825630286362,
+      "pinToCentroidMeters": 78.13851239278442,
+      "score": 0,
+      "confidence": 0.09,
+      "reasons": [
+        "house number conflicts (238)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 29,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 226.8m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lussuria-bangkok",
+    "venueId": null,
+    "listingName": "Lussuria Club",
+    "normalizedAddress": "785 5 pracha uthit road samsen nok huai khwang bangkok 10310 thailand",
+    "canonicalCoordinate": {
+      "lat": 13.769269,
+      "lng": 100.5902428
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.86,
+    "evaluatedAt": "2026-08-17T00:51:00.391Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 30,
+      "individualFootprintCount": 35
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-xrwvoc-1-4",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 91.67361046949448,
+      "pinToCentroidMeters": 113.35998751587579,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "postal code matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-w3tmvo-1-7",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "ซอยประชาอุทิศ 23, แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "road": "ซอยประชาอุทิศ 23",
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 94.767739731302,
+      "pinToCentroidMeters": 106.41025961169366,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 91.7m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club3",
+    "venueId": null,
+    "listingName": "Our Secret Spot",
+    "normalizedAddress": "191 parramatta road sydney nsw 2038 australia",
+    "canonicalCoordinate": {
+      "lat": -33.8878834297068,
+      "lng": 151.16448522425307
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.72,
+    "evaluatedAt": "2026-08-17T00:51:11.975Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 11,
+      "individualFootprintCount": 4
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1fzsu8n-1-4",
+      "providerFeatureIds": [
+        "2921272210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Coles Express, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 62.48193095392083,
+      "pinToCentroidMeters": 72.44314351761672,
+      "score": 21,
+      "confidence": 0.33,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-5ow99t-1-5",
+      "providerFeatureIds": [
+        "23075740"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Coles Express, 308-310, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "houseNumber": "308-310",
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 49.68057386522771,
+      "pinToCentroidMeters": 64.34362969997582,
+      "score": 9,
+      "confidence": 0.09,
+      "reasons": [
+        "house number conflicts (308-310)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 12,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 62.5m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-sweet-buenos-aires",
+    "venueId": null,
+    "listingName": "Sweet Club",
+    "normalizedAddress": "chacabuco 162 san telmo buenos aires argentina",
+    "canonicalCoordinate": {
+      "lat": -34.6183321,
+      "lng": -58.3758568
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:51:23.439Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 58,
+      "individualFootprintCount": 422
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-arc0q3-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "890, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "890",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 5.133273170103412,
+      "pinToCentroidMeters": 11.023247774163169,
+      "score": 21,
+      "confidence": 0.21,
+      "reasons": [
+        "house number conflicts (890)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-924xx8-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "874, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "874",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 11.277598942102237,
+      "pinToCentroidMeters": 20.258906769888213,
+      "score": 14,
+      "confidence": 0.14,
+      "reasons": [
+        "house number conflicts (874)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 7,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-dalliance-columbia",
+    "venueId": null,
+    "listingName": "Club Dalliance",
+    "normalizedAddress": "1100 first avenue south columbia sc 29209 united states",
+    "canonicalCoordinate": {
+      "lat": 33.9472104,
+      "lng": -80.9855402
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.92,
+    "evaluatedAt": "2026-08-17T00:51:41.900Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 7
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-7sp9ho-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "First Avenue, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "First Avenue",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 36.47336832185577,
+      "pinToCentroidMeters": 53.92830923605684,
+      "score": 38.33333333333333,
+      "confidence": 0.3833333333333333,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name is similar",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ue4gbc-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "The Boulevard, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "The Boulevard",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 33.26873068746212,
+      "pinToCentroidMeters": 48.65438635108979,
+      "score": 17,
+      "confidence": 0.17,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 21.33333333333333,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-colette-houston",
+    "venueId": null,
+    "listingName": "Colette - Houston",
+    "normalizedAddress": "1319 cypress creek parkway suite 190 houston texas 77090 united states",
+    "canonicalCoordinate": {
+      "lat": 30.0124282662,
+      "lng": -95.4491339996
+    },
+    "coordinateProvenance": "official_club_embedded_map",
+    "coordinateConfidence": 0.98,
+    "evaluatedAt": "2026-08-17T00:51:55.304Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 6,
+      "individualFootprintCount": 31
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1wshlhb-1-4",
+      "providerFeatureIds": [
+        "2589379180"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Ella Boulevard, Harris County, Texas, 77090, United States",
+      "addressComponents": {
+        "road": "Ella Boulevard",
+        "region": "Texas",
+        "postalCode": "77090",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 38.17570677466729,
+      "pinToCentroidMeters": 46.648499166047635,
+      "score": 13,
+      "confidence": 0.13,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1pamqaz-1-4",
+      "providerFeatureIds": [
+        "55866150"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Ella Boulevard, Harris County, Texas, 77090, United States",
+      "addressComponents": {
+        "road": "Ella Boulevard",
+        "region": "Texas",
+        "postalCode": "77090",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 38.24580119282571,
+      "pinToCentroidMeters": 42.49358198520203,
+      "score": 13,
+      "confidence": 0.13,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-coliseum-mexico-city",
+    "venueId": null,
+    "listingName": "Coliseum Club",
+    "normalizedAddress": "avenida rio rhin 76 cuauhtemoc ciudad de mexico 06500 mexico",
+    "canonicalCoordinate": {
+      "lat": 19.4315054,
+      "lng": -99.1650994
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T00:52:08.540Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 236,
+      "individualFootprintCount": 311
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-121zbgx-1-4",
+      "providerFeatureIds": [
+        "135364590"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Camarón Buchon, Calle Río Pánuco, Cuauhtémoc, Condesa, Ciudad de México, Cuauhtémoc, Ciudad de México, 06500, México",
+      "addressComponents": {
+        "road": "Calle Río Pánuco",
+        "city": "Ciudad de México",
+        "region": "Ciudad de México",
+        "postalCode": "06500",
+        "country": "México"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.093056941545315,
+      "pinToCentroidMeters": 23.331227185682458,
+      "score": 32.666666666666664,
+      "confidence": 0.32666666666666666,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qyvxpo-1-4",
+      "providerFeatureIds": [
+        "135364590"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Camarón Buchon, Calle Río Pánuco, Cuauhtémoc, Condesa, Ciudad de México, Cuauhtémoc, Ciudad de México, 06500, México",
+      "addressComponents": {
+        "road": "Calle Río Pánuco",
+        "city": "Ciudad de México",
+        "region": "Ciudad de México",
+        "postalCode": "06500",
+        "country": "México"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.26320745993709,
+      "pinToCentroidMeters": 20.010994209178335,
+      "score": 32.666666666666664,
+      "confidence": 0.32666666666666666,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-club-joi-la",
+    "venueId": "venue-club-club-joi-la",
+    "listingName": "Club Joi",
+    "normalizedAddress": "810 s santa fe avenue los angeles ca 90021 usa",
+    "canonicalCoordinate": {
+      "lat": 34.0343,
+      "lng": -118.2336
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": null,
+    "evaluatedAt": "2026-08-17T00:52:25.627Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 64,
+      "individualFootprintCount": 92
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-c1i6ai-1-4",
+      "providerFeatureIds": [
+        "63630390"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Wilson Street, Arts District, Downtown, Los Angeles, Los Angeles County, California, 90021, United States",
+      "addressComponents": {
+        "road": "Wilson Street",
+        "city": "Los Angeles",
+        "region": "California",
+        "postalCode": "90021",
+        "country": "United States"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 15.500428270253613,
+      "score": 42,
+      "confidence": 0.42,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-i4n7qr-1-4",
+      "providerFeatureIds": [
+        "2030087270"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Wilson Street, Arts District, Downtown, Los Angeles, Los Angeles County, California, 90021, United States",
+      "addressComponents": {
+        "road": "Wilson Street",
+        "city": "Los Angeles",
+        "region": "California",
+        "postalCode": "90021",
+        "country": "United States"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 16.291869962875893,
+      "score": 42,
+      "confidence": 0.42,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-twist-sf",
+    "venueId": "venue-club-twist-sf",
+    "listingName": "Twist SF",
+    "normalizedAddress": "387 bay street san francisco california 94133 united states",
+    "canonicalCoordinate": {
+      "lat": 37.8055766,
+      "lng": -122.4132692
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.95,
+    "evaluatedAt": "2026-08-17T00:52:38.890Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 107,
+      "individualFootprintCount": 223
+    },
+    "outcome": "ambiguous",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1jooo3k-1-4",
+      "providerFeatureIds": [
+        "13610630"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      "addressComponents": {
+        "road": "Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 0.16586291933253322,
+      "pinToCentroidMeters": 9.338234081974136,
+      "score": 68,
+      "confidence": 0.68,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-ny14tw-1-4",
+      "providerFeatureIds": [
+        "585241200"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Fitlife, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      "addressComponents": {
+        "road": "Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 2.5307149660032433,
+      "pinToCentroidMeters": 11.06668466301129,
+      "score": 68,
+      "confidence": 0.68,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "top two footprints are separated by only 0.0 points"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 2841 la moordrecht south holland netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.9923702,
+      "lng": 4.6587441
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:56:20.406Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 21
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bg12m2-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 63.90079500184933,
+      "pinToCentroidMeters": 67.21645849163693,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1rqlsh6-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 103.37735488975298,
+      "pinToCentroidMeters": 107.20681892709237,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 63.9m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 2841 la moordrecht south holland netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.9923702,
+      "lng": 4.6587441
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:56:53.571Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 21
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bg12m2-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 63.90079500184933,
+      "pinToCentroidMeters": 67.21645849163693,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1rqlsh6-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 103.37735488975298,
+      "pinToCentroidMeters": 107.20681892709237,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 63.9m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 2841 la moordrecht south holland netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.9923702,
+      "lng": 4.6587441
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T00:57:23.776Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 21
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bg12m2-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 63.90079500184933,
+      "pinToCentroidMeters": 67.21645849163693,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1rqlsh6-1-4",
+      "providerFeatureIds": [
+        "36606780"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Zorg- en Kinderboerderij In de Krom, Middelweg, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2841 LN, Nederland",
+      "addressComponents": {
+        "road": "Middelweg",
+        "city": "Moordrecht",
+        "region": "Zuid-Holland",
+        "postalCode": "2841 LN",
+        "country": "Nederland"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 103.37735488975298,
+      "pinToCentroidMeters": 107.20681892709237,
+      "score": 18,
+      "confidence": 0.3,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 63.9m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-sweet-buenos-aires",
+    "venueId": null,
+    "listingName": "Sweet Club",
+    "normalizedAddress": "chacabuco 162 san telmo buenos aires argentina",
+    "canonicalCoordinate": {
+      "lat": -34.6183321,
+      "lng": -58.3758568
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T01:10:29.678Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 58,
+      "individualFootprintCount": 422
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-arc0q3-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "890, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "890",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 5.133273170103412,
+      "pinToCentroidMeters": 11.023247774163169,
+      "score": 21,
+      "confidence": 0.21,
+      "reasons": [
+        "house number conflicts (890)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-924xx8-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "874, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "874",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 11.277598942102237,
+      "pinToCentroidMeters": 20.258906769888213,
+      "score": 14,
+      "confidence": 0.14,
+      "reasons": [
+        "house number conflicts (874)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 7,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-sweet-buenos-aires",
+    "venueId": null,
+    "listingName": "Sweet Club",
+    "normalizedAddress": "chacabuco 162 san telmo buenos aires argentina",
+    "canonicalCoordinate": {
+      "lat": -34.6183321,
+      "lng": -58.3758568
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T01:38:23.386Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 58,
+      "individualFootprintCount": 422
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-arc0q3-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "890, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "890",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 5.133273170103412,
+      "pinToCentroidMeters": 11.023247774163169,
+      "score": 21,
+      "confidence": 0.21,
+      "reasons": [
+        "house number conflicts (890)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-924xx8-1-4",
+      "providerFeatureIds": [
+        "26036030"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "874, Chacabuco, San Telmo, Buenos Aires, Distrito de Las Artes, Comuna 1, Ciudad Autónoma de Buenos Aires, C1100AAF, Argentina",
+      "addressComponents": {
+        "houseNumber": "874",
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "C1100AAF",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 11.277598942102237,
+      "pinToCentroidMeters": 20.258906769888213,
+      "score": 14,
+      "confidence": 0.14,
+      "reasons": [
+        "house number conflicts (874)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 7,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-sweet-buenos-aires",
+    "venueId": null,
+    "listingName": "Sweet Club",
+    "normalizedAddress": "chacabuco 162 san telmo buenos aires argentina",
+    "canonicalCoordinate": {
+      "lat": -34.6101671,
+      "lng": -58.3759532
+    },
+    "coordinateProvenance": "manual-adjustment",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-08-17T01:46:20.721Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 242,
+      "individualFootprintCount": 161
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-fnppty-1-6",
+      "providerFeatureIds": [
+        "11370190"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Centro de Formación Profesional 10 Raúl Scalabrini Ortiz (anexo) - SEC, Chacabuco, Monserrat, Buenos Aires, Comuna 1, Ciudad Autónoma de Buenos Aires, 1069, Argentina",
+      "addressComponents": {
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "1069",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 2.2672438244116333,
+      "pinToCentroidMeters": 7.001657454730498,
+      "score": 60,
+      "confidence": 0.6,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-18nd6c-1-6",
+      "providerFeatureIds": [
+        "11370190"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Centro de Formación Profesional 10 Raúl Scalabrini Ortiz (anexo) - SEC, Chacabuco, Monserrat, Buenos Aires, Comuna 1, Ciudad Autónoma de Buenos Aires, 1069, Argentina",
+      "addressComponents": {
+        "road": "Chacabuco",
+        "city": "Buenos Aires",
+        "region": "Ciudad Autónoma de Buenos Aires",
+        "postalCode": "1069",
+        "country": "Argentina"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 8.171173885870205,
+      "pinToCentroidMeters": 18.10489406690295,
+      "score": 48,
+      "confidence": 0.48,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 12,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "listingName": "Ice Lounge Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T01:50:24.539Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 10
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lussuria-bangkok",
+    "venueId": null,
+    "listingName": "Lussuria Club",
+    "normalizedAddress": "785 5 pracha uthit road samsen nok huai khwang bangkok 10310 thailand",
+    "canonicalCoordinate": {
+      "lat": 13.769269,
+      "lng": 100.5902428
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.86,
+    "evaluatedAt": "2026-08-17T01:50:42.964Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 30,
+      "individualFootprintCount": 35
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-xrwvoc-1-4",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 91.67361046949448,
+      "pinToCentroidMeters": 113.35998751587579,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "postal code matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-w3tmvo-1-7",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "ซอยประชาอุทิศ 23, แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "road": "ซอยประชาอุทิศ 23",
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 94.767739731302,
+      "pinToCentroidMeters": 106.41025961169366,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 91.7m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lussuria-bangkok",
+    "venueId": null,
+    "listingName": "Lussuria Club",
+    "normalizedAddress": "785 5 pracha uthit road samsen nok huai khwang bangkok 10310 thailand",
+    "canonicalCoordinate": {
+      "lat": 13.769269,
+      "lng": 100.5902428
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.86,
+    "evaluatedAt": "2026-08-17T01:52:03.795Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 30,
+      "individualFootprintCount": 35
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-xrwvoc-1-4",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 91.67361046949448,
+      "pinToCentroidMeters": 113.35998751587579,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "postal code matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-w3tmvo-1-7",
+      "providerFeatureIds": [
+        "58340500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "ซอยประชาอุทิศ 23, แขวงสามเสนนอก, เขตห้วยขวาง, กรุงเทพมหานคร, 10310, ประเทศไทย",
+      "addressComponents": {
+        "road": "ซอยประชาอุทิศ 23",
+        "city": "กรุงเทพมหานคร",
+        "postalCode": "10310",
+        "country": "ประเทศไทย"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 94.767739731302,
+      "pinToCentroidMeters": 106.41025961169366,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 91.7m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club3",
+    "venueId": null,
+    "listingName": "Our Secret Spot",
+    "normalizedAddress": "191 parramatta road sydney nsw 2038 australia",
+    "canonicalCoordinate": {
+      "lat": -33.8878834297068,
+      "lng": 151.16448522425307
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.72,
+    "evaluatedAt": "2026-08-17T01:52:06.106Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 11,
+      "individualFootprintCount": 4
+    },
+    "outcome": "pin_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1fzsu8n-1-4",
+      "providerFeatureIds": [
+        "2921272210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Coles Express, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 62.48193095392083,
+      "pinToCentroidMeters": 72.44314351761672,
+      "score": 21,
+      "confidence": 0.33,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-5ow99t-1-5",
+      "providerFeatureIds": [
+        "23075740"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Coles Express, 308-310, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "houseNumber": "308-310",
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 49.68057386522771,
+      "pinToCentroidMeters": 64.34362969997582,
+      "score": 9,
+      "confidence": 0.09,
+      "reasons": [
+        "house number conflicts (308-310)",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 12,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "best footprint is 62.5m from the stored pin"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "listingName": "Ice Lounge Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T02:20:18.763Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 6,
+      "individualFootprintCount": 15
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 3,
+      "confidence": 0.03,
+      "reasons": [
+        "house number conflicts (2240)",
+        "street name does not match",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club3",
+    "venueId": null,
+    "listingName": "Our Secret Spot",
+    "normalizedAddress": "191 parramatta road sydney nsw 2038 australia",
+    "canonicalCoordinate": {
+      "lat": -33.8878834297068,
+      "lng": 151.16448522425307
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.72,
+    "evaluatedAt": "2026-08-17T02:20:52.142Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 249,
+      "individualFootprintCount": 242
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-rekunj-1-20",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-rekunj-1-20"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "189, Parramatta Road, Annandale, Inner West, Sydney, New South Wales, 2038, Australia",
+      "addressComponents": {
+        "houseNumber": "189",
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2038",
+        "country": "Australia"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 5.772671769686061,
+      "score": 45,
+      "confidence": 0.45,
+      "reasons": [
+        "house number conflicts (189)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-tliwwa-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-tliwwa-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Vintage Cellars, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 48.34630097096655,
+      "pinToCentroidMeters": 63.26641999168494,
+      "score": 41,
+      "confidence": 0.41,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 4,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club3",
+    "venueId": null,
+    "listingName": "Our Secret Spot",
+    "normalizedAddress": "191 parramatta road sydney nsw 2038 australia",
+    "canonicalCoordinate": {
+      "lat": -33.8878834297068,
+      "lng": 151.16448522425307
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.72,
+    "evaluatedAt": "2026-08-17T02:20:53.303Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 249,
+      "individualFootprintCount": 242
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-rekunj-1-20",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-rekunj-1-20"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "189, Parramatta Road, Annandale, Inner West, Sydney, New South Wales, 2038, Australia",
+      "addressComponents": {
+        "houseNumber": "189",
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2038",
+        "country": "Australia"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 5.772671769686061,
+      "score": 45,
+      "confidence": 0.45,
+      "reasons": [
+        "house number conflicts (189)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-tliwwa-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-tliwwa-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Vintage Cellars, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 48.34630097096655,
+      "pinToCentroidMeters": 63.26641999168494,
+      "score": 41,
+      "confidence": 0.41,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 4,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road table view cape town 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.8306066,
+      "lng": 18.5103547
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-08-17T02:20:58.331Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 302,
+      "individualFootprintCount": 312
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1vbktbq-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-1vbktbq-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 27.66874258922117,
+      "pinToCentroidMeters": 39.781834474297824,
+      "score": 49,
+      "confidence": 0.49,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1fe90lo-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-1fe90lo-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.4276003942658,
+      "pinToCentroidMeters": 18.90879103076862,
+      "score": 22,
+      "confidence": 0.22,
+      "reasons": [
+        "house number conflicts (238)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 27,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-insolitam-spa-bogota",
+    "venueId": null,
+    "listingName": "Insolitam Spa",
+    "normalizedAddress": "calle 82 19a 05 bogota colombia",
+    "canonicalCoordinate": {
+      "lat": 4.665153,
+      "lng": -74.0520138
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.88,
+    "evaluatedAt": "2026-08-17T02:22:40.747Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 50,
+      "individualFootprintCount": 218
+    },
+    "outcome": "ambiguous",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-rjmyke-1-8",
+      "providerFeatureIds": [
+        "92433300"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "82-16, Carrera 10, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "82-16",
+        "road": "Carrera 10",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.904366258114374,
+      "pinToCentroidMeters": 27.533332580828908,
+      "score": 62,
+      "confidence": 0.62,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-15kdixd-1-4",
+      "providerFeatureIds": [
+        "390735500"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "82-17, Carrera 10, UPZs de Bogotá, Localidad Chapinero, Bogotá, Bogotá, Distrito Capital, RAP (Especial) Central, 110221, Colombia",
+      "addressComponents": {
+        "houseNumber": "82-17",
+        "road": "Carrera 10",
+        "city": "Bogotá",
+        "region": "Bogotá, Distrito Capital",
+        "postalCode": "110221",
+        "country": "Colombia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 23.16496470245205,
+      "pinToCentroidMeters": 46.86346305444845,
+      "score": 57,
+      "confidence": 0.57,
+      "reasons": [
+        "house number matches",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 5,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "top two footprints are separated by only 5.0 points"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club3",
+    "venueId": null,
+    "listingName": "Our Secret Spot",
+    "normalizedAddress": "191 parramatta road sydney nsw 2038 australia",
+    "canonicalCoordinate": {
+      "lat": -33.8878834297068,
+      "lng": 151.16448522425307
+    },
+    "coordinateProvenance": "nominatim",
+    "coordinateConfidence": 0.72,
+    "evaluatedAt": "2026-08-17T02:27:07.082Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 249,
+      "individualFootprintCount": 242
+    },
+    "outcome": "address_mismatch",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-rekunj-1-20",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-rekunj-1-20"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "189, Parramatta Road, Annandale, Inner West, Sydney, New South Wales, 2038, Australia",
+      "addressComponents": {
+        "houseNumber": "189",
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2038",
+        "country": "Australia"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 5.772671769686061,
+      "score": 45,
+      "confidence": 0.45,
+      "reasons": [
+        "house number conflicts (189)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-tliwwa-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-tliwwa-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Vintage Cellars, Parramatta Road, Stanmore, Inner West, Sydney, New South Wales, 2048, Australia",
+      "addressComponents": {
+        "road": "Parramatta Road",
+        "city": "Sydney",
+        "region": "New South Wales",
+        "postalCode": "2048",
+        "country": "Australia"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 48.34630097096655,
+      "pinToCentroidMeters": 63.26641999168494,
+      "score": 41,
+      "confidence": 0.41,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name strongly matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 4,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "candidate is on the expected street but has a conflicting house number"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-dalliance-columbia",
+    "venueId": null,
+    "listingName": "Club Dalliance",
+    "normalizedAddress": "1100 first avenue south columbia sc 29209 united states",
+    "canonicalCoordinate": {
+      "lat": 33.9472104,
+      "lng": -80.9855402
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.92,
+    "evaluatedAt": "2026-08-17T02:36:14.236Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 8,
+      "individualFootprintCount": 14
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-7sp9ho-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "First Avenue, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "First Avenue",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 36.47336832185577,
+      "pinToCentroidMeters": 53.92830923605684,
+      "score": 38.33333333333333,
+      "confidence": 0.3833333333333333,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name is similar",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ue4gbc-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "The Boulevard, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "The Boulevard",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 33.26873068746212,
+      "pinToCentroidMeters": 48.65438635108979,
+      "score": 17,
+      "confidence": 0.17,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 21.33333333333333,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-dalliance-columbia",
+    "venueId": null,
+    "listingName": "Club Dalliance",
+    "normalizedAddress": "1100 first avenue south columbia sc 29209 united states",
+    "canonicalCoordinate": {
+      "lat": 33.9472104,
+      "lng": -80.9855402
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.92,
+    "evaluatedAt": "2026-08-17T02:36:14.623Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 1,
+      "individualFootprintCount": 7
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-7sp9ho-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "First Avenue, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "First Avenue",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 36.47336832185577,
+      "pinToCentroidMeters": 53.92830923605684,
+      "score": 38.33333333333333,
+      "confidence": 0.3833333333333333,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name is similar",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ue4gbc-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "The Boulevard, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "The Boulevard",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 33.26873068746212,
+      "pinToCentroidMeters": 48.65438635108979,
+      "score": 17,
+      "confidence": 0.17,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 21.33333333333333,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-dalliance-columbia",
+    "venueId": null,
+    "listingName": "Club Dalliance",
+    "normalizedAddress": "1100 first avenue south columbia sc 29209 united states",
+    "canonicalCoordinate": {
+      "lat": 33.9472104,
+      "lng": -80.9855402
+    },
+    "coordinateProvenance": null,
+    "coordinateConfidence": 0.92,
+    "evaluatedAt": "2026-08-17T02:36:25.076Z",
+    "providerSnapshot": {
+      "source": "OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 8,
+      "individualFootprintCount": 14
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-7sp9ho-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "First Avenue, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "First Avenue",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 36.47336832185577,
+      "pinToCentroidMeters": 53.92830923605684,
+      "score": 38.33333333333333,
+      "confidence": 0.3833333333333333,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name is similar",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ue4gbc-1-14",
+      "providerFeatureIds": [
+        "2784568790"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "The Boulevard, Columbia, Richland County, South Carolina, 29209, United States",
+      "addressComponents": {
+        "road": "The Boulevard",
+        "city": "Columbia",
+        "region": "South Carolina",
+        "postalCode": "29209",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 33.26873068746212,
+      "pinToCentroidMeters": 48.65438635108979,
+      "score": 17,
+      "confidence": 0.17,
+      "reasons": [
+        "candidate has no mapped house number",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 21.33333333333333,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "available evidence is insufficient for a building-level decision"
+    ]
+  }
+]

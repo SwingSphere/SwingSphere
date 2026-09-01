@@ -46,7 +46,7 @@ const ContactUs: React.FC = () => {
           </div>
 
           <p className="text-center text-gray-500 mt-12">
-            We are a small team and will do our best to get back to you within 48 business hours.
+            We review messages as we are able and will do our best to respond as soon as we can.
           </p>
         </div>
       </div>

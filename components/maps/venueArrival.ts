@@ -30,13 +30,12 @@ const assertVenueResolverLoopLimit = (
   details: Record<string, unknown>,
 ) => {
   if (!venueResolverDiagnosticsEnabled()) return;
-  if (count <= VENUE_RESOLVER_DIAGNOSTIC_LIMIT) return;
-  console.error(`[VenueResolver] loop limit exceeded: ${label}`, {
+  if (count !== VENUE_RESOLVER_DIAGNOSTIC_LIMIT + 1) return;
+  console.warn(`[VenueResolver] diagnostic volume exceeded: ${label}`, {
     count,
     limit: VENUE_RESOLVER_DIAGNOSTIC_LIMIT,
     ...details,
   });
-  throw new Error(`[VenueResolver] loop limit exceeded: ${label}`);
 };
 
 export interface BuildingsSourceConfig {

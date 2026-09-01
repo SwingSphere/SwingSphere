@@ -23,7 +23,7 @@ const AboutUs: React.FC = () => {
                 <strong><span className="text-red-400 font-semibold">Swing</span>Sphere</strong> was created to solve that problem.
               </p>
               <p className="mt-4">
-                We are not just a directory; we are a community-built map. Our goal is to be the single, trusted platform that connects curious newcomers and experienced veterans alike to the best clubs and events in their area or travel destination.
+                We are not just a directory; we are a community-built map. Our goal is to build a trusted discovery platform that helps curious newcomers and experienced community members find clubs and events that fit what they are looking for, whether nearby or while traveling.
               </p>
             </section>
             
@@ -32,11 +32,11 @@ const AboutUs: React.FC = () => {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-2xl font-semibold text-gray-100 mb-2">Privacy First</h3>
-                  <p>This is our core principle. We are here to connect you to events, not to collect your data. We built this platform from the ground up to require the absolute minimum personal information. We don't want your real name, and we will never sell or trade your data.</p>
+                  <p>Privacy is a core design principle. We aim to minimize the personal information needed for discovery while using limited information to operate, secure, measure, and improve the service. A legal name is not required for standard browsing or account signup, and we do not sell personal information or provide advertisers with identifiable browsing histories.</p>
                 </div>
                  <div>
                   <h3 className="text-2xl font-semibold text-gray-100 mb-2">Quality over Quantity</h3>
-                  <p>We are not an open-for-all, unmoderated list. Our community relies on trust, and we honor that by moderating submissions to ensure the listings on <strong><span className="text-red-400 font-semibold">Swing</span>Sphere</strong> are legitimate, high-quality, and run by reputable hosts.</p>
+                  <p>We are not aiming to be an unmoderated, anything-goes list. Submissions may be reviewed for relevance, quality, obvious authenticity concerns, and compliance with our platform rules. That review helps improve the directory, but it is not a guarantee about any venue, event, host, or attendee.</p>
                 </div>
                  <div>
                   <h3 className="text-2xl font-semibold text-gray-100 mb-2">Community-Built</h3>

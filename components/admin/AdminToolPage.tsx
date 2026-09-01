@@ -38,6 +38,10 @@ const AdminToolPage: React.FC = () => {
     setListings((current) => current.map((item) => item.id === updated.id ? updated : item));
   };
 
+  const updateVenue = (updated: VenueData) => {
+    setVenues((current) => current.map((item) => item.id === updated.id ? updated : item));
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col bg-slate-950 text-slate-100">
       <div className="flex items-center justify-between border-b border-white/10 bg-slate-950/95 px-5 py-3">
@@ -66,6 +70,7 @@ const AdminToolPage: React.FC = () => {
             organizations={organizations}
             relationships={relationships}
             onUpdateListing={updateListing}
+            onUpdateVenue={updateVenue}
           />
         )}
       </div>

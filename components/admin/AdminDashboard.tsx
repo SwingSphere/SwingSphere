@@ -13,6 +13,7 @@ import { AdminView } from './AdminPanel';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
+import { buildingVerificationNeedsReview } from '../../lib/buildingVerification';
 
 const Icon: React.FC<{ path: string }> = ({ path }) => (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -134,6 +135,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
         const venuesMissingBuildings = data.venues.filter((venue) => !venue.buildingAssetId).length;
         const organizationsMissingContact = data.organizations.filter((organization) => !organization.contactEmail && !organization.website).length;
         const pending = data.listings.filter((item) => item.status === 'pending_approval').length;
+        const buildingVerificationFlags = [
+            ...data.venues
+                .filter((venue) => buildingVerificationNeedsReview(venue.locationMeta?.buildingVerification))
+                .map((venue) => ({
+                    id: `venue:${venue.id}`,
+                    name: venue.name,
+                    detail: venue.locationMeta?.buildingVerification?.candidateAddress
+                        ? `Address mismatch near ${venue.locationMeta.buildingVerification.candidateAddress}`
+                        : 'Nearby building address could not be confirmed',
+                })),
+            ...data.listings
+                .filter((listing) => buildingVerificationNeedsReview(listing.locationMeta?.buildingVerification))
+                .map((listing) => ({
+                    id: `listing:${listing.id}`,
+                    name: listing.name,
+                    detail: listing.locationMeta?.buildingVerification?.candidateAddress
+                        ? `Address mismatch near ${listing.locationMeta.buildingVerification.candidateAddress}`
+                        : 'Nearby building address could not be confirmed',
+                })),
+        ];
 
         const timeline = [
             ...upcomingEvents.map((event) => ({
@@ -164,6 +185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             missingFlyers,
             clubsMissingSchedules,
             venuesMissingBuildings,
+            buildingVerificationFlags,
             organizationsMissingContact,
             timeline,
         };
@@ -209,6 +231,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
                 name: club.name,
                 detail: club.location,
                 onClick: () => setView({ view: 'edit-club', clubId: club.id }),
+            })),
+        },
+        {
+            key: 'building-address-flags',
+            label: 'Building address verification flags',
+            value: computed.buildingVerificationFlags.length,
+            items: computed.buildingVerificationFlags.map((item) => ({
+                ...item,
+                onClick: () => setView('building-inspector'),
             })),
         },
         {
@@ -260,7 +291,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
                 <ActionCard label="Pending submissions" value={computed.pending} description="Listings waiting for review and approval." icon={<Icon path={icons.inbox} />} tone={computed.pending ? 'warning' : 'neutral'} onClick={() => setView('submissions')} />
                 <ActionCard label="Flagged content" value={data.flagged.length} description="Reports and moderation items awaiting action." icon={<Icon path={icons.flag} />} tone={data.flagged.length ? 'danger' : 'neutral'} onClick={() => setView('moderation')} />
                 <ActionCard label="Missing media" value={computed.missingLogos + computed.missingFlyers} description="Content missing a logo, banner, or event image." icon={<Icon path={icons.image} />} tone={computed.missingLogos + computed.missingFlyers ? 'warning' : 'neutral'} onClick={() => setView('manage-clubs')} />
-                <ActionCard label="Building links needed" value={computed.venuesMissingBuildings} description="Venues that still need building verification." icon={<Icon path={icons.map} />} tone={computed.venuesMissingBuildings ? 'warning' : 'neutral'} onClick={() => setView('manage-venues')} />
+                <ActionCard label="Building review" value={computed.venuesMissingBuildings + computed.buildingVerificationFlags.length} description="Missing building links plus address matches the resolver could not confirm." icon={<Icon path={icons.map} />} tone={computed.venuesMissingBuildings + computed.buildingVerificationFlags.length ? 'warning' : 'neutral'} onClick={() => setView('building-inspector')} />
             </div>
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">

@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import * as THREE from 'three';
@@ -10,6 +10,8 @@ import { mockData } from './data/mockData';
 import { normalizeAdmin1, normalizeCountry, normalizePlace, slugifyPlace } from './lib/geoNormalize';
 import { completeMediaUpload, createCloudflareDirectUpload } from './lib/media/serverActions';
 import { deleteAuthenticatedAccount } from './lib/accountDeletionServer';
+import { createNominatimBuildingAddressResolver } from './lib/buildingAddressResolver';
+import { queryMicrosoftBuildingFootprints } from './lib/microsoftBuildingFootprintsServer';
 
 type GeoAddress = {
   country?: string;
@@ -33,6 +35,10 @@ const LANDMASK_PATH = path.join(ROOT_DIR, 'public', 'geo', '_land', 'ne_land_sim
 const PYTHON_BIN = process.env.PYTHON || 'python';
 const LISTINGS_STORE = path.join(ROOT_DIR, 'data', 'listings.local.json');
 const BUILDING_ASSETS_STORE = path.join(ROOT_DIR, 'data', 'building-assets.local.json');
+const BUILDING_VERIFICATION_EVIDENCE_STORE = path.join(ROOT_DIR, 'data', 'building-verification-evidence.local.json');
+const BUILDING_ADDRESS_CACHE_STORE = path.join(ROOT_DIR, '.codex-temp', 'building-address-cache.local.json');
+const BUILDING_FOOTPRINT_CACHE_DIR = path.join(ROOT_DIR, '.codex-temp', 'microsoft-building-footprints');
+const STREET_VIEW_PROFILES_STORE = path.join(ROOT_DIR, 'data', 'street-view-profiles.local.json');
 const GLOBE_RUNTIME_CONFIG_PATH = path.join(ROOT_DIR, 'src', 'features', 'globe', 'runtime', 'GlobeRuntimeConfig.js');
 const GLOBE_BORDER_OVERRIDE_PATH = path.join(ROOT_DIR, 'scripts', 'globe', 'manual-border-overrides.json');
 const GLOBE_BORDER_GENERATOR_PATH = path.join(ROOT_DIR, 'scripts', 'globe', 'build-land-coastlines.mjs');
@@ -255,6 +261,46 @@ const saveBuildingAssetsToDisk = (assets: any[]) => {
   fs.writeFileSync(BUILDING_ASSETS_STORE, JSON.stringify(assets, null, 2));
 };
 
+const loadJsonArray = (filePath: string) => {
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn(`Failed to read ${path.basename(filePath)}.`, error);
+    return [];
+  }
+};
+
+const saveJsonArray = (filePath: string, records: any[]) => {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(records, null, 2));
+};
+
+const serverBuildingAddressResolver = createNominatimBuildingAddressResolver({
+  minimumIntervalMs: 1_100,
+  maximumAttempts: 3,
+  timeoutMs: 9_000,
+  userAgent: 'SwingSphereBuildingInspector/1.0 (admin development cache)',
+});
+
+const getBuildingAddressCacheKey = (body: any) => {
+  const fingerprint = String(body?.footprintFingerprint ?? '').trim();
+  if (fingerprint) return `footprint:${fingerprint}`;
+  const lat = Number(body?.lat);
+  const lng = Number(body?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? `coordinate:${lat.toFixed(5)},${lng.toFixed(5)}` : '';
+};
+
+const listingAllowsPreciseBuildingLookup = (listing: any) => Boolean(
+  listing
+  && listing.status === 'approved'
+  && listing.isAddressPrivate !== true
+  && listing.locationVisibility !== 'approximate_public'
+  && listing.locationVisibility !== 'private'
+  && listing.locationMeta?.status !== 'private',
+);
+
 const toFiniteNumber = (value: unknown, fallback: number) => (
   Number.isFinite(Number(value)) ? Number(value) : fallback
 );
@@ -326,6 +372,157 @@ const saveHeroArrivalProfileToDisk = (profile: any) => {
     .replace(/cameraYOffset:\s*[-\d.]+,/, `cameraYOffset: ${cameraYOffset},`);
   next = next.replace(/    heroArrival:\s*\{[\s\S]*?\n    \}/, heroBlock);
   fs.writeFileSync(GLOBE_RUNTIME_CONFIG_PATH, next);
+};
+
+const LIGHTING_AUDIT_LIGHT_KEYS = [
+  'ambient',
+  'hemisphere',
+  'directionalKey',
+  'softKey',
+  'fill',
+  'undersideFill',
+  'rearFill',
+  'crimsonRim',
+  'crimsonBack',
+  'crimsonBounce',
+] as const;
+
+const LIGHTING_AUDIT_EFFECT_KEYS = [
+  'backgroundGradient',
+  'backgroundHaze',
+  'backgroundGlow',
+  'innerAtmosphere',
+  'outerAtmosphere',
+  'crimsonRimShell',
+  'bloom',
+  'graphiteFacet',
+  'landEmissive',
+  'oceanEmissive',
+] as const;
+
+const saveLightingAuditStateToDisk = (state: any) => {
+  const source = fs.readFileSync(GLOBE_RUNTIME_CONFIG_PATH, 'utf8');
+  const lightState = state?.lights ?? {};
+  const effectState = state?.effects ?? {};
+  const missingLightState = LIGHTING_AUDIT_LIGHT_KEYS.filter((key) => typeof lightState[key] !== 'boolean');
+  const missingEffectState = LIGHTING_AUDIT_EFFECT_KEYS.filter((key) => typeof effectState[key] !== 'boolean');
+  const bloomSettings = state?.bloomSettings ?? {};
+  const bloomValues = ['strength', 'radius', 'threshold', 'resolutionScale'] as const;
+  const missingBloomState = bloomValues.filter((key) => !Number.isFinite(Number(bloomSettings[key])));
+  if (missingLightState.length || missingEffectState.length || missingBloomState.length || !Number.isFinite(Number(state?.crimsonRimStrength))) {
+    throw new Error(`Lighting state is incomplete. Missing lights: ${missingLightState.join(', ') || 'none'}; missing effects: ${missingEffectState.join(', ') || 'none'}; missing bloom: ${missingBloomState.join(', ') || 'none'}.`);
+  }
+  let next = source;
+
+  for (const key of LIGHTING_AUDIT_LIGHT_KEYS) {
+    const enabled = lightState[key] !== false;
+    const pattern = new RegExp(`^(\\s{4}${key}: \\{)([^\\n]*)(\\},?)$`, 'm');
+    next = next.replace(pattern, (_match, prefix, body, suffix) => {
+      const cleanBody = String(body)
+        .replace(/\benabled:\s*(?:true|false),?\s*/g, '')
+        .trim()
+        .replace(/^,\s*/, '');
+      return `${prefix} enabled: ${enabled}, ${cleanBody}${suffix}`;
+    });
+  }
+
+  let effectsBlock = [
+    '  renderEffects: {',
+    ...LIGHTING_AUDIT_EFFECT_KEYS.map((key, index) => {
+      const comma = index === LIGHTING_AUDIT_EFFECT_KEYS.length - 1 ? '' : ',';
+      return `    ${key}: ${effectState[key] !== false}${comma}`;
+    }),
+    '  },',
+  ].join('\n');
+
+  effectsBlock = effectsBlock
+    .split(String.fromCharCode(92, 110))
+    .join(String.fromCharCode(10));
+
+  if (/  renderEffects:\s*\{[\s\S]*?\n  \},/.test(next)) {
+    next = next.replace(/  renderEffects:\s*\{[\s\S]*?\n  \},/, effectsBlock);
+  } else {
+    next = next.replace(/\n  lights:\s*\{/, `\n${effectsBlock}\n  lights: {`);
+  }
+
+  const rimStrength = Math.max(0, Math.min(3, toFiniteNumber(state?.crimsonRimStrength, 1.05)));
+  next = next.replace(
+    /(  crimsonRim:\s*\{[\s\S]*?\n\s*rimStrength:\s*)[-\d.]+/,
+    `$1${rimStrength}`,
+  );
+
+  const bloomStrength = Math.max(0, Math.min(4, toFiniteNumber(bloomSettings.strength, 1.512)));
+  const bloomRadius = Math.max(0, Math.min(1, toFiniteNumber(bloomSettings.radius, 0.397)));
+  const bloomThreshold = Math.max(0, Math.min(1, toFiniteNumber(bloomSettings.threshold, 0.3)));
+  const bloomResolutionScale = Math.max(0.35, Math.min(1, toFiniteNumber(bloomSettings.resolutionScale, 0.75)));
+
+  next = next
+    .replace(/(    highBloom:\s*\{[\s\S]*?strength:\s*)[-\d.]+/, `$1${bloomStrength}`)
+    .replace(/(    highBloom:\s*\{[\s\S]*?radius:\s*)[-\d.]+/, `$1${bloomRadius}`)
+    .replace(/(    highBloom:\s*\{[\s\S]*?threshold:\s*)[-\d.]+/, `$1${bloomThreshold}`)
+    .replace(/(  bloom:\s*\{[\s\S]*?strength:\s*)[-\d.]+/, `$1${bloomStrength}`)
+    .replace(/(  bloom:\s*\{[\s\S]*?radius:\s*)[-\d.]+/, `$1${bloomRadius}`)
+    .replace(/(  bloom:\s*\{[\s\S]*?threshold:\s*)[-\d.]+/, `$1${bloomThreshold}`)
+    .replace(/(  bloom:\s*\{[\s\S]*?resolutionScale:\s*)[-\d.]+/, `$1${bloomResolutionScale}`);
+
+  const syntaxCheckPath = `${GLOBE_RUNTIME_CONFIG_PATH}.lighting-audit-check.mjs`;
+  try {
+    fs.writeFileSync(syntaxCheckPath, next, 'utf8');
+    const syntaxCheck = spawnSync(process.execPath, ['--check', syntaxCheckPath], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (syntaxCheck.status !== 0) {
+      const detail = String(syntaxCheck.stderr || syntaxCheck.stdout || 'Unknown JavaScript syntax error.').trim();
+      throw new Error(`Lighting state save was rejected before touching production config. ${detail}`);
+    }
+    fs.writeFileSync(GLOBE_RUNTIME_CONFIG_PATH, next, 'utf8');
+  } finally {
+    fs.rmSync(syntaxCheckPath, { force: true });
+  }
+};
+
+const loadStreetViewProfiles = (): any[] => {
+  if (!fs.existsSync(STREET_VIEW_PROFILES_STORE)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(STREET_VIEW_PROFILES_STORE, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const getStreetViewProfile = (listingId: string) =>
+  loadStreetViewProfiles().find((profile) => String(profile?.listingId ?? '') === listingId) ?? null;
+
+const saveStreetViewProfile = (profile: any) => {
+  const listingId = String(profile?.listingId ?? '').trim();
+  const camera = profile?.camera ?? {};
+  const selectedFeatures = profile?.buildingSelection?.geometry?.features;
+  if (!listingId) throw new Error('Street View profile is missing listingId.');
+  if (!Array.isArray(selectedFeatures) || !selectedFeatures.length) {
+    throw new Error('Street View profile must contain at least one selected building footprint.');
+  }
+  for (const key of ['zoom', 'pitch', 'bearing'] as const) {
+    if (!Number.isFinite(Number(camera[key]))) throw new Error(`Street View camera ${key} must be finite.`);
+  }
+  if (!Array.isArray(camera.center) || camera.center.length !== 2 || camera.center.some((value: unknown) => !Number.isFinite(Number(value)))) {
+    throw new Error('Street View camera center must be [longitude, latitude].');
+  }
+
+  const profiles = loadStreetViewProfiles();
+  const saved = {
+    ...profile,
+    id: String(profile?.id || `street-view-${listingId}`),
+    version: 1,
+    listingId,
+    updatedAt: new Date().toISOString(),
+  };
+  const index = profiles.findIndex((candidate) => String(candidate?.listingId ?? '') === listingId);
+  if (index >= 0) profiles[index] = saved;
+  else profiles.push(saved);
+  fs.writeFileSync(STREET_VIEW_PROFILES_STORE, `${JSON.stringify(profiles, null, 2)}\n`, 'utf8');
+  return saved;
 };
 
 const loadManualBorderOverrides = () => {
@@ -2757,6 +2954,151 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/building-verification/evidence')) {
+      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(records));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/building-verification/evidence/save')) {
+      const body = await readJsonBody(req);
+      const evidence = body?.evidence;
+      const listingId = String(evidence?.listingId ?? '').trim();
+      if (!listingId || !evidence?.evaluatedAt || !evidence?.providerSnapshot) {
+        res.statusCode = 400;
+        res.end('Missing building verification evidence.');
+        return;
+      }
+      const listings = loadListingsFromDisk();
+      const listing = listings.find((item: any) => item.id === listingId);
+      if (!listingAllowsPreciseBuildingLookup(listing)) {
+        res.statusCode = 403;
+        res.end('Precise building evidence is disabled for this listing.');
+        return;
+      }
+      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE)
+        .filter((item: any) => !(item.listingId === listingId && item.evaluatedAt === evidence.evaluatedAt));
+      records.push(evidence);
+      const latest = records
+        .sort((a: any, b: any) => String(b.evaluatedAt).localeCompare(String(a.evaluatedAt)))
+        .filter((record: any, index: number, all: any[]) => all.slice(0, index).filter((item: any) => item.listingId === record.listingId).length < 5)
+        .sort((a: any, b: any) => String(a.evaluatedAt).localeCompare(String(b.evaluatedAt)));
+      saveJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE, latest);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: true, evidence }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/building-verification/evidence/review')) {
+      const body = await readJsonBody(req);
+      const listingId = String(body?.listingId ?? '').trim();
+      const disposition = String(body?.disposition ?? '').trim();
+      const allowed = new Set(['accept_recommended_building', 'keep_existing_building', 'move_pin_to_recommended_building', 'mark_location_for_research']);
+      if (!listingId || !allowed.has(disposition)) {
+        res.statusCode = 400;
+        res.end('Invalid building review disposition.');
+        return;
+      }
+      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE);
+      const matching = records
+        .map((item: any, index: number) => ({ item, index }))
+        .filter(({ item }: any) => item.listingId === listingId)
+        .sort((a: any, b: any) => String(b.item.evaluatedAt).localeCompare(String(a.item.evaluatedAt)))[0];
+      if (!matching) {
+        res.statusCode = 404;
+        res.end('No building verification evidence exists for this listing.');
+        return;
+      }
+      records[matching.index] = {
+        ...matching.item,
+        review: { disposition, reviewedAt: new Date().toISOString(), note: String(body?.note ?? '').trim() || undefined },
+      };
+      saveJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE, records);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: true, evidence: records[matching.index] }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/building-footprints/supplemental')) {
+      const body = await readJsonBody(req);
+      const listingId = String(body?.listingId ?? '').trim();
+      const lat = Number(body?.lat);
+      const lng = Number(body?.lng);
+      const radiusMeters = Math.max(20, Math.min(750, Number(body?.radiusMeters) || 250));
+      const maxFeatures = Math.max(1, Math.min(2_000, Number(body?.maxFeatures) || 1_200));
+      const listing = loadListingsFromDisk().find((item: any) => item.id === listingId);
+      if (!listingId || !listingAllowsPreciseBuildingLookup(listing)) {
+        res.statusCode = 403;
+        res.end('Precise supplemental building lookup is disabled for this listing.');
+        return;
+      }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        res.statusCode = 400;
+        res.end('Invalid supplemental building coordinate.');
+        return;
+      }
+      const listingLat = Number(listing?.geopoint?.latitude);
+      const listingLng = Number(listing?.geopoint?.longitude);
+      if (Number.isFinite(listingLat) && Number.isFinite(listingLng)) {
+        const latitudeDeltaMeters = Math.abs(lat - listingLat) * 110_540;
+        const longitudeDeltaMeters = Math.abs(lng - listingLng) * Math.max(1, 111_320 * Math.cos((lat * Math.PI) / 180));
+        if (Math.hypot(latitudeDeltaMeters, longitudeDeltaMeters) > 1_500) {
+          res.statusCode = 400;
+          res.end('Supplemental building lookup must stay near the listing coordinate.');
+          return;
+        }
+      }
+      const payload = await queryMicrosoftBuildingFootprints({
+        lat,
+        lng,
+        radiusMeters,
+        maxFeatures,
+        cacheDirectory: BUILDING_FOOTPRINT_CACHE_DIR,
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.end(JSON.stringify(payload));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/building-address/reverse')) {
+      const body = await readJsonBody(req);
+      const listingId = String(body?.listingId ?? '').trim();
+      const lat = Number(body?.lat);
+      const lng = Number(body?.lng);
+      const listing = loadListingsFromDisk().find((item: any) => item.id === listingId);
+      if (!listingId || !listingAllowsPreciseBuildingLookup(listing)) {
+        res.statusCode = 403;
+        res.end('Precise address resolution is disabled for this listing.');
+        return;
+      }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        res.statusCode = 400;
+        res.end('Invalid reverse-geocode coordinate.');
+        return;
+      }
+      const cacheKey = getBuildingAddressCacheKey(body);
+      const cache = loadJsonArray(BUILDING_ADDRESS_CACHE_STORE);
+      const cached = cache.find((item: any) => item.key === cacheKey);
+      if (cached?.resolution) {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ ...cached.resolution, cached: true }));
+        return;
+      }
+      const resolution = await serverBuildingAddressResolver.resolveDetailed(lat, lng, {
+        listingId,
+        footprintFingerprint: String(body?.footprintFingerprint ?? '').trim() || undefined,
+      });
+      if (resolution.status !== 'provider_error') {
+        cache.push({ key: cacheKey, resolvedAt: new Date().toISOString(), source: 'nominatim', resolution });
+        saveJsonArray(BUILDING_ADDRESS_CACHE_STORE, cache.slice(-5_000));
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(resolution));
+      return;
+    }
+
     if (req.method === 'POST' && req.url.startsWith('/api/admin/globe/hero-arrival/save')) {
       const body = await readJsonBody(req);
       if (!body?.profile) {
@@ -2767,6 +3109,40 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       saveHeroArrivalProfileToDisk(body.profile);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ success: true, path: GLOBE_RUNTIME_CONFIG_PATH }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/globe/lighting-audit/save')) {
+      const body = await readJsonBody(req);
+      if (!body?.state) {
+        res.statusCode = 400;
+        res.end('Missing lighting audit state.');
+        return;
+      }
+      saveLightingAuditStateToDisk(body.state);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: true, path: GLOBE_RUNTIME_CONFIG_PATH }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/street-view/profile')) {
+      const url = new URL(req.url, 'http://localhost');
+      const listingId = String(url.searchParams.get('listingId') ?? '').trim();
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ profile: listingId ? getStreetViewProfile(listingId) : null }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/street-view/profile/save')) {
+      const body = await readJsonBody(req);
+      if (!body?.profile) {
+        res.statusCode = 400;
+        res.end('Missing Street View profile.');
+        return;
+      }
+      const profile = saveStreetViewProfile(body.profile);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: true, profile, path: STREET_VIEW_PROFILES_STORE }));
       return;
     }
 
@@ -3899,6 +4275,7 @@ export default defineConfig(({ mode }) => {
           ignored: [
             '**/data/listings.local.json',
             '**/data/building-assets.local.json',
+            '**/data/building-verification-evidence.local.json',
           ],
         },
       },
@@ -3946,11 +4323,6 @@ export default defineConfig(({ mode }) => {
       }
     };
 });
-
-
-
-
-
 
 
 

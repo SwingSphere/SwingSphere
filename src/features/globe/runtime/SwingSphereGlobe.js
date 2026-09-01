@@ -12,6 +12,8 @@ import { PinManager } from "./PinManager.js";
 import { CameraFocusController, easeByName } from "./CameraFocusController.js";
 import { ExplorerNavigationController } from "./ExplorerNavigationController.js";
 import { ActivityRegionManager } from "./ActivityRegionManager.js";
+import { AdministrativeBoundaryLayer } from "./AdministrativeBoundaryLayer.js";
+import { GeospatialCalibrationLayer } from "./GeospatialCalibrationLayer.js";
 import {
   geographicToLocalPosition,
   localPositionToLonLat,
@@ -28,6 +30,7 @@ const CALLBACK_NAMES = [
   "onCountryGeoJsonDiagnostics",
   "onEventHover",
   "onEventSelect",
+  "onEventLabelActivate",
   "onActivityRegionSelect",
   "onDiscoveryModeChange",
   "onNavigationChange",
@@ -49,8 +52,11 @@ export class SwingSphereGlobe {
     }, {});
     this.events = Array.isArray(options.events) ? options.events : [];
     this.activityRegions = Array.isArray(options.activityRegions) ? options.activityRegions : [];
+    this.clusterRegions = [];
+    this.countryOverviewEvents = [];
     this.activeActivityRegion = null;
     this.directPinsVisible = false;
+    this.countryOverviewVisible = false;
     this.lastNavigationSnapshot = null;
     this.navigationRaycaster = new THREE.Raycaster();
     this.navigationScreenCenter = new THREE.Vector2(0, 0);
@@ -151,6 +157,14 @@ export class SwingSphereGlobe {
         this.countryVectorActivity = new CountryVectorActivityLayer({ renderer: this.renderer, config: this.config });
         await this.countryVectorActivity.mount();
       }
+      if (this.config.administrativeBoundaries?.enabled) {
+        this.administrativeBoundaries = new AdministrativeBoundaryLayer({ renderer: this.renderer, config: this.config });
+        await this.administrativeBoundaries.mount();
+      }
+      if (this.config.geospatialCalibration?.enabled) {
+        this.geospatialCalibration = new GeospatialCalibrationLayer({ renderer: this.renderer, config: this.config });
+        this.geospatialCalibration.mount();
+      }
       if (this.config.landCoastlineAudit?.enabled) {
         const { LandCoastlineAuditLayer } = await import("./LandCoastlineAuditLayer.js");
         this.landCoastlineAudit = new LandCoastlineAuditLayer({ renderer: this.renderer, config: this.config });
@@ -231,6 +245,8 @@ export class SwingSphereGlobe {
         this.countryGeoJsonBorders?.update(elapsed);
         this.countryVectorActivity?.update(elapsed);
         this.countryVectorBorders?.update(elapsed);
+        this.administrativeBoundaries?.update(elapsed);
+        this.geospatialCalibration?.update(elapsed);
         const pinActivity = this.pinManager?.getActivityState?.() ?? {};
         const regionActivity = this.activityRegionManager?.getActivityState?.() ?? {};
         this.renderer.setActivityState({
@@ -302,28 +318,76 @@ export class SwingSphereGlobe {
   updateVisibleEvents(events = []) {
     if (this.disposed) return;
     this.events = Array.isArray(events) ? events : [];
-    this.pinManager?.updateEvents(this.#getActiveRegionEvents());
+    this.countryOverviewVisible = this.events.length > 0;
+    this.#refreshCountryOverviewData();
+    this.pinManager?.updateEvents(this.#getRenderableEvents());
+    this.#syncDiscoveryLayerVisibility();
+  }
+
+  setAdministrativeBoundaryIds(ids = []) {
+    if (this.disposed) return;
+    const activeIds = Array.isArray(ids) ? ids : [];
+    this.administrativeBoundaries?.setActiveIds(activeIds);
+    if (this.config.administrativeBoundaries?.deemphasizeCountryHighlight) {
+      this.countrySelection?.setHighlightVisible(activeIds.length === 0);
+    }
+  }
+
+  setGeospatialCalibrationState({ visible, longitudeOffsetDeg, latitudeOffsetDeg, showAuthoritativeBorders } = {}) {
+    if (this.disposed) return;
+    const alignmentPatch = {};
+    if (Number.isFinite(longitudeOffsetDeg)) alignmentPatch.pinLongitudeOffsetDeg = longitudeOffsetDeg;
+    if (Number.isFinite(latitudeOffsetDeg)) alignmentPatch.pinLatitudeOffsetDeg = latitudeOffsetDeg;
+    if (Object.keys(alignmentPatch).length) deepMerge(this.config, { alignment: alignmentPatch });
+
+    if (typeof visible === "boolean") this.geospatialCalibration?.setVisible(visible);
+    this.geospatialCalibration?.refreshPositions();
+
+    if (Number.isFinite(longitudeOffsetDeg) || Number.isFinite(latitudeOffsetDeg)) {
+      this.countryGeoJsonBorders?.updateAlignment({
+        longitudeOffsetDeg: Number.isFinite(longitudeOffsetDeg) ? longitudeOffsetDeg : undefined,
+        latitudeOffsetDeg: Number.isFinite(latitudeOffsetDeg) ? latitudeOffsetDeg : undefined
+      });
+      const selectedEventId = this.pinManager?.selectedEvent
+        ? String(this.pinManager.selectedEvent.id ?? this.pinManager.selectedEvent.name)
+        : null;
+      this.pinManager?.updateEvents(this.#getRenderableEvents());
+      if (selectedEventId) this.pinManager?.setSelectedEventSilently(selectedEventId);
+      this.activityRegionManager?.updateRegions(this.#getClusterRegions());
+      this.#syncDiscoveryLayerVisibility();
+      this.lastNavigationSnapshot = null;
+    }
+
+    if (typeof showAuthoritativeBorders === "boolean") {
+      this.countryGeoJsonBorders?.setVisible(true);
+      this.countryGeoJsonBorders?.updateStateStyles({ baseOpacity: showAuthoritativeBorders ? 0.72 : 0 });
+      this.countryVectorBorders?.setVisible(!showAuthoritativeBorders);
+      this.countryVectorActivity?.setVisible(!showAuthoritativeBorders);
+      this.administrativeBoundaries?.setVisible(!showAuthoritativeBorders);
+    }
+    this.renderer?.noteInteraction?.();
   }
 
   updateActivityRegions(regions = []) {
     if (this.disposed) return;
     this.activityRegions = Array.isArray(regions) ? regions : [];
-    this.activityRegionManager?.updateRegions(this.activityRegions);
+    this.#refreshCountryOverviewData();
+    this.activityRegionManager?.updateRegions(this.#getClusterRegions());
+    this.pinManager?.updateEvents(this.#getRenderableEvents());
     if (this.activeActivityRegion) {
       const previousRegion = this.activeActivityRegion;
       this.activeActivityRegion = this.activityRegions.find((region) => region.id === previousRegion.id) ?? null;
-      this.pinManager?.updateEvents(this.#getActiveRegionEvents());
       if (!this.activeActivityRegion) {
         // The country/discovery scope changed underneath an active cluster.
         // Reset the runtime-owned disclosure mode instead of leaving stale
         // direct pins visible until React catches up.
         this.directPinsVisible = false;
         this.pinManager?.clearSelection();
-        this.pinManager?.setVisible(false);
-        this.activityRegionManager?.setVisible(true);
+        this.#syncDiscoveryLayerVisibility();
         this.callbacks.onDiscoveryModeChange?.(null);
       }
     }
+    this.#syncDiscoveryLayerVisibility();
   }
 
   updateAtmosphereConfig(atmosphereConfig = {}) {
@@ -344,9 +408,10 @@ export class SwingSphereGlobe {
     });
     this.atmosphere?.updatePresentationConfig(this.config.presentation);
     if (this.cameraFocus) this.cameraFocus.defaultCameraFov = this.config.renderer.cameraFov;
-    this.pinManager?.updateEvents(this.#getActiveRegionEvents());
+    this.pinManager?.updateEvents(this.#getRenderableEvents());
     if (selectedEventId) this.pinManager?.setSelectedEventSilently(selectedEventId);
-    this.activityRegionManager?.updateRegions(this.activityRegions);
+    this.activityRegionManager?.updateRegions(this.#getClusterRegions());
+    this.#syncDiscoveryLayerVisibility();
     this.countrySelection?.markDirty();
     this.lastNavigationSnapshot = null;
     this.#emitNavigationChange();
@@ -403,8 +468,9 @@ export class SwingSphereGlobe {
     const selectedEventId = this.pinManager?.selectedEvent
       ? String(this.pinManager.selectedEvent.id ?? this.pinManager.selectedEvent.name)
       : null;
-    this.pinManager?.updateEvents(this.#getActiveRegionEvents());
+    this.pinManager?.updateEvents(this.#getRenderableEvents());
     if (selectedEventId) this.pinManager?.setSelectedEventSilently(selectedEventId);
+    this.#syncDiscoveryLayerVisibility();
     this.#updateCameraTargetDebugMarker(this.pinManager?.selectedEvent ?? null);
   }
 
@@ -892,6 +958,8 @@ export class SwingSphereGlobe {
     this.countryGeoJsonBorders?.dispose();
     this.countryVectorActivity?.dispose();
     this.countryVectorBorders?.dispose();
+    this.administrativeBoundaries?.dispose();
+    this.geospatialCalibration?.dispose();
     this.landCoastlineAudit?.dispose();
     this.hybridBorderAudit?.dispose();
     this.activityRegionManager?.dispose();
@@ -1005,15 +1073,16 @@ export class SwingSphereGlobe {
     this.setCountryDiscoveryEmphasis(false);
     this.activeActivityRegion = null;
     this.directPinsVisible = false;
+    this.countryOverviewVisible = false;
     this.#clearCountrySelection();
     if (preserveSelection) {
       this.pinManager.setVisible(true);
       this.activityRegionManager.setVisible(false);
     } else {
       this.pinManager.clearSelection();
-      this.pinManager.updateEvents(this.events);
+      this.pinManager.updateEvents([]);
       this.pinManager.setVisible(false);
-      this.activityRegionManager.setVisible(true);
+      this.activityRegionManager.setVisible(false);
     }
     this.callbacks.onDiscoveryModeChange?.(null);
   }
@@ -1030,6 +1099,44 @@ export class SwingSphereGlobe {
     if (!this.activeActivityRegion) return this.events;
     const listingIds = new Set(this.activeActivityRegion.listingIds?.map(String) ?? []);
     return this.events.filter((event) => listingIds.has(String(event.listingId ?? event.id)));
+  }
+
+  #refreshCountryOverviewData() {
+    this.clusterRegions = this.activityRegions.filter((region) => (region.listingIds?.length ?? 0) > 1);
+    const singletonListingIds = new Set(
+      this.activityRegions
+        .filter((region) => region.listingIds?.length === 1)
+        .flatMap((region) => region.listingIds.map(String))
+    );
+    this.countryOverviewEvents = this.events.filter((event) =>
+      singletonListingIds.has(String(event.listingId ?? event.id))
+    );
+  }
+
+  #getClusterRegions() {
+    return this.clusterRegions;
+  }
+
+  #getCountryOverviewEvents() {
+    return this.countryOverviewEvents;
+  }
+
+  #getRenderableEvents() {
+    return this.activeActivityRegion
+      ? this.#getActiveRegionEvents()
+      : this.countryOverviewVisible
+        ? this.#getCountryOverviewEvents()
+        : [];
+  }
+
+  #syncDiscoveryLayerVisibility() {
+    if (!this.pinManager || !this.activityRegionManager) return;
+    const hasSelection = Boolean(this.pinManager.selectedEvent);
+    const showOverview = this.countryOverviewVisible && !this.activeActivityRegion && !hasSelection;
+    const showPins = this.directPinsVisible || hasSelection || (showOverview && this.#getCountryOverviewEvents().length > 0);
+    const showClusters = showOverview && this.#getClusterRegions().length > 0;
+    this.pinManager.setVisible(showPins);
+    this.activityRegionManager.setVisible(showClusters);
   }
 
   #findEvent(eventId) {
@@ -1211,13 +1318,10 @@ export class SwingSphereGlobe {
   #updateProgressiveDisclosure() {
     if (!this.pinManager || !this.activityRegionManager) return;
     if (!this.activeActivityRegion) {
-      // A programmatic selection may not belong to an activity region (the
-      // landing showcase is intentionally region-free). Keep its shared pin
-      // and DOM label path alive for the duration of that focus.
-      const hasDirectEventSelection = Boolean(this.pinManager.selectedEvent);
-      const showDirectPins = this.directPinsVisible || hasDirectEventSelection;
-      this.pinManager.setVisible(showDirectPins);
-      this.activityRegionManager.setVisible(!showDirectPins);
+      // Country overview can show singleton listing markers and genuine
+      // multi-listing discovery clusters at the same time. A beacon never
+      // stands in for a single listing.
+      this.#syncDiscoveryLayerVisibility();
       return;
     }
     if (this.navigationController.isFocusActive()) return;

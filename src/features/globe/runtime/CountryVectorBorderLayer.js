@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
-import { wgs84ToRenderedGlobeLocal } from "./math/geoProjection.js";
+import { renderedGlobeLocalToWgs84, wgs84ToRenderedGlobeLocal } from "./math/geoProjection.js";
 import { resolveLandSurfaceAnchorFromDirection } from "./math/surfaceAnchoring.js";
 import { loadJsonAsset } from "./jsonAssetCache.js";
 
@@ -78,6 +78,11 @@ export class CountryVectorBorderLayer {
     this.surfaceCandidate = new THREE.Vector3();
     this.edgeCounts = new Map();
     this.shorelinePaths = [];
+    this.experimentalPhysicalCoastlineSnap = this.options.experimentalPhysicalCoastlineSnap === true;
+    this.shorelineSnapExcludedCountryKeys = this.experimentalPhysicalCoastlineSnap
+      ? normalizeCountryKeys(this.options.shorelineSnapExcludedCountryKeys ?? [])
+      : new Set();
+    this.physicalCoastlineAssetVersion = null;
     this.diagnostics = createEmptyDiagnostics();
     this.updateDiagnostics = createEmptyUpdateDiagnostics();
     this.group.visible = this.enabled;
@@ -89,7 +94,18 @@ export class CountryVectorBorderLayer {
     const data = await loadJsonAsset(url);
     const features = data?.features ?? [];
     this.edgeCounts = buildGeoJsonEdgeCounts(features);
-    this.shorelinePaths = buildLandShorelinePaths(this.renderer.landHitMesh?.geometry);
+    if (this.experimentalPhysicalCoastlineSnap) {
+      const physicalCoastlineAsset = await loadJsonAsset(
+        this.options.physicalCoastlineUrl ?? "/assets/globe/coastlines/physical-coastlines-v1.json"
+      ).catch((error) => {
+        console.warn("[SwingSphere physical coastline]", error);
+        return null;
+      });
+      this.physicalCoastlineAssetVersion = physicalCoastlineAsset?.version ?? null;
+      this.shorelinePaths = buildPhysicalCoastlineRenderPaths(physicalCoastlineAsset, this.config);
+    } else {
+      this.shorelinePaths = buildLandShorelinePaths(this.renderer.landHitMesh?.geometry);
+    }
     for (const feature of features) {
       for (const key of featureKeys(feature)) {
         if (!this.featuresByKey.has(key)) this.featuresByKey.set(key, feature);
@@ -342,10 +358,21 @@ export class CountryVectorBorderLayer {
     const maxRadialOutlier = Math.max(0.002, Number(this.options.maxRadialOutlier ?? this.renderer.globeRadius * 0.018));
     const maxSegmentDegrees = Math.max(0.15, Number(this.options.maxSegmentDegrees ?? 0.8));
     const useHybridSegmentTreatment = Boolean(source.asset);
+    const featureCountryKeys = featureKeys(feature);
+    const hybridShorelineSnapEnabled = this.experimentalPhysicalCoastlineSnap
+      && shorelineSnap
+      && this.shorelinePaths.length > 0
+      && !featureCountryKeys.some((key) => this.shorelineSnapExcludedCountryKeys.has(key));
     for (const segment of segments) {
-      const coordinates = useHybridSegmentTreatment
+      const baseCoordinates = useHybridSegmentTreatment
         ? boundarySegmentControlCoordinates(segment)
         : densifyBoundarySegment(segment, maxSegmentDegrees);
+      const sourceCoordinates = useHybridSegmentTreatment && this.experimentalPhysicalCoastlineSnap
+        ? compensateHybridCoastlineControls(baseCoordinates, this.config)
+        : baseCoordinates;
+      const coordinates = useHybridSegmentTreatment && hybridShorelineSnapEnabled
+        ? snapHybridCoastlineControlsToPhysical(sourceCoordinates, this.shorelinePaths, this.config, maxShorelineSnapDegrees)
+        : sourceCoordinates;
       if (coordinates.length < 2) continue;
       const boundaryPoints = buildShorelineConformedBoundary({
         coordinates,
@@ -364,6 +391,7 @@ export class CountryVectorBorderLayer {
           direction,
           originalDirection,
           snapped: Boolean(point.surfacePosition),
+          physicalCoastline: Boolean(point.physicalCoastline),
           coastalToNext: Boolean(point.coastalToNext)
         };
       });
@@ -864,10 +892,12 @@ function hybridAssetToBoundarySegments(asset, sourceMode) {
     const points = [];
     for (const segment of ring.segments ?? []) {
       const coordinates = segment.coordinates ?? [];
+      const coastlinePathId = segment.kind === "coastline" ? (segment.sourcePathId ?? null) : null;
       for (let index = 0; index < coordinates.length - 1; index += 1) {
         points.push({
           coordinate: coordinates[index],
-          coastalToNext: segment.kind === "coastline"
+          coastalToNext: segment.kind === "coastline",
+          coastlinePathIdToNext: coastlinePathId
         });
       }
     }
@@ -879,17 +909,122 @@ function hybridAssetToBoundarySegments(asset, sourceMode) {
 }
 
 function boundarySegmentControlCoordinates(segment) {
-  return segment.map(({ coordinate, coastal, coastalToNext }) => ({
+  return segment.map(({ coordinate, coastal, coastalToNext, coastlinePathIdToNext }) => ({
     lon: coordinate[0],
     lat: coordinate[1],
     coastal: Boolean(coastal),
-    coastalToNext: Boolean(coastalToNext)
+    coastalToNext: Boolean(coastalToNext),
+    coastlinePathIdToNext: coastlinePathIdToNext ?? null
   }));
+}
+
+export function buildPhysicalCoastlineRenderPaths(asset, config) {
+  return (asset?.paths ?? []).map((path) => {
+    const source = (path.simplifiedCoordinates ?? [])
+      .map((coordinate, index, coordinates) => ({
+        lon: Number(coordinate?.[0]),
+        lat: Number(coordinate?.[1]),
+        coastal: true,
+        coastalToNext: index < coordinates.length - 1
+      }))
+      .filter((control) => Number.isFinite(control.lon) && Number.isFinite(control.lat));
+    const compensated = compensateHybridCoastlineControls(source, config);
+    const points = compensated.map((control) =>
+      wgs84ToRenderedGlobeLocal(control.lon, control.lat, 1, config).normalize()
+    );
+    return {
+      id: path.id ?? null,
+      closed: path.closed !== false,
+      points,
+      directions: points
+    };
+  }).filter((path) => path.points.length >= 2);
+}
+
+export function snapHybridCoastlineControlsToPhysical(controls, shorelinePaths, config, maxSnapDegrees = 5) {
+  if (!Array.isArray(controls) || controls.length < 2 || !shorelinePaths?.length) return controls;
+  const normalized = controls.map((control, index) => ({
+    ...control,
+    coastal: Boolean(control.coastal || control.coastalToNext || controls[index - 1]?.coastalToNext),
+    coastlinePathIdToNext: control.coastlinePathIdToNext ?? null
+  }));
+  const snapped = buildShorelineConformedBoundary({
+    coordinates: normalized,
+    shorelinePaths,
+    config,
+    maxSnapDegrees,
+    strictPhysicalMatch: true
+  });
+  return snapped.map((point) => {
+    const geo = renderedGlobeLocalToWgs84(point.direction, config);
+    return {
+      lon: geo.lng,
+      lat: geo.lat,
+      coastal: Boolean(point.surfacePosition || point.coastalToNext),
+      coastalToNext: Boolean(point.coastalToNext),
+      physicalCoastline: Boolean(point.physicalCoastline)
+    };
+  });
+}
+
+export function compensateHybridCoastlineControls(controls, config) {
+  if (!Array.isArray(controls) || controls.length < 2) return controls;
+  const alignment = config?.alignment ?? {};
+  const longitudeSign = Number(alignment.pinLongitudeSign ?? -1) || -1;
+  const latitudeSign = Number(alignment.pinLatitudeSign ?? 1) || 1;
+  const longitudeOffset = Number(alignment.pinLongitudeOffsetDeg ?? 0);
+  const latitudeOffset = Number(alignment.pinLatitudeOffsetDeg ?? 0);
+  if (Math.abs(longitudeOffset) < 1e-9 && Math.abs(latitudeOffset) < 1e-9) return controls;
+
+  const isClosed = controls.length > 2
+    && Math.abs(controls[0].lon - controls[controls.length - 1].lon) < 1e-8
+    && Math.abs(controls[0].lat - controls[controls.length - 1].lat) < 1e-8;
+  const lastEdgeIndex = Math.max(0, controls.length - 2);
+  return controls.map((control, index) => {
+    const previousIndex = index > 0 ? index - 1 : isClosed ? lastEdgeIndex : -1;
+    const incomingCoastal = previousIndex >= 0 && Boolean(controls[previousIndex]?.coastalToNext);
+    const touchesPhysicalCoast = Boolean(control.coastal || control.coastalToNext || incomingCoastal);
+    if (!touchesPhysicalCoast) return control;
+    return {
+      ...control,
+      // Hybrid coastline coordinates were authored from land.glb in the pre-calibration
+      // visual frame. Counteract the WGS84 alignment offset only for coastline controls
+      // so the existing Border Surgery shoreline work stays on the physical mesh.
+      lon: wrapLongitude(control.lon - longitudeOffset / longitudeSign),
+      lat: THREE.MathUtils.clamp(control.lat - latitudeOffset / latitudeSign, -90, 90)
+    };
+  });
+}
+
+function densifyNormalizedPath(points, closed, maxStepDegrees) {
+  if (!Array.isArray(points) || points.length < 2) return points ?? [];
+  const explicitlyClosed = points[0].angleTo(points[points.length - 1]) < 1e-8;
+  const unique = explicitlyClosed ? points.slice(0, -1) : points.slice();
+  if (unique.length < 2) return points.slice();
+  const maxStepRadians = THREE.MathUtils.degToRad(Math.max(0.02, maxStepDegrees));
+  const result = [unique[0].clone().normalize()];
+  const segmentCount = closed ? unique.length : unique.length - 1;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const start = unique[index].clone().normalize();
+    const end = unique[(index + 1) % unique.length].clone().normalize();
+    const angle = angleBetween(start, end);
+    const divisions = Math.max(1, Math.ceil(angle / maxStepRadians));
+    for (let step = 1; step <= divisions; step += 1) {
+      if (closed && index === segmentCount - 1 && step === divisions) {
+        result.push(result[0].clone());
+        continue;
+      }
+      const t = step / divisions;
+      result.push(start.clone().lerp(end, t).normalize());
+    }
+  }
+  return result;
 }
 
 function appendStraightPreservingSegment(result, start, end) {
   const stepDegrees = THREE.MathUtils.radToDeg(angleBetween(start.direction, end.direction));
   const divisions = Math.max(1, Math.ceil(stepDegrees / STRAIGHT_PRESERVING_COASTLINE_STEP_DEGREES));
+  const preservePhysicalChord = Boolean(start.physicalCoastline && end.physicalCoastline);
   const startRadius = start.position.length();
   const endRadius = end.position.length();
   for (let step = 1; step <= divisions; step += 1) {
@@ -899,10 +1034,14 @@ function appendStraightPreservingSegment(result, start, end) {
       continue;
     }
     const interpolated = interpolateBoundaryPoint(start, end, t);
-    const radius = THREE.MathUtils.lerp(startRadius, endRadius, t);
+    const position = preservePhysicalChord
+      ? start.position.clone().lerp(end.position, t)
+      : interpolated.direction.clone().multiplyScalar(THREE.MathUtils.lerp(startRadius, endRadius, t));
     result.push({
       ...interpolated,
-      position: interpolated.direction.clone().multiplyScalar(radius),
+      direction: position.clone().normalize(),
+      position,
+      physicalCoastline: preservePhysicalChord,
       coastalToNext: true,
       breakBefore: false
     });
@@ -926,6 +1065,7 @@ function regularizeCoastalControlRadii(points) {
       const next = previousPass[(index + 1) % uniqueCount];
       const incomingCoastal = Boolean(previous.coastalToNext);
       const outgoingCoastal = Boolean(point.coastalToNext);
+      if (point.physicalCoastline || previous.physicalCoastline || next.physicalCoastline) return point;
       if (!incomingCoastal || !outgoingCoastal) return point;
       const previousSpan = angleBetween(previous.direction, point.direction);
       const nextSpan = angleBetween(point.direction, next.direction);
@@ -1058,7 +1198,7 @@ function buildLandShorelinePaths(geometry) {
   return paths;
 }
 
-function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, maxSnapDegrees }) {
+function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, maxSnapDegrees, strictPhysicalMatch = false }) {
   const source = coordinates.map((point) => ({
     ...point,
     originalDirection: wgs84ToRenderedGlobeLocal(point.lon, point.lat, 1, config).normalize()
@@ -1068,6 +1208,7 @@ function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, 
       direction: point.originalDirection.clone(),
       originalDirection: point.originalDirection.clone(),
       surfacePosition: null,
+      physicalCoastline: false,
       coastalToNext: Boolean(point.coastalToNext)
     }));
   }
@@ -1080,6 +1221,7 @@ function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, 
         direction: source[index].originalDirection.clone(),
         originalDirection: source[index].originalDirection.clone(),
         surfacePosition: null,
+        physicalCoastline: false,
         coastalToNext: Boolean(source[index].coastalToNext)
       });
       index += 1;
@@ -1089,16 +1231,24 @@ function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, 
     let end = index + 1;
     while (end < source.length && source[end].coastal) end += 1;
     const run = source.slice(index, end);
-    const arc = findBestShorelineArc(run, shorelinePaths, maxSnapDegrees);
+    const pathIds = [...new Set(
+      run.map((point) => point.coastlinePathIdToNext).filter((value) => typeof value === "string" && value.length)
+    )];
+    const preferredPathIds = pathIds.length === 1 ? new Set(pathIds) : null;
+    const arc = findBestShorelineArc(run, shorelinePaths, maxSnapDegrees, strictPhysicalMatch, preferredPathIds);
     if (arc?.length >= 2) {
-      for (const position of arc) {
+      for (let arcIndex = 0; arcIndex < arc.length; arcIndex += 1) {
+        const position = arc[arcIndex];
         const direction = position.clone().normalize();
         const nearestSource = findNearestSourceDirection(direction, run);
         result.push({
           direction,
           originalDirection: nearestSource.clone(),
           surfacePosition: position.clone(),
-          coastalToNext: true
+          physicalCoastline: strictPhysicalMatch,
+          coastalToNext: strictPhysicalMatch
+            ? (arcIndex < arc.length - 1 ? true : Boolean(run.at(-1)?.coastalToNext))
+            : true
         });
       }
     } else {
@@ -1107,6 +1257,7 @@ function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, 
           direction: point.originalDirection.clone(),
           originalDirection: point.originalDirection.clone(),
           surfacePosition: null,
+          physicalCoastline: false,
           coastalToNext: Boolean(point.coastalToNext)
         });
       }
@@ -1116,39 +1267,131 @@ function buildShorelineConformedBoundary({ coordinates, shorelinePaths, config, 
   return dedupeBoundaryPoints(result);
 }
 
-function findBestShorelineArc(run, shorelinePaths, maxSnapDegrees) {
+function findBestShorelineArc(run, shorelinePaths, maxSnapDegrees, strictPhysicalMatch = false, preferredPathIds = null) {
   if (run.length < 2) return null;
   const start = run[0].originalDirection;
   const end = run[run.length - 1].originalDirection;
+  const sourceDirections = run.map((point) => point.originalDirection);
   const midpoint = run[Math.floor(run.length / 2)].originalDirection;
   const maxAngle = THREE.MathUtils.degToRad(maxSnapDegrees);
-  const sourceLength = angularPathLength(run.map((point) => point.originalDirection));
+  const sourceLength = angularPathLength(sourceDirections);
   let best = null;
   let bestScore = Infinity;
 
   for (const path of shorelinePaths) {
-    const directions = path.points.map((point) => point.clone().normalize());
-    const startIndex = nearestDirectionIndex(start, directions);
-    const endIndex = nearestDirectionIndex(end, directions);
-    const startAngle = angleBetween(start, directions[startIndex]);
-    const endAngle = angleBetween(end, directions[endIndex]);
-    if (startAngle > maxAngle || endAngle > maxAngle) continue;
+    if (preferredPathIds?.size && !preferredPathIds.has(path.id)) continue;
 
-    const candidates = buildPathArcs(path.points, startIndex, endIndex, path.closed);
+    let candidates;
+    let startAngle;
+    let endAngle;
+    if (strictPhysicalMatch) {
+      const startMatch = nearestPointOnPathSegments(start, path.points, path.closed);
+      const endMatch = nearestPointOnPathSegments(end, path.points, path.closed);
+      if (!startMatch || !endMatch) continue;
+      startAngle = startMatch.angle;
+      endAngle = endMatch.angle;
+      if (startAngle > maxAngle || endAngle > maxAngle) continue;
+      candidates = buildProjectedPathArcs(path.points, startMatch, endMatch, path.closed);
+    } else {
+      const directions = path.directions ?? path.points.map((point) => point.clone().normalize());
+      const startIndex = nearestDirectionIndex(start, directions);
+      const endIndex = nearestDirectionIndex(end, directions);
+      startAngle = angleBetween(start, directions[startIndex]);
+      endAngle = angleBetween(end, directions[endIndex]);
+      if (startAngle > maxAngle || endAngle > maxAngle) continue;
+      candidates = buildPathArcs(path.points, startIndex, endIndex, path.closed);
+    }
+
     for (const arc of candidates) {
       if (arc.length < 2) continue;
       const arcDirections = arc.map((point) => point.clone().normalize());
-      const midpointAngle = nearestDirectionAngle(midpoint, arcDirections);
+      const midpointAngle = strictPhysicalMatch
+        ? nearestPolylineAngle(midpoint, arcDirections)
+        : nearestDirectionAngle(midpoint, arcDirections);
       if (midpointAngle > maxAngle * 1.6) continue;
       const arcLength = angularPathLength(arcDirections);
       const lengthPenalty = Math.abs(arcLength - sourceLength) / Math.max(sourceLength, 1e-4);
-      const score = startAngle + endAngle + midpointAngle * 0.8 + lengthPenalty * 0.08;
+      let score = startAngle + endAngle + midpointAngle * 0.8 + lengthPenalty * 0.08;
+      if (strictPhysicalMatch) {
+        const sourceDistances = sourceDirections.map((direction) => nearestPolylineAngle(direction, arcDirections));
+        const arcDistances = arcDirections.map((direction) => nearestPolylineAngle(direction, sourceDirections));
+        const maximumSourceToArc = Math.max(...sourceDistances);
+        const maximumArcToSource = Math.max(...arcDistances);
+        if (maximumSourceToArc > maxAngle * 2.4 || maximumArcToSource > maxAngle * 2.4) continue;
+        const averageSourceToArc = sourceDistances.reduce((sum, value) => sum + value, 0) / sourceDistances.length;
+        const averageArcToSource = arcDistances.reduce((sum, value) => sum + value, 0) / arcDistances.length;
+        score = startAngle + endAngle
+          + midpointAngle * 0.8
+          + averageSourceToArc * 1.2
+          + averageArcToSource * 0.75
+          + lengthPenalty * 0.55;
+      }
       if (score >= bestScore) continue;
       bestScore = score;
       best = arc;
     }
   }
   return best;
+}
+
+function nearestPointOnPathSegments(direction, points, closed) {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  const explicitlyClosed = points[0].distanceToSquared(points[points.length - 1]) < 1e-10;
+  const unique = explicitlyClosed ? points.slice(0, -1) : points;
+  const segmentCount = closed ? unique.length : unique.length - 1;
+  let best = null;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const a = unique[index];
+    const b = unique[(index + 1) % unique.length];
+    const ab = b.clone().sub(a);
+    const denominator = ab.lengthSq();
+    if (denominator < 1e-12) continue;
+    const t = THREE.MathUtils.clamp(direction.clone().sub(a).dot(ab) / denominator, 0, 1);
+    const point = a.clone().lerp(b, t).normalize();
+    const angle = angleBetween(direction, point);
+    if (best && angle >= best.angle) continue;
+    best = { segmentIndex: index, t, point, angle };
+  }
+  return best;
+}
+
+function buildProjectedPathArcs(points, startMatch, endMatch, closed) {
+  const explicitlyClosed = points[0].distanceToSquared(points[points.length - 1]) < 1e-10;
+  const unique = explicitlyClosed ? points.slice(0, -1) : points.slice();
+  if (unique.length < 2) return [];
+  const startPoint = startMatch.point.clone();
+  const endPoint = endMatch.point.clone();
+  const inserts = new Map();
+  const addInsert = (segmentIndex, entry) => {
+    const entries = inserts.get(segmentIndex) ?? [];
+    entries.push(entry);
+    inserts.set(segmentIndex, entries);
+  };
+  addInsert(startMatch.segmentIndex, { t: startMatch.t, point: startPoint, kind: "start" });
+  addInsert(endMatch.segmentIndex, { t: endMatch.t, point: endPoint, kind: "end" });
+
+  const expanded = [];
+  let startIndex = -1;
+  let endIndex = -1;
+  const segmentCount = closed ? unique.length : unique.length - 1;
+  for (let index = 0; index < unique.length; index += 1) {
+    expanded.push(unique[index]);
+    if (index >= segmentCount) continue;
+    const entries = (inserts.get(index) ?? []).sort((a, b) => a.t - b.t);
+    for (const entry of entries) {
+      expanded.push(entry.point);
+      if (entry.kind === "start") startIndex = expanded.length - 1;
+      if (entry.kind === "end") endIndex = expanded.length - 1;
+    }
+  }
+  if (startIndex < 0 || endIndex < 0) return [];
+  return buildPathArcs(expanded, startIndex, endIndex, closed);
+}
+
+function nearestPolylineAngle(direction, points) {
+  if (!Array.isArray(points) || points.length < 2) return Math.PI;
+  const match = nearestPointOnPathSegments(direction, points, false);
+  return match?.angle ?? Math.PI;
 }
 
 function buildPathArcs(points, startIndex, endIndex, closed) {

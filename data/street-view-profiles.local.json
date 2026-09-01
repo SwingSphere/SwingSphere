@@ -1,0 +1,144 @@
+[
+  {
+    "id": "street-view-club-twist-sf",
+    "version": 1,
+    "listingId": "club-twist-sf",
+    "venueName": "Twist SF",
+    "address": "387 Bay Street, San Francisco, CA 94133",
+    "camera": {
+      "center": [
+        -122.41332608919878,
+        37.805453078123904
+      ],
+      "zoom": 17.95,
+      "pitch": 79.25000000000001,
+      "bearing": 135.23000000000002
+    },
+    "visual": {
+      "skyColor": "#22191f",
+      "horizonColor": "#d86e72",
+      "hazeStrength": 0.46,
+      "buildingColor": "#b8b0ae",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#f2e7e2",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "13581200"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "13581200",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -122.41347670555115,
+                    37.805558386307254
+                  ],
+                  [
+                    -122.41333186626434,
+                    37.805575339916544
+                  ],
+                  [
+                    -122.41332113742828,
+                    37.805566863112375
+                  ],
+                  [
+                    -122.4132889509201,
+                    37.80540580364847
+                  ],
+                  [
+                    -122.41331577301025,
+                    37.805397326824874
+                  ],
+                  [
+                    -122.41327822208405,
+                    37.805236266991216
+                  ],
+                  [
+                    -122.41340160369873,
+                    37.80521931330409
+                  ],
+                  [
+                    -122.41347670555115,
+                    37.805558386307254
+                  ]
+                ]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "asset:1",
+            "properties": {
+              "selectionId": "asset:1",
+              "providerId": "13581200",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -122.4132889509201,
+                    37.80540580364847
+                  ],
+                  [
+                    -122.41332113742828,
+                    37.805566863112375
+                  ],
+                  [
+                    -122.41324067115784,
+                    37.80557957831826
+                  ],
+                  [
+                    -122.41320848464966,
+                    37.805414280471126
+                  ],
+                  [
+                    -122.4132889509201,
+                    37.80540580364847
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-08-16T07:59:19.173Z"
+  }
+]

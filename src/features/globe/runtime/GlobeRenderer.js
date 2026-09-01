@@ -52,6 +52,7 @@ export class GlobeRenderer {
       radius: config.quality?.highBloom?.radius ?? config.bloom.radius,
       threshold: config.quality?.highBloom?.threshold ?? config.bloom.threshold
     };
+    this.bloomResolutionScale = THREE.MathUtils.clamp(Number(config.bloom?.resolutionScale ?? 1), 0.35, 1);
     this.lights = {};
     this.visualIdleMotion = {
       landSpeed: config.idleMotion.idleRotationSpeed,
@@ -108,18 +109,44 @@ export class GlobeRenderer {
     this.camera.near = this.config.renderer.cameraNear;
     this.camera.far = this.config.renderer.cameraFar;
     this.controls.minDistance = camera.minDistanceWorld;
-    this.controls.maxDistance = camera.maxDistanceWorld;
+    const configuredWorldDistance = Number(camera.defaultDistanceWorld) || 8;
+    const fittedWorldDistance = this.config.renderer?.fitWorldToViewport
+      ? this.#resolveViewportFitDistance(this.config.renderer.worldViewportFill)
+      : configuredWorldDistance;
+    const worldDistance = Math.max(configuredWorldDistance, fittedWorldDistance);
+    this.controls.maxDistance = Math.max(camera.maxDistanceWorld, worldDistance * 1.08);
+    if (this.config.renderer?.fitWorldToViewport) {
+      this.config.progressiveDisclosure.worldDistance = worldDistance;
+    }
     if (frameWorld) {
       this.globe.getWorldPosition(this.tmpPresentationCenter);
       this.tmpPresentationDirection.copy(this.camera.position).sub(this.controls.target).normalize();
       if (this.tmpPresentationDirection.lengthSq() < 0.0001) this.tmpPresentationDirection.set(0, 0, 1);
       this.controls.target.copy(this.tmpPresentationCenter);
       this.camera.position.copy(this.tmpPresentationCenter)
-        .addScaledVector(this.tmpPresentationDirection, camera.defaultDistanceWorld);
+        .addScaledVector(this.tmpPresentationDirection, worldDistance);
     }
     this.camera.updateProjectionMatrix();
     this.controls.update();
     this.noteInteraction();
+  }
+
+  #resolveViewportFitDistance(fill = 0.82) {
+    const safeFill = THREE.MathUtils.clamp(Number(fill) || 0.82, 0.55, 0.94);
+    const verticalHalfFov = THREE.MathUtils.degToRad(this.camera.fov) * 0.5;
+    const horizontalHalfFov = Math.atan(
+      Math.tan(verticalHalfFov) * Math.max(this.camera.aspect || 1, 0.05)
+    );
+    const limitingHalfFov = Math.max(0.001, Math.min(verticalHalfFov, horizontalHalfFov));
+    const targetAngularRadius = Math.atan(Math.tan(limitingHalfFov) * safeFill);
+
+    this.globe.updateWorldMatrix(true, true);
+    const bounds = new THREE.Box3();
+    if (this.oceanMesh) bounds.expandByObject(this.oceanMesh);
+    if (this.visibleLandMesh) bounds.expandByObject(this.visibleLandMesh);
+    const sphere = bounds.isEmpty() ? null : bounds.getBoundingSphere(new THREE.Sphere());
+    const renderedRadius = sphere?.radius || this.presentationRadius || this.globeRadius || 1;
+    return renderedRadius / Math.max(Math.sin(targetAngularRadius), 0.001);
   }
 
   setQualityTier(tier = "high") {
@@ -129,21 +156,59 @@ export class GlobeRenderer {
     const cap = normalizedTier === "high" ? 1.5 : normalizedTier === "balanced" ? 1.25 : 1;
     this.config.renderer.maxPixelRatio = cap;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
-    if (normalizedTier === "low") {
-      this.bloomPass.enabled = false;
-    } else {
-      const multiplier = normalizedTier === "balanced" ? 0.54 : 1;
-      this.bloomPass.enabled = this.fullBloomConfig.strength > 0;
-      this.bloomPass.strength = this.fullBloomConfig.strength * multiplier;
-      this.bloomPass.radius = normalizedTier === "balanced"
-        ? Math.min(this.fullBloomConfig.radius, 0.28)
-        : this.fullBloomConfig.radius;
-      this.bloomPass.threshold = normalizedTier === "balanced"
-        ? Math.max(this.fullBloomConfig.threshold, 0.36)
-        : this.fullBloomConfig.threshold;
-    }
+    this.#applyBloomSettingsForQuality();
     this.resize();
     this.noteInteraction();
+  }
+
+  setBloomSettings(settings = {}) {
+    const wasEnabled = Boolean(this.bloomPass?.enabled);
+    const strength = Number(settings.strength);
+    const radius = Number(settings.radius);
+    const threshold = Number(settings.threshold);
+    const resolutionScale = Number(settings.resolutionScale);
+
+    if (Number.isFinite(strength)) this.fullBloomConfig.strength = THREE.MathUtils.clamp(strength, 0, 4);
+    if (Number.isFinite(radius)) this.fullBloomConfig.radius = THREE.MathUtils.clamp(radius, 0, 1);
+    if (Number.isFinite(threshold)) this.fullBloomConfig.threshold = THREE.MathUtils.clamp(threshold, 0, 1);
+    if (Number.isFinite(resolutionScale)) {
+      this.bloomResolutionScale = THREE.MathUtils.clamp(resolutionScale, 0.35, 1);
+    }
+
+    Object.assign(this.config.bloom, {
+      strength: this.fullBloomConfig.strength,
+      radius: this.fullBloomConfig.radius,
+      threshold: this.fullBloomConfig.threshold,
+      resolutionScale: this.bloomResolutionScale
+    });
+    if (this.config.quality?.highBloom) {
+      Object.assign(this.config.quality.highBloom, {
+        strength: this.fullBloomConfig.strength,
+        radius: this.fullBloomConfig.radius,
+        threshold: this.fullBloomConfig.threshold
+      });
+    }
+
+    this.#applyBloomSettingsForQuality();
+    if (this.qualityTier !== "low") this.bloomPass.enabled = wasEnabled;
+    this.#resizeBloomPass();
+    this.noteInteraction();
+  }
+
+  #applyBloomSettingsForQuality() {
+    if (this.qualityTier === "low") {
+      this.bloomPass.enabled = false;
+      return;
+    }
+    const multiplier = this.qualityTier === "balanced" ? 0.54 : 1;
+    this.bloomPass.enabled = this.config.renderEffects?.bloom !== false && this.fullBloomConfig.strength > 0;
+    this.bloomPass.strength = this.fullBloomConfig.strength * multiplier;
+    this.bloomPass.radius = this.qualityTier === "balanced"
+      ? Math.min(this.fullBloomConfig.radius, 0.28)
+      : this.fullBloomConfig.radius;
+    this.bloomPass.threshold = this.qualityTier === "balanced"
+      ? Math.max(this.fullBloomConfig.threshold, 0.36)
+      : this.fullBloomConfig.threshold;
   }
 
   getPerformanceSnapshot() {
@@ -259,9 +324,18 @@ export class GlobeRenderer {
     }
     this.renderer.setSize(width, height, false);
     this.composer.setSize(width, height);
-    this.bloomPass.setSize(width, height);
+    this.#resizeBloomPass(width, height);
     this.resizeListeners.forEach((listener) => listener({ width, height }));
     this.interactionActiveUntil = performance.now() + 750;
+  }
+
+  #resizeBloomPass(width = this.container.clientWidth || window.innerWidth, height = this.container.clientHeight || window.innerHeight) {
+    if (!this.bloomPass) return;
+    const scale = THREE.MathUtils.clamp(Number(this.bloomResolutionScale ?? 1), 0.35, 1);
+    this.bloomPass.setSize(
+      Math.max(1, Math.round(width * scale)),
+      Math.max(1, Math.round(height * scale))
+    );
   }
 
   noteInteraction() {
@@ -287,6 +361,8 @@ export class GlobeRenderer {
     this.disposed = true;
     this.stop();
     this.eventListenerDisposers.splice(0).forEach((disposeListener) => disposeListener());
+    this.containerResizeObserver?.disconnect?.();
+    this.containerResizeObserver = null;
     this.controls.dispose();
     this.composer.renderTarget1?.dispose?.();
     this.composer.renderTarget2?.dispose?.();
@@ -346,8 +422,19 @@ export class GlobeRenderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = this.config.renderer.toneMappingExposure;
     this.renderer.info.autoReset = false;
+    Object.assign(this.renderer.domElement.style, {
+      display: "block",
+      position: "absolute",
+      inset: "0",
+      width: "100%",
+      height: "100%"
+    });
     this.container.appendChild(this.renderer.domElement);
     this.boundResize = () => this.resize();
+    this.containerResizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => this.resize())
+      : null;
+    this.containerResizeObserver?.observe(this.container);
     this.boundVisibilityChange = () => {
       if (document.hidden) {
         this.#suspend();
@@ -382,7 +469,7 @@ export class GlobeRenderer {
 
   #createScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = this.config.background.enabled === false
+    this.scene.background = this.config.background.enabled === false || this.config.renderEffects?.backgroundGradient === false
       ? null
       : createEnvironmentBackgroundTexture(this.config);
   }
@@ -407,6 +494,10 @@ export class GlobeRenderer {
     this.controls.rotateSpeed = this.config.orbitControls.rotateSpeed;
     this.boundControlStart = () => {
       this.controlsActive = true;
+      if (this.config.renderer?.clearViewOffsetOnInteraction && this.camera.view?.enabled) {
+        this.camera.clearViewOffset();
+        this.camera.updateProjectionMatrix();
+      }
       this.noteInteraction();
     };
     this.boundControlEnd = () => {
@@ -447,12 +538,15 @@ export class GlobeRenderer {
   #createComposer() {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    const bloomWidth = Math.max(1, Math.round((this.container.clientWidth || window.innerWidth) * this.bloomResolutionScale));
+    const bloomHeight = Math.max(1, Math.round((this.container.clientHeight || window.innerHeight) * this.bloomResolutionScale));
     this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(this.container.clientWidth || window.innerWidth, this.container.clientHeight || window.innerHeight),
+      new THREE.Vector2(bloomWidth, bloomHeight),
       this.config.bloom.strength,
       this.config.bloom.radius,
       this.config.bloom.threshold
     );
+    this.bloomPass.enabled = this.config.renderEffects?.bloom !== false && this.config.bloom.strength > 0;
     this.composer.addPass(this.bloomPass);
   }
 
@@ -475,14 +569,14 @@ export class GlobeRenderer {
     this.oceanMesh.material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.config.colors.ocean),
       emissive: new THREE.Color("#08080a"),
-      emissiveIntensity: this.config.materials.ocean.emissiveStrength,
+      emissiveIntensity: this.config.renderEffects?.oceanEmissive === false ? 0 : this.config.materials.ocean.emissiveStrength,
       roughness: this.config.materials.ocean.roughness,
       metalness: this.config.materials.ocean.metalness,
       flatShading: true,
       envMapIntensity: 0.1
     });
     applyGraphiteFacetBoost(this.oceanMesh.material, {
-      strength: this.config.materials.ocean.graphiteFacetBoost,
+      strength: this.config.renderEffects?.graphiteFacet === false ? 0 : this.config.materials.ocean.graphiteFacetBoost,
       rimStrength: 0.042,
       rimPower: 1.85
     });
@@ -490,14 +584,14 @@ export class GlobeRenderer {
     this.landMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color(this.config.colors.land),
       emissive: new THREE.Color("#08080a"),
-      emissiveIntensity: this.config.materials.land.emissiveStrength,
+      emissiveIntensity: this.config.renderEffects?.landEmissive === false ? 0 : this.config.materials.land.emissiveStrength,
       roughness: this.config.materials.land.roughness,
       metalness: this.config.materials.land.metalness,
       flatShading: true,
       envMapIntensity: 0.16
     });
     applyGraphiteFacetBoost(this.landMaterial, {
-      strength: this.config.materials.land.graphiteFacetBoost,
+      strength: this.config.renderEffects?.graphiteFacet === false ? 0 : this.config.materials.land.graphiteFacetBoost,
       rimStrength: 0.058,
       rimPower: 1.7
     });
@@ -517,8 +611,15 @@ export class GlobeRenderer {
 
   #createLights() {
     const cfg = this.config.lights;
-    this.scene.add(new THREE.AmbientLight(cfg.ambient.color, cfg.ambient.intensity));
-    this.scene.add(new THREE.HemisphereLight(cfg.hemisphere.skyColor, cfg.hemisphere.groundColor, cfg.hemisphere.intensity));
+    this.lights.ambient = new THREE.AmbientLight(cfg.ambient.color, cfg.ambient.intensity);
+    this.lights.ambient.visible = cfg.ambient.enabled !== false && Number(cfg.ambient.intensity) > 0;
+    this.lights.hemisphere = new THREE.HemisphereLight(
+      cfg.hemisphere.skyColor,
+      cfg.hemisphere.groundColor,
+      cfg.hemisphere.intensity
+    );
+    this.lights.hemisphere.visible = cfg.hemisphere.enabled !== false && Number(cfg.hemisphere.intensity) > 0;
+    this.scene.add(this.lights.ambient, this.lights.hemisphere);
     this.#addDirectional("directionalKey", cfg.directionalKey);
     this.#addDirectional("softKey", cfg.softKey);
     this.#addDirectional("fill", cfg.fill);

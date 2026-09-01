@@ -2,7 +2,7 @@ import React from 'react';
 import Footer from './Footer';
 
 const TermsOfService: React.FC = () => {
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const lastUpdated = 'August 31, 2026';
 
   return (
     <main className="ss-bg-geometric-muted flex-grow overflow-y-auto">
@@ -11,7 +11,7 @@ const TermsOfService: React.FC = () => {
           <h1 className="text-5xl font-bold tracking-tighter mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
             <strong><span className="text-red-400">Swing</span>Sphere</strong> Terms of Service
           </h1>
-          <p className="text-lg text-gray-500 mb-12">Last Updated: {today}</p>
+          <p className="text-lg text-gray-500 mb-12">Last Updated: {lastUpdated}</p>
           
           <div className="space-y-10">
             <p>Please read these Terms of Service ("Terms") carefully before using the <strong><span className="text-red-400 font-semibold">Swing</span>Sphere</strong> website (the "Service") operated by <strong><span className="text-red-400 font-semibold">Swing</span>Sphere</strong> ("us", "we", or "our").</p>
@@ -26,7 +26,7 @@ const TermsOfService: React.FC = () => {
             
             <section>
               <h2 className="text-2xl font-bold text-red-500 mb-4">2. Privacy Policy</h2>
-              <p>Your use of the Service is also governed by our Privacy Policy, which is incorporated here by reference. Please review it to understand our "Privacy First" practices.</p>
+              <p>Your use of the Service is also governed by our Privacy Policy, which is incorporated here by reference. Please review it to understand our privacy-forward practices.</p>
             </section>
             
             <section>
@@ -44,7 +44,7 @@ const TermsOfService: React.FC = () => {
             <section>
               <h2 className="text-2xl font-bold text-red-500 mb-4">4. Our Rights & Your License Grant</h2>
               <p>We are not obligated to publish any Content you submit. We reserve the right, in our sole discretion, to remove, edit, or reject any Content for any reason, at any time, without notice. This includes our right to remove listings that we deem to be low-quality, unsafe, or inappropriate for our platform.</p>
-              <p className="mt-2">By posting Content, you grant us a non-exclusive, worldwide, royalty-free, perpetual, and transferable license to use, display, reproduce, modify, and distribute your Content on and through the Service. This license is solely for the purpose of operating, promoting, and improving the Service.</p>
+              <p className="mt-2">By posting Content, you grant us a non-exclusive, worldwide, royalty-free license to host, store, use, display, reproduce, adapt, and distribute that Content as reasonably necessary to operate, provide, promote, secure, and improve the Service. This license applies while your Content is available through the Service and may continue only to the extent reasonably necessary for backups, legal obligations, dispute resolution, or materials already incorporated into platform communications or promotional materials.</p>
             </section>
             
             <section>
@@ -57,7 +57,7 @@ const TermsOfService: React.FC = () => {
                 <li>To post Content that is knowingly false, misleading, or deceptive.</li>
                 <li>To impersonate any person or entity, or to falsely state or otherwise misrepresent your affiliation with a person or entity.</li>
               </ul>
-              <p className="mt-2">Violation of these terms will result in the immediate termination of your Contributor account and removal of your Content.</p>
+              <p className="mt-2">Violations of these Terms may result in content removal, feature restrictions, suspension, or termination of an account, depending on the circumstances.</p>
             </section>
             
             <section>

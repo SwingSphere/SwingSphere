@@ -419,7 +419,8 @@
         "updated_at": "2026-07-23T04:52:36.434824+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/502221f3-a8c5-4637-b6ab-6de10dd71a00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/502221f3-a8c5-4637-b6ab-6de10dd71a00/logosquare",
+    "buildingAssetId": "building-asset-club3"
   },
   {
     "id": "club-club-joi-la",
@@ -1748,7 +1749,8 @@
         "updated_at": "2026-07-17T11:08:17.77904+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ccbfa9ad-9b02-4331-1e2e-b7c18aa18b00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ccbfa9ad-9b02-4331-1e2e-b7c18aa18b00/logosquare",
+    "buildingAssetId": "building-asset-club-eden-san-antonio"
   },
   {
     "id": "club-eden-oklahoma-city",
@@ -1848,7 +1850,8 @@
         "updated_at": "2026-07-17T11:08:03.16459+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/01a9777d-dbc8-4cd2-1a0c-cc37aa1d9f00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/01a9777d-dbc8-4cd2-1a0c-cc37aa1d9f00/logosquare",
+    "buildingAssetId": "building-asset-club-eden-oklahoma-city"
   },
   {
     "id": "club-colette-dallas",
@@ -2078,8 +2081,8 @@
     "website": "https://members.coletteclubs.com/clubs/houston",
     "contactEmail": "houstongm@coletteclubs.com",
     "geopoint": {
-      "latitude": 29.987,
-      "longitude": -95.4305,
+      "latitude": 30.0124282662,
+      "longitude": -95.4491339996,
       "address": {
         "addressLine1": "1319 Cypress Creek Parkway",
         "addressLine2": "Suite 190",
@@ -2094,14 +2097,15 @@
       }
     },
     "locationMeta": {
-      "status": "needs_review",
-      "confidence": 0.82,
+      "status": "validated",
+      "confidence": 0.98,
       "normalizedAddress": "1319 Cypress Creek Parkway, Suite 190, Houston, Texas 77090, United States",
-      "geocoderSource": "official_club_page",
+      "geocoderSource": "official_club_embedded_map",
       "warnings": [
-        "coordinates-need-final-verification"
+        "coordinates-from-official-club-map",
+        "building-footprint-needs-final-verification"
       ],
-      "validatedAt": "2026-07-17T00:00:00.000Z"
+      "validatedAt": "2026-08-16T07:18:00.000Z"
     },
     "galleryImageUrls": [],
     "postedByUserId": "admin-import",
@@ -2192,7 +2196,8 @@
         "updated_at": "2026-07-29T03:43:45.633615+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d45818fb-0862-469a-1a2a-cee7df966f00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d45818fb-0862-469a-1a2a-cee7df966f00/logosquare",
+    "buildingAssetId": "building-asset-club-colette-houston"
   },
   {
     "id": "club-colette-new-orleans",
@@ -2379,7 +2384,8 @@
       "BYOB",
       "Dress Code",
       "Non-Smoking"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-colette-san-antonio"
   },
   {
     "id": "club-voluptuous-tokyo",
@@ -2548,17 +2554,17 @@
   },
   {
     "id": "club-2a2-rio-de-janeiro",
-    "location": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-042, Brazil",
+    "location": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
     "website": "https://clube2a2.com.br/home/",
     "contactEmail": "reservas2a2@gmail.com",
     "geopoint": {
-      "latitude": -22.9566935,
-      "longitude": -43.1945456,
+      "latitude": -22.9574018,
+      "longitude": -43.1972616,
       "address": {
         "addressLine1": "Rua Visconde de Caravelas, 176",
         "city": "Rio de Janeiro",
         "region": "Rio de Janeiro",
-        "postalCode": "22271-042",
+        "postalCode": "22271-041",
         "country": "Brazil",
         "countrySlug": "br",
         "admin1Slug": "rio-de-janeiro",
@@ -2567,16 +2573,14 @@
       }
     },
     "locationMeta": {
-      "status": "needs_review",
-      "confidence": 0.78,
-      "normalizedAddress": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-042, Brazil",
-      "geocoderLabel": "Rua Visconde de Caravelas, Botafogo, Rio de Janeiro, Região Sudeste, 22271-030, Brasil",
-      "geocoderSource": "nominatim",
-      "warnings": [
-        "street-level-geocode",
-        "postal-code-source-mismatch"
-      ],
-      "validatedAt": "2026-07-22T02:00:00.000Z"
+      "status": "validated",
+      "confidence": 0.99,
+      "normalizedAddress": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
+      "geocoderLabel": "Boate 2A2 - R. Visc. de Caravelas, 176 - Botafogo, Rio de Janeiro - RJ, 22271-041, Brazil",
+      "geocoderSource": "official-site+google-maps",
+      "warnings": [],
+      "manualAdjustment": true,
+      "validatedAt": "2026-08-16T21:45:00.000Z"
     },
     "postedByUserId": "user1",
     "status": "approved",
@@ -2668,7 +2672,8 @@
         "updated_at": "2026-07-22T03:13:56.262059+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d8b64865-379e-4b9b-da53-43df90f02b00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d8b64865-379e-4b9b-da53-43df90f02b00/logosquare",
+    "buildingAssetId": "building-asset-club-2a2-rio-de-janeiro"
   },
   {
     "id": "club-kiwiklub-johannesburg",
@@ -2834,7 +2839,8 @@
         "updated_at": "2026-07-24T23:30:03.207783+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ce254355-b64e-4404-6ef1-33d25b201000/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ce254355-b64e-4404-6ef1-33d25b201000/logosquare",
+    "buildingAssetId": "building-asset-club-kiwiklub-durban"
   },
   {
     "id": "club-dungeon-tel-aviv",
@@ -3204,7 +3210,8 @@
         "updated_at": "2026-07-22T03:43:23.06484+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6800a11e-4819-45e6-0258-60c519a12900/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6800a11e-4819-45e6-0258-60c519a12900/logosquare",
+    "buildingAssetId": "building-asset-club-taken-paris"
   },
   {
     "id": "club-black-diamond-belgrade",
@@ -3291,7 +3298,8 @@
     ],
     "attendancePolicy": "varies_by_night",
     "logoImageUrl": "https://blackdiamondclub.net/wp-content/uploads/2022/08/black-diamond-logo-hero-no-line.png",
-    "headerImageUrl": "https://blackdiamondclub.net/wp-content/uploads/2022/09/slika-1.jpeg"
+    "headerImageUrl": "https://blackdiamondclub.net/wp-content/uploads/2022/09/slika-1.jpeg",
+    "buildingAssetId": "building-asset-club-black-diamond-belgrade"
   },
   {
     "id": "club-sweet-buenos-aires",
@@ -3306,8 +3314,8 @@
     "status": "approved",
     "postedByUserId": "user1",
     "geopoint": {
-      "latitude": -34.6183321,
-      "longitude": -58.3758568,
+      "latitude": -34.6101671,
+      "longitude": -58.3759532,
       "address": {
         "addressLine1": "Chacabuco 162",
         "city": "Buenos Aires",
@@ -3318,12 +3326,11 @@
     },
     "locationMeta": {
       "status": "validated",
-      "confidence": 0.9,
-      "source": "official-site+waze+nominatim-street",
-      "warnings": [
-        "house-number-confirmed-by-official-site-and-waze",
-        "map-coordinate-resolved-at-street-segment-level"
-      ]
+      "confidence": 0.99,
+      "source": "official-site+waze+google-maps",
+      "warnings": [],
+      "manualAdjustment": true,
+      "validatedAt": "2026-08-17T01:40:00.000Z"
     },
     "schedule": [
       {
@@ -3373,7 +3380,8 @@
     ],
     "attendancePolicy": "varies_by_night",
     "logoImageUrl": "https://sweetsw.com/wp-content/uploads/2019/09/djo-logo-2.webp",
-    "headerImageUrl": "https://sweetsw.com/wp-content/uploads/2026/07/Flyer-24-07-VIERNES-LUJURIA-768x1365.jpg"
+    "headerImageUrl": "https://sweetsw.com/wp-content/uploads/2026/07/Flyer-24-07-VIERNES-LUJURIA-768x1365.jpg",
+    "buildingAssetId": "building-asset-club-sweet-buenos-aires"
   },
   {
     "id": "club-dalliance-columbia",
@@ -3381,7 +3389,7 @@
     "name": "Club Dalliance",
     "description_short": "An upscale, private members-only lifestyle nightclub in Columbia, South Carolina, offering themed Saturday events, dancing, socializing, and a carefully managed admission policy.",
     "description_full": "Club Dalliance is a permanent private lifestyle club in Columbia, South Carolina. The approximately 3,000-square-foot venue centers on an upscale nightclub atmosphere with a dance floor, DJ, light effects, performance features, complimentary nonalcoholic drinks, ice, snacks, and an outdoor smoking area. Events are themed and currently run on selected Saturdays from 9:00 PM to 2:00 AM. Couples and single women may attend, while single men must arrive with, remain with, and leave with a sponsoring attending couple. Membership, admission, dress code, and event details should be confirmed before visiting.",
-    "location": "911A First Avenue South, Columbia, SC 29209, United States",
+    "location": "1100 First Avenue South, Columbia, SC 29209, United States",
     "website": "https://clubdalliance.com/",
     "status": "approved",
     "postedByUserId": "user1",
@@ -3389,7 +3397,7 @@
       "latitude": 33.9472104,
       "longitude": -80.9855402,
       "address": {
-        "addressLine1": "911A First Avenue South",
+        "addressLine1": "1100 First Avenue South",
         "city": "Columbia",
         "region": "South Carolina",
         "postalCode": "29209",
@@ -3399,9 +3407,10 @@
     "locationMeta": {
       "status": "validated",
       "confidence": 0.92,
-      "source": "official-site+nominatim-street",
+      "source": "official-site-gps-instruction+user-verified",
       "warnings": [
-        "official-site-confirms-house-number",
+        "official-site-publishes-911A-but-directs-visitors-to-1100-first-avenue-south",
+        "physical-location-is-an-industrial-warehouse",
         "map-coordinate-resolved-at-street-segment-level"
       ]
     },
@@ -3451,7 +3460,8 @@
     ],
     "attendancePolicy": "varies_by_night",
     "logoImageUrl": "https://images.squarespace-cdn.com/content/v1/5c3e907755b02cbca8aff6bb/1548732493796-4LBHANROOZ3NXXZD9U3G/Dalliance+Banner.png",
-    "headerImageUrl": "https://images.squarespace-cdn.com/content/v1/5c3e907755b02cbca8aff6bb/1547609944421-FS0A9FD8TW56W6PJ88I4/sls_bannera_2b.jpg"
+    "headerImageUrl": "https://images.squarespace-cdn.com/content/v1/5c3e907755b02cbca8aff6bb/1547609944421-FS0A9FD8TW56W6PJ88I4/sls_bannera_2b.jpg",
+    "buildingAssetId": "building-asset-club-dalliance-columbia"
   },
   {
     "id": "club-zcretclub-lima",
@@ -3720,7 +3730,8 @@
     ],
     "attendancePolicy": "varies_by_night",
     "logoImageUrl": "https://static.wixstatic.com/media/5ae087_3b47e08e41604d2ca9f5caa627b082fc%7Emv2.png",
-    "headerImageUrl": "https://static.wixstatic.com/media/5ae087_3d5a0d8d7d92448ea8154c3713cd50c4~mv2.jpg"
+    "headerImageUrl": "https://static.wixstatic.com/media/5ae087_3d5a0d8d7d92448ea8154c3713cd50c4~mv2.jpg",
+    "buildingAssetId": "building-asset-club-lorage-montreal"
   },
   {
     "id": "club-the-69-las-vegas",
@@ -4355,7 +4366,8 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://coliseum.com.mx/sw/wp-content/uploads/2024/08/Coliseum-White-2.png"
+    "logoImageUrl": "https://coliseum.com.mx/sw/wp-content/uploads/2024/08/Coliseum-White-2.png",
+    "buildingAssetId": "building-asset-club-coliseum-mexico-city"
   },
   {
     "id": "club-privata-portland",
@@ -4672,7 +4684,8 @@
     "galleryImageUrls": [
       "https://oasisaqualounge.com/wp-content/uploads/2020/09/drinks.jpg",
       "https://oasisaqualounge.com/wp-content/uploads/2022/05/sex-in-the-pool-cocktail-scaled.jpg"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-oasis-aqualounge-toronto"
   },
   {
     "id": "club-trapeze-atlanta",
@@ -5049,7 +5062,8 @@
       "BYOB",
       "Casual",
       "Women-Centered"
-    ]
+    ],
+    "buildingAssetId": "building-asset-event-her-fantasy-back-to-school-twist-2026-08-16"
   },
   {
     "id": "event-her-fantasy-white-party-twist-2026-08-30",
@@ -5337,7 +5351,8 @@
     ],
     "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6901119/bd6fdb42-1f62-4593-8b92-4d626a7511c4/small_thumb.jpg?v=tgcunn",
     "status": "approved",
-    "postedByUserId": "user1"
+    "postedByUserId": "user1",
+    "buildingAssetId": "building-asset-event-bronze-halloween-kickoff-twist-2026-10-24"
   },
   {
     "id": "club-lussuria-bangkok",
@@ -5490,7 +5505,8 @@
     "headerImageUrl": "https://soho-graz.at/wp-content/uploads/2025/03/eventlocation_header.webp",
     "galleryImageUrls": [
       "https://soho-graz.at/wp-content/uploads/2025/03/was-ziehe-ich-an-02.jpg"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-soho-graz"
   },
   {
     "id": "club-attraction-bucharest",
@@ -5583,7 +5599,8 @@
       "screening_approval_required"
     ],
     "logoImageUrl": "https://club.attractionclub.ro/wp-content/uploads/attraction-club-logo.png",
-    "headerImageUrl": "https://club.attractionclub.ro/wp-content/uploads/Romantic-ambiance-Attraction-Club.jpg"
+    "headerImageUrl": "https://club.attractionclub.ro/wp-content/uploads/Romantic-ambiance-Attraction-Club.jpg",
+    "buildingAssetId": "building-asset-club-attraction-bucharest"
   },
   {
     "id": "club-fun4two-moordrecht",
@@ -5997,7 +6014,8 @@
     "headerImageUrl": "https://swingland.dk/wp-content/uploads/2020/08/116849647_374940753488909_5480733183463034935_n.jpg",
     "galleryImageUrls": [
       "https://swingland.dk/wp-content/uploads/2020/08/116895034_625410881439213_7466061617006457974_n.jpg"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-swingland-ishoj"
   },
   {
     "id": "club-more-helsinki",
@@ -6076,7 +6094,8 @@
     "headerImageUrl": "https://i0.wp.com/club-more.com/wp-content/uploads/2026/01/1000036813_edited.jpeg?fit=1200%2C897&ssl=1",
     "galleryImageUrls": [
       "https://i0.wp.com/club-more.com/wp-content/uploads/2025/07/gridart_20250722_121649135.jpg?fit=768%2C1024&ssl=1"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-more-helsinki"
   },
   {
     "id": "resort-hedonism-ii-negril",
@@ -6151,7 +6170,8 @@
     "headerImageUrl": "https://hedonism.com/wp-content/uploads/2024/03/homepage-hero.webp",
     "galleryImageUrls": [
       "https://hedonism.com/wp-content/uploads/2024/03/hedonism-resort-map.webp"
-    ]
+    ],
+    "buildingAssetId": "building-asset-resort-hedonism-ii-negril"
   },
   {
     "id": "club-trapeze-fort-lauderdale",
@@ -6293,7 +6313,8 @@
     "headerImageUrl": "https://trapezeclubs.com/psemtugh/2023/01/Screen-Shot-2023-01-02-at-2.28.54-PM.png",
     "galleryImageUrls": [
       "https://trapezeclubs.com/psemtugh/2022/11/people-celebrating-party.jpg"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-trapeze-fort-lauderdale"
   },
   {
     "id": "club-sauna-paradise-tel-aviv",
@@ -6436,7 +6457,8 @@
     ],
     "attendancePolicy": "varies_by_event",
     "headerImageUrl": "https://images8.webydo.com/93/9329343/3958/BC5E1CD4-7590-0B07-78FB-4097861BCE60.jpg",
-    "galleryImageUrls": []
+    "galleryImageUrls": [],
+    "buildingAssetId": "building-asset-club-sauna-paradise-tel-aviv"
   },
   {
     "id": "club-sauna-club-tel-aviv",
@@ -6500,7 +6522,8 @@
     "attendancePolicy": "men_only",
     "headerImageUrl": "https://ciqsrxtduuhhrclxeyiv.supabase.co/storage/v1/render/image/public/uploads/images/img_HyZqVn7g6iZlCXpi5i6PhX/original.png?width=1200&resize=contain&quality=80&format=webp",
     "logoImageUrl": "https://ciqsrxtduuhhrclxeyiv.supabase.co/storage/v1/render/image/public/uploads/images/img_HyZqVn7g6iZlCXpi5i6PhX/original.png?width=1200&resize=contain&quality=80&format=webp",
-    "galleryImageUrls": []
+    "galleryImageUrls": [],
+    "buildingAssetId": "building-asset-club-sauna-club-tel-aviv"
   },
   {
     "id": "club-rich-moscow",
@@ -6850,8 +6873,8 @@
     "status": "approved",
     "postedByUserId": "user1",
     "geopoint": {
-      "latitude": 53.514795,
-      "longitude": -2.34325,
+      "latitude": 53.5149992,
+      "longitude": -2.3431375,
       "address": {
         "addressLine1": "13-17 Sutherland Street",
         "city": "Swinton",
@@ -6862,8 +6885,8 @@
     },
     "locationMeta": {
       "status": "validated",
-      "confidence": 0.94,
-      "geocoderSource": "postcodes.io+official-site+salford-licensing",
+      "confidence": 0.99,
+      "geocoderSource": "google-business-pin+official-site+salford-licensing+os-openmap-local",
       "normalizedAddress": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
       "warnings": []
     },
@@ -6904,7 +6927,8 @@
     "headerImageUrl": "https://framerusercontent.com/images/Rj0uD6i9hzzqjpScVwtNOlrQ.webp?width=2240&height=1487",
     "galleryImageUrls": [
       "https://framerusercontent.com/images/NtzKdpfr6DfzmtMxTSyq5Xm9Ac.webp?width=1536&height=1024"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-cupids-swinton"
   },
   {
     "id": "club-krystal-vicenza",
@@ -6985,7 +7009,8 @@
     "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/19settembre-3-920x415.png",
     "galleryImageUrls": [
       "https://www.krystal-club.it/wp-content/uploads/2026/08/26settembre-920x415.jpg"
-    ]
+    ],
+    "buildingAssetId": "building-asset-club-krystal-vicenza"
   },
   {
     "id": "club-syn-tulsa",

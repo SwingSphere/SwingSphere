@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import maplibregl, { type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { ArrowLeft, Copy, Search } from 'lucide-react';
+import { ArrowLeft, CircleHelp, Copy, RefreshCw, Search } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as api from '../../lib/api';
@@ -16,15 +16,37 @@ import {
   type EntityCollections,
 } from '../../lib/entityCompatibility';
 import { getListingCanonicalCoords } from '../../lib/explorerMarkers';
+import { isApproximateLocation } from '../../lib/publicLocation';
+import {
+  getBuildingVerificationForListing,
+  evaluateBuildingVerification,
+  listingHasExactBuildingAddress,
+  scoreBuildingAddressCandidate,
+  normalizeAddressText,
+  type BuildingAddressCandidate,
+  type BuildingVerificationOutcome,
+} from '../../lib/buildingVerification';
 import type {
   BuildingAsset,
+  BuildingVerificationMeta,
   Listing,
   OrganizationData,
   OrganizationVenueRelationship,
   VenueData,
 } from '../../types';
-import { buildBuildingsSource, findSelectedBuilding, getBuildingsSourceId, venueArrival } from '../maps/venueArrival';
+import { buildBuildingsSource, getBuildingsSourceId, venueArrival } from '../maps/venueArrival';
 import { swingMapStyle } from '../maps/mapStyle';
+import BuildingVerificationAuditPanel from './BuildingVerificationAuditPanel';
+import { inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
+import { geometryFingerprint, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
+import {
+  fetchSupplementalBuildingFootprints,
+  filterSupplementalBuildingFeatures,
+  MICROSOFT_BUILDING_ID_PREFIX,
+  MICROSOFT_BUILDING_SOURCE,
+  primaryCoverageNeedsSupplement,
+} from '../../lib/buildingFootprintSources';
+import type { BuildingCandidateEvidence, BuildingReviewDisposition, BuildingVerificationEvidenceRecord } from '../../lib/buildingVerificationEvidence';
 
 const DEFAULT_FEATURE_ID = '13581200';
 const DEFAULT_TWIST_LAT = 37.8055766;
@@ -34,8 +56,23 @@ const VIEWBOX_SIZE = 1000;
 const VIEWBOX_PADDING = 56;
 const EXTRUDE_HEIGHT_METERS = 5;
 const BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT = 10000;
+const MAX_CONNECTED_PIECE_DIAGNOSTIC_POLYGONS = 250;
 const DEFAULT_NEIGHBORHOOD_RADIUS_METERS = 100;
 const EXPANDED_NEIGHBORHOOD_RADII_METERS = [150, 250] as const;
+const OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL = 'https://services.arcgis.com/qHLhLQrcvEnxjtPr/arcgis/rest/services/OS_OpenMap_Local_Buildings/FeatureServer/1/query';
+const OS_OPENMAP_LOCAL_SOURCE = 'Ordnance Survey OpenMap Local';
+const OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX = 'os-openmap-local:';
+const OS_OPENMAP_LOCAL_ATTRIBUTION = 'Contains OS data © Crown copyright and database right 2026';
+const BUILDING_VERIFICATION_MODE: 'shadow' | 'enabled' = 'shadow';
+type BuildingSourceMode = 'auto' | 'openfreemap' | 'microsoft';
+const BUILDING_SOURCE_MODE_ORDER: BuildingSourceMode[] = ['auto', 'openfreemap', 'microsoft'];
+const BUILDING_SOURCE_MODE_LABELS: Record<BuildingSourceMode, string> = {
+  auto: 'Auto',
+  openfreemap: 'OSM',
+  microsoft: 'Microsoft',
+};
+const EMPTY_ORGANIZATIONS: OrganizationData[] = [];
+const EMPTY_RELATIONSHIPS: OrganizationVenueRelationship[] = [];
 
 const LANDMARK_TESTS: LandmarkTestRecord[] = [
   {
@@ -108,13 +145,12 @@ const assertBuildingInspectorLoopLimit = (
   details: Record<string, unknown>,
 ) => {
   if (!buildingInspectorDiagnosticsEnabled()) return;
-  if (count <= BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT) return;
-  console.error(`[BuildingInspector] loop limit exceeded: ${label}`, {
+  if (count !== BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT + 1) return;
+  console.warn(`[BuildingInspector] diagnostic volume exceeded: ${label}`, {
     count,
     limit: BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT,
     ...details,
   });
-  throw new Error(`[BuildingInspector] loop limit exceeded: ${label}`);
 };
 
 const getProviderFeatureLabel = (index: number): string => {
@@ -143,7 +179,146 @@ const BLANK_STYLE: StyleSpecification = {
 };
 
 type Bounds = [number, number, number, number];
+type StreetReferenceSnapshot = {
+  dataUrl: string;
+  bounds: Bounds;
+};
+
+const STREET_PLANE_CONTEXT_RADIUS_METERS = 500;
+const STREET_PLANE_CAPTURE_SIZE_PX = 1024;
+
+const getStreetPlaneBounds = (lng: number, lat: number, radiusMeters = STREET_PLANE_CONTEXT_RADIUS_METERS): Bounds => {
+  const latitudeDegreesPerMeter = 1 / 111_320;
+  const longitudeDegreesPerMeter = 1 / (111_320 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  const latDelta = radiusMeters * latitudeDegreesPerMeter;
+  const lngDelta = radiusMeters * longitudeDegreesPerMeter;
+  return [lng - lngDelta, lat - latDelta, lng + lngDelta, lat + latDelta];
+};
+
+const captureStreetPlaneNeighborhood = (
+  lng: number,
+  lat: number,
+): Promise<StreetReferenceSnapshot> => new Promise((resolve, reject) => {
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-12000px';
+  container.style.top = '0';
+  container.style.width = `${STREET_PLANE_CAPTURE_SIZE_PX}px`;
+  container.style.height = `${STREET_PLANE_CAPTURE_SIZE_PX}px`;
+  container.style.opacity = '0';
+  container.style.pointerEvents = 'none';
+  container.style.zIndex = '-1';
+  document.body.appendChild(container);
+
+  const bounds = getStreetPlaneBounds(lng, lat);
+  let settled = false;
+  let captureMap: MapLibreMap | null = null;
+  let timeoutId: number | null = null;
+
+  const cleanup = () => {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+    captureMap?.remove();
+    captureMap = null;
+    container.remove();
+  };
+
+  const fail = (error: unknown) => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    reject(error instanceof Error ? error : new Error('Street plane capture failed.'));
+  };
+
+  const capture = () => {
+    if (settled || !captureMap) return;
+    window.requestAnimationFrame(() => {
+      if (settled || !captureMap) return;
+      try {
+        const renderedBounds = captureMap.getBounds();
+        const dataUrl = captureMap.getCanvas().toDataURL('image/png');
+        settled = true;
+        const snapshot: StreetReferenceSnapshot = {
+          dataUrl,
+          bounds: [renderedBounds.getWest(), renderedBounds.getSouth(), renderedBounds.getEast(), renderedBounds.getNorth()],
+        };
+        cleanup();
+        resolve(snapshot);
+      } catch (error) {
+        fail(error);
+      }
+    });
+  };
+
+  try {
+    captureMap = new maplibregl.Map({
+      container,
+      style: JSON.parse(JSON.stringify(swingMapStyle)) as StyleSpecification,
+      center: [lng, lat],
+      zoom: 15,
+      attributionControl: false,
+      interactive: false,
+      canvasContextAttributes: { preserveDrawingBuffer: true },
+    });
+    captureMap.on('load', () => {
+      if (!captureMap || settled) return;
+      captureMap.fitBounds(
+        [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
+        { padding: 36, duration: 0, maxZoom: 17 },
+      );
+      captureMap.once('idle', capture);
+      captureMap.triggerRepaint();
+      window.setTimeout(capture, 2500);
+    });
+    captureMap.on('error', (event) => {
+      if (settled) return;
+      console.warn('[BuildingInspector] street-plane capture map error', event.error ?? event);
+    });
+    timeoutId = window.setTimeout(() => fail(new Error('Street plane capture timed out.')), 8000);
+  } catch (error) {
+    fail(error);
+  }
+});
+type SelectedBuildingAddressState = {
+  status: 'idle' | 'loading' | 'resolved' | 'missing' | 'error' | 'multiple';
+  primary: string | null;
+  secondary: string | null;
+};
+type ReverseAddressResult = ResolvedBuildingAddress;
+type BuildingAddressIntelligenceResolvedStatus = 'confirmed' | 'probable' | 'unconfirmed' | 'mismatch';
+type BuildingAddressIntelligenceStatus = 'idle' | 'checking' | 'skipped' | BuildingAddressIntelligenceResolvedStatus;
+type BuildingAddressIntelligenceCandidate = {
+  buildingId: string;
+  polygonIndices: number[];
+  providerFeatureIds: string[];
+  distanceMeters: number | null;
+  pinIntersects: boolean;
+  address: ReverseAddressResult | null;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  pinToCentroidMeters: number;
+  score: number;
+  confidence: number;
+  reasons: string[];
+  reverseAddressStatus: BuildingAddressResolution['status'];
+  providerSource: string | null;
+};
+type BuildingAddressIntelligenceState = {
+  status: BuildingAddressIntelligenceStatus;
+  message: string;
+  searchRadiusMeters: number | null;
+  bestCandidate: BuildingAddressIntelligenceCandidate | null;
+  checkedCandidateCount: number;
+  outcome?: BuildingVerificationOutcome;
+  scoreGap?: number | null;
+  autoAccept?: boolean;
+};
 type DiagnosticMetric = number | null;
+
+const selectedBuildingAddressCache = new Map<string, Omit<SelectedBuildingAddressState, 'status'>>();
+const reverseGeocodeBuildingAddressDetailed = (
+  lat: number,
+  lng: number,
+  context: { listingId: string; footprintFingerprint?: string },
+): Promise<BuildingAddressResolution> => inspectorBuildingAddressResolver.resolveDetailed(lat, lng, context);
 
 type BuildingResolution = {
   featureId: string;
@@ -240,7 +415,14 @@ type RenderedPolygon = {
   stroke: string;
 };
 
-type BuildingAssetFilter = 'all' | 'missing' | 'has';
+type BuildingAssetFilter = 'all' | 'missing' | 'location' | 'has';
+type BuildingLocationAuditState = 'ready' | 'review' | 'approximate';
+type BuildingLocationAudit = {
+  state: BuildingLocationAuditState;
+  label: string;
+  reason: string;
+  venueListingDriftMeters: number | null;
+};
 type ResolverFailureStatus =
   | 'FEATURE_FOUND'
   | 'FEATURE_NOT_IN_TILE'
@@ -250,7 +432,29 @@ type ResolverFailureStatus =
   | 'UNSUPPORTED_GEOMETRY'
   | 'NO_PROVIDER_FEATURE'
   | 'OUTSIDE_RADIUS'
-  | 'PROVIDER_SYNC_MISMATCH';
+  | 'PROVIDER_SYNC_MISMATCH'
+  | 'PROVIDER_TIMEOUT'
+  | 'WORKSPACE_LIMIT'
+  | 'GEOMETRY_PROCESSING_ERROR'
+  | 'RENDER_ERROR'
+  | 'ADDRESS_LOOKUP_FAILED';
+
+const RESOLVER_FAILURE_COPY: Record<ResolverFailureStatus, { title: string; action: string }> = {
+  FEATURE_FOUND: { title: 'Building resolved', action: 'Review the selected footprint and evidence before saving.' },
+  FEATURE_NOT_IN_TILE: { title: 'Provider feature is not in the loaded tile', action: 'Reload nearby tiles or use the coordinate-first neighborhood.' },
+  FEATURE_IN_ADJACENT_TILE: { title: 'Building is split across an adjacent tile', action: 'The inspector will merge deduplicated footprint fragments.' },
+  EMPTY_GEOMETRY: { title: 'Provider returned empty geometry', action: 'Try the expanded neighborhood or another provider.' },
+  INVALID_GEOMETRY: { title: 'Provider geometry is malformed', action: 'Keep this case in geometry review; do not save it automatically.' },
+  UNSUPPORTED_GEOMETRY: { title: 'Provider geometry type is unsupported', action: 'Use an individual Polygon or MultiPolygon footprint.' },
+  NO_PROVIDER_FEATURE: { title: 'No usable provider footprint', action: 'Check the coordinate and provider coverage; this is not a silent failure.' },
+  OUTSIDE_RADIUS: { title: 'Buildings exist, but not near the stored pin', action: 'Review the listing coordinate before choosing a footprint.' },
+  PROVIDER_SYNC_MISMATCH: { title: 'Provider tiles are out of sync', action: 'Reload the neighborhood before making a decision.' },
+  PROVIDER_TIMEOUT: { title: 'Provider tiles timed out', action: 'Retry later; do not treat this as no building data.' },
+  WORKSPACE_LIMIT: { title: 'Neighborhood is exceptionally dense', action: 'The workspace was capped safely; narrow the radius for review.' },
+  GEOMETRY_PROCESSING_ERROR: { title: 'Footprint processing failed', action: 'Open Diagnostics for the rejected geometry reason.' },
+  RENDER_ERROR: { title: 'Footprints loaded but 3D rendering failed', action: 'Geometry remains available for diagnostics; reload the scene.' },
+  ADDRESS_LOOKUP_FAILED: { title: 'Building address lookup failed', action: 'Geometry can still be reviewed, but it cannot auto-qualify.' },
+};
 
 type ResolverStepStatus = 'idle' | 'running' | 'success' | 'failed' | 'skipped';
 
@@ -296,10 +500,12 @@ type WorkspaceBuildingGroup = {
   id: string;
   label: string;
   polygonCount: number;
+  polygonIndices: number[];
   providerFeatureIds: string[];
   distanceMeters: number | null;
   areaMeters: number;
   bbox: Bounds | null;
+  center: [number, number] | null;
   maxRenderHeightMeters: number | null;
   avgRenderHeightMeters: number | null;
 };
@@ -486,6 +692,63 @@ const formatListingAddress = (
   collections: EntityCollections = {},
 ): string => formatListingPhysicalAddress(listing, collections);
 
+const isUnitedKingdomListing = (
+  listing: Listing,
+  collections: EntityCollections = {},
+): boolean => {
+  const country = getListingPhysicalAddress(listing, collections).country?.trim().toLowerCase();
+  return country === 'united kingdom' || country === 'uk' || country === 'great britain';
+};
+
+type OsOpenMapLocalFeature = {
+  id?: string | number;
+  geometry?: GeoJSON.Geometry | null;
+  properties?: Record<string, unknown> | null;
+};
+
+const fetchOsOpenMapLocalBuildingAtPoint = async (
+  point: { lng: number; lat: number },
+): Promise<MapGeoJSONFeature[]> => {
+  const query = new URLSearchParams({
+    where: '1=1',
+    geometry: `${point.lng},${point.lat}`,
+    geometryType: 'esriGeometryPoint',
+    inSR: '4326',
+    outSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects',
+    outFields: 'OBJECTID,ID,FEATCODE,ESRIUKCASTID',
+    returnGeometry: 'true',
+    f: 'geojson',
+  });
+  const response = await fetch(`${OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL}?${query.toString()}`);
+  if (!response.ok) {
+    throw new Error(`${OS_OPENMAP_LOCAL_SOURCE} returned ${response.status}`);
+  }
+  const payload = await response.json() as { features?: OsOpenMapLocalFeature[] };
+  return (payload.features ?? []).flatMap((feature) => {
+    const geometry = feature.geometry;
+    if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) return [];
+    const properties = feature.properties ?? {};
+    const sourceId = properties.ESRIUKCASTID ?? properties.ID ?? properties.OBJECTID ?? feature.id;
+    if (sourceId === undefined || sourceId === null) return [];
+    const providerFeatureId = `${OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX}${String(sourceId)}`;
+    return [{
+      type: 'Feature',
+      id: providerFeatureId,
+      properties: {
+        ...properties,
+        render_height: EXTRUDE_HEIGHT_METERS,
+        swingsphere_provider_source: OS_OPENMAP_LOCAL_SOURCE,
+        swingsphere_provider_attribution: OS_OPENMAP_LOCAL_ATTRIBUTION,
+      },
+      geometry,
+      source: 'os-openmap-local-buildings',
+      sourceLayer: SOURCE_LAYER,
+      state: {},
+    } as unknown as MapGeoJSONFeature];
+  });
+};
+
 const getListingCityLabel = (
   listing: Listing,
   collections: EntityCollections = {},
@@ -663,7 +926,7 @@ const buildPolygonRecords = (
   }
 
   let polygonIterations = 0;
-  const records = polygons.map((polygon, polygonIndex) => {
+  const records: PolygonRecord[] = polygons.map((polygon, polygonIndex) => {
     polygonIterations += 1;
     assertBuildingInspectorLoopLimit('buildPolygonRecords.polygonLoop', polygonIterations, {
       polygonCount: polygons.length,
@@ -699,15 +962,6 @@ const buildPolygonRecords = (
     const ringCount = polygon.length;
     const vertexCount = polygon.reduce((total, ring) => total + ring.length, 0);
     const metadata = metadataByPolygon[polygonIndex] ?? {};
-    logBuildingInspector('buildPolygonRecords:polygon extracted', {
-      polygonIndex,
-      ringCount,
-      vertexCount,
-      renderHeightMeters: metadata.renderHeightMeters ?? null,
-      localRingCount: localRings.length,
-      localVertexCount: localRings.reduce((total, ring) => total + ring.length, 0),
-    });
-
     return {
       polygonIndex,
       geometry: geometryPolygon,
@@ -875,29 +1129,8 @@ const getBoundsCenter = (bounds: Bounds | null): [number, number] | null => {
   return [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
 };
 
-const boundsTouchOrOverlapMeters = (
-  a: Bounds | null,
-  b: Bounds | null,
-  origin: { lng: number; lat: number },
-  toleranceMeters = 0.75,
-): boolean => {
-  if (!a || !b) return false;
-  const toExtent = (bounds: Bounds) => {
-    const min = toLocalMeters([bounds[0], bounds[1]], origin);
-    const max = toLocalMeters([bounds[2], bounds[3]], origin);
-    return {
-      minX: Math.min(min.x, max.x) - toleranceMeters,
-      maxX: Math.max(min.x, max.x) + toleranceMeters,
-      minY: Math.min(min.y, max.y) - toleranceMeters,
-      maxY: Math.max(min.y, max.y) + toleranceMeters,
-    };
-  };
-  const first = toExtent(a);
-  const second = toExtent(b);
-  return first.minX <= second.maxX &&
-    first.maxX >= second.minX &&
-    first.minY <= second.maxY &&
-    first.maxY >= second.minY;
+const getWorkspacePolygonFingerprint = (coordinates: number[][][]): string => {
+  return geometryFingerprint({ type: 'Polygon', coordinates });
 };
 
 const buildWorkspaceGeometryFromFeatures = (
@@ -912,26 +1145,19 @@ const buildWorkspaceGeometryFromFeatures = (
   });
 
   const polygons: WorkspacePolygon[] = [];
+  const polygonIndexByFingerprint = new Map<string, number>();
   let featureIterations = 0;
   let polygonIterations = 0;
 
   for (const feature of features) {
     featureIterations += 1;
-    assertBuildingInspectorLoopLimit('workspaceGeometry.featureLoop', featureIterations, {
-      featureCount: features.length,
-      polygonCount: polygons.length,
-    });
 
     const providerFeatureId = getFeatureIdString(feature);
     const renderHeightMeters = getProviderRenderHeight(feature);
     const renderMinHeightMeters = getProviderRenderMinHeight(feature);
     const featurePolygons = collectPolygons(feature.geometry);
-    featurePolygons.forEach((coordinates, localPolygonIndex) => {
+    featurePolygons.forEach((coordinates) => {
       polygonIterations += 1;
-      assertBuildingInspectorLoopLimit('workspaceGeometry.polygonLoop', polygonIterations, {
-        featureCount: features.length,
-        polygonCount: polygons.length,
-      });
       const geometry: GeoJSON.Polygon = {
         type: 'Polygon',
         coordinates,
@@ -939,8 +1165,16 @@ const buildWorkspaceGeometryFromFeatures = (
       const bbox = getGeometryBBox(geometry);
       const distanceMeters = getBoundsDistanceMeters(bbox, center);
       if (distanceMeters === null || distanceMeters > radiusMeters) return;
+      const fingerprint = getWorkspacePolygonFingerprint(coordinates);
+      const duplicateIndex = polygonIndexByFingerprint.get(fingerprint);
+      if (duplicateIndex !== undefined) {
+        const duplicate = polygons[duplicateIndex];
+        if (!duplicate.providerFeatureId && providerFeatureId) duplicate.providerFeatureId = providerFeatureId;
+        return;
+      }
+      polygonIndexByFingerprint.set(fingerprint, polygons.length);
       polygons.push({
-        id: `${providerFeatureId ?? 'featureless'}:${localPolygonIndex}:${polygons.length}`,
+        id: fingerprint,
         geometry,
         bbox,
         distanceMeters,
@@ -957,63 +1191,22 @@ const buildWorkspaceGeometryFromFeatures = (
     (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY)
     || a.id.localeCompare(b.id),
   );
-
-  const visited = new Set<number>();
-  const groups: WorkspacePolygon[][] = [];
-  let groupingComparisons = 0;
-  for (let index = 0; index < polygons.length; index += 1) {
-    if (visited.has(index)) continue;
-    const group: WorkspacePolygon[] = [];
-    const stack = [index];
-    visited.add(index);
-
-    while (stack.length) {
-      const current = stack.pop();
-      if (current === undefined) continue;
-      const currentPolygon = polygons[current];
-      group.push(currentPolygon);
-
-      for (let nextIndex = 0; nextIndex < polygons.length; nextIndex += 1) {
-        groupingComparisons += 1;
-        assertBuildingInspectorLoopLimit('workspaceGeometry.groupingComparisons', groupingComparisons, {
-          polygonCount: polygons.length,
-          groupCount: groups.length,
-        });
-        if (visited.has(nextIndex)) continue;
-        if (boundsTouchOrOverlapMeters(currentPolygon.bbox, polygons[nextIndex].bbox, center)) {
-          visited.add(nextIndex);
-          stack.push(nextIndex);
-        }
-      }
-    }
-
-    groups.push(group);
-  }
-
-  groups.sort((a, b) => {
-    const distanceA = Math.min(...a.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY));
-    const distanceB = Math.min(...b.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY));
-    return distanceA - distanceB;
-  });
-
-  const buildings = groups.map((group, index): WorkspaceBuildingGroup => {
-    const providerFeatureIds = Array.from(new Set(group
-      .map((polygon) => polygon.providerFeatureId)
-      .filter((value): value is string => Boolean(value))));
-    const bbox = buildAggregateBounds(group);
-    const renderHeights = group.map((polygon) => polygon.renderHeightMeters);
-    return {
-      id: `workspace-building-${index + 1}`,
-      label: `Building ${index + 1}`,
-      polygonCount: group.length,
-      providerFeatureIds,
-      distanceMeters: Math.min(...group.map((polygon) => polygon.distanceMeters ?? Number.POSITIVE_INFINITY)),
-      areaMeters: group.reduce((total, polygon) => total + getFootprintAreaMeters(polygon.geometry), 0),
-      bbox,
-      maxRenderHeightMeters: maxMetric(renderHeights),
-      avgRenderHeightMeters: averageMetric(renderHeights),
-    };
-  });
+  // A provider MultiPolygon is not a reliable real-world building grouping. Keep
+  // each deduplicated footprint independent; an administrator can deliberately
+  // multi-select genuinely related pieces when authoring the canonical asset.
+  const buildings = polygons.map((polygon, index): WorkspaceBuildingGroup => ({
+    id: polygon.id,
+    label: `Building ${index + 1}`,
+    polygonCount: 1,
+    polygonIndices: [index],
+    providerFeatureIds: polygon.providerFeatureId ? [polygon.providerFeatureId] : [],
+    distanceMeters: polygon.distanceMeters,
+    areaMeters: getFootprintAreaMeters(polygon.geometry),
+    bbox: polygon.bbox,
+    center: getBoundsCenter(polygon.bbox),
+    maxRenderHeightMeters: polygon.renderHeightMeters,
+    avgRenderHeightMeters: polygon.renderHeightMeters,
+  }));
 
   const coordinates = polygons.map((polygon) => polygon.geometry.coordinates);
   const geometry = coordinates.length === 1
@@ -1038,7 +1231,7 @@ const buildWorkspaceGeometryFromFeatures = (
     workspacePolygonCount: polygons.length,
     buildingCount: buildings.length,
     providerFeatureIdCount: providerFeatureIds.length,
-    groupingComparisons,
+    duplicatePolygonCount: Math.max(0, polygonIterations - polygons.length),
     radiusMeters,
   });
 
@@ -1123,9 +1316,9 @@ const buildRawFeatureDump = (feature: MapGeoJSONFeature, index: number): string[
 };
 
 const getGeometryBBox = (geometry: GeoJSON.Geometry | null | undefined): Bounds | null => {
-  if (!geometry) return null;
+  if (!geometry || !('coordinates' in geometry)) return null;
   const points: number[][] = [];
-  flattenCoords((geometry as GeoJSON.Geometry).coordinates, points);
+  flattenCoords(geometry.coordinates, points);
   if (!points.length) return null;
   let minLng = Number.POSITIVE_INFINITY;
   let minLat = Number.POSITIVE_INFINITY;
@@ -1185,6 +1378,138 @@ const haversineMeters = (a: { lng: number; lat: number }, b: { lng: number; lat:
   const sinLng = Math.sin(dLng / 2);
   const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
   return 2 * earthRadiusMeters * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+const BUILDING_LOCATION_APPROXIMATE_WARNING_PATTERN = /approximate-location|exact-address-not-published|exact-address-not-public|private-venue-city-level-location|map-pin-is-approximate|coordinate-represents-|event-location-may-vary|event-locations-vary|exact-location-provided|location-disclosed|published-road-area/i;
+const BUILDING_LOCATION_REVIEW_WARNING_PATTERN = /coordinates?-need-final-verification|street-level-geocode|address-number-not-resolved|map-coordinate-resolved-(?:at|near)-street-segment|coordinate-resolved-to-(?:nearby-)?road-segment|venue-name-confirmed-address-number-not-published|low-geocode-confidence|postal-code-source-mismatch/i;
+
+const coordinateDecimalPlaces = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  const decimal = String(Math.abs(value)).split('.')[1];
+  return decimal?.length ?? 0;
+};
+
+const getBuildingLocationAudit = (
+  listing: Listing,
+  collections: EntityCollections = {},
+): BuildingLocationAudit => {
+  const venue = getVenueForListing(listing, collections);
+  const physicalAddress = getListingPhysicalAddress(listing, collections);
+  const canonicalCoords = getListingCanonicalCoords(listing, collections);
+  const persistedVenue = venue && collections.venues?.some((candidate) => candidate.id === venue.id)
+    ? venue
+    : null;
+  const metadata = persistedVenue?.locationMeta ?? listing.locationMeta;
+  const warnings = Array.from(new Set([
+    ...(listing.locationMeta?.warnings ?? []),
+    ...(persistedVenue?.locationMeta?.warnings ?? []),
+  ]));
+  const warningText = warnings.join(' ');
+  const streetAddress = physicalAddress.addressLine1?.trim() ?? '';
+  const metadataStatus = String(metadata?.status ?? '').trim().toLowerCase();
+  const isApproximate =
+    isApproximateLocation(listing) ||
+    persistedVenue?.visibility === 'public_approximate' ||
+    persistedVenue?.visibility === 'private' ||
+    metadataStatus === 'approximate' ||
+    BUILDING_LOCATION_APPROXIMATE_WARNING_PATTERN.test(warningText);
+
+  if (!streetAddress) {
+    return {
+      state: 'approximate',
+      label: 'No exact address',
+      reason: 'This listing does not have a street-level address, so selecting a specific building would be guesswork.',
+      venueListingDriftMeters: null,
+    };
+  }
+
+  if (isApproximate) {
+    return {
+      state: 'approximate',
+      label: 'Approximate pin',
+      reason: 'This location is intentionally approximate, private, or otherwise not precise enough for building authoring.',
+      venueListingDriftMeters: null,
+    };
+  }
+
+  let venueListingDriftMeters: number | null = null;
+  if (
+    listing.type === 'club' &&
+    persistedVenue &&
+    Number.isFinite(listing.geopoint.latitude) &&
+    Number.isFinite(listing.geopoint.longitude)
+  ) {
+    venueListingDriftMeters = haversineMeters(
+      { lat: listing.geopoint.latitude, lng: listing.geopoint.longitude },
+      { lat: persistedVenue.latitude, lng: persistedVenue.longitude },
+    );
+    if (venueListingDriftMeters > 35) {
+      return {
+        state: 'review',
+        label: 'Venue/listing drift',
+        reason: `The Venue pin and listing pin differ by about ${Math.round(venueListingDriftMeters)} m. Resolve that drift before choosing a building.`,
+        venueListingDriftMeters,
+      };
+    }
+  }
+
+  const buildingVerification = metadata?.buildingVerification;
+  if (buildingVerification?.status === 'mismatch' || buildingVerification?.status === 'unconfirmed') {
+    return {
+      state: 'review',
+      label: 'Building address flag',
+      reason: buildingVerification.candidateAddress
+        ? `The last automated building check could not reconcile the listing with ${buildingVerification.candidateAddress}.`
+        : 'The last automated building check could not confirm a nearby footprint against the listing address.',
+      venueListingDriftMeters,
+    };
+  }
+
+  if (metadataStatus && metadataStatus !== 'validated') {
+    return {
+      state: 'review',
+      label: 'Pin review',
+      reason: `Location metadata is marked ${metadataStatus.replace(/_/g, ' ')} rather than validated.`,
+      venueListingDriftMeters,
+    };
+  }
+
+  if (BUILDING_LOCATION_REVIEW_WARNING_PATTERN.test(warningText)) {
+    return {
+      state: 'review',
+      label: 'Pin review',
+      reason: warnings[0] ? `Location warning: ${warnings[0].replace(/-/g, ' ')}.` : 'The stored coordinate needs street-level verification.',
+      venueListingDriftMeters,
+    };
+  }
+
+  if (typeof metadata?.confidence === 'number' && metadata.confidence < 0.9) {
+    return {
+      state: 'review',
+      label: 'Pin review',
+      reason: `Location confidence is ${(metadata.confidence * 100).toFixed(0)}%, below the building-authoring threshold.`,
+      venueListingDriftMeters,
+    };
+  }
+
+  if (
+    canonicalCoords &&
+    Math.min(coordinateDecimalPlaces(canonicalCoords.lat), coordinateDecimalPlaces(canonicalCoords.lng)) < 4
+  ) {
+    return {
+      state: 'review',
+      label: 'Low-precision pin',
+      reason: 'The stored coordinate is too coarsely rounded for reliable building-level selection.',
+      venueListingDriftMeters,
+    };
+  }
+
+  return {
+    state: 'ready',
+    label: 'Pin ready',
+    reason: 'The listing has a street address and no known precision warnings.',
+    venueListingDriftMeters,
+  };
 };
 
 const getFeatureTile = (feature: MapGeoJSONFeature): string => {
@@ -1261,6 +1586,127 @@ const pointInRing = (point: [number, number], ring: number[][]): boolean => {
 const pointInPolygon = (point: [number, number], polygon: number[][][]): boolean => {
   if (!polygon.length || !pointInRing(point, polygon[0])) return false;
   return !polygon.slice(1).some((hole) => pointInRing(point, hole));
+};
+
+const getWorkspaceBuildingGeometry = (
+  workspace: WorkspaceGeometryResult,
+  building: WorkspaceBuildingGroup,
+): GeoJSON.Polygon | GeoJSON.MultiPolygon | null => {
+  const coordinates = building.polygonIndices
+    .map((index) => workspace.polygons[index]?.geometry.coordinates)
+    .filter((value): value is number[][][] => Boolean(value));
+  if (!coordinates.length) return null;
+  return coordinates.length === 1
+    ? { type: 'Polygon', coordinates: coordinates[0] }
+    : { type: 'MultiPolygon', coordinates };
+};
+
+const workspaceBuildingContainsPoint = (
+  workspace: WorkspaceGeometryResult,
+  building: WorkspaceBuildingGroup,
+  point: { lng: number; lat: number },
+): boolean => {
+  const geometry = getWorkspaceBuildingGeometry(workspace, building);
+  if (!geometry) return false;
+  return collectPolygons(geometry).some((polygon) => pointInPolygon([point.lng, point.lat], polygon));
+};
+
+const rankWorkspaceAddressCandidates = async (
+  listing: Listing,
+  workspace: WorkspaceGeometryResult,
+  point: { lng: number; lat: number },
+  collections: EntityCollections,
+  maxCandidates = 7,
+): Promise<BuildingAddressIntelligenceCandidate[]> => {
+  const listingAddress = getListingPhysicalAddress(listing, collections);
+  const candidates: BuildingAddressIntelligenceCandidate[] = [];
+  const buildings = workspace.buildings
+    .filter((building) => building.center && building.polygonIndices.length)
+    .slice(0, maxCandidates);
+
+  for (const building of buildings) {
+    const center = building.center;
+    if (!center) continue;
+    const addressResolution = await reverseGeocodeBuildingAddressDetailed(center[1], center[0], {
+      listingId: listing.id,
+      footprintFingerprint: building.id,
+    });
+    const address = addressResolution.status === 'resolved' ? addressResolution.address : null;
+    const geometry = getWorkspaceBuildingGeometry(workspace, building);
+    if (!geometry) continue;
+    const minimumPinToFootprintMeters = pointToBuildingDistanceMeters(point, geometry);
+    const pinIntersects = pointIntersectsBuildingGeometry(point, geometry);
+    const pinToCentroidMeters = haversineMeters(point, { lng: center[0], lat: center[1] });
+    const scored = scoreBuildingAddressCandidate(
+      listingAddress,
+      address?.candidate ?? {},
+      { distanceMeters: minimumPinToFootprintMeters, pinIntersects },
+    );
+    candidates.push({
+      buildingId: building.id,
+      polygonIndices: building.polygonIndices,
+      providerFeatureIds: building.providerFeatureIds,
+      distanceMeters: minimumPinToFootprintMeters,
+      pinIntersects,
+      address,
+      geometry,
+      pinToCentroidMeters,
+      score: scored.score,
+      confidence: scored.confidence,
+      reasons: scored.reasons,
+      reverseAddressStatus: addressResolution.status,
+      providerSource: workspace.polygons[building.polygonIndices[0]]?.source ?? 'OpenFreeMap',
+    });
+  }
+
+  return candidates.sort((a, b) =>
+    b.score - a.score
+    || b.confidence - a.confidence
+    || (a.distanceMeters ?? Number.POSITIVE_INFINITY) - (b.distanceMeters ?? Number.POSITIVE_INFINITY),
+  );
+};
+
+const classifyBuildingAddressCandidates = (
+  candidates: BuildingAddressIntelligenceCandidate[],
+  listing: Listing,
+  collections: EntityCollections,
+): { status: BuildingAddressIntelligenceResolvedStatus; message: string; bestCandidate: BuildingAddressIntelligenceCandidate | null; outcome: BuildingVerificationOutcome; scoreGap: number | null; autoAccept: boolean; autoAcceptMethod: 'exact_address_and_pin' | 'authoritative_unique_pin' | null; decision: ReturnType<typeof evaluateBuildingVerification> } => {
+  const venue = getVenueForListing(listing, collections);
+  const locationMeta = venue?.locationMeta ?? listing.locationMeta;
+  const decision = evaluateBuildingVerification(candidates.map((candidate) => ({
+    fingerprint: candidate.buildingId,
+    geometry: candidate.geometry,
+    providerFeatureIds: candidate.providerFeatureIds,
+    source: candidate.providerSource,
+    pinIntersects: candidate.pinIntersects,
+    pinToFootprintMeters: candidate.distanceMeters ?? Number.POSITIVE_INFINITY,
+    pinToCentroidMeters: candidate.pinToCentroidMeters,
+    address: candidate.address?.candidate ?? null,
+    addressLabel: candidate.address?.displayName ?? candidate.address?.primary ?? null,
+  })), {
+    listingAddress: getListingPhysicalAddress(listing, collections),
+    locationConfidence: locationMeta?.confidence,
+    geocoderSource: locationMeta?.geocoderSource,
+    manuallyAdjusted: locationMeta?.manualAdjustment,
+  });
+  const bestCandidate = decision.candidate
+    ? candidates.find((candidate) => candidate.buildingId === decision.candidate?.fingerprint) ?? candidates[0] ?? null
+    : null;
+  const status: BuildingAddressIntelligenceResolvedStatus = decision.outcome === 'verified'
+    ? 'confirmed'
+    : decision.outcome === 'probable'
+      ? 'probable'
+      : decision.outcome === 'address_mismatch' || decision.outcome === 'pin_mismatch'
+        ? 'mismatch'
+        : 'unconfirmed';
+  const message = decision.outcome === 'verified'
+    ? `Definitive shadow candidate: ${bestCandidate?.address?.primary ?? 'the recommended footprint'}. No asset was written.`
+    : decision.outcome === 'probable'
+      ? `Best candidate is ${bestCandidate?.address?.primary ?? 'a nearby footprint'}, but it needs a quick visual review.`
+      : decision.outcome === 'ambiguous'
+        ? 'Two or more nearby buildings have materially similar evidence.'
+        : decision.reasons.join(' ') || 'No nearby building could be address-checked.';
+  return { status, message, bestCandidate, outcome: decision.outcome, scoreGap: decision.scoreGap, autoAccept: decision.autoAccept, autoAcceptMethod: decision.autoAcceptMethod, decision };
 };
 
 const polygonsIntersect = (a: number[][][][], b: number[][][][]): boolean => {
@@ -1509,14 +1955,22 @@ const getFeatureMetrics = (geometry: GeoJSON.Geometry | null | undefined): Featu
   const polygons = collectPolygons(geometry);
   let disconnectedPieces: DiagnosticMetric = null;
   let metricsStatus: FeatureMetrics['metricsStatus'] = 'ready';
-  try {
-    disconnectedPieces = countConnectedPieces(polygons);
-  } catch (error) {
+  if (polygons.length > MAX_CONNECTED_PIECE_DIAGNOSTIC_POLYGONS) {
     metricsStatus = 'skipped';
-    logBuildingInspector('getFeatureMetrics:diagnostic skipped', {
+    logBuildingInspector('getFeatureMetrics:diagnostic skipped for aggregate geometry', {
       ...baseMetrics,
-      error,
+      maxPolygonCount: MAX_CONNECTED_PIECE_DIAGNOSTIC_POLYGONS,
     });
+  } else {
+    try {
+      disconnectedPieces = countConnectedPieces(polygons);
+    } catch (error) {
+      metricsStatus = 'skipped';
+      logBuildingInspector('getFeatureMetrics:diagnostic skipped', {
+        ...baseMetrics,
+        error,
+      });
+    }
   }
 
   return {
@@ -1653,7 +2107,11 @@ const buildRawGeoJSON = (
     })),
 });
 
-const buildResolution = (featureId: string, fragments: MapGeoJSONFeature[]): BuildingResolution | null => {
+const buildResolution = (
+  featureId: string,
+  fragments: MapGeoJSONFeature[],
+  focusPoint?: { lng: number; lat: number } | null,
+): BuildingResolution | null => {
   logBuildingInspector('buildResolution:enter', {
     featureId,
     fragmentCount: fragments.length,
@@ -1662,7 +2120,13 @@ const buildResolution = (featureId: string, fragments: MapGeoJSONFeature[]): Bui
     logBuildingInspector('buildResolution:exit empty fragments', { featureId });
     return null;
   }
-  const primaryFragment = choosePrimaryFragment(fragments, { lng: DEFAULT_TWIST_LNG, lat: DEFAULT_TWIST_LAT });
+  const fallbackCenter = getGeometryCenter(fragments[0]?.geometry);
+  const primaryFragment = choosePrimaryFragment(
+    fragments,
+    focusPoint ?? (fallbackCenter
+      ? { lng: fallbackCenter[0], lat: fallbackCenter[1] }
+      : { lng: DEFAULT_TWIST_LNG, lat: DEFAULT_TWIST_LAT }),
+  );
   if (!primaryFragment?.geometry) {
     logBuildingInspector('buildResolution:exit missing primary geometry', {
       featureId,
@@ -1738,9 +2202,12 @@ const buildResolutionFromWorkspace = (
 ): BuildingResolution | null => {
   if (!workspace.geometry) return null;
   const metrics = getBaseFeatureMetrics(workspace.geometry);
+  const includesOsOpenMapLocal = workspace.providerFeatureIds.some((providerFeatureId) =>
+    providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX)
+  );
   return {
     featureId: `workspace:${seedFeatureId}`,
-    source: 'SwingSphere Workspace Geometry',
+    source: includesOsOpenMapLocal ? OS_OPENMAP_LOCAL_SOURCE : 'OpenFreeMap',
     sourceLayer: SOURCE_LAYER,
     fragments,
     duplicateGroups: [],
@@ -1918,14 +2385,6 @@ const buildExtrudedPolygonGeometry = (record: PolygonRecord): THREE.ExtrudeGeome
     steps: 1,
     curveSegments: 1,
   });
-  logBuildingInspector('buildExtrudedPolygonGeometry:exit', {
-    polygonIndex: record.polygonIndex,
-    extrusionHeight,
-    renderMinHeightMeters: record.renderMinHeightMeters,
-    contourLength: contour.length,
-    holeCount: shape.holes.length,
-    attributePositionCount: geometry.attributes.position?.count ?? 0,
-  });
   return geometry;
 };
 
@@ -2009,29 +2468,48 @@ const disposeSceneMeshEntries = (entries: SceneMeshEntry[]): void => {
   }
 };
 
+const disposeSceneGroup = (group: THREE.Group | null): void => {
+  if (!group) return;
+  group.removeFromParent();
+  group.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    mesh.geometry?.dispose?.();
+    const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    const disposeMaterial = (item: THREE.Material) => {
+      const mapped = item as THREE.MeshBasicMaterial;
+      mapped.map?.dispose?.();
+      item.dispose();
+    };
+    if (Array.isArray(material)) material.forEach(disposeMaterial);
+    else if (material) disposeMaterial(material);
+  });
+};
+
 const applySceneMeshStyles = (
   entries: SceneMeshEntry[],
   hoveredPolygonIndex: number | null,
   selectedPolygonIndices: Set<number>,
+  suggestedPolygonIndices: Set<number>,
   isolateSelected: boolean,
 ): void => {
   for (const entry of entries) {
     const hasSelection = selectedPolygonIndices.size > 0;
     const isSelected = selectedPolygonIndices.has(entry.record.polygonIndex);
     const isHovered = entry.record.polygonIndex === hoveredPolygonIndex;
+    const isSuggested = suggestedPolygonIndices.has(entry.record.polygonIndex);
     const isDimmed = isolateSelected && hasSelection && !isSelected;
     const baseColor = new THREE.Color(
-      isSelected ? '#37d97a' : isHovered && !isDimmed ? '#f1c35a' : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
+      isSelected ? '#37d97a' : (isHovered || isSuggested) && !isDimmed ? '#f1c35a' : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
     );
     entry.material.color.copy(baseColor);
-    entry.material.emissive.set(isSelected ? '#10301c' : isHovered && !isDimmed ? '#231c08' : '#000000');
-    entry.material.opacity = isDimmed ? 0.08 : isSelected ? 0.95 : isHovered ? 0.9 : 0.82;
+    entry.material.emissive.set(isSelected ? '#10301c' : (isHovered || isSuggested) && !isDimmed ? '#231c08' : '#000000');
+    entry.material.opacity = isDimmed ? 0.08 : isSelected ? 0.95 : isHovered ? 0.9 : isSuggested ? 0.88 : 0.82;
     entry.mesh.visible = !isolateSelected || !hasSelection || isSelected;
     entry.material.needsUpdate = true;
 
-    entry.outline.visible = !isDimmed && (isHovered || isSelected);
-    entry.outlineMaterial.color.set(isSelected ? '#7dff99' : '#ffffff');
-    entry.outlineMaterial.opacity = isSelected ? 0.95 : 0.45;
+    entry.outline.visible = !isDimmed && (isHovered || isSelected || isSuggested);
+    entry.outlineMaterial.color.set(isSelected ? '#7dff99' : isSuggested ? '#f1c35a' : '#ffffff');
+    entry.outlineMaterial.opacity = isSelected ? 0.95 : isSuggested ? 0.8 : 0.45;
     entry.outlineMaterial.needsUpdate = true;
   }
 };
@@ -2074,6 +2552,7 @@ type BuildingInspectorPageProps = {
   buildingAssets?: BuildingAsset[];
   onBuildingAssetSaved?: (asset: BuildingAsset, listing: Listing | null) => void;
   onListingLocationSaved?: (listing: Listing) => void;
+  onVenueLocationSaved?: (venue: VenueData) => void;
 };
 
 const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
@@ -2085,6 +2564,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   buildingAssets: buildingAssetsProp,
   onBuildingAssetSaved,
   onListingLocationSaved,
+  onVenueLocationSaved,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const sceneContainerRef = useRef<HTMLDivElement | null>(null);
@@ -2097,6 +2577,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const modelGroupRef = useRef<THREE.Group | null>(null);
   const referenceGroupRef = useRef<THREE.Group | null>(null);
   const venueMarkerGroupRef = useRef<THREE.Group | null>(null);
+  const streetFloorGroupRef = useRef<THREE.Group | null>(null);
+  const compassNeedleRef = useRef<HTMLSpanElement | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const meshEntriesRef = useRef<SceneMeshEntry[]>([]);
   const referenceMeshEntriesRef = useRef<SceneMeshEntry[]>([]);
@@ -2105,6 +2587,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const pendingSelectAllRef = useRef(false);
+  const addressIntelligenceRunRef = useRef(0);
   const featureIdInputRef = useRef(DEFAULT_FEATURE_ID);
   const [featureIdInput, setFeatureIdInput] = useState(DEFAULT_FEATURE_ID);
   const [resolution, setResolution] = useState<BuildingResolution | null>(null);
@@ -2119,10 +2602,28 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState<number | null>(null);
   const [selectedPolygonIndices, setSelectedPolygonIndices] = useState<number[]>([]);
+  const [suggestedPolygonIndices, setSuggestedPolygonIndices] = useState<number[]>([]);
   const [isolateSelected, setIsolateSelected] = useState(false);
   const [showVenueMarker, setShowVenueMarker] = useState(true);
   const [showNearbyBuildings, setShowNearbyBuildings] = useState(true);
-  const [showGrid, setShowGrid] = useState(true);
+  const [showStreetFloor, setShowStreetFloor] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+  const [buildingSourceMode, setBuildingSourceMode] = useState<BuildingSourceMode>('auto');
+  const [loadedBuildingSourceLabel, setLoadedBuildingSourceLabel] = useState('Not loaded');
+  const [streetReferenceSnapshot, setStreetReferenceSnapshot] = useState<StreetReferenceSnapshot | null>(null);
+  const [streetReferenceStatus, setStreetReferenceStatus] = useState('Map ready');
+  const [selectedBuildingAddress, setSelectedBuildingAddress] = useState<SelectedBuildingAddressState>({
+    status: 'idle',
+    primary: null,
+    secondary: null,
+  });
+  const [addressIntelligence, setAddressIntelligence] = useState<BuildingAddressIntelligenceState>({
+    status: 'idle',
+    message: 'Address intelligence has not run yet.',
+    searchRadiusMeters: null,
+    bestCandidate: null,
+    checkedCandidateCount: 0,
+  });
   const [showFullProviderTileCache, setShowFullProviderTileCache] = useState(false);
   const [referencePolygonRecords, setReferencePolygonRecords] = useState<PolygonRecord[]>([]);
   const [providerCandidates, setProviderCandidates] = useState<ProviderCandidate[]>([]);
@@ -2147,11 +2648,13 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [savedGeometrySignature, setSavedGeometrySignature] = useState('');
   const [assetStatusMessage, setAssetStatusMessage] = useState<string | null>(null);
   const [localListings, setLocalListings] = useState<Listing[]>([]);
+  const [localVenues, setLocalVenues] = useState<VenueData[]>([]);
   const [localBuildingAssets, setLocalBuildingAssets] = useState<BuildingAsset[]>([]);
+  const [buildingEvidenceRecords, setBuildingEvidenceRecords] = useState<BuildingVerificationEvidenceRecord[]>([]);
   const listings = listingsProp ?? localListings;
-  const venues = venuesProp ?? [];
-  const organizations = organizationsProp ?? [];
-  const relationships = relationshipsProp ?? [];
+  const venues = venuesProp ?? localVenues;
+  const organizations = organizationsProp ?? EMPTY_ORGANIZATIONS;
+  const relationships = relationshipsProp ?? EMPTY_RELATIONSHIPS;
   const buildingAssets = buildingAssetsProp ?? localBuildingAssets;
   const semv2Collections = useMemo(
     () => ({ listings, venues, organizations, relationships }),
@@ -2167,16 +2670,67 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     () => getBuildingAssetForListing(selectedVenue, buildingAssets, venues, listings, organizations, relationships),
     [buildingAssets, listings, organizations, relationships, selectedVenue, venues],
   );
+  const selectedVenueAssetOwnerListing = useMemo(
+    () => selectedVenueAsset
+      ? listings.find((listing) => listing.id === selectedVenueAsset.listingId) ?? null
+      : null,
+    [listings, selectedVenueAsset],
+  );
+  const selectedVenueAssetIsShared = Boolean(
+    selectedVenue &&
+    selectedVenueAsset &&
+    selectedVenueAsset.listingId !== selectedVenue.id,
+  );
   const selectedVenueCoords = useMemo(
     () => selectedVenue ? getListingCanonicalCoords(selectedVenue, semv2Collections) : null,
     [selectedVenue, semv2Collections],
   );
+  const selectedVenueLat = selectedVenueCoords?.lat ?? null;
+  const selectedVenueLng = selectedVenueCoords?.lng ?? null;
+  const selectedStoredBuildingVerification = useMemo(
+    () => selectedVenue ? getBuildingVerificationForListing(selectedVenue, semv2Collections) : undefined,
+    [selectedVenue, semv2Collections],
+  );
+  const selectedBuildingEvidence = useMemo(() => selectedVenue
+    ? buildingEvidenceRecords
+      .filter((record) => {
+        if (record.listingId !== selectedVenue.id) return false;
+        if (!selectedVenueCoords) return true;
+        return haversineMeters(
+          selectedVenueCoords,
+          { lat: record.canonicalCoordinate.lat, lng: record.canonicalCoordinate.lng },
+        ) <= 5;
+      })
+      .sort((a, b) => b.evaluatedAt.localeCompare(a.evaluatedAt))[0] ?? null
+    : null,
+  [buildingEvidenceRecords, selectedVenue, selectedVenueCoords]);
+  const listingLocationAudits = useMemo(
+    () => new Map(listings.map((listing) => [listing.id, getBuildingLocationAudit(listing, semv2Collections)])),
+    [listings, semv2Collections],
+  );
+  const selectedVenueLocationAudit = selectedVenue
+    ? listingLocationAudits.get(selectedVenue.id) ?? getBuildingLocationAudit(selectedVenue, semv2Collections)
+    : null;
+  const selectedVenueAssetPinDriftMeters = useMemo(() => {
+    if (!selectedVenueAsset || !selectedVenueCoords) return null;
+    return pointToBuildingDistanceMeters(
+      { lat: selectedVenueCoords.lat, lng: selectedVenueCoords.lng },
+      selectedVenueAsset.geometry,
+    );
+  }, [selectedVenueAsset, selectedVenueCoords]);
+  const selectedVenueAssetCentroidDistanceMeters = useMemo(() => {
+    if (!selectedVenueAsset || !selectedVenueCoords) return null;
+    const center = getGeometryCenter(selectedVenueAsset.geometry);
+    return center ? haversineMeters(selectedVenueCoords, { lat: center[1], lng: center[0] }) : null;
+  }, [selectedVenueAsset, selectedVenueCoords]);
   const filteredVenues = useMemo(() => {
     const query = venueSearch.trim().toLowerCase();
     return listings
       .filter((listing) => {
         const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
-        if (assetFilter === 'missing' && hasAsset) return false;
+        const locationAudit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
+        if (assetFilter === 'missing' && (hasAsset || locationAudit.state !== 'ready')) return false;
+        if (assetFilter === 'location' && (hasAsset || locationAudit.state === 'ready')) return false;
         if (assetFilter === 'has' && !hasAsset) return false;
         if (!query) return true;
         const haystack = [
@@ -2190,15 +2744,28 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         return haystack.includes(query);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [assetFilter, buildingAssets, listings, organizations, relationships, semv2Collections, venueSearch, venues]);
+  }, [assetFilter, buildingAssets, listingLocationAudits, listings, organizations, relationships, semv2Collections, venueSearch, venues]);
   const venueStats = useMemo(() => {
-    const withAssets = listings.filter((listing) => getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships)).length;
+    let withAssets = 0;
+    let missing = 0;
+    let locationReview = 0;
+    listings.forEach((listing) => {
+      const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
+      if (hasAsset) {
+        withAssets += 1;
+        return;
+      }
+      const audit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
+      if (audit.state === 'ready') missing += 1;
+      else locationReview += 1;
+    });
     return {
       total: listings.length,
-      missing: listings.length - withAssets,
+      missing,
+      locationReview,
       withAssets,
     };
-  }, [buildingAssets, listings, organizations, relationships, venues]);
+  }, [buildingAssets, listingLocationAudits, listings, organizations, relationships, semv2Collections, venues]);
 
   const polygonRecords = useMemo(() => {
     const geometry = resolution?.geometry ?? null;
@@ -2224,6 +2791,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     () => new Set(selectedPolygonIndices),
     [selectedPolygonIndices],
   );
+  const suggestedPolygonIndexSet = useMemo(
+    () => new Set(suggestedPolygonIndices),
+    [suggestedPolygonIndices],
+  );
   const selectedPolygonRecords = useMemo(
     () => selectedPolygonIndices.map((index) => polygonRecords[index]).filter((record): record is PolygonRecord => Boolean(record)),
     [polygonRecords, selectedPolygonIndices],
@@ -2240,6 +2811,73 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     () => getGeometrySignature(selectedSummary.geoJson?.geometry),
     [selectedSummary.geoJson?.geometry],
   );
+
+  useEffect(() => {
+    if (!selectedPolygonRecords.length) {
+      setSelectedBuildingAddress({ status: 'idle', primary: null, secondary: null });
+      return;
+    }
+    if (selectedPolygonRecords.length > 1) {
+      setSelectedBuildingAddress({
+        status: 'multiple',
+        primary: `${selectedPolygonRecords.length} footprints selected`,
+        secondary: 'Select one building footprint to look up its individual street address.',
+      });
+      return;
+    }
+
+    const center = getGeometryCenter(selectedPolygonRecords[0].geometry);
+    if (!center) {
+      setSelectedBuildingAddress({ status: 'missing', primary: 'Address unavailable', secondary: 'The selected footprint has no usable geographic center.' });
+      return;
+    }
+
+    const [lng, lat] = center;
+    const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    const cached = selectedBuildingAddressCache.get(cacheKey);
+    if (cached) {
+      setSelectedBuildingAddress({ status: 'resolved', ...cached });
+      return;
+    }
+
+    let cancelled = false;
+    setSelectedBuildingAddress({ status: 'loading', primary: 'Looking up address…', secondary: null });
+
+    const timer = window.setTimeout(async () => {
+      if (!selectedVenue) return;
+      const addressResolution = await reverseGeocodeBuildingAddressDetailed(lat, lng, {
+        listingId: selectedVenue.id,
+        footprintFingerprint: geometryFingerprint(selectedPolygonRecords[0].geometry),
+      });
+      if (cancelled) return;
+      if (addressResolution.status === 'provider_error') {
+        setSelectedBuildingAddress({
+          status: 'error',
+          primary: 'Address provider unavailable',
+          secondary: addressResolution.errorCode === 'timeout' ? 'The lookup timed out. Retry later.' : 'The footprint remains available for review.',
+        });
+        return;
+      }
+      const formatted = addressResolution.status === 'resolved' ? addressResolution.address : null;
+      if (!formatted?.primary && !formatted?.secondary) {
+        setSelectedBuildingAddress({
+          status: 'missing',
+          primary: 'No mapped street address',
+          secondary: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        });
+        return;
+      }
+      const display = { primary: formatted.primary, secondary: formatted.secondary };
+      selectedBuildingAddressCache.set(cacheKey, display);
+      setSelectedBuildingAddress({ status: 'resolved', ...display });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [selectedGeometrySignature, selectedPolygonRecords, selectedVenue]);
+
   const saveStateLabel = useMemo(() => {
     if (selectedSummary.count > 0) {
       return selectedGeometrySignature && selectedGeometrySignature === savedGeometrySignature ? 'Saved' : 'Unsaved Changes';
@@ -2331,16 +2969,25 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   useEffect(() => {
     if (embedded || listingsProp || buildingAssetsProp) return;
     let cancelled = false;
-    Promise.all([api.getListings(), api.getBuildingAssets()])
-      .then(([nextListings, nextAssets]) => {
+    Promise.all([
+      api.getListings(),
+      api.getVenues(),
+      api.getBuildingAssets(),
+      fetch('/api/admin/building-verification/evidence').then((response) => response.ok ? response.json() : []),
+    ])
+      .then(([nextListings, nextVenues, nextAssets, nextEvidence]) => {
         if (cancelled) return;
         setLocalListings(nextListings);
+        setLocalVenues(nextVenues);
         setLocalBuildingAssets(nextAssets);
+        setBuildingEvidenceRecords(Array.isArray(nextEvidence) ? nextEvidence : []);
       })
       .catch(() => {
         if (cancelled) return;
         setLocalListings([]);
+        setLocalVenues([]);
         setLocalBuildingAssets([]);
+        setBuildingEvidenceRecords([]);
       });
     return () => {
       cancelled = true;
@@ -2527,6 +3174,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       const polygonIndex = intersections[0]?.object.userData?.polygonIndex;
       if (typeof polygonIndex === 'number') {
         const shouldToggle = event.shiftKey || event.ctrlKey || event.metaKey;
+        setSuggestedPolygonIndices([]);
         setSelectedPolygonIndices((current) => {
           if (!shouldToggle) return [polygonIndex];
           if (current.includes(polygonIndex)) {
@@ -2558,6 +3206,17 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     const animate = () => {
       animationFrameRef.current = window.requestAnimationFrame(animate);
       controls.update();
+      const compassNeedle = compassNeedleRef.current;
+      if (compassNeedle) {
+        const targetProjected = controls.target.clone().project(camera);
+        const northProjected = controls.target.clone().add(new THREE.Vector3(0, 0, -100)).project(camera);
+        const dx = northProjected.x - targetProjected.x;
+        const dy = northProjected.y - targetProjected.y;
+        if (Number.isFinite(dx) && Number.isFinite(dy) && Math.hypot(dx, dy) > 1e-6) {
+          const angleDegrees = THREE.MathUtils.radToDeg(Math.atan2(dx, dy));
+          compassNeedle.style.transform = `rotate(${angleDegrees.toFixed(1)}deg)`;
+        }
+      }
       const marker = venueMarkerGroupRef.current;
       if (marker?.visible) {
         const pulse = marker.getObjectByName('venue-pulse-ring') as THREE.Mesh | undefined;
@@ -2596,9 +3255,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       modelGroupRef.current?.removeFromParent();
       referenceGroupRef.current?.removeFromParent();
       venueMarkerGroupRef.current?.removeFromParent();
+      disposeSceneGroup(streetFloorGroupRef.current);
       modelGroupRef.current = null;
       referenceGroupRef.current = null;
       venueMarkerGroupRef.current = null;
+      streetFloorGroupRef.current = null;
       gridRef.current = null;
       renderer.dispose();
       container.removeChild(renderer.domElement);
@@ -2710,7 +3371,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         ? soloProviderFeatureId === currentEditableFeatureId
         : !hiddenProviderFeatureIdSet.has(currentEditableFeatureId)
       : true;
-    applySceneMeshStyles(entries, hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected);
+    applySceneMeshStyles(entries, hoveredPolygonIndex, selectedPolygonIndexSet, suggestedPolygonIndexSet, isolateSelected);
 
     const bounds = buildMeshEntriesBounds(entries);
     if (bounds) {
@@ -2746,8 +3407,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   }, [polygonRecords]);
 
   useEffect(() => {
-    applySceneMeshStyles(meshEntriesRef.current, hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected);
-  }, [hoveredPolygonIndex, selectedPolygonIndexSet, isolateSelected]);
+    applySceneMeshStyles(meshEntriesRef.current, hoveredPolygonIndex, selectedPolygonIndexSet, suggestedPolygonIndexSet, isolateSelected);
+  }, [hoveredPolygonIndex, selectedPolygonIndexSet, suggestedPolygonIndexSet, isolateSelected]);
 
   useEffect(() => {
     if (!modelGroupRef.current || !currentEditableFeatureId) return;
@@ -2761,6 +3422,84 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       gridRef.current.visible = showGrid;
     }
   }, [showGrid]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const previousGroup = streetFloorGroupRef.current;
+    if (previousGroup) {
+      disposeSceneGroup(previousGroup);
+      streetFloorGroupRef.current = null;
+    }
+
+    if (!showStreetFloor || !streetReferenceSnapshot || !sceneOrigin) return;
+
+    let cancelled = false;
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      streetReferenceSnapshot.dataUrl,
+      (texture) => {
+        if (cancelled) {
+          texture.dispose();
+          return;
+        }
+
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(8, rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1);
+        texture.needsUpdate = true;
+
+        const [west, south, east, north] = streetReferenceSnapshot.bounds;
+        const origin = { lng: sceneOrigin[0], lat: sceneOrigin[1] };
+        const southWest = toLocalMeters([west, south], origin);
+        const northEast = toLocalMeters([east, north], origin);
+        const center = toLocalMeters([(west + east) / 2, (south + north) / 2], origin);
+        const widthMeters = Math.max(1, Math.abs(northEast.x - southWest.x));
+        const depthMeters = Math.max(1, Math.abs(northEast.y - southWest.y));
+
+        const geometry = new THREE.PlaneGeometry(widthMeters, depthMeters);
+        const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.92,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.set(center.x, -0.12, -center.y);
+        plane.renderOrder = -10;
+
+        const outline = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geometry),
+          new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.28 }),
+        );
+        outline.rotation.x = -Math.PI / 2;
+        outline.position.set(center.x, -0.1, -center.y);
+        outline.renderOrder = -9;
+
+        const group = new THREE.Group();
+        group.name = 'building-inspector-street-plane';
+        group.add(plane, outline);
+        scene.add(group);
+        streetFloorGroupRef.current = group;
+        setStreetReferenceStatus('Ready');
+      },
+      undefined,
+      () => {
+        if (!cancelled) setStreetReferenceStatus('Map only');
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      const currentGroup = streetFloorGroupRef.current;
+      if (!currentGroup) return;
+      disposeSceneGroup(currentGroup);
+      streetFloorGroupRef.current = null;
+    };
+  }, [sceneOrigin, showStreetFloor, streetReferenceSnapshot]);
 
   useEffect(() => {
     logBuildingInspector('renderReferenceGeometry:enter', {
@@ -2889,10 +3628,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       });
       venueMarkerGroupRef.current = null;
     }
-    if (!selectedVenueCoords || !sceneOrigin) return;
+    if (selectedVenueLat === null || selectedVenueLng === null || !sceneOrigin) return;
 
     const local = toLocalMeters(
-      [selectedVenueCoords.lng, selectedVenueCoords.lat],
+      [selectedVenueLng, selectedVenueLat],
       { lng: sceneOrigin[0], lat: sceneOrigin[1] },
     );
     const group = new THREE.Group();
@@ -2930,7 +3669,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     group.visible = showVenueMarker;
     scene.add(group);
     venueMarkerGroupRef.current = group;
-  }, [sceneOrigin, selectedVenue]);
+  }, [sceneOrigin, selectedVenueLat, selectedVenueLng]);
 
   useEffect(() => {
     if (venueMarkerGroupRef.current) {
@@ -2944,11 +3683,312 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setSelectedPolygonIndices(polygonRecords.map((record) => record.polygonIndex));
   }, [polygonRecords]);
 
+  const persistBuildingVerification = async (
+    listing: Listing,
+    verification: BuildingVerificationMeta,
+  ): Promise<void> => {
+    if (BUILDING_VERIFICATION_MODE === 'shadow') {
+      logBuildingInspector('building verification shadow result', {
+        listingId: listing.id,
+        outcome: verification.outcome ?? verification.status,
+        confidence: verification.confidence,
+        footprintFingerprint: verification.footprintFingerprint ?? null,
+      });
+      return;
+    }
+    const resolvedVenue = getVenueForListing(listing, semv2Collections);
+    if (
+      listing.id.startsWith('landmark-test-') ||
+      isApproximateLocation(listing) ||
+      resolvedVenue?.visibility === 'private' ||
+      resolvedVenue?.visibility === 'public_approximate'
+    ) return;
+    const persistedVenue = resolvedVenue
+      ? venues.find((candidate) => candidate.id === resolvedVenue.id) ?? null
+      : null;
+
+    try {
+      if (persistedVenue) {
+        const savedVenue = await api.saveVenue({
+          ...persistedVenue,
+          locationMeta: {
+            status: persistedVenue.locationMeta?.status ?? 'manual',
+            ...persistedVenue.locationMeta,
+            buildingVerification: verification,
+          },
+        });
+        setLocalVenues((current) => current.map((item) => (item.id === savedVenue.id ? savedVenue : item)));
+        onVenueLocationSaved?.(savedVenue);
+        return;
+      }
+
+      const savedListing = await api.saveListing({
+        ...listing,
+        locationMeta: {
+          status: listing.locationMeta?.status ?? 'manual',
+          ...listing.locationMeta,
+          buildingVerification: verification,
+        },
+      });
+      setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
+      onListingLocationSaved?.(savedListing);
+    } catch (error) {
+      setAssetStatusMessage(`Address intelligence ran, but its admin review status could not be saved: ${(error as Error).message || 'unknown error'}`);
+    }
+  };
+
+  const persistShadowEvidence = async (args: {
+    listing: Listing;
+    classification: ReturnType<typeof classifyBuildingAddressCandidates>;
+    candidates: BuildingAddressIntelligenceCandidate[];
+    workspace: WorkspaceGeometryResult;
+    center: { lng: number; lat: number };
+  }): Promise<void> => {
+    const { listing, classification, candidates, workspace, center } = args;
+    const resolvedVenue = getVenueForListing(listing, semv2Collections);
+    const locationMeta = resolvedVenue?.locationMeta ?? listing.locationMeta;
+    const addressStatuses = candidates.map((candidate) => candidate.reverseAddressStatus);
+    const providerStatus = !workspace.buildings.length
+      ? 'no_building_footprints'
+      : addressStatuses.length > 0 && addressStatuses.every((status) => status === 'provider_error')
+        ? 'provider_unavailable'
+        : addressStatuses.length > 0 && addressStatuses.every((status) => status === 'no_address')
+          ? 'footprints_address_unresolved'
+          : 'completed';
+    const toEvidenceCandidate = (
+      ranked: ReturnType<typeof evaluateBuildingVerification>['candidate'],
+    ): BuildingCandidateEvidence | null => {
+      if (!ranked) return null;
+      const raw = candidates.find((candidate) => candidate.buildingId === ranked.fingerprint);
+      return {
+        footprintFingerprint: ranked.fingerprint,
+        providerFeatureIds: ranked.providerFeatureIds,
+        providerSource: ranked.source ?? raw?.providerSource ?? 'OpenFreeMap',
+        reverseAddressStatus: raw?.reverseAddressStatus === 'provider_error'
+          ? 'provider_error'
+          : raw?.reverseAddressStatus === 'resolved' ? 'resolved' : 'no_address',
+        candidateAddress: ranked.addressLabel ?? null,
+        addressComponents: ranked.address ?? null,
+        pinIntersects: ranked.pinIntersects,
+        minimumPinToFootprintMeters: ranked.pinToFootprintMeters,
+        pinToCentroidMeters: ranked.pinToCentroidMeters,
+        score: ranked.score,
+        confidence: ranked.confidence,
+        reasons: ranked.reasons,
+      };
+    };
+    const providerOutcome = providerStatus === 'provider_unavailable'
+      ? 'provider_unavailable'
+      : providerStatus === 'footprints_address_unresolved'
+        ? 'footprints_address_unresolved'
+        : classification.outcome;
+    const evidence: BuildingVerificationEvidenceRecord = {
+      version: 1,
+      listingId: listing.id,
+      venueId: resolvedVenue?.id ?? null,
+      listingName: listing.name,
+      normalizedAddress: normalizeAddressText(formatListingAddress(listing, semv2Collections)),
+      canonicalCoordinate: center,
+      coordinateProvenance: locationMeta?.geocoderSource ?? (locationMeta?.manualAdjustment ? 'manual-adjustment' : null),
+      coordinateConfidence: locationMeta?.confidence ?? null,
+      evaluatedAt: new Date().toISOString(),
+      providerSnapshot: {
+        source: 'OpenFreeMap',
+        status: providerStatus,
+        searchRadiusMeters: workspace.radiusMeters,
+        tileFeatureCount: workspace.providerTileFeatureCount,
+        individualFootprintCount: workspace.buildings.length,
+      },
+      outcome: providerOutcome,
+      autoAccept: providerStatus === 'completed' && classification.autoAccept,
+      autoAcceptMethod: providerStatus === 'completed' ? classification.autoAcceptMethod : null,
+      bestCandidate: toEvidenceCandidate(classification.decision.candidate),
+      runnerUp: toEvidenceCandidate(classification.decision.runnerUp),
+      scoreMargin: classification.scoreGap,
+      acceptanceReasons: classification.autoAccept ? classification.decision.reasons : [],
+      rejectionReasons: classification.autoAccept ? [] : classification.decision.reasons,
+    };
+    try {
+      const response = await fetch('/api/admin/building-verification/evidence/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evidence }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      setBuildingEvidenceRecords((current) => [
+        ...current.filter((record) => record.listingId !== evidence.listingId),
+        evidence,
+      ]);
+    } catch (error) {
+      setAssetStatusMessage(`Shadow evidence could not be recorded: ${(error as Error).message || 'unknown error'}`);
+    }
+  };
+
+  const runAddressIntelligence = async (args: {
+    listing: Listing;
+    seedFeatureId: string;
+    allFeatures: MapGeoJSONFeature[];
+    initialWorkspace: WorkspaceGeometryResult;
+    fragments: MapGeoJSONFeature[];
+    center: { lng: number; lat: number };
+  }): Promise<void> => {
+    const { listing, seedFeatureId, allFeatures, initialWorkspace, fragments, center } = args;
+    const runId = ++addressIntelligenceRunRef.current;
+    const resolvedVenue = getVenueForListing(listing, semv2Collections);
+    const isApproximateOrPrivate = isApproximateLocation(listing)
+      || resolvedVenue?.visibility === 'private'
+      || resolvedVenue?.visibility === 'public_approximate';
+    const skipReason = isApproximateOrPrivate
+      ? 'Approximate/private locations are intentionally excluded from building-address automation.'
+      : !listingHasExactBuildingAddress(listing, semv2Collections)
+        ? 'No exact street number is available, so the tool will not pretend it can confirm a building.'
+        : null;
+
+    if (skipReason) {
+      if (runId !== addressIntelligenceRunRef.current) return;
+      setAddressIntelligence({
+        status: 'skipped',
+        message: skipReason,
+        searchRadiusMeters: null,
+        bestCandidate: null,
+        checkedCandidateCount: 0,
+      });
+      return;
+    }
+
+    let finalWorkspace = initialWorkspace;
+    let finalCandidates: BuildingAddressIntelligenceCandidate[] = [];
+    let classification = classifyBuildingAddressCandidates([], listing, semv2Collections);
+    const radii = [
+      initialWorkspace.radiusMeters,
+      ...EXPANDED_NEIGHBORHOOD_RADII_METERS.filter((radius) => radius > initialWorkspace.radiusMeters),
+    ];
+
+    setAddressIntelligence({
+      status: 'checking',
+      message: `Checking nearby building addresses within ${initialWorkspace.radiusMeters}m…`,
+      searchRadiusMeters: initialWorkspace.radiusMeters,
+      bestCandidate: null,
+      checkedCandidateCount: 0,
+    });
+
+    for (let radiusIndex = 0; radiusIndex < radii.length; radiusIndex += 1) {
+      const radius = radii[radiusIndex];
+      const workspace = radius === initialWorkspace.radiusMeters
+        ? initialWorkspace
+        : buildWorkspaceGeometryFromFeatures(allFeatures, center, radius);
+      if (!workspace.geometry || !workspace.buildings.length) continue;
+      finalWorkspace = workspace;
+      if (runId !== addressIntelligenceRunRef.current) return;
+      setAddressIntelligence((current) => ({
+        ...current,
+        status: 'checking',
+        message: radius === initialWorkspace.radiusMeters
+          ? `Comparing the listing address with nearby footprints within ${radius}m…`
+          : `No confirmed match yet. Expanding the building search to ${radius}m…`,
+        searchRadiusMeters: radius,
+      }));
+
+      const maxCandidates = radiusIndex === 0 ? 5 : radius <= 150 ? 8 : 12;
+      finalCandidates = await rankWorkspaceAddressCandidates(
+        listing,
+        workspace,
+        center,
+        semv2Collections,
+        maxCandidates,
+      );
+      if (runId !== addressIntelligenceRunRef.current) return;
+      classification = classifyBuildingAddressCandidates(finalCandidates, listing, semv2Collections);
+      setAddressIntelligence({
+        ...classification,
+        searchRadiusMeters: radius,
+        checkedCandidateCount: finalCandidates.length,
+      });
+      if (classification.status === 'confirmed') break;
+    }
+
+    if (runId !== addressIntelligenceRunRef.current) return;
+    const workspaceWasExpanded = finalWorkspace.radiusMeters > initialWorkspace.radiusMeters;
+    if (workspaceWasExpanded && finalWorkspace.geometry) {
+      const expandedResolution = buildResolutionFromWorkspace(seedFeatureId, finalWorkspace, fragments);
+      if (expandedResolution) setResolution(expandedResolution);
+      setWorkspaceBuildings(finalWorkspace.buildings);
+      setWorkspaceProviderFeatureIds(finalWorkspace.providerFeatureIds);
+      setWorkspacePolygonMetadata(finalWorkspace.polygons.map((polygon) => ({
+        renderHeightMeters: polygon.renderHeightMeters,
+        renderMinHeightMeters: polygon.renderMinHeightMeters,
+        providerFeatureId: polygon.providerFeatureId,
+      })));
+      setProviderCandidates(buildWorkspaceProviderCandidates(allFeatures, finalWorkspace, center));
+      setResolverState((current) => ({
+        ...updateResolverStep(current, 'Neighborhood', 'Expanded radius', 'success', `Address intelligence expanded the workspace to ${finalWorkspace.radiusMeters}m`),
+        neighborhoodFeatureCount: finalWorkspace.polygons.length,
+        radiusMeters: finalWorkspace.radiusMeters,
+      }));
+    }
+
+    const bestCandidate = classification.bestCandidate;
+    if (bestCandidate && classification.status === 'confirmed') {
+      pendingSelectAllRef.current = false;
+      setSuggestedPolygonIndices([]);
+      setSelectedPolygonIndices(bestCandidate.polygonIndices);
+      const bestFeatureId = bestCandidate.providerFeatureIds[0] ?? seedFeatureId;
+      setResolvedVenueFeatureId(bestFeatureId);
+      setFeatureIdInput(bestFeatureId);
+      featureIdInputRef.current = bestFeatureId;
+      setStatus(
+        `Shadow verification selected ${bestCandidate.address?.primary ?? 'the matching building'} as a definitive candidate. No asset was written.`,
+      );
+    } else if (bestCandidate && classification.status === 'probable') {
+      pendingSelectAllRef.current = false;
+      setSelectedPolygonIndices([]);
+      setSuggestedPolygonIndices(bestCandidate.polygonIndices);
+      const bestFeatureId = bestCandidate.providerFeatureIds[0] ?? seedFeatureId;
+      setResolvedVenueFeatureId(bestFeatureId);
+      setFeatureIdInput(bestFeatureId);
+      featureIdInputRef.current = bestFeatureId;
+      setStatus(`Address intelligence highlighted the best nearby candidate in gold for review: ${bestCandidate.address?.primary ?? bestCandidate.buildingId}.`);
+    } else if (classification.status === 'mismatch' || classification.status === 'unconfirmed') {
+      setSuggestedPolygonIndices([]);
+      setStatus(`${classification.message} The record has been marked for building-location review in admin.`);
+    }
+
+    const verification: BuildingVerificationMeta = {
+      status: classification.status,
+      checkedAt: new Date().toISOString(),
+      confidence: bestCandidate?.confidence ?? 0,
+      listingAddress: formatListingAddress(listing, semv2Collections),
+      candidateAddress: bestCandidate?.address?.primary ?? undefined,
+      candidateSecondary: bestCandidate?.address?.secondary ?? undefined,
+      distanceMeters: bestCandidate?.distanceMeters ?? undefined,
+      pinIntersects: bestCandidate?.pinIntersects,
+      searchRadiusMeters: finalWorkspace.radiusMeters,
+      providerFeatureIds: bestCandidate?.providerFeatureIds,
+      footprintFingerprint: bestCandidate?.buildingId,
+      method: classification.autoAcceptMethod ?? 'human_review',
+      outcome: classification.outcome,
+      scoreGap: classification.scoreGap ?? undefined,
+      notes: [
+        ...(bestCandidate?.reasons ?? []),
+        `checked ${finalCandidates.length} nearby building candidate${finalCandidates.length === 1 ? '' : 's'}`,
+        workspaceWasExpanded ? `search expanded to ${finalWorkspace.radiusMeters}m` : `search stayed within ${finalWorkspace.radiusMeters}m`,
+      ],
+    };
+    await persistBuildingVerification(listing, verification);
+    await persistShadowEvidence({ listing, classification, candidates: finalCandidates, workspace: finalWorkspace, center });
+  };
+
   const resolveFeature = async (
     featureIdOverride?: string,
-    options: { useWorkspace?: boolean; workspaceCenter?: { lng: number; lat: number } } = {},
+    options: {
+      useWorkspace?: boolean;
+      workspaceCenter?: { lng: number; lat: number };
+      intelligenceListing?: Listing;
+      buildingSourceMode?: BuildingSourceMode;
+    } = {},
   ) => {
     const startedAt = performance.now();
+    const requestedBuildingSourceMode = options.buildingSourceMode ?? buildingSourceMode;
     const map = mapRef.current;
     const featureId = (featureIdOverride ?? featureIdInputRef.current).trim();
     logBuildingInspector('resolveFeature:enter', {
@@ -2974,7 +4014,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       const deadline = Date.now() + 8000;
       let allFeatures: MapGeoJSONFeature[] = [];
       let fragments: MapGeoJSONFeature[] = [];
+      let workspace: WorkspaceGeometryResult | null = null;
       let scanIterations = 0;
+      let osOpenMapLocalFallbackAttempted = false;
+      let usedOsOpenMapLocalFallback = false;
+      let supplementalFallbackAttempted = false;
+      let usedSupplementalFallback = false;
+      let supplementalAcceptedCount = 0;
+      let microsoftOnlyFeatures: MapGeoJSONFeature[] | null = null;
 
       while (Date.now() < deadline) {
         scanIterations += 1;
@@ -2990,13 +4037,54 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           sourceId: getBuildingsSourceId(),
           sourceLayer: SOURCE_LAYER,
         });
-        allFeatures = map.querySourceFeatures(getBuildingsSourceId(), {
+        const openFreeMapFeatures = map.querySourceFeatures(getBuildingsSourceId(), {
           sourceLayer: SOURCE_LAYER,
         }) as MapGeoJSONFeature[];
+        allFeatures = openFreeMapFeatures;
+        if (requestedBuildingSourceMode === 'microsoft') {
+          const canUseMicrosoftSource = Boolean(
+            options.useWorkspace &&
+            options.workspaceCenter &&
+            options.intelligenceListing &&
+            listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
+            !isApproximateLocation(options.intelligenceListing)
+          );
+          if (!canUseMicrosoftSource) {
+            allFeatures = [];
+            microsoftOnlyFeatures = [];
+            supplementalFallbackAttempted = true;
+          } else if (!supplementalFallbackAttempted) {
+            supplementalFallbackAttempted = true;
+            setLoadingPhase('Loading Microsoft building footprints');
+            try {
+              const supplementalRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
+              const supplemental = await fetchSupplementalBuildingFootprints({
+                listingId: options.intelligenceListing.id,
+                center: options.workspaceCenter,
+                radiusMeters: supplementalRadiusMeters,
+                maxFeatures: 900,
+              });
+              microsoftOnlyFeatures = supplemental.features.map((supplementalFeature) => ({
+                ...supplementalFeature,
+                source: 'microsoft-global-ml-buildings',
+                sourceLayer: SOURCE_LAYER,
+                state: {},
+              } as unknown as MapGeoJSONFeature));
+              usedSupplementalFallback = microsoftOnlyFeatures.length > 0;
+              supplementalAcceptedCount = microsoftOnlyFeatures.length;
+            } catch (error) {
+              microsoftOnlyFeatures = [];
+              logBuildingInspector('microsoftBuildingSource:failed', { featureId, error });
+            }
+          }
+          allFeatures = microsoftOnlyFeatures ?? [];
+        }
         logBuildingInspector('querySourceFeatures:exit', {
           featureId,
           scanIterations,
           featureCount: allFeatures.length,
+          openFreeMapFeatureCount: openFreeMapFeatures.length,
+          requestedBuildingSourceMode,
         });
         let fragmentFilterIterations = 0;
         fragments = allFeatures.filter((feature) => {
@@ -3008,6 +4096,119 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           if (feature.id === undefined || feature.id === null) return false;
           return String(feature.id) === featureId;
         });
+        if (options.useWorkspace && options.workspaceCenter) {
+          for (const radius of [DEFAULT_NEIGHBORHOOD_RADIUS_METERS, ...EXPANDED_NEIGHBORHOOD_RADII_METERS]) {
+            const candidateWorkspace = buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, radius);
+            if (candidateWorkspace.geometry) {
+              workspace = candidateWorkspace;
+              break;
+            }
+          }
+        }
+        const workspaceContainsPin = Boolean(
+          workspace &&
+          options.workspaceCenter &&
+          workspace.buildings.some((building) => workspaceBuildingContainsPoint(workspace, building, options.workspaceCenter!)),
+        );
+        if (
+          options.useWorkspace &&
+          options.workspaceCenter &&
+          options.intelligenceListing &&
+          requestedBuildingSourceMode === 'auto' &&
+          !osOpenMapLocalFallbackAttempted &&
+          !workspaceContainsPin &&
+          isUnitedKingdomListing(options.intelligenceListing, semv2Collections)
+        ) {
+          osOpenMapLocalFallbackAttempted = true;
+          setLoadingPhase('Checking UK building coverage');
+          try {
+            const supplementalFeatures = await fetchOsOpenMapLocalBuildingAtPoint(options.workspaceCenter);
+            if (supplementalFeatures.length) {
+              usedOsOpenMapLocalFallback = true;
+              allFeatures = [...allFeatures, ...supplementalFeatures];
+              workspace = null;
+              for (const radius of [DEFAULT_NEIGHBORHOOD_RADIUS_METERS, ...EXPANDED_NEIGHBORHOOD_RADII_METERS]) {
+                const candidateWorkspace = buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, radius);
+                if (candidateWorkspace.geometry) {
+                  workspace = candidateWorkspace;
+                  break;
+                }
+              }
+              logBuildingInspector('osOpenMapLocalFallback:loaded', {
+                featureId,
+                featureCount: supplementalFeatures.length,
+                workspaceBuildingCount: workspace?.buildings.length ?? 0,
+              });
+            }
+          } catch (error) {
+            logBuildingInspector('osOpenMapLocalFallback:skipped', { featureId, error });
+          }
+        }
+
+        if (
+          options.useWorkspace &&
+          options.workspaceCenter &&
+          options.intelligenceListing &&
+          requestedBuildingSourceMode === 'auto' &&
+          !supplementalFallbackAttempted &&
+          listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
+          !isApproximateLocation(options.intelligenceListing)
+        ) {
+          const supplementalRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
+          const coverage = primaryCoverageNeedsSupplement(allFeatures, options.workspaceCenter, {
+            radiusMeters: supplementalRadiusMeters,
+            minimumContextFootprints: 6,
+          });
+          if (coverage.needed) {
+            supplementalFallbackAttempted = true;
+            setLoadingPhase(coverage.reason === 'missing-target' ? 'Filling missing building coverage' : 'Filling sparse building context');
+            try {
+              const supplemental = await fetchSupplementalBuildingFootprints({
+                listingId: options.intelligenceListing.id,
+                center: options.workspaceCenter,
+                radiusMeters: supplementalRadiusMeters,
+                maxFeatures: 900,
+              });
+              const fused = filterSupplementalBuildingFeatures(
+                allFeatures,
+                supplemental.features,
+                options.workspaceCenter,
+                supplementalRadiusMeters,
+              );
+              const supplementalFeatures = fused.features.map((supplementalFeature) => ({
+                ...supplementalFeature,
+                source: supplementalFeature.source ?? 'microsoft-global-ml-buildings',
+                sourceLayer: supplementalFeature.sourceLayer ?? SOURCE_LAYER,
+                state: {},
+              } as unknown as MapGeoJSONFeature));
+              if (supplementalFeatures.length) {
+                usedSupplementalFallback = true;
+                supplementalAcceptedCount = supplementalFeatures.length;
+                allFeatures = [...allFeatures, ...supplementalFeatures];
+                workspace = null;
+                for (const radius of [DEFAULT_NEIGHBORHOOD_RADIUS_METERS, ...EXPANDED_NEIGHBORHOOD_RADII_METERS]) {
+                  const candidateWorkspace = buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, radius);
+                  if (candidateWorkspace.geometry) {
+                    workspace = candidateWorkspace;
+                    if (candidateWorkspace.buildings.some((building) => workspaceBuildingContainsPoint(candidateWorkspace, building, options.workspaceCenter!))) break;
+                  }
+                }
+                logBuildingInspector('supplementalBuildingFallback:loaded', {
+                  featureId,
+                  coverageReason: coverage.reason,
+                  provider: supplemental.provider,
+                  requestedCount: supplemental.features.length,
+                  acceptedCount: supplementalFeatures.length,
+                  suppressedExact: fused.stats.suppressedExact,
+                  suppressedOverlap: fused.stats.suppressedOverlap,
+                  workspaceBuildingCount: workspace?.buildings.length ?? 0,
+                });
+              }
+            } catch (error) {
+              logBuildingInspector('supplementalBuildingFallback:skipped', { featureId, error });
+            }
+          }
+        }
         logBuildingInspector('resolveFeature:fragment filter exit', {
           featureId,
           scanIterations,
@@ -3017,12 +4218,20 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           fragmentCoordinateCounts: fragments.map((fragment) => getCoordinateCount(fragment.geometry)),
           fragmentTiles: fragments.map((fragment) => getFeatureTile(fragment)),
         });
-        if (fragments.length) break;
+        if (fragments.length || workspace?.geometry) break;
 
         setLoadingPhase('Waiting for source tiles');
         await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
       }
 
+      const nextLoadedBuildingSourceLabel = requestedBuildingSourceMode === 'microsoft'
+        ? (usedSupplementalFallback ? 'Microsoft ML' : 'Microsoft ML · no geometry')
+        : usedSupplementalFallback
+          ? 'Hybrid · OSM + Microsoft'
+          : usedOsOpenMapLocalFallback
+            ? 'Hybrid · OSM + OS OpenMap'
+            : 'OSM · OpenFreeMap';
+      setLoadedBuildingSourceLabel(nextLoadedBuildingSourceLabel);
       setLoadingPhase(`Filtering feature ${featureId}`);
       logBuildingInspector('resolveFeature:located feature summary', {
         featureId,
@@ -3044,7 +4253,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         }),
       });
       setLoadingPhase('Building geometry');
-      const next = buildResolution(featureId, fragments);
+      const next = options.useWorkspace ? null : buildResolution(featureId, fragments, options.workspaceCenter);
+      const editableResolution = workspace?.geometry
+        ? buildResolutionFromWorkspace(featureId, workspace, fragments)
+        : next;
       setLoadedFeatureCount(allFeatures.length);
       setLoadedUniqueIdCount(countUniqueIds(allFeatures));
       setProviderCandidates([]);
@@ -3058,7 +4270,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       }));
       setHiddenProviderFeatureIds([]);
       setSoloProviderFeatureId(null);
-      if (!next) {
+      if (!editableResolution) {
         setResolution(null);
         setReferencePolygonRecords([]);
         setWorkspaceBuildings([]);
@@ -3067,7 +4279,9 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         setFragmentRecords([]);
         setDuplicateSummaries([]);
         setForensicReport(null);
-        const failure: ResolverFailureStatus = fragments.length ? 'UNSUPPORTED_GEOMETRY' : 'FEATURE_NOT_IN_TILE';
+        const failure: ResolverFailureStatus = options.useWorkspace
+          ? 'NO_PROVIDER_FEATURE'
+          : fragments.length ? 'UNSUPPORTED_GEOMETRY' : 'FEATURE_NOT_IN_TILE';
         setResolverState((current) => ({
           ...updateResolverStep(
             updateResolverStep(
@@ -3077,26 +4291,50 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               fragments.length ? 'skipped' : 'failed',
               fragments.length ? 'Not needed' : 'Adjacent tile loading unavailable in current source window',
             ),
-            'Geometry',
-            'Polygon extracted',
-            'failed',
-            fragments.length ? 'Unsupported or empty provider geometry' : 'No provider feature geometry',
+              'Geometry',
+              'Polygon extracted',
+              'failed',
+              options.useWorkspace
+                ? `No individual building footprint found within ${EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1]}m`
+                : fragments.length ? 'Unsupported or empty provider geometry' : 'No provider feature geometry',
           ),
           failure,
           suggestions: resolverFailureSuggestions(failure),
           providerTileFeatureCount: allFeatures.length,
           neighborhoodFeatureCount: 0,
         }));
-        setStatus(`Feature id ${featureId} was not returned by the OpenFreeMap building source before the wait window expired.`);
+        if (options.intelligenceListing) {
+          const listing = options.intelligenceListing;
+          const noFeatureVenue = getVenueForListing(listing, semv2Collections);
+          const shouldSkip = isApproximateLocation(listing)
+            || noFeatureVenue?.visibility === 'private'
+            || noFeatureVenue?.visibility === 'public_approximate';
+          const searchRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
+          setAddressIntelligence({
+            status: shouldSkip ? 'skipped' : 'unconfirmed',
+            message: shouldSkip
+              ? 'Approximate/private locations are intentionally excluded from building verification.'
+              : `No provider building was available within ${searchRadiusMeters}m of the stored pin.`,
+            searchRadiusMeters,
+            bestCandidate: null,
+            checkedCandidateCount: 0,
+          });
+          if (!shouldSkip && listingHasExactBuildingAddress(listing, semv2Collections)) {
+            await persistBuildingVerification(listing, {
+              status: 'unconfirmed',
+              checkedAt: new Date().toISOString(),
+              confidence: 0,
+              listingAddress: formatListingAddress(listing, semv2Collections),
+              searchRadiusMeters,
+              notes: ['no provider building found inside expanded search radius'],
+            });
+          }
+          setStatus(`No provider building was found within ${searchRadiusMeters}m of ${listing.name}. The location is flagged for admin review.`);
+        } else {
+          setStatus(`Feature id ${featureId} was not returned by the OpenFreeMap building source before the wait window expired.`);
+        }
         return;
       }
-
-      const workspace = options.useWorkspace && options.workspaceCenter
-        ? buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, DEFAULT_NEIGHBORHOOD_RADIUS_METERS)
-        : null;
-      const editableResolution = workspace?.geometry
-        ? buildResolutionFromWorkspace(featureId, workspace, fragments) ?? next
-        : next;
 
       setWorkspaceBuildings(workspace?.buildings ?? []);
       setWorkspaceProviderFeatureIds(workspace?.providerFeatureIds ?? []);
@@ -3105,6 +4343,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         renderMinHeightMeters: polygon.renderMinHeightMeters,
         providerFeatureId: polygon.providerFeatureId,
       })) ?? []);
+      const workspaceProvenanceFeatureId = workspace?.polygons.find((polygon) => polygon.providerFeatureId)?.providerFeatureId ?? null;
+      if (workspaceProvenanceFeatureId) {
+        setResolvedVenueFeatureId(workspaceProvenanceFeatureId);
+        setFeatureIdInput(workspaceProvenanceFeatureId);
+        featureIdInputRef.current = workspaceProvenanceFeatureId;
+      }
       setResolution(editableResolution);
       logBuildingInspector('resolveFeature:setResolution', {
         featureId,
@@ -3126,7 +4370,15 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       setResolverState((current) =>
         updateResolverStep(
           updateResolverStep(
-            updateResolverStep(current, 'Provider', 'Feature found', 'success', `Feature ${featureId}`),
+            updateResolverStep(
+              current,
+              'Provider',
+              'Feature found',
+              workspaceProvenanceFeatureId || !options.useWorkspace ? 'success' : 'skipped',
+              workspaceProvenanceFeatureId
+                ? `Provenance feature ${workspaceProvenanceFeatureId}`
+                : options.useWorkspace ? 'Footprints loaded without a stable provider feature ID' : `Feature ${featureId}`,
+            ),
             'Provider',
             'Adjacent tiles',
             'skipped',
@@ -3140,10 +4392,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       );
       setStatus(
         workspace?.geometry
-          ? `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace.`
-          : `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}. Diagnostics pending.`,
+          ? `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace${usedOsOpenMapLocalFallback ? `, including the ${OS_OPENMAP_LOCAL_SOURCE} footprint at the pin` : ''}${usedSupplementalFallback ? `, with ${supplementalAcceptedCount} gap-filling footprint(s) from ${MICROSOFT_BUILDING_SOURCE}` : ''}.`
+          : `Resolved feature id ${featureId}: ${editableResolution.fragmentCount} candidate fragment(s), rendered ${editableResolution.primaryTile}. Geometry: ${formatPolygonCountLabel(editableResolution.polygonCount)}. Diagnostics pending.`,
       );
-      window.setTimeout(() => {
+      window.setTimeout(async () => {
         logBuildingInspector('resolveFeature:deferred diagnostics enter', {
           featureId,
           featureCount: allFeatures.length,
@@ -3180,7 +4432,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               suggestions: [],
             }));
             setStatus(
-              `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace.`,
+              `Loaded ${workspace.buildings.length} building group(s) and ${workspace.polygons.length} editable polygon(s) inside the ${workspace.radiusMeters}m workspace${usedOsOpenMapLocalFallback ? `, including the ${OS_OPENMAP_LOCAL_SOURCE} footprint at the pin` : ''}${usedSupplementalFallback ? `, with ${supplementalAcceptedCount} gap-filling footprint(s) from ${MICROSOFT_BUILDING_SOURCE}` : ''}.`,
             );
             logBuildingInspector('resolveFeature:workspace diagnostics exit', {
               featureId,
@@ -3188,25 +4440,36 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               workspaceBuildingCount: workspace.buildings.length,
               workspacePolygonCount: workspace.polygons.length,
             });
+            if (options.intelligenceListing && options.workspaceCenter) {
+              setLoadingPhase('Checking building addresses');
+              await runAddressIntelligence({
+                listing: options.intelligenceListing,
+                seedFeatureId: featureId,
+                allFeatures,
+                initialWorkspace: workspace,
+                fragments,
+                center: options.workspaceCenter,
+              });
+            }
             return;
           }
           let scopedCache = buildScopedNeighborhoodCache(
             allFeatures,
-            next.geometry,
+            editableResolution.geometry,
             featureId,
             DEFAULT_NEIGHBORHOOD_RADIUS_METERS,
           );
           for (const expandedRadius of EXPANDED_NEIGHBORHOOD_RADII_METERS) {
             const nonEditableCount = scopedCache.candidates.filter((candidate) => candidate.featureId !== featureId).length;
             if (nonEditableCount > 0) break;
-            scopedCache = buildScopedNeighborhoodCache(allFeatures, next.geometry, featureId, expandedRadius);
+            scopedCache = buildScopedNeighborhoodCache(allFeatures, editableResolution.geometry, featureId, expandedRadius);
           }
           const fullTileCache = showFullProviderTileCache
-            ? buildScopedNeighborhoodCache(allFeatures, next.geometry, featureId, Number.POSITIVE_INFINITY).candidates
+            ? buildScopedNeighborhoodCache(allFeatures, editableResolution.geometry, featureId, Number.POSITIVE_INFINITY).candidates
             : [];
           const scopedFeatures = scopedCache.candidates.map((candidate) => candidate.feature);
           const nextDuplicateSummaries = buildDuplicateSummaries(scopedFeatures);
-          setReferencePolygonRecords(buildReferencePolygonRecords(scopedFeatures, featureId, getGeometryCenter(next.geometry)));
+          setReferencePolygonRecords(buildReferencePolygonRecords(scopedFeatures, featureId, getGeometryCenter(editableResolution.geometry)));
           setFragmentRecords(nextFragmentRecords);
           setDuplicateSummaries(nextDuplicateSummaries);
           setProviderCandidates(scopedCache.candidates);
@@ -3227,7 +4490,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             suggestions: [],
           }));
           setStatus(
-            `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}, disconnected pieces ${formatDiagnosticMetric(next.disconnectedPieces)}.`,
+            `Resolved feature id ${featureId}: ${editableResolution.fragmentCount} candidate fragment(s), rendered ${editableResolution.primaryTile}. Geometry: ${formatPolygonCountLabel(editableResolution.polygonCount)}, disconnected pieces ${formatDiagnosticMetric(editableResolution.disconnectedPieces)}.`,
           );
           logBuildingInspector('resolveFeature:deferred diagnostics exit', {
             featureId,
@@ -3241,7 +4504,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             error,
           });
           setStatus(
-            `Resolved feature id ${featureId}: ${next.fragmentCount} candidate fragment(s), rendered ${next.primaryTile}. Geometry: ${formatPolygonCountLabel(next.polygonCount)}. Optional metrics skipped.`,
+            `Resolved feature id ${featureId}: ${editableResolution.fragmentCount} candidate fragment(s), rendered ${editableResolution.primaryTile}. Geometry: ${formatPolygonCountLabel(editableResolution.polygonCount)}. Optional metrics skipped.`,
           );
           setResolverState((current) => ({
             ...updateResolverStep(current, 'Neighborhood', 'Nearby features', 'skipped', 'Optional diagnostics skipped'),
@@ -3271,8 +4534,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const loadVenueGeometry = async (listing: Listing) => {
+  const loadVenueGeometry = async (
+    listing: Listing,
+    options: { forceProvider?: boolean; buildingSourceMode?: BuildingSourceMode } = {},
+  ) => {
     const startedAt = performance.now();
+    const requestedBuildingSourceMode = options.buildingSourceMode ?? buildingSourceMode;
     logBuildingInspector('loadVenueGeometry:enter', {
       listingId: listing.id,
       listingName: listing.name,
@@ -3314,6 +4581,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       setLandmarkListing(null);
     }
     setSelectedVenueId(listing.id);
+    addressIntelligenceRunRef.current += 1;
+    setAddressIntelligence({
+      status: 'idle',
+      message: 'Address intelligence will run after the nearby building workspace loads.',
+      searchRadiusMeters: null,
+      bestCandidate: null,
+      checkedCandidateCount: 0,
+    });
     setResolvedVenueFeatureId(null);
     setSavedGeometrySignature(getGeometrySignature(savedAsset?.geometry));
     setAssetStatusMessage(null);
@@ -3338,9 +4613,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setFragmentRecords([]);
     setDuplicateSummaries([]);
     setForensicReport(null);
+    pendingSelectAllRef.current = false;
     setSelectedPolygonIndices([]);
+    setSuggestedPolygonIndices([]);
     setHoveredPolygonIndex(null);
     setIsLoading(true);
+    setLoadedBuildingSourceLabel('Loading…');
     setLoadingPhase(`Loading venue ${listing.name}`);
 
     try {
@@ -3369,7 +4647,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       if (idleResult === 'timeout') {
         setStatus(`Map tiles did not become idle for ${listing.name}; continuing with provider lookup.`);
       }
-      if (savedAsset) {
+      if (savedAsset && !options.forceProvider) {
         loadSavedBuildingAsset(savedAsset, listing.name);
         setResolverState((current) => ({
           ...updateResolverStep(current, 'Asset', 'Saved asset loaded', 'success', `${savedAsset.capture.polygonCount} polygon(s)`),
@@ -3385,43 +4663,18 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         return;
       }
 
-      setLoadingPhase('Resolving venue building with Venue Arrival');
-      const savedProviderFeatureId = null;
-      logBuildingInspector('findSelectedBuilding:enter', {
-        listingId: listing.id,
-        savedProviderFeatureId,
+      setLoadingPhase('Loading neighborhood building footprints');
+      setResolverState((current) => updateResolverStep(current, 'Provider', 'Feature found', 'skipped', 'Neighborhood scan does not require a provider feature ID'));
+      setStatus(`Loading individual building footprints around ${listing.name}.`);
+      await resolveFeature(`neighborhood:${listing.id}`, {
+        useWorkspace: true,
+        workspaceCenter: coords,
+        intelligenceListing: listing,
+        buildingSourceMode: requestedBuildingSourceMode,
       });
-      const match = savedProviderFeatureId ? { buildingId: savedProviderFeatureId } : findSelectedBuilding(map, listing, venueArrival, coords);
-      logBuildingInspector('findSelectedBuilding:exit', {
-        listingId: listing.id,
-        savedProviderFeatureId,
-        buildingId: match?.buildingId ?? null,
-      });
-      if (!match?.buildingId) {
-        setResolverState((current) => ({
-          ...updateResolverStep(current, 'Provider', 'Feature found', 'failed', 'No provider feature resolved'),
-          failure: 'NO_PROVIDER_FEATURE',
-          suggestions: resolverFailureSuggestions('NO_PROVIDER_FEATURE'),
-        }));
-        setStatus(`No provider building feature was resolved for ${listing.name}. Use Advanced lookup for manual inspection.`);
-        logBuildingInspector('loadVenueGeometry:exit no provider feature', {
-          listingId: listing.id,
-          elapsedMs: performance.now() - startedAt,
-        });
-        return;
-      }
-
-      setResolvedVenueFeatureId(match.buildingId);
-      setResolverState((current) =>
-        updateResolverStep(current, 'Provider', 'Feature found', 'success', `Feature ${match.buildingId}`),
-      );
-      setFeatureIdInput(match.buildingId);
-      featureIdInputRef.current = match.buildingId;
-      setStatus(`${savedProviderFeatureId ? 'Using saved provider feature' : `Resolved ${listing.name} to provider feature`} ${match.buildingId}. Loading geometry.`);
-      await resolveFeature(match.buildingId, { useWorkspace: true, workspaceCenter: coords });
       logBuildingInspector('loadVenueGeometry:exit', {
         listingId: listing.id,
-        buildingId: match.buildingId,
+        neighborhoodScan: true,
         elapsedMs: performance.now() - startedAt,
       });
     } catch (error) {
@@ -3476,9 +4729,25 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setFeatureIdInput(asset.provider.featureIds[0] ?? featureIdInput);
     featureIdInputRef.current = asset.provider.featureIds[0] ?? featureIdInputRef.current;
     setSavedGeometrySignature(getGeometrySignature(asset.geometry));
+    setLoadedBuildingSourceLabel(`Saved · ${asset.provider.source || 'unknown source'}`);
     setAssetStatusMessage(`Loaded saved building asset updated ${new Date(asset.capture.updatedAt).toLocaleString()}.`);
     setStatus(`Loaded saved building asset for ${venueName}: ${asset.capture.polygonCount} polygon(s).`);
+    setSuggestedPolygonIndices([]);
     pendingSelectAllRef.current = true;
+  };
+
+  const reloadBuildingSource = async (mode: BuildingSourceMode = buildingSourceMode) => {
+    if (!selectedVenue || isLoading) return;
+    await loadVenueGeometry(selectedVenue, { forceProvider: true, buildingSourceMode: mode });
+  };
+
+  const cycleBuildingSource = async () => {
+    const currentIndex = BUILDING_SOURCE_MODE_ORDER.indexOf(buildingSourceMode);
+    const nextMode = BUILDING_SOURCE_MODE_ORDER[(currentIndex + 1) % BUILDING_SOURCE_MODE_ORDER.length];
+    setBuildingSourceMode(nextMode);
+    if (selectedVenue && !isLoading) {
+      await loadVenueGeometry(selectedVenue, { forceProvider: true, buildingSourceMode: nextMode });
+    }
   };
 
   const promoteCandidateToEditable = (candidate: ProviderCandidate | null = promotedCandidate) => {
@@ -3486,7 +4755,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection with this provider candidate?')) {
       return;
     }
-    const next = buildResolution(candidate.featureId, [candidate.feature]);
+    const next = buildResolution(candidate.featureId, [candidate.feature], selectedVenueCoords);
     if (!next) {
       setAssetStatusMessage(`Candidate ${candidate.featureId} could not be converted into editable geometry.`);
       return;
@@ -3496,6 +4765,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setFeatureIdInput(candidate.featureId);
     featureIdInputRef.current = candidate.featureId;
     setSelectedPolygonIndices([]);
+    setSuggestedPolygonIndices([]);
     setHoveredPolygonIndex(null);
     setPendingCandidateId(null);
     setHoveredCandidateId(null);
@@ -3526,30 +4796,47 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
 
     const now = new Date().toISOString();
-    const providerFeatureIds = Array.from(new Set([
-      resolvedVenueFeatureId,
-      resolution?.featureId,
-      ...workspaceProviderFeatureIds,
-      ...fragmentRecords.map((fragment) => fragment.featureId),
-    ].filter((value): value is string => Boolean(
+    const selectedProviderFeatureIds = Array.from(new Set(
+      selectedPolygonRecords
+        .map((record) => record.providerFeatureId)
+        .filter((value): value is string => Boolean(value)),
+    ));
+    const providerFeatureIds = Array.from(new Set((selectedProviderFeatureIds.length
+      ? selectedProviderFeatureIds
+      : [resolvedVenueFeatureId, resolution?.featureId, ...fragmentRecords.map((fragment) => fragment.featureId)]
+    ).filter((value): value is string => Boolean(
       value &&
       !value.startsWith('building-asset-') &&
       !value.startsWith('workspace:'),
     ))));
+    const selectedProviderSource = providerFeatureIds.some((providerFeatureId) =>
+      providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX)
+    )
+      ? OS_OPENMAP_LOCAL_SOURCE
+      : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(MICROSOFT_BUILDING_ID_PREFIX))
+        ? MICROSOFT_BUILDING_SOURCE
+        : resolution?.source ?? 'OpenFreeMap';
     const renderHeightMeters = selectedSummary.maxRenderHeightMeters ??
       venueArrival.buildingFallbackHeight * venueArrival.selectedBuilding.heightBoost;
     const renderMinHeightMeters = minMetric(selectedPolygonRecords.map((record) => record.renderMinHeightMeters)) ?? 0;
     const existingAsset = selectedVenueAsset;
     const resolvedVenueId = getVenueForListing(selectedVenue, { listings, venues, organizations, relationships })?.id;
+    const canonicalVenueListing = resolvedVenueId
+      ? listings.find((listing) => (
+          listing.type === 'club' &&
+          getVenueForListing(listing, { listings, venues, organizations, relationships })?.id === resolvedVenueId
+        )) ?? null
+      : null;
+    const assetOwnerListingId = existingAsset?.listingId ?? canonicalVenueListing?.id ?? selectedVenue.id;
     const asset: BuildingAsset = {
-      id: existingAsset?.id ?? `building-asset-${selectedVenue.id}`,
-      listingId: selectedVenue.id,
+      id: existingAsset?.id ?? `building-asset-${assetOwnerListingId}`,
+      listingId: assetOwnerListingId,
       venueId: existingAsset?.venueId ?? resolvedVenueId,
       version: 1,
       provider: {
         source: providerWasManuallyCorrected
-          ? `${resolution?.source ?? 'OpenFreeMap'} (manually corrected)`
-          : resolution?.source ?? 'OpenFreeMap',
+          ? `${selectedProviderSource} (manually corrected)`
+          : selectedProviderSource,
         featureIds: providerFeatureIds,
       },
       geometry: selectedSummary.geoJson.geometry,
@@ -3568,7 +4855,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setLoadingPhase('Saving building asset');
     setAssetStatusMessage(null);
     try {
-      const saved = await api.saveBuildingAsset(selectedVenue.id, asset);
+      const saved = await api.saveBuildingAsset(assetOwnerListingId, asset);
       setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
       setAssetStatusMessage(`Saved building asset at ${new Date(saved.asset.capture.updatedAt).toLocaleString()}.`);
       setStatus(`Saved building asset for ${selectedVenue.name}: ${saved.asset.capture.polygonCount} polygon(s).`);
@@ -3604,6 +4891,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
 
     const [longitude, latitude] = center;
+    const resolvedVenue = getVenueForListing(selectedVenue, { listings, venues, organizations, relationships });
+    const persistedVenue = resolvedVenue && venues.some((venue) => venue.id === resolvedVenue.id)
+      ? resolvedVenue
+      : null;
     const updatedListing: Listing = {
       ...selectedVenue,
       geopoint: {
@@ -3617,17 +4908,81 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setLoadingPhase('Moving venue pin');
     setAssetStatusMessage(null);
     try {
-      const saved = await api.saveListing(updatedListing);
-      setLocalListings((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-      onListingLocationSaved?.(saved);
-      setAssetStatusMessage(`Moved venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`);
-      setStatus(`Moved ${saved.name}'s display pin to the center of the selected building.`);
+      if (persistedVenue) {
+        const savedVenue = await api.saveVenue({
+          ...persistedVenue,
+          latitude,
+          longitude,
+        });
+        setLocalVenues((current) => current.map((venue) => (venue.id === savedVenue.id ? savedVenue : venue)));
+        onVenueLocationSaved?.(savedVenue);
+
+        let listingMirrorUpdated = true;
+        if (selectedVenue.type === 'club') {
+          try {
+            const savedListing = await api.saveListing(updatedListing);
+            setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
+            onListingLocationSaved?.(savedListing);
+          } catch (error) {
+            listingMirrorUpdated = false;
+            console.warn('[BuildingInspector] Venue pin moved, but the legacy club listing coordinate could not be mirrored.', error);
+          }
+        }
+
+        setAssetStatusMessage(
+          listingMirrorUpdated
+            ? `Moved shared venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`
+            : `Moved the canonical Venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, but the legacy club listing coordinate still needs to be synchronized.`,
+        );
+        setStatus(`Moved ${persistedVenue.name}'s canonical venue pin to the center of the selected building.`);
+      } else {
+        const savedListing = await api.saveListing(updatedListing);
+        setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
+        onListingLocationSaved?.(savedListing);
+        setAssetStatusMessage(`Moved venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`);
+        setStatus(`Moved ${savedListing.name}'s display pin to the center of the selected building.`);
+      }
     } catch (error) {
       setAssetStatusMessage((error as Error).message || 'Failed to move the venue pin.');
     } finally {
       setLoadingPhase(null);
       setIsLoading(false);
     }
+  };
+
+  const recordBuildingReview = async (disposition: BuildingReviewDisposition, note?: string) => {
+    if (!selectedVenue || !selectedBuildingEvidence) {
+      setAssetStatusMessage('Run the live provider comparison before recording a building review.');
+      return;
+    }
+    const response = await fetch('/api/admin/building-verification/evidence/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId: selectedVenue.id, disposition, note }),
+    });
+    if (!response.ok) {
+      setAssetStatusMessage(`Building review was not recorded: ${await response.text()}`);
+      return;
+    }
+    const payload = await response.json();
+    setBuildingEvidenceRecords((current) => current.map((record) => (
+      record.listingId === selectedVenue.id && record.evaluatedAt === selectedBuildingEvidence.evaluatedAt
+        ? payload.evidence
+        : record
+    )));
+    setAssetStatusMessage('Building review decision recorded. Canonical changes remain explicit.');
+  };
+
+  const acceptRecommendedBuildingForReview = async () => {
+    const candidate = addressIntelligence.bestCandidate;
+    if (!candidate) {
+      setAssetStatusMessage('No live provider recommendation is loaded. Use Compare live first.');
+      return;
+    }
+    setSelectedPolygonIndices(candidate.polygonIndices);
+    setSuggestedPolygonIndices([]);
+    await recordBuildingReview('accept_recommended_building', 'Recommended footprint selected; Save Building remains an explicit canonical write.');
+    setStatus('Recommended footprint selected. Review it against the street plane, then use Save Building for the explicit asset change.');
   };
 
   const handleCopy = async (label: string, value: string) => {
@@ -3652,10 +5007,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       maxZoom: 20,
       attributionControl: false,
       interactive: true,
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     });
     mapRef.current = map;
 
     map.on('load', () => {
+      map.setPaintProperty('dark-basemap', 'raster-brightness-max', 0.9);
+      map.setPaintProperty('dark-basemap-labels', 'raster-opacity', 1);
+      map.setPaintProperty('dark-basemap-labels', 'raster-brightness-max', 1);
       map.addSource(getBuildingsSourceId(), buildBuildingsSource());
       map.addLayer({
         id: 'building-inspector-loader',
@@ -3682,10 +5041,17 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedVenueCoords) return;
+    if (!map || selectedVenueLat === null || selectedVenueLng === null) return;
 
-    const lngLat: [number, number] = [selectedVenueCoords.lng, selectedVenueCoords.lat];
-    map.jumpTo({ center: lngLat, zoom: Math.max(map.getZoom(), 17.4) });
+    let cancelled = false;
+    const lngLat: [number, number] = [selectedVenueLng, selectedVenueLat];
+    setStreetReferenceSnapshot(null);
+    setStreetReferenceStatus('Loading streets');
+    // Keep the compact top-right reference map readable at a close neighborhood
+    // scale. The projected street plane is captured separately at high resolution
+    // across a fixed ±500m area so it contains roughly a four-block-radius context
+    // instead of stretching this small reference-map canvas.
+    map.jumpTo({ center: lngLat, zoom: 18.2 });
 
     if (!mapReferenceMarkerRef.current) {
       const markerElement = document.createElement('div');
@@ -3696,7 +5062,24 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     } else {
       mapReferenceMarkerRef.current.setLngLat(lngLat);
     }
-  }, [selectedVenueCoords]);
+
+    captureStreetPlaneNeighborhood(selectedVenueLng, selectedVenueLat)
+      .then((snapshot) => {
+        if (cancelled) return;
+        setStreetReferenceSnapshot(snapshot);
+        setStreetReferenceStatus('Ready');
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn('[BuildingInspector] street plane neighborhood capture unavailable', error);
+        setStreetReferenceSnapshot(null);
+        setStreetReferenceStatus('Map only');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedVenueLat, selectedVenueLng]);
 
   if (!embedded && !isDevRouteEnabled()) {
     return <Navigate to="/" replace />;
@@ -3825,6 +5208,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                 <div className="mt-1 text-[10px] text-zinc-600">
                   BBox: {formatBounds(building.bbox)}
                 </div>
+                {building.providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX)) ? (
+                  <div className="mt-1 text-[10px] leading-4 text-zinc-600">
+                    {OS_OPENMAP_LOCAL_ATTRIBUTION}
+                  </div>
+                ) : null}
               </details>
             </div>
           );
@@ -3872,27 +5260,39 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">
         Selection & Asset
       </summary>
+      <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+        Green is the current building selection. Click a footprint to replace it; Shift-click or Ctrl-click to add or remove pieces.
+      </p>
       <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-        <MiniStat label="Selected" value={String(selectedSummary.count)} />
-        <MiniStat label="Editable" value={String(polygonRecords.length)} />
-        <MiniStat label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} mÂ²` : 'n/a'} />
-        <MiniStat label="Vertices" value={String(selectedSummary.vertexCount)} />
-        <MiniStat label="Max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
-        <MiniStat label="Avg height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} />
+        <MiniStat label="Selected" value={String(selectedSummary.count)} help="How many footprint pieces are currently selected for this building asset." />
+        <MiniStat label="Editable" value={String(polygonRecords.length)} help="All footprint pieces currently loaded into the 3D workspace." />
+        <MiniStat label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'n/a'} help="Combined ground area of the selected footprints." />
+        <MiniStat label="Vertices" value={String(selectedSummary.vertexCount)} help="Technical point count for the selected footprint geometry." />
+        <MiniStat label="Max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} help="Tallest provider-reported render height among the selected footprint pieces." />
+        <MiniStat label="Avg height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} help="Average provider-reported render height among the selected footprint pieces." />
       </div>
       <div className="mt-3 space-y-2 text-xs text-zinc-300">
-        <Row label="Geometry" value={selectedMetrics.geometryType} />
-        <Row label="Indices" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'n/a'} />
-        <Row label="BBox" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} />
-        <Row label="Asset state" value={saveStateLabel} />
+        <Row
+          label="Footprints"
+          value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => `#${index + 1}`).join(', ') : 'None'}
+          help="These are internal footprint numbers inside the current workspace. They are not provider IDs or street addresses."
+        />
+        <Row label="Asset state" value={saveStateLabel} help="Saved means the current selection matches the stored building asset. Unsaved Changes means it has not been written yet." />
       </div>
+      <details className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+        <summary className="cursor-pointer select-none text-[11px] font-semibold text-zinc-400">Technical geometry</summary>
+        <div className="mt-2 space-y-2 text-xs text-zinc-300">
+          <Row label="Geometry type" value={selectedMetrics.geometryType} help="GeoJSON geometry type for the currently loaded workspace." />
+          <Row label="Bounding box (BBox)" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} help="BBox means bounding box: the smallest latitude/longitude rectangle that contains the selected geometry." />
+        </div>
+      </details>
       {assetStatusMessage ? (
         <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-300">
           {assetStatusMessage}
         </div>
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
-        <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
+        <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10" title="Hide unselected footprints so you can inspect only the current building selection.">
           <input
             type="checkbox"
             checked={isolateSelected}
@@ -3905,6 +5305,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           type="button"
           disabled={!selectedSummary.count}
           onClick={frameSelected}
+          title="Move the 3D camera so the current selection fills the viewport."
           className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Frame
@@ -3913,6 +5314,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           type="button"
           disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
           onClick={() => void saveSelectedBuildingAsset()}
+          title="Save the selected footprint geometry as this venue's building asset."
           className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Save Building
@@ -3921,6 +5323,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           type="button"
           disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
           onClick={() => void movePinToSelectedBuilding()}
+          title="Move the venue's map pin to the center of the selected building without changing its address text."
           className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Move Pin to Building
@@ -3929,6 +5332,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           type="button"
           disabled={!selectedVenueAsset || isLoading}
           onClick={() => loadSavedBuildingAsset()}
+          title="Discard the current selection and reload the last saved building asset."
           className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Reload
@@ -3947,33 +5351,137 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             <h2 className="text-sm font-semibold text-zinc-50">Venue Summary</h2>
             <p className="mt-0.5 truncate text-[11px] text-zinc-500">{selectedVenue.name}</p>
           </div>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={(event) => {
-              event.preventDefault();
-              void loadVenueGeometry(selectedVenue);
-            }}
-            className="shrink-0 rounded-lg border border-red-500/40 bg-red-500/20 px-2.5 py-1.5 text-[11px] font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Load geometry
-          </button>
+          <div className="flex shrink-0 gap-1.5">
+            {selectedVenueAsset && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void loadVenueGeometry(selectedVenue, { forceProvider: true });
+                }}
+                title="Load current provider footprints without replacing the saved asset."
+                className="rounded-lg border border-sky-300/30 bg-sky-300/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-300/20 disabled:opacity-60"
+              >
+                Compare live
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void loadVenueGeometry(selectedVenue);
+              }}
+              title="Load the preserved asset, or current provider footprints when no asset exists."
+              className="rounded-lg border border-red-500/40 bg-red-500/20 px-2.5 py-1.5 text-[11px] font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Load geometry
+            </button>
+          </div>
         </div>
       </summary>
       <div className="mt-3 space-y-2 text-xs text-zinc-300">
         <Row label="Listing type" value={selectedVenue.type} />
-        <Row label="Address" value={formatListingAddress(selectedVenue, semv2Collections)} />
+        <Row
+          label="Address"
+          value={formatListingAddress(selectedVenue, semv2Collections)}
+          help="The venue address used as your real-world reference while choosing a building footprint."
+          action={(
+            <button
+              type="button"
+              onClick={() => void handleCopy('Venue address', formatListingAddress(selectedVenue, semv2Collections))}
+              title="Copy venue address"
+              aria-label="Copy venue address"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-zinc-100"
+            >
+              <Copy size={13} aria-hidden="true" />
+            </button>
+          )}
+        />
         <Row
           label="Coordinates"
           value={selectedVenueCoords ? `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}` : 'Not resolved'}
+          action={selectedVenueCoords ? (
+            <button
+              type="button"
+              onClick={() => void handleCopy('Venue coordinates', `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}`)}
+              title="Copy venue coordinates"
+              aria-label="Copy venue coordinates"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-zinc-100"
+            >
+              <Copy size={13} aria-hidden="true" />
+            </button>
+          ) : undefined}
         />
+        {selectedVenueLocationAudit && (
+          <Row
+            label="Pin audit"
+            value={(
+              <span className={selectedVenueLocationAudit.state === 'ready' ? 'text-emerald-300' : 'text-amber-200'}>
+                {selectedVenueLocationAudit.label}
+              </span>
+            )}
+            help={selectedVenueLocationAudit.reason}
+          />
+        )}
+        <Row
+          label="Address intelligence"
+          value={(() => {
+            const statusValue = addressIntelligence.status === 'idle' && selectedStoredBuildingVerification
+              ? selectedStoredBuildingVerification.status
+              : addressIntelligence.status;
+            const label = statusValue === 'checking' ? 'Checking nearby buildings…'
+              : statusValue === 'confirmed' ? 'Confirmed — auto-selected'
+                : statusValue === 'probable' ? 'Probable match — review'
+                  : statusValue === 'mismatch' ? 'Address mismatch — flagged'
+                    : statusValue === 'unconfirmed' ? 'Could not confirm — flagged'
+                      : statusValue === 'skipped' ? 'Skipped'
+                        : 'Not checked yet';
+            const className = statusValue === 'confirmed' ? 'text-emerald-300'
+              : statusValue === 'checking' ? 'text-sky-300'
+                : statusValue === 'probable' ? 'text-amber-200'
+                  : statusValue === 'mismatch' || statusValue === 'unconfirmed' ? 'text-red-300'
+                    : 'text-zinc-400';
+            return <span className={className}>{label}</span>;
+          })()}
+          help={addressIntelligence.status === 'idle' && selectedStoredBuildingVerification
+            ? `Last checked ${new Date(selectedStoredBuildingVerification.checkedAt).toLocaleString()}. ${selectedStoredBuildingVerification.notes?.join(' · ') ?? ''}`
+            : addressIntelligence.message}
+        />
+        {(addressIntelligence.bestCandidate || selectedStoredBuildingVerification?.candidateAddress) && (
+          <Row
+            label="Best building match"
+            value={addressIntelligence.bestCandidate?.address?.primary
+              ?? selectedStoredBuildingVerification?.candidateAddress
+              ?? 'Address unavailable'}
+            help={addressIntelligence.bestCandidate
+              ? `${Math.round(addressIntelligence.bestCandidate.confidence * 100)}% confidence · ${formatMeters(addressIntelligence.bestCandidate.distanceMeters)} from pin · ${addressIntelligence.bestCandidate.pinIntersects ? 'pin intersects footprint' : 'pin does not intersect footprint'} · searched ${addressIntelligence.searchRadiusMeters ?? DEFAULT_NEIGHBORHOOD_RADIUS_METERS}m`
+              : selectedStoredBuildingVerification
+                ? `${Math.round(selectedStoredBuildingVerification.confidence * 100)}% confidence · ${formatMeters(selectedStoredBuildingVerification.distanceMeters)} from pin · searched ${selectedStoredBuildingVerification.searchRadiusMeters ?? DEFAULT_NEIGHBORHOOD_RADIUS_METERS}m`
+                : undefined}
+          />
+        )}
+        {selectedVenueAssetPinDriftMeters !== null && selectedVenueAssetPinDriftMeters > 25 && (
+          <Row
+            label="Pin ↔ asset"
+            value={<span className="text-amber-200">{Math.round(selectedVenueAssetPinDriftMeters)} m apart</span>}
+            help={`Minimum distance from the canonical pin to the saved footprint. Centroid distance is secondary${selectedVenueAssetCentroidDistanceMeters === null ? '' : ` (${Math.round(selectedVenueAssetCentroidDistanceMeters)} m)`}. A pin inside the footprint is never flagged.`}
+          />
+        )}
         <Row
           label="Provider feature ID"
-          value={resolvedVenueFeatureId ?? getListingProviderFeatureId(selectedVenue) ?? resolution?.featureId ?? 'Not resolved yet'}
+          value={resolvedVenueFeatureId ?? workspaceProviderFeatureIds[0] ?? getListingProviderFeatureId(selectedVenue) ?? 'Not resolved yet'}
+          help="An internal building ID from the map-tile provider. It is useful for provenance, but it is not the venue ID and does not by itself prove this is the correct building."
         />
         <Row
           label="Building asset"
-          value={selectedVenueAsset ? 'Has asset' : 'Missing asset'}
+          value={selectedVenueAsset
+            ? selectedVenueAssetIsShared
+              ? `Shared via ${selectedVenueAssetOwnerListing?.name ?? 'venue'}`
+              : 'Has asset'
+            : 'Missing asset'}
+          help="Building geometry belongs to the physical venue. Events at a venue automatically reuse its verified asset instead of requiring a second building selection."
         />
         {selectedVenueAsset && (
           <Row
@@ -3990,7 +5498,27 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         <Row
           label="Editor state"
           value={saveStateLabel}
+          help="Shows whether the current footprint selection matches the saved building asset or still needs to be saved."
         />
+        {selectedBuildingEvidence && (
+          <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] p-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100">Human building review</div>
+            <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px] leading-4">
+              <span className="text-zinc-600">Listing address</span><span className="text-zinc-300">{formatListingAddress(selectedVenue, semv2Collections)}</span>
+              <span className="text-zinc-600">Stored pin</span><span className="text-zinc-300">{selectedVenueCoords ? `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}` : 'Unavailable'}</span>
+              <span className="text-zinc-600">Recommended</span><span className="text-zinc-300">{selectedBuildingEvidence.bestCandidate?.candidateAddress ?? 'Address unresolved'}</span>
+              <span className="text-zinc-600">Relationship</span><span className="text-zinc-300">{selectedBuildingEvidence.bestCandidate?.pinIntersects ? 'Pin is inside footprint' : `${selectedBuildingEvidence.bestCandidate?.minimumPinToFootprintMeters.toFixed(1) ?? 'n/a'} m minimum distance`}</span>
+              <span className="text-zinc-600">Evidence</span><span className="text-zinc-300">{selectedBuildingEvidence.outcome} · score {selectedBuildingEvidence.bestCandidate?.score ?? 'n/a'} · margin {selectedBuildingEvidence.scoreMargin ?? 'n/a'}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-1.5">
+              <button type="button" onClick={() => void acceptRecommendedBuildingForReview()} className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2 py-1.5 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-400/20">Accept recommended</button>
+              <button type="button" disabled={!selectedVenueAsset} onClick={() => { loadSavedBuildingAsset(); void recordBuildingReview('keep_existing_building'); }} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[10px] font-semibold text-zinc-200 hover:bg-white/10 disabled:opacity-40">Keep existing</button>
+              <button type="button" onClick={async () => { await movePinToSelectedBuilding(); await recordBuildingReview('move_pin_to_recommended_building'); }} className="rounded-lg border border-sky-300/25 bg-sky-300/10 px-2 py-1.5 text-[10px] font-semibold text-sky-100 hover:bg-sky-300/20">Move pin</button>
+              <button type="button" onClick={() => void recordBuildingReview('mark_location_for_research')} className="rounded-lg border border-rose-300/25 bg-rose-300/10 px-2 py-1.5 text-[10px] font-semibold text-rose-100 hover:bg-rose-300/20">Mark for research</button>
+            </div>
+            <p className="mt-2 text-[9px] leading-3.5 text-zinc-500">Accept selects the footprint for inspection; Save Building remains the explicit asset write. Move pin is an explicit canonical coordinate change.</p>
+          </div>
+        )}
       </div>
     </details>
   ) : null;
@@ -4028,38 +5556,39 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           </details>
 
           <details className="group relative">
-            <summary className={menuSummaryClassName}>View</summary>
+            <summary className={menuSummaryClassName} title="Control the 3D scene reference layers and camera.">View</summary>
             <div className={menuPanelClassName}>
               <div className="space-y-2 text-xs text-zinc-200">
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showVenueMarker} onChange={(event) => setShowVenueMarker(event.target.checked)} className="accent-red-400" />Venue marker</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showNearbyBuildings} onChange={(event) => setShowNearbyBuildings(event.target.checked)} />Nearby buildings</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />Grid</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"><input type="checkbox" checked={isolateSelected} onChange={(event) => setIsolateSelected(event.target.checked)} className="accent-emerald-400" />Isolate selected</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Red beacon showing the venue's stored latitude/longitude."><input type="checkbox" checked={showVenueMarker} onChange={(event) => setShowVenueMarker(event.target.checked)} className="accent-red-400" />Venue marker</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Project the live street-reference map onto the 3D ground plane so buildings can be matched to real streets."><input type="checkbox" checked={showStreetFloor} onChange={(event) => setShowStreetFloor(event.target.checked)} className="accent-sky-300" />Street plane</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Show nearby provider buildings when raw provider geometry is enabled."><input type="checkbox" checked={showNearbyBuildings} onChange={(event) => setShowNearbyBuildings(event.target.checked)} />Nearby buildings</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Show the metric orientation grid above the street plane."><input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />Metric grid</label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Hide everything except the current green selection."><input type="checkbox" checked={isolateSelected} onChange={(event) => setIsolateSelected(event.target.checked)} className="accent-emerald-400" />Isolate selected</label>
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" disabled={!selectedSummary.count} onClick={frameSelected} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame selection</button>
-                  <button type="button" disabled={!selectedVenue || !sceneOrigin} onClick={frameVenue} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame venue</button>
+                  <button type="button" disabled={!selectedSummary.count} onClick={frameSelected} title="Move the camera to the selected building footprint." className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame selection</button>
+                  <button type="button" disabled={!selectedVenue || !sceneOrigin} onClick={frameVenue} title="Move the camera to the venue's stored pin coordinate." className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame venue</button>
                 </div>
               </div>
             </div>
           </details>
 
           <details className="group relative">
-            <summary className={menuSummaryClassName}>Venue</summary>
+            <summary className={menuSummaryClassName} title="Venue address, coordinates, provider match, and saved-asset state.">Venue</summary>
             <div className={menuPanelClassName}>{venueSummaryPanel ?? <p className="p-2 text-xs text-zinc-500">Select a venue from the left panel.</p>}</div>
           </details>
 
           <details className="group relative">
-            <summary className={menuSummaryClassName}>Selection</summary>
+            <summary className={menuSummaryClassName} title="Inspect the current green footprint selection and save it as the venue building.">Selection</summary>
             <div className={menuPanelClassName}>{selectionWorkspacePanel}</div>
           </details>
 
           <details className="group relative">
-            <summary className={menuSummaryClassName}>Workspace</summary>
+            <summary className={menuSummaryClassName} title="Inspect nearby building geometry and provider provenance.">Workspace</summary>
             <div className={menuPanelClassName}>{providerNeighborhoodManager}</div>
           </details>
 
           <details className="group relative">
-            <summary className={menuSummaryClassName}>Diagnostics</summary>
+            <summary className={menuSummaryClassName} title="Technical resolver status and failure details.">Diagnostics</summary>
             <div className={menuPanelClassName}>
               {resolverStatusPanel}
               <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
@@ -4104,12 +5633,25 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             )}
           </div>
           <p className="mt-3 text-xs leading-5 text-zinc-400">
-            Inspect loaded building geometry, select one or more footprint meshes, and export authoring-ready GeoJSON.
+            Match a venue to the correct real-world building, verify it against the street plane, then save the selected footprint.
           </p>
           <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-            Vector tile feature IDs may be generated by the tile provider and may not directly match OpenStreetMap way IDs.
+            The provider match is only a starting guess. Use the red venue beacon, street labels, and green selection to confirm the building before saving.
           </p>
         </div>
+
+        <BuildingVerificationAuditPanel
+          listings={listings}
+          venues={venues}
+          organizations={organizations}
+          relationships={relationships}
+          buildingAssets={buildingAssets}
+          evidenceRecords={buildingEvidenceRecords}
+          onSelectListing={(listingId) => {
+            const listing = listings.find((candidate) => candidate.id === listingId);
+            if (listing) void loadVenueGeometry(listing);
+          }}
+        />
 
         {(
           <section className="border-b border-white/10 px-4 py-4">
@@ -4121,8 +5663,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                 </p>
               </div>
               <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-1 text-right text-[11px] text-zinc-400">
-                <div className="text-zinc-500">Missing assets</div>
-                <div className="font-semibold text-zinc-100">{venueStats.missing}</div>
+                <div className="text-zinc-500">Ready / pin review</div>
+                <div className="font-semibold text-zinc-100">{venueStats.missing} / <span className="text-amber-200">{venueStats.locationReview}</span></div>
               </div>
             </div>
 
@@ -4136,10 +5678,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               />
             </label>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
               {([
                 ['all', `All ${venueStats.total}`],
-                ['missing', `Missing ${venueStats.missing}`],
+                ['missing', `Ready ${venueStats.missing}`],
+                ['location', `Pin review ${venueStats.locationReview}`],
                 ['has', `Has asset ${venueStats.withAssets}`],
               ] as Array<[BuildingAssetFilter, string]>).map(([value, label]) => (
                 <button
@@ -4161,6 +5704,17 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               {filteredVenues.length ? filteredVenues.slice(0, 80).map((listing) => {
                 const isSelected = selectedVenueId === listing.id;
                 const asset = getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships);
+                const locationAudit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
+                const assetLabel = asset
+                  ? (asset.listingId === listing.id ? 'Has asset' : 'Shared asset')
+                  : locationAudit.state === 'ready'
+                    ? 'Ready for asset'
+                    : locationAudit.label;
+                const assetLabelClass = asset
+                  ? 'text-emerald-300'
+                  : locationAudit.state === 'ready'
+                    ? 'text-red-200'
+                    : 'text-amber-200';
                 return (
                   <button
                     key={listing.id}
@@ -4184,8 +5738,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                     <div className="mt-1 truncate text-[11px] text-zinc-500">{getListingCityLabel(listing, semv2Collections)}</div>
                     <div className="mt-1 flex items-center justify-between gap-3 text-[11px]">
                       <span className="truncate text-zinc-400">{formatListingAddress(listing, semv2Collections)}</span>
-                      <span className={asset ? 'text-emerald-300' : 'text-red-200'}>
-                        {asset ? 'Has asset' : 'Missing asset'}
+                      <span className={assetLabelClass} title={!asset ? locationAudit.reason : undefined}>
+                        {assetLabel}
                       </span>
                     </div>
                   </button>
@@ -4592,17 +6146,163 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
 
       <section className="relative min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl shadow-black/30">
         <div ref={sceneContainerRef} className="h-full w-full" />
+        {isLoading ? (
+          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/35 backdrop-blur-[2px]" aria-live="polite" aria-busy="true">
+            <div className="w-[min(34rem,calc(100%-3rem))] overflow-hidden rounded-2xl border border-white/15 bg-[#08090d]/96 shadow-2xl shadow-black/70 backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-4">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">Building Inspector</div>
+                  <div className="mt-1 truncate text-sm font-semibold text-zinc-100">
+                    {loadingPhase === 'Saving building asset'
+                      ? 'Saving building asset'
+                      : loadingPhase === 'Moving venue pin'
+                        ? 'Updating venue location'
+                        : selectedVenue
+                          ? `Loading ${selectedVenue.name}`
+                          : 'Loading building data'}
+                  </div>
+                  <div className="mt-1 text-[11px] text-zinc-400">{loadingPhase ?? 'Preparing venue geometry'}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.65)]" />
+                  Working
+                </div>
+              </div>
+              <div className="h-1.5 overflow-hidden bg-white/10">
+                <div
+                  className="h-full w-1/3 bg-gradient-to-r from-transparent via-red-400 to-transparent"
+                  style={{ animation: 'loading-bar 1.05s ease-in-out infinite' }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {selectedVenue && resolverState.failure && resolverState.failure !== 'FEATURE_FOUND' ? (
+          <div className="pointer-events-none absolute left-4 top-4 z-20 w-[min(24rem,calc(100%-2rem))] rounded-xl border border-rose-400/25 bg-[#12090d]/94 p-3 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-200">Action required</div>
+              <div className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2 py-0.5 text-[9px] text-rose-200">{resolverState.failure}</div>
+            </div>
+            <div className="mt-1 text-sm font-semibold text-zinc-100">{RESOLVER_FAILURE_COPY[resolverState.failure].title}</div>
+            <div className="mt-1 text-[11px] leading-4 text-zinc-400">{RESOLVER_FAILURE_COPY[resolverState.failure].action}</div>
+          </div>
+        ) : null}
+        {selectedVenue && (!resolverState.failure || resolverState.failure === 'FEATURE_FOUND') && ['checking', 'unconfirmed', 'mismatch', 'skipped'].includes(addressIntelligence.status) ? (
+          <div className={`pointer-events-none absolute left-4 top-4 z-20 w-[min(24rem,calc(100%-2rem))] rounded-xl border p-3 shadow-2xl shadow-black/50 backdrop-blur-xl ${addressIntelligence.status === 'checking' ? 'border-sky-300/25 bg-[#080d14]/94' : addressIntelligence.status === 'skipped' ? 'border-violet-300/20 bg-[#0d0914]/94' : 'border-amber-300/25 bg-[#120f08]/94'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className={`text-[10px] font-bold uppercase tracking-[0.14em] ${addressIntelligence.status === 'checking' ? 'text-sky-200' : addressIntelligence.status === 'skipped' ? 'text-violet-200' : 'text-amber-200'}`}>
+                {addressIntelligence.status === 'checking' ? 'Shadow verification running' : addressIntelligence.status === 'skipped' ? 'Verification skipped' : 'Human review required'}
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-zinc-300">No automatic writes</div>
+            </div>
+            <div className="mt-1 text-[11px] leading-4 text-zinc-300">{addressIntelligence.message}</div>
+          </div>
+        ) : null}
+        <div className="absolute bottom-20 left-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 text-[10px]">
+          <div className="pointer-events-none flex items-center gap-2 rounded-xl border border-white/10 bg-[#08090d]/88 px-2.5 py-2 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md">
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/30 text-[9px] font-bold text-zinc-200">
+              N
+              <span
+                ref={compassNeedleRef}
+                className="absolute inset-0 flex origin-center items-start justify-center pt-0.5 text-sm leading-none text-sky-300"
+                style={{ transform: 'rotate(0deg)' }}
+                aria-hidden="true"
+              >
+                ↑
+              </span>
+            </span>
+            <span>North in 3D</span>
+          </div>
+          <button
+            type="button"
+            aria-pressed={showStreetFloor}
+            onClick={() => setShowStreetFloor((current) => !current)}
+            title="Toggle the street-aligned ground plane beneath the 3D buildings."
+            className={`pointer-events-auto flex items-center gap-2 rounded-xl border px-3 py-2.5 font-semibold shadow-xl shadow-black/40 backdrop-blur-md transition-colors ${showStreetFloor ? 'border-sky-300/30 bg-sky-300/15 text-sky-100 hover:bg-sky-300/20' : 'border-white/10 bg-[#08090d]/88 text-zinc-400 hover:bg-white/10'}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${showStreetFloor && streetReferenceStatus === 'Ready' ? 'bg-emerald-300' : showStreetFloor ? 'bg-amber-300' : 'bg-zinc-600'}`} />
+            Street plane · {showStreetFloor ? streetReferenceStatus : 'Off'}
+          </button>
+          <button
+            type="button"
+            aria-pressed={showGrid}
+            onClick={() => setShowGrid((current) => !current)}
+            title="Overlay the metric measurement grid on the street plane."
+            className={`pointer-events-auto rounded-xl border px-3 py-2.5 font-semibold shadow-xl shadow-black/40 backdrop-blur-md transition-colors ${showGrid ? 'border-white/25 bg-white/15 text-zinc-100 hover:bg-white/20' : 'border-white/10 bg-[#08090d]/88 text-zinc-400 hover:bg-white/10'}`}
+          >
+            Metric grid
+          </button>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => void cycleBuildingSource()}
+            title="Cycle the building source: Auto prefers OpenStreetMap/OpenFreeMap and fills missing coverage with Microsoft ML footprints; OSM uses OpenFreeMap only; Microsoft uses Microsoft footprints only."
+            className="pointer-events-auto flex items-center gap-2 rounded-xl border border-violet-300/25 bg-[#08090d]/88 px-3 py-2.5 font-semibold text-violet-100 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-violet-300/10 disabled:cursor-wait disabled:opacity-60"
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${loadedBuildingSourceLabel.includes('Microsoft') || loadedBuildingSourceLabel.includes('Hybrid') ? 'bg-violet-300' : loadedBuildingSourceLabel.includes('OSM') || loadedBuildingSourceLabel.includes('OpenFreeMap') ? 'bg-emerald-300' : 'bg-zinc-500'}`} />
+            <span>Buildings · {BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]}</span>
+            <span className="max-w-40 truncate text-[9px] font-medium text-zinc-500">{loadedBuildingSourceLabel}</span>
+          </button>
+          <button
+            type="button"
+            disabled={!selectedVenue || isLoading}
+            onClick={() => void reloadBuildingSource()}
+            title={`Reload ${selectedVenue?.name ?? 'the selected venue'} using ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} building coverage.`}
+            aria-label="Reload building source"
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#08090d]/88 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-white/10 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
         <div className="absolute right-4 top-4 z-30 w-[min(24rem,calc(100%-2rem))] overflow-hidden rounded-xl border border-white/15 bg-[#08090d]/95 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
             <div>
-              <div className="text-[11px] font-semibold text-zinc-100">Street reference</div>
-              <div className="text-[10px] text-zinc-500">Same venue coordinate with roads and labels</div>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-100">
+                Street reference
+                <InfoTip text="This compact map is aligned to the venue pin. The Street plane is generated separately from a high-resolution ±500m neighborhood capture so the 3D grid includes roughly four blocks of streets and intersections in every direction." />
+              </div>
+              <div className="text-[10px] text-zinc-500">North is up · same venue coordinate as the red beacon</div>
             </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-400">Map</span>
+            <span
+              className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-200"
+              title={showStreetFloor ? `Street plane: ${streetReferenceStatus}` : 'Street plane hidden'}
+            >
+              N ↑
+            </span>
           </div>
           <div ref={mapContainerRef} className="h-64 w-full bg-[#050608]" />
+          <div className="border-t border-white/10 bg-[#0a0b0f]/98 px-3 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  Selected building address
+                  <InfoTip text="Reverse-geocoded from the center of the selected building footprint. This is the nearest address mapped in OpenStreetMap and should be verified before changing the venue listing." />
+                </div>
+                {selectedBuildingAddress.status === 'idle' ? (
+                  <div className="mt-1.5 text-[11px] text-zinc-500">Select a building to identify its street address.</div>
+                ) : (
+                  <>
+                    <div className={`mt-1.5 text-sm font-semibold ${selectedBuildingAddress.status === 'error' || selectedBuildingAddress.status === 'missing' ? 'text-amber-200' : 'text-zinc-100'}`}>
+                      {selectedBuildingAddress.primary}
+                    </div>
+                    {selectedBuildingAddress.secondary ? (
+                      <div className="mt-0.5 text-[11px] leading-4 text-zinc-400">{selectedBuildingAddress.secondary}</div>
+                    ) : null}
+                    {selectedBuildingAddress.status === 'resolved' ? (
+                      <div className="mt-1 text-[9px] uppercase tracking-wide text-zinc-600">Nearest mapped address · OpenStreetMap</div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+              {selectedPolygonRecords.length === 1 ? (
+                <span className="shrink-0 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-semibold text-zinc-400">
+                  #{selectedPolygonRecords[0].polygonIndex + 1}
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
-        {!resolution?.geometry && (
+        {!resolution?.geometry && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="max-w-md rounded-2xl border border-white/10 bg-black/30 px-6 py-5 text-center text-sm text-zinc-400 backdrop-blur-md">
               Select a venue to load provider geometry, or use Advanced tools for manual provider lookup.
@@ -4669,7 +6369,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   {selectedVenue?.name ?? 'No venue selected'}
                 </div>
                 <div className="mt-1 text-[11px] text-zinc-500">
-                  {saveStateLabel} | Selected {selectedSummary.count} | Editable {polygonRecords.length} | Reference {referencePolygonRecords.length}
+                  {saveStateLabel} · Green = selected · Gold = suggested / hover · Red beacon = venue pin · Street plane = real-world context
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -4677,6 +6377,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   type="button"
                   disabled={!selectedSummary.count}
                   onClick={frameSelected}
+                  title="Move the camera to the selected building footprint."
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Frame Selection
@@ -4685,6 +6386,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   type="button"
                   disabled={!selectedVenue || !sceneOrigin}
                   onClick={frameVenue}
+                  title="Move the camera to the venue's stored pin coordinate."
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Frame Venue
@@ -4693,6 +6395,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   type="button"
                   disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
                   onClick={() => void saveSelectedBuildingAsset()}
+                  title="Save the current green footprint selection as this venue's building asset."
                   className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading && loadingPhase === 'Saving building asset' ? 'Saving...' : saveStateLabel === 'Saved' ? 'Saved' : 'Save Building'}
@@ -4701,6 +6404,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   type="button"
                   disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
                   onClick={() => void movePinToSelectedBuilding()}
+                  title="Move the venue pin to the center of the selected building while preserving the address text."
                   className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-3 py-2 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading && loadingPhase === 'Moving venue pin' ? 'Moving Pin...' : 'Move Pin to Building'}
@@ -4709,6 +6413,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   type="button"
                   disabled={!selectedVenueAsset || isLoading}
                   onClick={() => loadSavedBuildingAsset()}
+                  title="Discard the current selection and reload the last saved building asset."
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Reload
@@ -4761,16 +6466,36 @@ const buildOutlinePath = (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon): str
     .join(' ');
 };
 
-const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-    <span className="text-zinc-500">{label}</span>
-    <span className="max-w-[60%] text-right text-zinc-100">{value}</span>
+const InfoTip: React.FC<{ text: string }> = ({ text }) => (
+  <span
+    className="inline-flex cursor-help items-center text-zinc-600 transition-colors hover:text-zinc-300"
+    title={text}
+    aria-label={text}
+    tabIndex={0}
+  >
+    <CircleHelp size={12} aria-hidden="true" />
+  </span>
+);
+
+const Row: React.FC<{ label: string; value: React.ReactNode; help?: string; action?: React.ReactNode }> = ({ label, value, help, action }) => (
+  <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/20 px-3 py-2" title={help}>
+    <span className="flex items-center gap-1.5 text-zinc-500">
+      {label}
+      {help ? <InfoTip text={help} /> : null}
+    </span>
+    <span className="flex max-w-[68%] items-start justify-end gap-2 text-right text-zinc-100">
+      <span>{value}</span>
+      {action}
+    </span>
   </div>
 );
 
-const MiniStat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="rounded-md border border-white/5 bg-white/5 px-2 py-2">
-    <div className="text-zinc-500">{label}</div>
+const MiniStat: React.FC<{ label: string; value: React.ReactNode; help?: string }> = ({ label, value, help }) => (
+  <div className="rounded-md border border-white/5 bg-white/5 px-2 py-2" title={help}>
+    <div className="flex items-center gap-1.5 text-zinc-500">
+      {label}
+      {help ? <InfoTip text={help} /> : null}
+    </div>
     <div className="mt-0.5 text-zinc-100">{value}</div>
   </div>
 );

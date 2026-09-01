@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, GeoJSON, useMap, Pane } from 're
 import type { GeoJsonObject } from 'geojson';
 import 'leaflet/dist/leaflet.css';
 import { fetchMajorRoads, type RoadsFetchStatus } from './overpassRoads';
+import { withCartoBasemapKey } from './cartoBasemap';
 
 type MiniMapHybridProps = {
   center: { lat: number; lng: number };
@@ -122,7 +123,7 @@ const MiniMapHybrid: React.FC<MiniMapHybridProps> = ({
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+          url={withCartoBasemapKey('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png')}
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={20}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'

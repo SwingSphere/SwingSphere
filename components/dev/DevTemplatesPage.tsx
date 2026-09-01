@@ -52,6 +52,8 @@ const DevTemplatesPage: React.FC = () => {
 
   const devLinks: LinkItem[] = [
     { path: '/dev/hero-camera', label: 'Destination-relative production hero camera authoring studio' },
+    { path: '/dev/lighting-audit', label: 'Production globe lighting, atmosphere and bloom audit tool' },
+    { path: '/dev/street-view', label: 'Fixed-location 3D venue Street View prototype and camera authoring tool' },
     { path: '/dev/badges', label: 'Badge and achievement design lab with micro-scale readability tests' },
     { path: '/dev/building-inspector', label: 'Vector-tile building resolver and forensic dump' },
     { path: '/dev/building-capture', label: 'Click-to-capture building geometry canvas' },

@@ -67,7 +67,7 @@ export class ActivityRegionManager {
       });
       this.group.add(marker.group);
       this.markers.set(region.id, marker);
-      this.hitTargets.push(marker.hitTarget, marker.label.sprite);
+      this.hitTargets.push(marker.hitTarget);
     }
     this.lifecycleStats.sourceRegionCount = regions.length;
     this.lifecycleStats.constructedRegionCount = this.markers.size;

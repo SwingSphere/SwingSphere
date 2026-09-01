@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:building-verification": "node scripts/run-typescript-entry.mjs test tests/buildingVerification.test.ts",
+    "audit:building-verification": "node scripts/run-typescript-entry.mjs run scripts/audit-building-verification.ts",
     "verify:feedback": "node scripts/verify-feedback-foundation.mjs",
     "build:cloudflare": "vite build --mode cloudflare",
     "preview": "vite preview",

@@ -8,6 +8,9 @@ These notes describe active systems or durable implementation handoffs.
 - `hex-landmask.md`
 - `cluster-and-pin-rendering.md`
 - `mini-map-system.md`
+- `mobile-globe-renderer-sizing.md` — Dev Mobile WebGL canvas sizing, right-side black-bar root cause, viewport-fit distinction, and regression checklist
+- `street-view-phase-one.md` — desktop Phase One Street View architecture, UX intent, performance guardrails, occlusion atlas, landmark handling, and deferred work
+- `street-view-building-overlap-resolution.md` — durable fix for venue-highlight z-fighting, coarse OpenFreeMap MultiPolygon IDs, and Building Inspector overlap masking
 - `event-dedupe-and-canonical-identity.md`
 - `event-club-host-page-architecture.md`
 - `image-handling-pipeline.md`

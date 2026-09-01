@@ -7,6 +7,7 @@ import LandingPage from './components/LandingPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AppProvider } from './store/appStore';
 import ExplorerLayout from './components/explorer/ExplorerLayout';
+import { ExplorerProvider } from './components/explorer/ExplorerProvider';
 import { DEV_TOOLS_ENABLED } from './lib/devTools';
 import ComingSoonPage from './components/ComingSoonPage';
 
@@ -43,11 +44,18 @@ const DevTemplatesPage = import.meta.env.DEV ? React.lazy(() => import('./compon
 const BuildingInspectorPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BuildingInspectorPage')) : null;
 const BuildingCapturePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BuildingCapturePage')) : null;
 const HeroCameraStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/HeroCameraStudioPage')) : null;
+const LightingAuditPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LightingAuditPage')) : null;
+const StreetViewToolPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/StreetViewToolPage')) : null;
 const GlassMaterialLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/GlassMaterialLabPage')) : null;
 const LanguageExplorerGlobeLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LanguageExplorerGlobeLabPage')) : null;
 const BadgeAchievementLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BadgeAchievementLabPage')) : null;
 const LivingBackgroundLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LivingBackgroundLabPage')) : null;
 const BorderSurgeryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BorderSurgeryPage')) : null;
+const CleanRoomGlobePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/CleanRoomGlobePage')) : null;
+const PinMarkerStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/PinMarkerStudioPage')) : null;
+const DevImageLibraryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevImageLibraryPage')) : null;
+const MobileExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/MobileExplorerWorkbenchPage')) : null;
+const DevMobileApp = import.meta.env.DEV ? React.lazy(() => import('./components/dev/mobile/DevMobileApp')) : null;
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -110,6 +118,14 @@ root.render(
           <React.Suspense fallback={<div className="min-h-[40vh] bg-[#030405]" aria-label="Loading SwingSphere" />}>
           <Routes>
             <Route
+              path="/dev/mobile"
+              element={DEV_TOOLS_ENABLED && MobileExplorerWorkbenchPage ? <ProtectedRoute roles={['Admin']}><MobileExplorerWorkbenchPage /></ProtectedRoute> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/dev/mobile-preview/*"
+              element={DEV_TOOLS_ENABLED && DevMobileApp ? <ProtectedRoute roles={['Admin']}><DevMobileApp /></ProtectedRoute> : <Navigate to="/" replace />}
+            />
+            <Route
               path="/dev/building-inspector"
               element={DEV_TOOLS_ENABLED && BuildingInspectorPage ? <ProtectedRoute roles={['Admin']}><BuildingInspectorPage /></ProtectedRoute> : <Navigate to="/" replace />}
             />
@@ -131,8 +147,16 @@ root.render(
                   element={DEV_TOOLS_ENABLED ? <ProtectedRoute roles={['Admin']}><ProductionGlobePage hybridPrototype /></ProtectedRoute> : <Navigate to="/globe" replace />}
                 />
                 <Route
+                  path="dev/globe-v3-cleanroom"
+                  element={DEV_TOOLS_ENABLED && CleanRoomGlobePage ? <ProtectedRoute roles={['Admin']}><CleanRoomGlobePage /></ProtectedRoute> : <Navigate to="/globe" replace />}
+                />
+                <Route
                   path="dev/language-explorer-globe"
                   element={DEV_TOOLS_ENABLED && LanguageExplorerGlobeLabPage ? <ProtectedRoute roles={['Admin']}><LanguageExplorerGlobeLabPage /></ProtectedRoute> : <Navigate to="/globe" replace />}
+                />
+                <Route
+                  path="dev/pin-marker-studio"
+                  element={DEV_TOOLS_ENABLED && PinMarkerStudioPage ? <ProtectedRoute roles={['Admin']}><PinMarkerStudioPage /></ProtectedRoute> : <Navigate to="/globe" replace />}
                 />
                 <Route path="map" element={<ProductionGlobePage />} />
                 <Route path="explore" element={<Navigate to="/globe" replace />} />
@@ -175,8 +199,20 @@ root.render(
                 element={DEV_TOOLS_ENABLED && DevTemplatesPage ? <ProtectedRoute roles={['Admin']}><DevTemplatesPage /></ProtectedRoute> : <Navigate to="/" replace />}
               />
               <Route
+                path="dev/images"
+                element={DEV_TOOLS_ENABLED && DevImageLibraryPage ? <ProtectedRoute roles={['Admin']}><DevImageLibraryPage /></ProtectedRoute> : <Navigate to="/" replace />}
+              />
+              <Route
                 path="dev/hero-camera"
                 element={DEV_TOOLS_ENABLED && HeroCameraStudioPage ? <ProtectedRoute roles={['Admin']}><HeroCameraStudioPage /></ProtectedRoute> : <Navigate to="/" replace />}
+              />
+              <Route
+                path="dev/lighting-audit"
+                element={DEV_TOOLS_ENABLED && LightingAuditPage ? <ProtectedRoute roles={['Admin']}><LightingAuditPage /></ProtectedRoute> : <Navigate to="/" replace />}
+              />
+              <Route
+                path="dev/street-view"
+                element={DEV_TOOLS_ENABLED && StreetViewToolPage ? <ProtectedRoute roles={['Admin']}><StreetViewToolPage /></ProtectedRoute> : <Navigate to="/" replace />}
               />
               <Route
                 path="dev/glass"

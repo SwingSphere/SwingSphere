@@ -1,5 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, Crosshair, ListFilter, MapPin, Search, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bookmark,
+  CalendarDays,
+  ChevronUp,
+  Globe2,
+  ListFilter,
+  MapPin,
+  Plus,
+  UserRound,
+  X,
+} from 'lucide-react';
 import type { Listing } from '../../types';
 import type { EntityIndex } from '../../lib/entityIndex';
 import { getListingCanonicalPath } from '../../lib/entityUtils';
@@ -15,9 +26,14 @@ export type MobileExplorerPrototypeProps = {
   onSearchTextChange: (value: string) => void;
   onSelectListing: (listingId: string) => void;
   onNavigate: (path: string) => void;
+  onRecenter?: () => void;
+  onFilterChange?: (filter: MobileFilter) => void;
+  devMobileMode?: boolean;
   entityIndex?: EntityIndex;
   isUpdating?: boolean;
 };
+
+type MobileFilter = 'all' | 'event' | 'club';
 
 const formatEventDate = (listing: Listing): string => {
   if (listing.type !== 'event') return 'Club';
@@ -32,7 +48,6 @@ const formatEventDate = (listing: Listing): string => {
 
 const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   surfaceMode,
-  onSurfaceModeChange,
   listings,
   selectedListingId,
   activeRegionName,
@@ -40,142 +55,226 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   onSearchTextChange,
   onSelectListing,
   onNavigate,
+  onRecenter,
+  onFilterChange,
+  devMobileMode = false,
   entityIndex,
   isUpdating = false,
 }) => {
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<MobileFilter>('all');
+
+  const visibleListings = useMemo(
+    () => activeFilter === 'all' ? listings : listings.filter((listing) => listing.type === activeFilter),
+    [activeFilter, listings],
+  );
   const selectedListing = useMemo(
     () => listings.find((listing) => listing.id === selectedListingId) ?? null,
     [listings, selectedListingId],
   );
-  const destinationName = activeRegionName || (surfaceMode === 'map' ? 'Nearby' : 'Explore the world');
-  const eventCount = listings.filter((listing) => listing.type === 'event').length;
-  const clubCount = listings.filter((listing) => listing.type === 'club').length;
+  const destinationName = (devMobileMode ? selectedListing?.name : null) || activeRegionName || (surfaceMode === 'map' ? 'Nearby' : 'Explore the world');
+  const summaryListings = devMobileMode ? visibleListings : listings;
+  const eventCount = summaryListings.filter((listing) => listing.type === 'event').length;
+  const clubCount = summaryListings.filter((listing) => listing.type === 'club').length;
+  const resultSummary = [
+    eventCount ? `${eventCount} ${eventCount === 1 ? 'event' : 'events'}` : '',
+    clubCount ? `${clubCount} ${clubCount === 1 ? 'club' : 'clubs'}` : '',
+  ].filter(Boolean).join(' · ');
   const previewListings = selectedListing
-    ? [selectedListing, ...listings.filter((listing) => listing.id !== selectedListing.id)].slice(0, 3)
-    : listings.slice(0, 3);
+    ? [selectedListing, ...visibleListings.filter((listing) => listing.id !== selectedListing.id)].slice(0, 4)
+    : visibleListings.slice(0, 4);
 
   const openListing = (listing: Listing) => {
     onNavigate(getListingCanonicalPath(listing, entityIndex));
   };
 
+  const openResults = () => {
+    setSheetOpen(false);
+    setResultsOpen(true);
+  };
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-[75] md:hidden" aria-label="Mobile explorer prototype">
-      <div className="pointer-events-auto absolute inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] flex flex-col gap-2.5">
-        <div className="ss-glass ss-glass--liquid flex h-12 items-center gap-2 rounded-2xl px-3 shadow-2xl shadow-black/35">
-          <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchText}
-            onChange={(event) => onSearchTextChange(event.target.value)}
-            placeholder="Search destinations, events, clubs…"
-            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500"
-          />
-          <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.055] text-gray-300" aria-label="Open filters">
-            <ListFilter className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="flex items-start justify-between gap-3">
-          <div className="ss-glass ss-glass--liquid flex rounded-full p-1 text-[11px] font-bold uppercase tracking-[0.16em]">
-            {(['globe', 'map'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => onSurfaceModeChange(mode)}
-                className={`rounded-full px-3 py-2 transition ${surfaceMode === mode ? 'ss-glass--crimson bg-red-500/15 text-white' : 'text-gray-400'}`}
-              >
-                {mode}
-              </button>
-            ))}
+    <div className="pointer-events-none absolute inset-0 z-[75] md:hidden" aria-label="SwingSphere mobile explorer">
+      <div className="pointer-events-auto absolute inset-x-3 top-[max(2rem,env(safe-area-inset-top))] flex items-center gap-2">
+        <div className="ss-glass ss-glass--liquid flex h-[52px] min-w-0 flex-1 items-center rounded-[18px] border-white/[0.09] px-3 shadow-[0_18px_50px_rgba(0,0,0,0.36)]">
+          <div className="min-w-0 flex-1 px-1">
+            <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-300/75">
+              {surfaceMode === 'map' ? 'Local view' : 'Explore'}
+            </div>
+            <div className="mt-0.5 truncate text-[14px] font-semibold text-white">
+              {destinationName}
+            </div>
           </div>
-
-          <button type="button" className="ss-glass ss-glass--liquid grid h-10 w-10 place-items-center rounded-full text-gray-200" aria-label="Recenter map">
-            <Crosshair className="h-4 w-4" aria-hidden="true" />
-          </button>
         </div>
-      </div>
 
-      <section className="pointer-events-auto absolute inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden rounded-[26px] border border-white/[0.09] bg-[rgba(8,10,14,0.93)] shadow-[0_-20px_70px_rgba(0,0,0,0.56)] backdrop-blur-[28px] backdrop-saturate-150">
         <button
           type="button"
-          onClick={() => setResultsOpen(true)}
-          className="block w-full px-4 pb-2 pt-3 text-left"
-          aria-label={`Open results for ${destinationName}`}
+          onClick={() => onNavigate('/home')}
+          className="ss-glass ss-glass--liquid grid h-[52px] w-[52px] shrink-0 place-items-center overflow-hidden rounded-[18px] border-white/[0.09] shadow-[0_18px_50px_rgba(0,0,0,0.36)]"
+          aria-label="SwingSphere home"
+        >
+          <img src="/swingsphere-logo.png" alt="" className="h-8 w-8 object-contain" />
+        </button>
+      </div>
+
+      <div className="pointer-events-auto absolute right-3 top-[calc(max(2rem,env(safe-area-inset-top))+4.25rem)] flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="ss-glass ss-glass--liquid relative grid h-11 w-11 place-items-center rounded-2xl text-gray-100 shadow-xl shadow-black/30"
+          aria-label="Open filters"
+        >
+          <ListFilter className="h-[18px] w-[18px]" />
+          {activeFilter !== 'all' ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-400 ring-2 ring-[#111318]" /> : null}
+        </button>
+        <button
+          type="button"
+          onClick={onRecenter}
+          className="ss-glass ss-glass--liquid grid h-11 w-11 place-items-center rounded-2xl text-gray-100 shadow-xl shadow-black/30"
+          aria-label="Return to world view"
+        >
+          <Globe2 className="h-[19px] w-[19px]" />
+        </button>
+      </div>
+
+      <section
+        className={[
+          'pointer-events-auto absolute inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden rounded-[28px]',
+          'border border-white/[0.09] bg-[rgba(8,10,14,0.94)] shadow-[0_-22px_70px_rgba(0,0,0,0.58)] backdrop-blur-[30px] backdrop-saturate-150',
+          'transition-[height] duration-300 ease-out',
+          sheetOpen ? 'h-[330px]' : 'h-[158px]',
+        ].join(' ')}
+        aria-label="Destination and nearby listings"
+      >
+        <button
+          type="button"
+          onClick={() => setSheetOpen((current) => !current)}
+          className="block w-full px-4 pb-2 pt-2.5 text-left"
+          aria-expanded={sheetOpen}
         >
           <span className="mx-auto block h-1 w-10 rounded-full bg-white/20" />
-          <span className="mt-3 flex items-end justify-between gap-3">
-            <span>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-red-300/80">Destination</span>
-              <span className="mt-1 block text-lg font-semibold text-white">{destinationName}</span>
-              <span className="mt-0.5 block text-xs text-gray-400">{eventCount} events · {clubCount} clubs</span>
+          <span className="mt-2.5 flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-red-300/80">Destination</span>
+              <span className="mt-0.5 block truncate text-[17px] font-semibold text-white">{destinationName}</span>
+              <span className="mt-0.5 block text-[11px] text-gray-400">{devMobileMode ? (selectedListing ? `Selected ${selectedListing.type}` : resultSummary || 'Choose a country to discover nearby places') : `${eventCount} events · ${clubCount} clubs`}</span>
             </span>
-            <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-red-300">View all <ChevronDown className="h-4 w-4" /></span>
+            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/[0.045] text-gray-300 transition-transform ${sheetOpen ? 'rotate-180' : ''}`}>
+              <ChevronUp className="h-4 w-4" />
+            </span>
           </span>
         </button>
 
-        {isUpdating ? <div className="px-4 pb-2 text-[11px] text-gray-500">Updating this area…</div> : null}
+        {isUpdating ? <div className="px-4 pb-1 text-[10px] text-gray-500">Updating this area…</div> : null}
 
-        <div className="flex gap-2 overflow-x-auto px-3 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {previewListings.map((listing) => {
-            const selected = listing.id === selectedListingId;
-            return (
-              <article key={listing.id} className={`min-w-[10.25rem] overflow-hidden rounded-2xl border ${selected ? 'border-red-400/65 bg-red-500/[0.09]' : 'border-white/[0.08] bg-white/[0.035]'}`}>
-                <button type="button" onClick={() => onSelectListing(listing.id)} className="block w-full text-left">
-                  <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-20 w-full object-cover" />
-                  <span className="block px-3 pb-2.5 pt-2">
-                    <span className="block truncate text-sm font-semibold text-white">{listing.name}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-gray-400">{formatEventDate(listing)} · {listing.location}</span>
-                  </span>
-                </button>
-                {selected ? (
-                  <button type="button" onClick={() => openListing(listing)} className="mx-2.5 mb-2.5 block w-[calc(100%-1.25rem)] rounded-xl bg-red-500 px-3 py-2 text-xs font-bold text-white">
-                    View {listing.type}
+        <div className={`transition-opacity duration-200 ${sheetOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
+          {previewListings.length ? (
+            <div className="flex gap-2 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {previewListings.map((listing) => {
+                const selected = listing.id === selectedListingId;
+                return (
+                  <button
+                    key={listing.id}
+                    type="button"
+                    onClick={() => selected ? openListing(listing) : onSelectListing(listing.id)}
+                    className={`min-w-[148px] overflow-hidden rounded-2xl border text-left ${selected ? 'border-red-400/65 bg-red-500/[0.09]' : 'border-white/[0.08] bg-white/[0.035]'}`}
+                  >
+                    <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-[70px] w-full object-cover" />
+                    <span className="block px-2.5 pb-2 pt-1.5">
+                      <span className="block truncate text-xs font-semibold text-white">{listing.name}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-gray-400">{formatEventDate(listing)}</span>
+                    </span>
                   </button>
-                ) : null}
-              </article>
-            );
-          })}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mx-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3 py-4 text-center text-xs text-gray-400">
+              {devMobileMode ? (activeRegionName || searchText ? 'No clubs or events match this view. Try another filter or destination.' : 'Choose a highlighted country or search for a destination to begin.') : 'Move the globe or search for a destination to begin.'}
+            </div>
+          )}
+
+          <button type="button" onClick={openResults} className="mx-3 flex h-9 w-[calc(100%-1.5rem)] items-center justify-center rounded-xl bg-white/[0.055] text-xs font-semibold text-gray-200">
+            View all nearby
+          </button>
         </div>
+
+        <nav className="absolute inset-x-0 bottom-0 grid h-[58px] grid-cols-5 border-t border-white/[0.07] bg-black/25 px-1" aria-label="Mobile navigation">
+          <button type="button" onClick={() => setSheetOpen(false)} className="flex flex-col items-center justify-center gap-1 text-red-300">
+            <Globe2 className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Explore</span>
+          </button>
+          <button type="button" onClick={() => onNavigate('/events')} className="flex flex-col items-center justify-center gap-1 text-gray-400">
+            <CalendarDays className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Events</span>
+          </button>
+          <button type="button" onClick={() => onNavigate('/submission')} className="flex flex-col items-center justify-center gap-1 text-white">
+            <span className="-mt-5 grid h-11 w-11 place-items-center rounded-2xl bg-red-500 shadow-[0_10px_28px_rgba(239,68,68,0.38)]"><Plus className="h-5 w-5" /></span>
+            <span className="-mt-0.5 text-[9px] font-semibold">Add</span>
+          </button>
+          <button type="button" onClick={devMobileMode ? () => onNavigate('/saved') : undefined} className="flex flex-col items-center justify-center gap-1 text-gray-400">
+            <Bookmark className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Saved</span>
+          </button>
+          <button type="button" onClick={() => onNavigate('/account')} className="flex flex-col items-center justify-center gap-1 text-gray-400">
+            <UserRound className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Account</span>
+          </button>
+        </nav>
       </section>
 
-      {resultsOpen ? (
-        <div className="pointer-events-auto absolute inset-0 flex flex-col bg-[#07090d]/98 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-2xl">
-          <header className="border-b border-white/[0.08] px-4 pb-3 pt-2">
-            <div className="flex items-center justify-between gap-3">
-              <button type="button" onClick={() => setResultsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.05] text-white" aria-label="Return to explorer">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div className="min-w-0 text-center">
-                <div className="truncate text-sm font-semibold text-white">{destinationName}</div>
-                <div className="text-[11px] text-gray-500">{listings.length} nearby results</div>
-              </div>
-              <button type="button" onClick={() => setResultsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.05] text-gray-300" aria-label="Close results">
-                <X className="h-4 w-4" />
-              </button>
+      {filtersOpen ? (
+        <div className={`pointer-events-auto absolute inset-0 flex items-end bg-black/55 backdrop-blur-sm ${devMobileMode ? 'z-[120]' : ''}`} onClick={() => setFiltersOpen(false)}>
+          <section className="w-full rounded-t-[30px] border-t border-white/[0.1] bg-[#0b0d12] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_80px_rgba(0,0,0,0.7)]" onClick={(event) => event.stopPropagation()}>
+            <span className="mx-auto block h-1 w-10 rounded-full bg-white/20" />
+            <div className="mt-4 flex items-center justify-between">
+              <div><div className="text-base font-semibold text-white">Filters</div><div className="text-[11px] text-gray-500">Choose which listings appear on the globe</div></div>
+              <button type="button" onClick={() => setFiltersOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.05] text-gray-300"><X className="h-4 w-4" /></button>
             </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {['This weekend', 'Events', 'Clubs', 'All tags'].map((label, index) => (
-                <button key={label} type="button" className={`whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold ${index === 0 ? 'border-red-400/55 bg-red-500/12 text-red-200' : 'border-white/[0.09] bg-white/[0.035] text-gray-300'}`}>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {([
+                ['all', 'Clubs & events'],
+                ['event', 'Events'],
+                ['club', 'Clubs'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setActiveFilter(value);
+                    onFilterChange?.(value);
+                  }}
+                  className={`rounded-2xl border px-3 py-3 text-xs font-semibold ${activeFilter === value ? 'border-red-400/55 bg-red-500/12 text-red-100' : 'border-white/[0.08] bg-white/[0.03] text-gray-300'}`}
+                >
                   {label}
                 </button>
               ))}
+            </div>
+            <button type="button" onClick={() => setFiltersOpen(false)} className="mt-4 h-12 w-full rounded-2xl bg-red-500 text-sm font-bold text-white">Show {visibleListings.length} results</button>
+          </section>
+        </div>
+      ) : null}
+
+      {resultsOpen ? (
+        <div className={`pointer-events-auto absolute inset-0 flex flex-col bg-[#07090d]/98 pt-[max(2rem,env(safe-area-inset-top))] backdrop-blur-2xl ${devMobileMode ? 'z-[100]' : ''}`}>
+          <header className="border-b border-white/[0.08] px-3 pb-3 pt-2">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setResultsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.05] text-white" aria-label="Return to explorer"><ArrowLeft className="h-5 w-5" /></button>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-white">{destinationName}</div>
+                <div className="text-[11px] text-gray-500">{visibleListings.length} results</div>
+              </div>
+              <button type="button" onClick={() => setFiltersOpen(true)} className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.05] text-gray-300" aria-label="Open filters"><ListFilter className="h-4 w-4" /></button>
             </div>
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <div className="space-y-2.5">
-              {listings.map((listing) => (
-                <button key={listing.id} type="button" onClick={() => openListing(listing)} className="flex w-full gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-2.5 text-left shadow-lg shadow-black/15">
+              {visibleListings.map((listing) => (
+                <button key={listing.id} type="button" onClick={() => openListing(listing)} className="flex w-full gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-2.5 text-left">
                   <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-24 w-24 shrink-0 rounded-xl object-cover" />
                   <span className="min-w-0 flex-1 py-1">
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="line-clamp-2 text-sm font-semibold leading-5 text-white">{listing.name}</span>
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
-                    </span>
+                    <span className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-sm font-semibold leading-5 text-white">{listing.name}</span><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-300" /></span>
                     <span className="mt-1 block text-xs font-medium text-red-200">{formatEventDate(listing)}</span>
                     <span className="mt-1 block line-clamp-2 text-xs leading-5 text-gray-400">{listing.location}</span>
-                    <span className="mt-2 inline-flex rounded-full border border-white/[0.08] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{listing.type}</span>
                   </span>
                 </button>
               ))}

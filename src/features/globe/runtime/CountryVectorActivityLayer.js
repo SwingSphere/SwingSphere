@@ -4,7 +4,12 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { wgs84ToRenderedGlobeLocal } from "./math/geoProjection.js";
 import { resolveLandSurfaceAnchorFromDirection } from "./math/surfaceAnchoring.js";
-import { BORDER_SURFACE_CLEARANCE } from "./CountryVectorBorderLayer.js";
+import {
+  BORDER_SURFACE_CLEARANCE,
+  buildPhysicalCoastlineRenderPaths,
+  compensateHybridCoastlineControls,
+  snapHybridCoastlineControlsToPhysical
+} from "./CountryVectorBorderLayer.js";
 import { loadJsonAsset } from "./jsonAssetCache.js";
 
 const DEFAULT_IDLE = {
@@ -83,6 +88,15 @@ export class CountryVectorActivityLayer {
     this.rayOrigin = new THREE.Vector3();
     this.rayDirection = new THREE.Vector3();
     this.surfaceCandidate = new THREE.Vector3();
+    this.experimentalPhysicalCoastlineSnap = this.options.experimentalPhysicalCoastlineSnap === true;
+    this.shorelinePaths = [];
+    this.shorelineSnapExcludedCountryKeys = this.experimentalPhysicalCoastlineSnap
+      ? new Set(
+          (this.options.shorelineSnapExcludedCountryKeys ?? this.config.countryVectorBorders?.shorelineSnapExcludedCountryKeys ?? [])
+            .map((value) => String(value).trim().toUpperCase())
+            .filter(Boolean)
+        )
+      : new Set();
     this.group = new THREE.Group();
     this.group.name = "language-explorer-vector-country-activity";
     this.group.renderOrder = 27;
@@ -93,6 +107,15 @@ export class CountryVectorActivityLayer {
   async mount() {
     if (!this.manifestUrl) return;
     this.manifest = await loadJsonAsset(this.manifestUrl);
+    if (this.experimentalPhysicalCoastlineSnap) {
+      const physicalCoastlineAsset = await loadJsonAsset(
+        this.options.physicalCoastlineUrl ?? this.config.countryVectorBorders?.physicalCoastlineUrl ?? "/assets/globe/coastlines/physical-coastlines-v1.json"
+      ).catch((error) => {
+        console.warn("[SwingSphere activity physical coastline]", error);
+        return null;
+      });
+      this.shorelinePaths = buildPhysicalCoastlineRenderPaths(physicalCoastlineAsset, this.config);
+    }
     await this.#syncActivityCountries();
   }
 
@@ -319,9 +342,25 @@ export class CountryVectorActivityLayer {
 
   #buildCountry(key, source, sourceType = "hybrid", hybridStatus = null) {
     const country = { key, lines: [], hoverMix: 0, selectedMix: 0, sourceType, hybridStatus };
+    const maxShorelineSnapDegrees = THREE.MathUtils.clamp(
+      Number(this.options.maxShorelineSnapDegrees ?? this.config.countryVectorBorders?.maxShorelineSnapDegrees ?? 5),
+      0.25,
+      12
+    );
+    const shorelineSnapEnabled = this.experimentalPhysicalCoastlineSnap
+      && this.options.shorelineSnap !== false
+      && this.shorelinePaths.length > 0
+      && !this.shorelineSnapExcludedCountryKeys.has(String(key).trim().toUpperCase());
+    const hybridRings = buildHybridControlRings(source);
     const rings = sourceType === "geojson-fallback"
       ? buildGeoJsonControlRings(source)
-      : buildHybridControlRings(source);
+      : this.experimentalPhysicalCoastlineSnap
+        ? hybridRings
+            .map((ring) => compensateHybridCoastlineControls(ring, this.config))
+            .map((ring) => shorelineSnapEnabled
+              ? snapHybridCoastlineControlsToPhysical(ring, this.shorelinePaths, this.config, maxShorelineSnapDegrees)
+              : ring)
+        : hybridRings;
     for (const ring of rings) {
       const anchoredControls = ring.map((control) => this.#anchorControl(control));
       const regularizedControls = regularizeCoastalControlRadii(anchoredControls);
@@ -506,6 +545,7 @@ function buildHybridControlRings(asset) {
     const segments = Array.isArray(ring?.segments) ? ring.segments : [];
     for (const segment of segments) {
       const coordinates = Array.isArray(segment?.coordinates) ? segment.coordinates : [];
+      const coastlinePathId = segment.kind === "coastline" ? (segment.sourcePathId ?? null) : null;
       for (let index = 0; index < coordinates.length - 1; index += 1) {
         const coordinate = coordinates[index];
         if (!Array.isArray(coordinate) || coordinate.length < 2) continue;
@@ -515,15 +555,26 @@ function buildHybridControlRings(asset) {
         if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
         if (previous && Math.abs(previous.lng - lng) < 1e-9 && Math.abs(previous.lat - lat) < 1e-9) {
           previous.coastalToNext = segment.kind === "coastline";
+          previous.coastlinePathIdToNext = coastlinePathId;
           continue;
         }
-        controls.push({ lng, lat, coastalToNext: segment.kind === "coastline" });
+        controls.push({
+          lng,
+          lat,
+          coastalToNext: segment.kind === "coastline",
+          coastlinePathIdToNext: coastlinePathId
+        });
       }
     }
     const lastSegment = segments[segments.length - 1];
     const lastCoordinate = lastSegment?.coordinates?.[lastSegment.coordinates.length - 1];
     if (Array.isArray(lastCoordinate) && lastCoordinate.length >= 2) {
-      controls.push({ lng: Number(lastCoordinate[0]), lat: Number(lastCoordinate[1]), coastalToNext: false });
+      controls.push({
+        lng: Number(lastCoordinate[0]),
+        lat: Number(lastCoordinate[1]),
+        coastalToNext: false,
+        coastlinePathIdToNext: null
+      });
     }
     return controls;
   }).filter((ring) => ring.length >= 2);
@@ -545,10 +596,15 @@ function buildStraightPreservingPath(controls, maxStepDegrees, anchorControl) {
       const t = step / divisions;
       const interpolated = interpolateControl(start, end, t);
       if (start.coastalToNext) {
-        const radius = THREE.MathUtils.lerp(start.position.length(), end.position.length(), t);
+        const preservePhysicalChord = Boolean(start.physicalCoastline && end.physicalCoastline);
+        const position = preservePhysicalChord
+          ? start.position.clone().lerp(end.position, t)
+          : interpolated.direction.clone().multiplyScalar(THREE.MathUtils.lerp(start.position.length(), end.position.length(), t));
         result.push({
           ...interpolated,
-          position: interpolated.direction.clone().multiplyScalar(radius),
+          direction: position.clone().normalize(),
+          position,
+          physicalCoastline: preservePhysicalChord,
           coastalToNext: true
         });
       } else {
@@ -579,6 +635,7 @@ function regularizeCoastalControlRadii(points) {
     controls = previousPass.map((point, index) => {
       const previous = previousPass[(index - 1 + uniqueCount) % uniqueCount];
       const next = previousPass[(index + 1) % uniqueCount];
+      if (point.physicalCoastline || previous.physicalCoastline || next.physicalCoastline) return point;
       if (!previous.coastalToNext || !point.coastalToNext) return point;
       const previousSpan = previous.direction.angleTo(point.direction);
       const nextSpan = point.direction.angleTo(next.direction);

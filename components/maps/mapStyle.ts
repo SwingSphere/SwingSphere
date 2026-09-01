@@ -1,4 +1,5 @@
 import type { StyleSpecification } from 'maplibre-gl';
+import { withCartoBasemapKey } from './cartoBasemap';
 
 export const swingMapStyle: StyleSpecification = {
   version: 8,
@@ -7,10 +8,10 @@ export const swingMapStyle: StyleSpecification = {
     'carto-dark-base': {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+        withCartoBasemapKey('https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://d.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png'),
       ],
       tileSize: 256,
       maxzoom: 20,
@@ -20,10 +21,10 @@ export const swingMapStyle: StyleSpecification = {
     'carto-dark-labels': {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
+        withCartoBasemapKey('https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://b.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://c.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png'),
+        withCartoBasemapKey('https://d.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png'),
       ],
       tileSize: 256,
       maxzoom: 20,

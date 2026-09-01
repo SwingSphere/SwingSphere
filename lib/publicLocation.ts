@@ -9,12 +9,26 @@ type PrivacyAwareListing = Listing & {
   isAddressPrivate?: boolean;
 };
 
+const hasLegacyPrivacyHint = (listing: Listing): boolean => {
+  const addressLine1 = listing.geopoint?.address?.addressLine1?.trim().toLowerCase() ?? '';
+  const location = listing.location?.trim().toLowerCase() ?? '';
+  const warnings = listing.locationMeta?.warnings?.map((warning) => warning.trim().toLowerCase()) ?? [];
+
+  if (addressLine1.startsWith('private location') || location.startsWith('private location')) return true;
+
+  return warnings.some((warning) => (
+    warning.includes('exact-address')
+    && (warning.includes('private') || warning.includes('hidden') || warning.includes('ticketed'))
+  ));
+};
+
 export const isApproximateLocation = (listing: Listing | null | undefined): boolean => {
   if (!listing) return false;
   const privacyAwareListing = listing as PrivacyAwareListing;
   return (
     privacyAwareListing.locationVisibility === 'approximate_public' ||
-    privacyAwareListing.isAddressPrivate === true
+    privacyAwareListing.isAddressPrivate === true ||
+    hasLegacyPrivacyHint(listing)
   );
 };
 

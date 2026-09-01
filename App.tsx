@@ -22,7 +22,7 @@ const App: React.FC = () => {
     navigate('/');
   }
 
-  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/language-explorer-globe', '/dev/hero-camera'].includes(location.pathname);
+  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
   const explorerSurface = location.pathname === '/map'
     ? 'map' as const
     : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/language-explorer-globe'

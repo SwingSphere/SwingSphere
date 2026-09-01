@@ -55,9 +55,15 @@ export class PinManager {
     this.boundPointerMove = (event) => this.#handlePointerMove(event);
     this.boundPointerLeave = () => this.#handlePointerLeave();
     this.boundClick = (event) => this.#handleClick(event);
+    this.boundLabelActivate = (event) => this.#handleLabelActivate(event);
+    this.boundLabelKeyDown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') this.#handleLabelActivate(event);
+    };
     this.renderer.renderer.domElement.addEventListener("pointermove", this.boundPointerMove);
     this.renderer.renderer.domElement.addEventListener("pointerleave", this.boundPointerLeave);
     this.renderer.renderer.domElement.addEventListener("click", this.boundClick);
+    this.labelOverlayRoot.addEventListener("click", this.boundLabelActivate);
+    this.labelOverlayRoot.addEventListener("keydown", this.boundLabelKeyDown);
   }
 
   updateEvents(events = []) {
@@ -359,11 +365,24 @@ export class PinManager {
     dom.removeEventListener("pointermove", this.boundPointerMove);
     dom.removeEventListener("pointerleave", this.boundPointerLeave);
     dom.removeEventListener("click", this.boundClick);
+    this.labelOverlayRoot?.removeEventListener("click", this.boundLabelActivate);
+    this.labelOverlayRoot?.removeEventListener("keydown", this.boundLabelKeyDown);
     this.#clearMarkers();
     this.labelOverlayRoot?.remove();
     this.labelOverlayRoot = null;
     this.renderer.globe.remove(this.group);
     this.group.clear();
+  }
+
+  #handleLabelActivate(event) {
+    const label = event.target?.closest?.('[data-marker-id]');
+    if (!label || !this.labelOverlayRoot?.contains(label)) return;
+    const view = this.markerMap.get(String(label.dataset.markerId));
+    if (!view?.marker?.event) return;
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    this.renderer.noteInteraction();
+    this.callbacks.onEventLabelActivate?.(view.marker.event);
   }
 
   #handlePointerMove(event) {

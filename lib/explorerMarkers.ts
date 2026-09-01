@@ -1,5 +1,6 @@
 import type { Listing } from '../types';
 import { getListingPhysicalCoords, type EntityCollections } from './entityCompatibility';
+import { isApproximateLocation } from './publicLocation';
 
 const GRID_SIZE = 0.02;
 const GRID_JITTER = 0.4;
@@ -39,7 +40,7 @@ export const getListingDisplayCoords = (
 ) => {
   const coords = getListingPhysicalCoords(listing, collections);
   if (!coords) return null;
-  if (listing.type === 'event' && listing.isAddressPrivate) {
+  if (isApproximateLocation(listing)) {
     return getPrivacySafePoint(coords.lat, coords.lng, listing.id);
   }
   return coords;
@@ -75,7 +76,7 @@ export const buildExplorerMarkers = (
         name: listing.name,
         lng: coords.lng,
         lat: coords.lat,
-        isPrivate: listing.type === 'event' && Boolean(listing.isAddressPrivate),
+        isPrivate: isApproximateLocation(listing),
       };
     })
     .filter((marker): marker is ExplorerMarker => marker !== null);

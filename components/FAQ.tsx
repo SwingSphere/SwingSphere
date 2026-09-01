@@ -8,7 +8,7 @@ const guestFaqs = [
   },
   { 
     q: "Do I need to create an account to browse?", 
-    a: "No. In line with our \"Privacy First\" policy, we do not require you to create an account to browse the site." 
+    a: "No. SwingSphere is designed to let you browse public listings without creating an account. Some member, contributor, review, claim, and organizer features do require an account." 
   },
   {
     q: "Do I have to be 21 to use SwingSphere?",
@@ -16,11 +16,11 @@ const guestFaqs = [
   },
   { 
     q: "How do I know these events are legitimate?", 
-    a: "We have a moderation team that reviews all submissions before they go live. We do our best to vet listings for quality and to ensure they are from reputable hosts. We also rely on our community to leave honest (thumbs up/down) reviews to help everyone make informed decisions." 
+    a: "Submissions are reviewed before publication for relevance, quality, obvious authenticity concerns, and compliance with our platform rules. That review is not a guarantee that a venue, event, host, or attendee is safe, legitimate, or a good fit for you. Verify important details with the operator and use your own judgment before attending." 
   },
   { 
     q: "Is my browsing on this site private?", 
-    a: "Yes. We do not use advertising trackers or collect any of your personal information while you browse. Your searches are anonymous. Please see our Privacy Policy for full details." 
+    a: "SwingSphere is designed with privacy in mind. We use limited first-party usage and technical information to operate, secure, measure, and improve the service. We do not sell personal information or provide advertisers with identifiable browsing histories. Please see our Privacy Policy for details about what may be collected and how it is used." 
   },
   { 
     q: "I don't see any events in my area. What gives?", 
@@ -35,7 +35,7 @@ const contributorFaqs = [
   },
   { 
     q: "What do I need to post a listing?", 
-    a: "You must be 21 or older and create a free, simple \"Contributor\" account. This only requires a public screen name (like \"VelvetRoomHost\") and a private contact email for verification. We do not ask for your real name or other personal info."
+    a: "You must be 21 or older and create an account to use contributor features. A standard account uses a screen name and private contact email for authentication and account communication; a legal name is not required for standard signup. Additional information may be requested when needed for specific features such as listing claims or organization access. See our Privacy Policy for details."
   },
   {
     q: "What kinds of images can I upload?",
@@ -47,7 +47,7 @@ const contributorFaqs = [
   },
   { 
     q: "How do I edit a listing I already submitted?", 
-    a: "When you are logged into your Contributor account, you will have access to a dashboard where you can see all your live listings and edit or delete them as needed." 
+    a: "Eligible listings can be managed through the account tools available to you. Editing, removal, ownership, and publication may be subject to moderation, verification, or organization-access rules." 
   },
   { 
     q: "Can I charge for tickets through SwingSphere?", 

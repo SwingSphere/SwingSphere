@@ -17,14 +17,16 @@ export class AtmosphereRenderer {
     this.tmpCameraUp = new THREE.Vector3();
     this.tmpGlowPosition = new THREE.Vector3();
     this.presentationScale = config.presentation?.globeScale ?? 1;
+    this.qualityTier = config.quality?.currentTier ?? "high";
     scene.add(this.backgroundGroup);
     globe.add(this.group);
     this.#createAtmosphere();
     if (this.config.background.enabled !== false) this.#createBackgroundGlow();
+    this.#applyEffectVisibility();
   }
 
   update() {
-    if (!this.backgroundGlowMesh || !this.backgroundHazeMesh) return;
+    if (!this.backgroundGroup.visible || !this.backgroundGlowMesh || !this.backgroundHazeMesh) return;
     this.globe.getWorldPosition(this.tmpGlobePosition);
     this.tmpCameraDirection.copy(this.camera.position).sub(this.tmpGlobePosition).normalize();
     this.tmpCameraUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion).normalize();
@@ -51,6 +53,7 @@ export class AtmosphereRenderer {
     this.#applyShellConfig(this.outerMesh, this.outerMaterial, config.atmosphere.outer);
     this.rimMesh.scale.setScalar(config.crimsonRim.radius);
     this.#applyUniforms(this.rimMaterial, config.crimsonRim);
+    this.#applyEffectVisibility();
   }
 
   updatePresentationConfig(presentation = this.config.presentation) {
@@ -61,11 +64,22 @@ export class AtmosphereRenderer {
   }
 
   setQualityTier(tier = "high") {
-    const isLow = tier === "low";
-    this.innerMesh.visible = true;
-    this.rimMesh.visible = true;
-    this.outerMesh.visible = !isLow;
-    this.backgroundGroup.visible = !isLow;
+    this.qualityTier = tier;
+    this.#applyEffectVisibility();
+  }
+
+  #applyEffectVisibility() {
+    const isLow = this.qualityTier === "low";
+    const effects = this.config.renderEffects ?? {};
+    this.innerMesh.visible = effects.innerAtmosphere !== false;
+    this.rimMesh.visible = effects.crimsonRimShell !== false;
+    this.outerMesh.visible = !isLow && effects.outerAtmosphere !== false;
+    if (this.backgroundHazeMesh) this.backgroundHazeMesh.visible = !isLow && effects.backgroundHaze !== false;
+    if (this.backgroundGlowMesh) this.backgroundGlowMesh.visible = !isLow && effects.backgroundGlow !== false;
+    this.backgroundGroup.visible = !isLow && Boolean(
+      (this.backgroundHazeMesh && effects.backgroundHaze !== false)
+      || (this.backgroundGlowMesh && effects.backgroundGlow !== false)
+    );
   }
 
   #createAtmosphere() {

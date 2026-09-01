@@ -22,7 +22,8 @@ export type MapHostPin = {
 
 type MapPinEntity = Listing | MapHostPin;
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
-import { formatAddressRegion, resolveCountryFlagEmoji } from '../../lib/formatting';
+import { resolveCountryIsoCodes } from '../../lib/globeEntityAdapter';
+import { createVenueLabelElement } from '../../src/features/globe/runtime/GlobeMarker.js';
 
 export const THREE_PIN_LAYER_ID = 'swingsphere-three-pins';
 
@@ -239,32 +240,6 @@ const createPinView = (listing: MapPinEntity): PinView | null => {
   };
 };
 
-const styleLabel = (element: HTMLDivElement, selected: boolean) => {
-  element.className = selected
-    ? 'map-venue-label map-venue-label--selected'
-    : 'map-venue-label map-venue-label--hover';
-  Object.assign(element.style, {
-    position: 'absolute',
-    zIndex: selected ? '26' : '25',
-    display: 'flex',
-    alignItems: 'center',
-    gap: selected ? '12px' : '9px',
-    maxWidth: selected ? '340px' : '280px',
-    padding: selected ? '12px 15px' : '9px 12px',
-    border: `1px solid ${selected ? 'rgba(255,77,94,.9)' : 'rgba(197,29,52,.72)'}`,
-    borderRadius: selected ? '16px' : '13px',
-    background: 'rgba(15,17,21,.94)',
-    boxShadow: selected ? '0 14px 34px rgba(0,0,0,.42)' : '0 10px 26px rgba(0,0,0,.34)',
-    color: '#f5f5f5',
-    pointerEvents: 'none',
-    opacity: '0',
-    visibility: 'hidden',
-    transform: 'translate(-50%, -100%)',
-    transition: 'opacity 120ms ease, transform 120ms ease',
-    backdropFilter: 'blur(12px)',
-  });
-};
-
 const countMeshes = (root: THREE.Object3D): number => {
   let count = 0;
   root.traverse((object) => {
@@ -276,87 +251,28 @@ const countMeshes = (root: THREE.Object3D): number => {
 const countDescendantElements = (root: Element): number => root.querySelectorAll('*').length;
 
 const buildLabel = (selected: boolean) => {
-  const element = document.createElement('div');
-  styleLabel(element, selected);
+  const element = createVenueLabelElement('', '', '', '', selected) as HTMLDivElement;
+  element.replaceChildren();
+  element.style.pointerEvents = 'none';
+  element.style.zIndex = selected ? '26' : '25';
   return element;
 };
 
-const setLabelContent = (element: HTMLDivElement, listing: MapPinEntity) => {
-  element.replaceChildren();
-  const logo = document.createElement('div');
-  Object.assign(logo.style, {
-    width: '38px',
-    height: '38px',
-    flex: '0 0 38px',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    display: 'grid',
-    placeItems: 'center',
-    background: 'rgba(197,29,52,.14)',
-    color: '#ff4d5e',
-    fontWeight: '800',
-  });
-  if (listing.logoImageUrl) {
-    const image = document.createElement('img');
-    image.src = listing.logoImageUrl;
-    image.alt = '';
-    Object.assign(image.style, { width: '100%', height: '100%', objectFit: 'cover' });
-    logo.append(image);
-  } else {
-    logo.textContent = listing.name.slice(0, 1).toUpperCase();
-  }
-
-  const text = document.createElement('div');
-  text.style.minWidth = '0';
-  const title = document.createElement('div');
-  title.textContent = listing.name;
-  Object.assign(title.style, {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontSize: '14px',
-    fontWeight: '750',
-    lineHeight: '1.2',
-  });
-  const subtitle = document.createElement('div');
+const setLabelContent = (element: HTMLDivElement, listing: MapPinEntity, selected: boolean) => {
   const address = listing.geopoint.address;
-  const region = formatAddressRegion(address.region, address.country);
-  const flag = resolveCountryFlagEmoji(address.country);
-  const locationText = document.createElement('span');
-  locationText.textContent = [address.city, region].filter(Boolean).join(', ');
-  subtitle.append(locationText);
-  if (flag) {
-    const flagEmoji = document.createElement('span');
-    flagEmoji.textContent = flag;
-    flagEmoji.setAttribute('aria-label', address.country);
-    Object.assign(flagEmoji.style, {
-      flex: '0 0 auto',
-      fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-      fontSize: '12px',
-      lineHeight: '1',
-    });
-    subtitle.append(flagEmoji);
-  }
-  Object.assign(subtitle.style, {
-    marginTop: '3px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px',
-    minWidth: '0',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontSize: '11px',
-    color: '#aeb7c3',
-  });
-  Object.assign(locationText.style, {
-    minWidth: '0',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  });
-  text.append(title, subtitle);
-  element.append(logo, text);
+  const countryIso2 = resolveCountryIsoCodes(address.country).iso2;
+  const template = createVenueLabelElement(
+    listing.name,
+    address.city,
+    countryIso2,
+    listing.logoImageUrl ?? '',
+    selected,
+  ) as HTMLDivElement;
+  element.className = template.className;
+  element.style.cssText = template.style.cssText;
+  element.style.pointerEvents = 'none';
+  element.style.zIndex = selected ? '26' : '25';
+  element.replaceChildren(...Array.from(template.childNodes));
 };
 
 export class MapLibreThreePinLayer implements CustomLayerInterface {
@@ -684,7 +600,7 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     const isHoverLabel = element === this.hoverLabel;
     const renderedListingId = isHoverLabel ? this.hoverLabelListingId : this.selectedLabelListingId;
     if (renderedListingId !== id) {
-      setLabelContent(element, view.listing);
+      setLabelContent(element, view.listing, !isHoverLabel);
       if (isHoverLabel) this.hoverLabelListingId = id;
       else this.selectedLabelListingId = id;
     }

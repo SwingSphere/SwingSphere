@@ -80,6 +80,7 @@ type FlatWorldMapProps = {
   onViewportChange?: (viewport: MapViewportDiscoverySnapshot) => void;
   onViewportChangeState?: (state: { isPending: boolean; reason: MapViewportDiscoverySnapshot['reason'] }) => void;
   onVenueArrivalComplete?: (listingId: string) => void;
+  onReady?: () => void;
   className?: string;
   mode?: 'explore' | 'capture';
   onVenueBuildingCapture?: (capture: VenueBuildingCaptureState) => void;
@@ -379,6 +380,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   onViewportChange,
   onViewportChangeState,
   onVenueArrivalComplete,
+  onReady,
   className,
   mode = 'explore',
   onVenueBuildingCapture,
@@ -391,6 +393,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   const onViewportChangeRef = useRef(onViewportChange);
   const onViewportChangeStateRef = useRef(onViewportChangeState);
   const onVenueArrivalCompleteRef = useRef(onVenueArrivalComplete);
+  const onReadyRef = useRef(onReady);
   const selectedIdRef = useRef(selectedId);
   const listingsRef = useRef(listings);
   const resolutionListingsRef = useRef(resolutionListings);
@@ -601,6 +604,10 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   useEffect(() => {
     onVenueArrivalCompleteRef.current = onVenueArrivalComplete;
   }, [onVenueArrivalComplete]);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -2800,6 +2807,14 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
           clearVenueBuildings();
         }
       }
+      let initialReadyNotified = false;
+      const notifyInitialReady = () => {
+        if (initialReadyNotified) return;
+        initialReadyNotified = true;
+        onReadyRef.current?.();
+      };
+      map.once('moveend', notifyInitialReady);
+      map.once('idle', notifyInitialReady);
       flushViewportChange('load');
     });
 

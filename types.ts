@@ -52,6 +52,40 @@ export type LocationValidationStatus =
   | 'needs_review'
   | 'manual';
 
+export type BuildingVerificationStatus =
+  | 'confirmed'
+  | 'probable'
+  | 'unconfirmed'
+  | 'mismatch'
+  | 'skipped';
+
+export interface BuildingVerificationMeta {
+  status: BuildingVerificationStatus;
+  checkedAt: string;
+  confidence: number;
+  listingAddress?: string;
+  candidateAddress?: string;
+  candidateSecondary?: string;
+  distanceMeters?: number;
+  pinIntersects?: boolean;
+  searchRadiusMeters?: number;
+  providerFeatureIds?: string[];
+  footprintFingerprint?: string;
+  method?: 'exact_address_and_pin' | 'authoritative_unique_pin' | 'human_review';
+  outcome?:
+    | 'verified'
+    | 'probable'
+    | 'ambiguous'
+    | 'address_mismatch'
+    | 'pin_mismatch'
+    | 'no_building_data'
+    | 'needs_location_review'
+    | 'private_or_approximate_skipped'
+    | 'has_verified_asset';
+  scoreGap?: number;
+  notes?: string[];
+}
+
 export interface ListingLocationMeta {
   status: LocationValidationStatus;
   validatedAt?: string;
@@ -62,6 +96,7 @@ export interface ListingLocationMeta {
   warnings?: string[];
   manualAdjustment?: boolean;
   placeId?: string;
+  buildingVerification?: BuildingVerificationMeta;
 }
 
 export type EntityStatus =
