@@ -77,6 +77,7 @@ type ListingEditorProps = {
   listingToEdit?: ClubData | EventData;
   onSaved?: (listing: Listing) => void;
   onCancel: () => void;
+  presentation?: 'default' | 'mobile';
 };
 
 const EDITOR_STEPS = ['Identity', 'Address Validation', 'Details', 'Schedule', 'Tags / Amenities', 'Images', 'Review'] as const;
@@ -127,7 +128,7 @@ const buildAddressInput = (address: ListingAddress) => {
   return base || shortCity || '';
 };
 
-const createInitialDraft = (currentUser?: User | null): ListingDraft => ({
+const createInitialDraft = (currentUser?: User | null, blankSchedule = false): ListingDraft => ({
   type: null,
   name: '',
   hostName: '',
@@ -136,7 +137,9 @@ const createInitialDraft = (currentUser?: User | null): ListingDraft => ({
   description_full: '',
   website: '',
   contactEmail: '',
-  schedule: createInitialSchedule(),
+  schedule: blankSchedule
+    ? createInitialSchedule().map((day) => ({ day: day.day, isClosed: true, rules: [] }))
+    : createInitialSchedule(),
   specialScheduleNotes: '',
   generalAmenities: [],
   time: { start: '', end: '' },
@@ -442,10 +445,37 @@ const submitDraft = async (
 const storageKeyForDraft = (mode: ListingEditorMode, kind: ListingKind | null, id?: string) =>
   ['swingsphere', 'listing-editor', mode, kind ?? 'unset', id ?? 'new'].join(':');
 
-const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listingToEdit, onSaved, onCancel }) => {
+type ResumableDraft = {
+  kind: ListingKind;
+  name: string;
+  step: number;
+  savedAt: number;
+};
+
+const readResumableDraft = (mode: ListingEditorMode): ResumableDraft | null => {
+  if (typeof window === 'undefined') return null;
+  const candidates = (['club', 'event'] as const).flatMap((kind) => {
+    const raw = window.localStorage.getItem(storageKeyForDraft(mode, kind));
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw) as Partial<ListingDraft> & { step?: number; draftSavedAt?: number };
+      return [{
+        kind,
+        name: parsed.name?.trim() || `Untitled ${kind}`,
+        step: typeof parsed.step === 'number' ? parsed.step : 0,
+        savedAt: typeof parsed.draftSavedAt === 'number' ? parsed.draftSavedAt : 0,
+      }];
+    } catch {
+      return [];
+    }
+  });
+  return candidates.sort((a, b) => b.savedAt - a.savedAt)[0] ?? null;
+};
+
+const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listingToEdit, onSaved, onCancel, presentation = 'default' }) => {
   const { currentUser, addToast, tags: taxonomyTags, tagCategories, fetchTags } = useAppStore();
   const [draft, setDraft] = useState<ListingDraft>(() =>
-    listingToEdit ? createDraftFromListing(listingToEdit, currentUser) : createInitialDraft(currentUser),
+    listingToEdit ? createDraftFromListing(listingToEdit, currentUser) : createInitialDraft(currentUser, mode === 'public'),
   );
   const [kind, setKind] = useState<ListingKind | null>(listingToEdit?.type ?? initialKind ?? null);
   const [step, setStep] = useState(0);
@@ -457,6 +487,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   const [duplicateMatches, setDuplicateMatches] = useState<ListingDuplicateMatch[]>([]);
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
+  const [resumableDraft, setResumableDraft] = useState<ResumableDraft | null>(() => readResumableDraft(mode));
   const [expandedScheduleDay, setExpandedScheduleDay] = useState<string | null>(() =>
     getDefaultExpandedScheduleDay(createInitialSchedule()),
   );
@@ -473,9 +504,10 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   const shouldPersistDraft = !isEditing && Boolean(kind);
   const hasInitializedSessionRef = useRef(false);
   const isPublicSubmission = mode === 'public' && !listingToEdit;
+  const isMobilePresentation = presentation === 'mobile';
   const activeSteps = isPublicSubmission ? PUBLIC_SUBMISSION_STEPS : EDITOR_STEPS.map((label, index) => ({ id: `admin-${index}`, label }));
   const totalSteps = activeSteps.length;
-  const currentStepLabel = kind ? activeSteps[Math.min(step, activeSteps.length - 1)].label : 'Choose Type';
+  const currentStepLabel = kind ? activeSteps[Math.min(step, activeSteps.length - 1)].label : 'Choose below';
   const progress = kind ? ((step + 1) / totalSteps) * 100 : 0;
 
   useEffect(() => {
@@ -499,7 +531,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   const eventSafetyTags = liveEventGroups.find((group) => group.id === 'cat-safety')?.options ?? [];
 
   const resetSubmissionState = (nextKind: ListingKind | null = initialKind ?? null, removeStoredDraft = true) => {
-    const nextDraft = createInitialDraft(currentUser);
+    const nextDraft = createInitialDraft(currentUser, mode === 'public');
     nextDraft.type = nextKind;
     nextDraft.id = nextKind ? createListingId(nextKind) : undefined;
     setKind(nextKind);
@@ -600,9 +632,12 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   }, [draftKey, kind, listingToEdit, shouldPersistDraft]);
 
   useEffect(() => {
-    if (!kind) return;
+    if (!kind) {
+      setResumableDraft(readResumableDraft(mode));
+      return;
+    }
     setDraft((current) => ({ ...current, type: kind }));
-  }, [kind]);
+  }, [kind, mode]);
 
   useEffect(() => {
     if (!kind) return;
@@ -624,6 +659,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
       ...draft,
       kind,
       step,
+      draftSavedAt: Date.now(),
       headerImageFile: undefined,
       galleryImageFiles: undefined,
     };
@@ -680,8 +716,12 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
     setDraft((current) => current.id ? current : { ...current, id: createListingId(kind), type: kind });
   }, [draft.id, kind]);
 
-  const getDraftMediaAsset = (role: MediaRole) =>
-    draft.mediaAssets.find((asset) => asset.role === role) ?? null;
+  const getDraftMediaAsset = (role: MediaRole) => {
+    if (role === 'gallery') {
+      return [...draft.mediaAssets].reverse().find((asset) => asset.role === role) ?? null;
+    }
+    return draft.mediaAssets.find((asset) => asset.role === role) ?? null;
+  };
 
   const handleMediaUploaded = (asset: MediaAsset) => {
     setDraft((current) => {
@@ -929,6 +969,40 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
     setStep((current) => Math.min(current + 1, totalSteps - 1));
   };
 
+  const resumeDraft = () => {
+    if (!resumableDraft || typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(storageKeyForDraft(mode, resumableDraft.kind));
+    if (!raw) {
+      setResumableDraft(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as Partial<ListingDraft> & { step?: number };
+      const nextDraft: ListingDraft = {
+        ...createInitialDraft(currentUser, mode === 'public'),
+        ...parsed,
+        type: resumableDraft.kind,
+        geopoint: parsed.geopoint ?? null,
+      };
+      setKind(resumableDraft.kind);
+      setDraft(nextDraft);
+      setStep(Math.max(0, Math.min(typeof parsed.step === 'number' ? parsed.step : 0, totalSteps - 1)));
+      setErrors({});
+      setDuplicateMatches([]);
+      setValidationMessage('');
+      setExpandedScheduleDay(getDefaultExpandedScheduleDay(nextDraft.schedule));
+    } catch {
+      window.localStorage.removeItem(storageKeyForDraft(mode, resumableDraft.kind));
+      setResumableDraft(readResumableDraft(mode));
+    }
+  };
+
+  const discardResumableDraft = () => {
+    if (!resumableDraft || typeof window === 'undefined') return;
+    window.localStorage.removeItem(storageKeyForDraft(mode, resumableDraft.kind));
+    setResumableDraft(readResumableDraft(mode));
+  };
+
   const handleBack = () => {
     if (!kind && canChooseType) {
       resetSubmissionState(null, true);
@@ -941,6 +1015,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
     }
     if (kind && canChooseType) {
       resetSubmissionState(null, false);
+      setResumableDraft(readResumableDraft(mode));
       return;
     }
     resetSubmissionState(initialKind ?? null, true);
@@ -983,8 +1058,14 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
       resetSubmissionState(initialKind ?? null, true);
       addToast({ message: `${kind === 'club' ? 'Club' : 'Event'} saved successfully.`, type: 'success' });
       onSaved?.(saved);
-    } catch {
-      addToast({ message: 'Failed to save listing.', type: 'error' });
+    } catch (error) {
+      const candidateMessage = error instanceof Error
+        ? error.message
+        : typeof (error as { message?: unknown } | null)?.message === 'string'
+          ? String((error as { message: string }).message)
+          : '';
+      const message = candidateMessage.trim() || 'Failed to save listing.';
+      addToast({ message, type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -1009,10 +1090,24 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   };
 
   const renderTypeChoice = () => (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className={isMobilePresentation ? 'grid gap-4' : 'grid gap-4 md:grid-cols-2'}>
       {[
-        { type: 'club' as const, title: 'Add a Club', copy: 'Recurring venues, weekly schedules, and permanent spaces.' },
-        { type: 'event' as const, title: 'Add an Event', copy: 'One-time or recurring listings with date/time and optional venue.' },
+        {
+          type: 'club' as const,
+          title: 'Add a Club',
+          copy: 'Recurring venues, weekly schedules, and permanent spaces.',
+          imageUrl: '/assets/submission/add-club-card.svg',
+          imagePosition: 'center center',
+          accent: 'from-red-950/10 via-black/18 to-black/82',
+        },
+        {
+          type: 'event' as const,
+          title: 'Add an Event',
+          copy: 'One-time or recurring listings with date/time and optional venue.',
+          imageUrl: '/assets/hosts/community-host/hero-banner.png',
+          imagePosition: 'center 72%',
+          accent: 'from-fuchsia-950/20 via-black/34 to-black/90',
+        },
       ].map((option) => (
         <button
           key={option.type}
@@ -1020,18 +1115,38 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
           onClick={() => {
             setKind(option.type);
             setDraft((currentUserDraft) => ({
-              ...createInitialDraft(currentUser),
+              ...createInitialDraft(currentUser, mode === 'public'),
               id: createListingId(option.type),
               type: option.type,
               postedByUserId: currentUserDraft.postedByUserId || currentUser?.id || 'user-submission',
             }));
             setStep(0);
           }}
-          className="rounded-3xl border border-white/10 bg-black/25 p-6 text-left transition hover:border-red-400/60 hover:bg-white/5"
+          className={isMobilePresentation
+            ? 'group relative min-h-[184px] overflow-hidden rounded-[26px] border border-white/[0.09] text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 active:scale-[0.99] active:border-red-300/45'
+            : 'rounded-3xl border border-white/10 bg-black/25 p-6 text-left transition hover:border-red-400/60 hover:bg-white/5'}
         >
-          <div className="text-xs font-semibold uppercase tracking-[0.28em] text-red-300/80">Start here</div>
-          <div className="mt-3 text-2xl font-semibold text-white">{option.title}</div>
-          <p className="mt-2 text-sm text-gray-400">{option.copy}</p>
+          {isMobilePresentation ? (
+            <>
+              <div
+                className="absolute inset-0 scale-[1.02] bg-cover transition-transform duration-500 group-active:scale-105"
+                style={{ backgroundImage: `url(${option.imageUrl})`, backgroundPosition: option.imagePosition }}
+                aria-hidden="true"
+              />
+              <div className={`absolute inset-0 bg-gradient-to-b ${option.accent}`} aria-hidden="true" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_12%,rgba(239,68,68,0.20),transparent_36%)]" aria-hidden="true" />
+              <div className="relative z-10 flex min-h-[184px] flex-col justify-end p-5">
+                <div className="text-[22px] font-semibold tracking-[-0.02em] text-white">{option.title}</div>
+                <p className="mt-1.5 max-w-[30ch] text-[12px] leading-5 text-gray-200/85">{option.copy}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-xs font-semibold uppercase tracking-[0.28em] text-red-300/80">Start here</div>
+              <div className="mt-3 text-2xl font-semibold text-white">{option.title}</div>
+              <p className="mt-2 text-sm text-gray-400">{option.copy}</p>
+            </>
+          )}
         </button>
       ))}
     </div>
@@ -1119,7 +1234,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         />
         {kind === 'event' && (
           <Field
-            label="Public host name"
+            label="Host / promoter"
             value={draft.hostName}
             onChange={(event) => updateField('hostName', event.target.value)}
             error={errors.hostName}
@@ -1851,7 +1966,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         <ReviewSection title="Basic Info" onEdit={() => setStep(0)}>
           <ReviewLine label="Listing type">{kind}</ReviewLine>
           <ReviewLine label="Name">{draft.name}</ReviewLine>
-          {kind === 'event' && <ReviewLine label="Host name">{draft.hostName}</ReviewLine>}
+          {kind === 'event' && <ReviewLine label="Host / promoter">{draft.hostName || 'Not provided'}</ReviewLine>}
           <ReviewLine label={kind === 'event' ? 'How to attend link' : 'Website'}>{draft.website || 'None'}</ReviewLine>
           <ReviewLine label="Contact email">{draft.contactEmail}</ReviewLine>
           {kind === 'club' ? (
@@ -1910,9 +2025,18 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         </ReviewSection>
 
         <ReviewSection title="Photos" onEdit={() => setStep(3)}>
-          <ReviewLine label="Header image">{draft.headerImageFile?.name || draft.headerImageUrl || 'None'}</ReviewLine>
-          <ReviewLine label="Uploaded media">{draft.mediaAssets.map((asset) => asset.role).join(', ') || 'None'}</ReviewLine>
-          <ReviewLine label="Gallery">{draft.galleryImageFiles?.map((file) => file.name).join(', ') || draft.galleryImageUrls.join(', ') || 'None'}</ReviewLine>
+          {kind === 'club' ? (
+            <>
+              <ReviewLine label="Logo">{getDraftMediaAsset('logo') ? 'Uploaded' : 'None'}</ReviewLine>
+              <ReviewLine label="Hero image">{getDraftMediaAsset('hero') ? 'Uploaded' : 'None'}</ReviewLine>
+            </>
+          ) : (
+            <>
+              <ReviewLine label="Event flyer">{getDraftMediaAsset('flyer') ? 'Uploaded' : 'None'}</ReviewLine>
+              <ReviewLine label="Hero image">{getDraftMediaAsset('hero') ? 'Uploaded' : 'None'}</ReviewLine>
+            </>
+          )}
+          <ReviewLine label="Gallery">{draft.mediaAssets.filter((asset) => asset.role === 'gallery').length ? `${draft.mediaAssets.filter((asset) => asset.role === 'gallery').length} uploaded` : 'None'}</ReviewLine>
         </ReviewSection>
       </div>
     </Section>
@@ -2187,16 +2311,29 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
       : 'Create Listing';
 
   return (
-    <div className="ss-submission-page ss-bg-geometric-muted min-h-screen px-4 py-6 text-white md:px-8">
-      <div className={['mx-auto flex w-full flex-col gap-6', isPublicSubmission ? 'max-w-7xl' : 'max-w-5xl'].join(' ')}>
-        <div className="ss-glass ss-glass--liquid ss-glass--crimson rounded-[2rem] p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className={isMobilePresentation ? 'text-white' : 'ss-submission-page ss-bg-geometric-muted min-h-screen px-4 py-6 text-white md:px-8'}>
+      <div className={[
+        'mx-auto flex w-full flex-col',
+        isMobilePresentation ? 'gap-3' : 'gap-6',
+        isPublicSubmission ? 'max-w-7xl' : 'max-w-5xl',
+      ].join(' ')}>
+        <div className={isMobilePresentation ? 'relative overflow-hidden rounded-[26px] border border-white/[0.09] bg-white/[0.045] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.20)] backdrop-blur-xl' : 'ss-glass ss-glass--liquid ss-glass--crimson rounded-[2rem] p-6'}>
+          {isMobilePresentation ? (
+            <>
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_4%,rgba(239,68,68,0.20),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.008))]" />
+              <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-red-500/[0.06] blur-3xl" />
+            </>
+          ) : null}
+          <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               {!isPublicSubmission && (
                 <div className="text-xs font-semibold uppercase tracking-[0.34em] text-red-300/80">Listing editor</div>
               )}
-              <h1 className="mt-2 text-3xl font-semibold text-white md:text-4xl">{headerLabel}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-gray-300">
+              {isMobilePresentation && isPublicSubmission ? (
+                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-200/80">Community submission</div>
+              ) : null}
+              <h1 className={isMobilePresentation ? 'mt-2 text-[28px] font-semibold leading-[1.02] tracking-[-0.035em] text-white' : 'mt-2 text-3xl font-semibold text-white md:text-4xl'}>{headerLabel}</h1>
+              <p className={isMobilePresentation ? 'mt-2 w-full text-[12px] leading-5 text-gray-300/85' : 'mt-2 max-w-2xl text-sm text-gray-300'}>
                 {mode === 'public'
                   ? kind === 'club'
                     ? 'Help people discover this club on SwingSphere. Submissions are reviewed before going live.'
@@ -2206,9 +2343,9 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
                   : 'Create or update a live listing using the same persisted workflow.'}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-gray-300">
+            <div className={isMobilePresentation ? 'rounded-2xl border border-white/[0.08] bg-black/25 px-3 py-2 text-[11px] text-gray-400 backdrop-blur-md' : 'rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-gray-300'}>
               <div className="font-semibold text-white">{currentStepLabel}</div>
-              <div className="mt-1">{kind ? `Step ${step + 1} of ${totalSteps}` : 'Type selection'}</div>
+              <div className="mt-1">{kind ? `Step ${step + 1} of ${totalSteps}` : 'Pick the one that fits best'}</div>
             </div>
           </div>
           {kind && (
@@ -2237,32 +2374,52 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
               </div>
             )}
 
-            <div className="ss-glass ss-glass--liquid flex flex-col gap-3 rounded-3xl p-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm text-gray-400">
-                {listingToEdit ? 'Changes save directly to the dev-local persistence file.' : 'Draft saved automatically.'}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="secondary" type="button" onClick={handleBack} disabled={isSaving}>
-                  Back
-                </Button>
-                {kind && step < totalSteps - 1 ? (
-                  <Button type="button" onClick={() => void handleNext()} disabled={isSaving}>
-                    Next
-                  </Button>
-                ) : kind ? (
-                  <Button type="button" onClick={() => void saveListing()} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : isEditing ? 'Update listing' : mode === 'public' ? 'Submit for review' : 'Save listing'}
-                  </Button>
+            {(!isMobilePresentation || kind || resumableDraft) ? (
+              <div className={isMobilePresentation ? 'sticky bottom-0 z-20 flex flex-col gap-3 rounded-[22px] border border-white/[0.08] bg-[#0b0d12]/95 p-3 shadow-[0_-12px_36px_rgba(0,0,0,0.35)] backdrop-blur-xl' : 'ss-glass ss-glass--liquid flex flex-col gap-3 rounded-3xl p-4 md:flex-row md:items-center md:justify-between'}>
+                {isMobilePresentation && !kind && resumableDraft ? (
+                  <>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-200/75">Saved draft</div>
+                      <div className="mt-1 text-sm font-semibold text-white">{resumableDraft.name}</div>
+                      <div className="mt-0.5 text-[11px] text-gray-500">Continue your {resumableDraft.kind} listing where you left off.</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="secondary" type="button" onClick={discardResumableDraft}>Discard</Button>
+                      <Button type="button" onClick={resumeDraft}>Resume draft</Button>
+                    </div>
+                  </>
                 ) : (
-                  <Button type="button" onClick={handleBack}>
-                    Cancel
-                  </Button>
+                  <>
+                    {(listingToEdit || kind) ? (
+                      <div className="text-sm text-gray-400">
+                        {listingToEdit ? 'Changes save directly to the dev-local persistence file.' : 'Draft saved automatically.'}
+                      </div>
+                    ) : null}
+                    <div className={isMobilePresentation ? 'grid grid-cols-2 gap-2' : 'flex flex-wrap gap-3'}>
+                      <Button variant="secondary" type="button" onClick={handleBack} disabled={isSaving}>
+                        Back
+                      </Button>
+                      {kind && step < totalSteps - 1 ? (
+                        <Button type="button" onClick={() => void handleNext()} disabled={isSaving}>
+                          Next
+                        </Button>
+                      ) : kind ? (
+                        <Button type="button" onClick={() => void saveListing()} disabled={isSaving}>
+                          {isSaving ? 'Saving...' : isEditing ? 'Update listing' : mode === 'public' ? 'Submit for review' : 'Save listing'}
+                        </Button>
+                      ) : (
+                        <Button type="button" onClick={handleBack}>
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
+            ) : null}
           </div>
 
-          {isPublicSubmission && renderPublicHelperPanel()}
+          {isPublicSubmission && !isMobilePresentation && renderPublicHelperPanel()}
         </div>
       </div>
     </div>

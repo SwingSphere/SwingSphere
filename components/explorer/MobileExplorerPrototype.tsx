@@ -1,20 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import {
   ArrowLeft,
-  Bookmark,
-  CalendarDays,
   ChevronUp,
   Globe2,
   ListFilter,
   MapPin,
-  Plus,
-  UserRound,
   X,
 } from 'lucide-react';
 import type { Listing } from '../../types';
 import type { EntityIndex } from '../../lib/entityIndex';
 import { getListingCanonicalPath } from '../../lib/entityUtils';
-import { getListingHeroUrl, handleListingImageError } from '../../lib/listingImage';
+import { getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
+import { getMobileNavTarget, mobileNavItems } from '../dev/mobile/DevMobileShell';
 
 export type MobileExplorerPrototypeProps = {
   surfaceMode: 'globe' | 'map';
@@ -97,8 +94,20 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[75] md:hidden" aria-label="SwingSphere mobile explorer">
-      <div className="pointer-events-auto absolute inset-x-3 top-[max(2rem,env(safe-area-inset-top))] flex items-center gap-2">
-        <div className="ss-glass ss-glass--liquid flex h-[52px] min-w-0 flex-1 items-center rounded-[18px] border-white/[0.09] px-3 shadow-[0_18px_50px_rgba(0,0,0,0.36)]">
+      <div className="pointer-events-auto absolute inset-x-3 top-[max(1.45rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          onClick={() => onNavigate('/home')}
+          className="flex min-h-11 items-center gap-2.5 px-1 text-left"
+          aria-label="SwingSphere home"
+        >
+          <img src="/swingsphere-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
+          <span className="text-[17px] font-black uppercase tracking-[0.04em] leading-none">
+            <span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span>
+          </span>
+        </button>
+
+        <div className="ss-glass ss-glass--liquid mt-2 flex h-[52px] min-w-0 items-center rounded-[18px] border-white/[0.09] px-3 shadow-[0_18px_50px_rgba(0,0,0,0.36)]">
           <div className="min-w-0 flex-1 px-1">
             <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-300/75">
               {surfaceMode === 'map' ? 'Local view' : 'Explore'}
@@ -108,18 +117,9 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
             </div>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onNavigate('/home')}
-          className="ss-glass ss-glass--liquid grid h-[52px] w-[52px] shrink-0 place-items-center overflow-hidden rounded-[18px] border-white/[0.09] shadow-[0_18px_50px_rgba(0,0,0,0.36)]"
-          aria-label="SwingSphere home"
-        >
-          <img src="/swingsphere-logo.png" alt="" className="h-8 w-8 object-contain" />
-        </button>
       </div>
 
-      <div className="pointer-events-auto absolute right-3 top-[calc(max(2rem,env(safe-area-inset-top))+4.25rem)] flex flex-col gap-2">
+      <div className="pointer-events-auto absolute right-3 top-[calc(max(1.45rem,env(safe-area-inset-top))+7.55rem)] flex flex-col gap-2">
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
@@ -179,12 +179,17 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
                     key={listing.id}
                     type="button"
                     onClick={() => selected ? openListing(listing) : onSelectListing(listing.id)}
-                    className={`min-w-[148px] overflow-hidden rounded-2xl border text-left ${selected ? 'border-red-400/65 bg-red-500/[0.09]' : 'border-white/[0.08] bg-white/[0.035]'}`}
+                    className={`relative h-[96px] min-w-[148px] overflow-hidden rounded-2xl border text-left ${selected ? 'border-red-400/65 bg-red-500/[0.09]' : 'border-white/[0.08] bg-white/[0.035]'}`}
                   >
-                    <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-[70px] w-full object-cover" />
-                    <span className="block px-2.5 pb-2 pt-1.5">
-                      <span className="block truncate text-xs font-semibold text-white">{listing.name}</span>
-                      <span className="mt-0.5 block truncate text-[10px] text-gray-400">{formatEventDate(listing)}</span>
+                    <img
+                      src={getListingLogoUrl(listing)}
+                      onError={handleListingImageError}
+                      alt={`${listing.name} logo`}
+                      className="absolute inset-0 h-full w-full object-contain"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 block bg-gradient-to-t from-black/90 via-black/55 to-transparent px-2.5 pb-2 pt-6">
+                      <span className="block truncate text-xs font-semibold text-white drop-shadow-sm">{listing.name}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-gray-300">{formatEventDate(listing)}</span>
                     </span>
                   </button>
                 );
@@ -201,23 +206,33 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
           </button>
         </div>
 
-        <nav className="absolute inset-x-0 bottom-0 grid h-[58px] grid-cols-5 border-t border-white/[0.07] bg-black/25 px-1" aria-label="Mobile navigation">
-          <button type="button" onClick={() => setSheetOpen(false)} className="flex flex-col items-center justify-center gap-1 text-red-300">
-            <Globe2 className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Explore</span>
-          </button>
-          <button type="button" onClick={() => onNavigate('/events')} className="flex flex-col items-center justify-center gap-1 text-gray-400">
-            <CalendarDays className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Events</span>
-          </button>
-          <button type="button" onClick={() => onNavigate('/submission')} className="flex flex-col items-center justify-center gap-1 text-white">
-            <span className="-mt-5 grid h-11 w-11 place-items-center rounded-2xl bg-red-500 shadow-[0_10px_28px_rgba(239,68,68,0.38)]"><Plus className="h-5 w-5" /></span>
-            <span className="-mt-0.5 text-[9px] font-semibold">Add</span>
-          </button>
-          <button type="button" onClick={devMobileMode ? () => onNavigate('/saved') : undefined} className="flex flex-col items-center justify-center gap-1 text-gray-400">
-            <Bookmark className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Saved</span>
-          </button>
-          <button type="button" onClick={() => onNavigate('/account')} className="flex flex-col items-center justify-center gap-1 text-gray-400">
-            <UserRound className="h-[18px] w-[18px]" /><span className="text-[9px] font-semibold">Account</span>
-          </button>
+        <nav className="absolute inset-x-0 bottom-0 grid min-h-[58px] grid-cols-5 border-t border-white/[0.07] bg-black/25 px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1" aria-label="Mobile navigation">
+          {mobileNavItems.map(({ label, path, icon: Icon, emphasized }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                if (!path) {
+                  setSheetOpen(false);
+                  return;
+                }
+                if (!devMobileMode && label === 'Saved') return;
+                const target = devMobileMode
+                  ? getMobileNavTarget(path)
+                  : label === 'Add'
+                    ? '/submission'
+                    : path;
+                onNavigate(target);
+              }}
+              className={`flex min-h-11 flex-col items-center justify-center gap-1 text-[9px] font-semibold ${!path ? 'text-red-300' : 'text-gray-400'}`}
+              aria-current={!path ? 'page' : undefined}
+            >
+              <span className={emphasized ? '-mt-5 grid h-11 w-11 place-items-center rounded-2xl bg-red-500 text-white shadow-[0_10px_28px_rgba(239,68,68,0.38)]' : ''}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className={emphasized ? '-mt-0.5' : ''}>{label}</span>
+            </button>
+          ))}
         </nav>
       </section>
 
@@ -270,7 +285,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
             <div className="space-y-2.5">
               {visibleListings.map((listing) => (
                 <button key={listing.id} type="button" onClick={() => openListing(listing)} className="flex w-full gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-2.5 text-left">
-                  <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-24 w-24 shrink-0 rounded-xl object-cover" />
+                  <img src={getListingLogoUrl(listing)} onError={handleListingImageError} alt={`${listing.name} logo`} className="h-24 w-24 shrink-0 rounded-xl bg-black/30 object-contain" />
                   <span className="min-w-0 flex-1 py-1">
                     <span className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-sm font-semibold leading-5 text-white">{listing.name}</span><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-300" /></span>
                     <span className="mt-1 block text-xs font-medium text-red-200">{formatEventDate(listing)}</span>

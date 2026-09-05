@@ -51,7 +51,7 @@ export class CountrySelectionManager {
     this.boundPointerUp = () => this.#handlePointerUp();
     this.boundPointerCancel = () => this.#handlePointerCancel();
     this.boundPointerLeave = () => this.#handlePointerLeave();
-    this.boundClick = () => this.#handleClick();
+    this.boundClick = (event) => this.#handleClick(event);
     this.boundDblClick = () => this.#handleDblClick();
     this.renderer.renderer.domElement.addEventListener("pointerdown", this.boundPointerDown);
     this.renderer.renderer.domElement.addEventListener("pointermove", this.boundPointerMove);
@@ -117,7 +117,7 @@ export class CountrySelectionManager {
     this.#setHighlightRegion(region);
     this.callbacks.onCountrySelect?.(region);
     if (region && this.hoverWorldPosition) {
-      this.callbacks.onCountryFocusRequest?.(this.hoverWorldPosition, elapsed);
+      this.callbacks.onCountryFocusRequest?.(this.hoverWorldPosition, elapsed, region);
     }
     return region;
   }
@@ -232,6 +232,8 @@ export class CountrySelectionManager {
     this.pointerDown = true;
     this.pointerDragExceeded = false;
     this.pointerDownPosition.set(event.clientX, event.clientY);
+    this.#updatePointerFromEvent(event);
+    this.#updateHover();
   }
 
   #handlePointerMove(event) {
@@ -241,6 +243,10 @@ export class CountrySelectionManager {
         this.pointerDragExceeded = true;
       }
     }
+    this.#updatePointerFromEvent(event);
+  }
+
+  #updatePointerFromEvent(event) {
     const rect = this.renderer.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
@@ -267,17 +273,21 @@ export class CountrySelectionManager {
     this.markDirty();
   }
 
-  #handleClick() {
+  #handleClick(event) {
     const wasDrag = this.pointerDragExceeded;
     this.pointerDragExceeded = false;
     if (wasDrag) return;
+    if (event) {
+      this.#updatePointerFromEvent(event);
+      this.#updateHover();
+    }
     if (this.pinManager?.hoveredEvent || this.activityRegionManager?.hoveredRegionId) return;
     this.renderer.noteInteraction();
     this.selectedRegion = this.hoverRegion;
     this.#setHighlightRegion(this.selectedRegion);
     this.callbacks.onCountrySelect?.(this.selectedRegion);
     if (this.selectedRegion && this.hoverWorldPosition) {
-      this.callbacks.onCountryFocusRequest?.(this.hoverWorldPosition, this.renderer.clock.elapsedTime);
+      this.callbacks.onCountryFocusRequest?.(this.hoverWorldPosition, this.renderer.clock.elapsedTime, this.selectedRegion);
     }
   }
 

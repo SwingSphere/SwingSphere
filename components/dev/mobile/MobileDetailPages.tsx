@@ -62,7 +62,7 @@ const NotFoundState: React.FC<{ entity: string; message?: string }> = ({ entity,
         <span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/[0.08] bg-white/[0.035]"><Info className="h-6 w-6 text-red-200" /></span>
         <h1 className="mt-5 text-xl font-semibold text-white">We couldn’t open this {entity.toLowerCase()}</h1>
         <p className="mt-2 text-sm leading-6 text-gray-400">{message || 'The link may be outdated, or the listing data is temporarily unavailable.'}</p>
-        <button type="button" onClick={() => navigate('/dev/mobile-preview')} className="mt-6 min-h-12 rounded-2xl bg-red-500 px-6 text-sm font-bold text-white">Return to Explore</button>
+        <button type="button" onClick={() => navigate('/mobile')} className="mt-6 min-h-12 rounded-2xl bg-red-500 px-6 text-sm font-bold text-white">Return to Explore</button>
       </div>
     </DevMobileScreen>
   );
@@ -101,14 +101,14 @@ const StatusBadges: React.FC<{ status: string; privateLocation?: boolean }> = ({
   </div>
 );
 
-const Hero: React.FC<{ src: string; logoSrc?: string | null; name: string; type: string; location: string }> = ({ src, logoSrc, name, type, location }) => (
+const Hero: React.FC<{ src: string; logoSrc?: string | null; name: string; type: string; location: string; monochrome?: boolean }> = ({ src, logoSrc, name, type, location, monochrome = false }) => (
   <div>
     <div className="relative aspect-[4/3] overflow-hidden rounded-b-[30px] bg-[#11151b]">
-      <img src={src} onError={handleListingImageError} alt={`${name} hero`} className="h-full w-full object-cover" />
+      <img src={src} onError={handleListingImageError} alt={`${name} hero`} className={`h-full w-full object-cover ${monochrome ? 'grayscale contrast-[1.08]' : ''}`} />
       <div className="absolute inset-0 bg-gradient-to-t from-[#07090d] via-transparent to-black/10" />
       {logoSrc ? (
-        <div className="absolute left-4 top-4 grid h-[70px] w-[70px] place-items-center overflow-hidden rounded-[20px] border border-white/[0.14] bg-black/70 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-md">
-          <img src={logoSrc} onError={handleListingImageError} alt={`${name} logo`} className="h-full w-full object-contain" />
+        <div className="absolute left-4 top-4 h-[70px] w-[70px] overflow-hidden rounded-[20px] border border-white/[0.14] bg-black/70 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-md">
+          <img src={logoSrc} onError={handleListingImageError} alt={`${name} logo`} className={`h-full w-full object-contain ${monochrome ? 'grayscale contrast-[1.12]' : ''}`} />
         </div>
       ) : null}
       <div className="absolute inset-x-4 bottom-4">
@@ -146,13 +146,15 @@ export const MobileClubPage: React.FC = () => {
     : getListingPhysicalCityLabel(club, { listings });
   const address = privateLocation ? location : formatListingPhysicalAddress(club, { listings });
   const saved = isSaved(club.id);
+  const schedule = Array.isArray(club.schedule) ? club.schedule : [];
+  const generalAmenities = Array.isArray(club.generalAmenities) ? club.generalAmenities : [];
   const logoSrc = club.logoImageUrl || club.mediaAssets?.some((asset) => asset.role === 'logo') ? getListingLogoUrl(club) : null;
   return (
     <DevMobileScreen>
       <div className="flex h-full min-h-0 flex-col">
         <MobileHeader title={club.name} eyebrow="Club" onSave={() => toggleSaved(club.id)} saved={saved} onShare={() => shareListing(club.name)} />
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6">
-          <Hero src={getListingHeroUrl(club)} logoSrc={logoSrc} name={club.name} type="Club" location={location} />
+          <Hero src={getListingHeroUrl(club)} logoSrc={logoSrc} name={club.name} type="Club" location={location} monochrome={club.mediaPresentation === 'monochrome' || club.id === 'club-epicure-cape-town'} />
           <div className="space-y-3 px-3 pt-4">
             <StatusBadges status={club.status} privateLocation={privateLocation} />
             <p className="text-[14px] leading-6 text-gray-300">{club.description_short}</p>
@@ -169,11 +171,11 @@ export const MobileClubPage: React.FC = () => {
             </Section>
 
             <Section title="Hours & schedule" icon={<Clock3 className="h-4 w-4" />}>
-              {club.schedule.length ? <div className="divide-y divide-white/[0.055]">{club.schedule.map((day) => <div key={day.day} className="flex items-center justify-between gap-3 py-2.5 text-[12px]"><span className="font-medium text-gray-200">{day.day}</span><span className="text-right text-gray-400">{day.isClosed ? 'Closed' : [day.open ? formatClockTime(day.open) : '', day.close ? formatClockTime(day.close) : ''].filter(Boolean).join(' – ') || 'See current schedule'}</span></div>)}</div> : <p className="text-[13px] leading-6 text-gray-400">Hours vary by event. Check the official schedule before visiting.</p>}
+              {schedule.length ? <div className="divide-y divide-white/[0.055]">{schedule.map((day) => <div key={day.day} className="flex items-center justify-between gap-3 py-2.5 text-[12px]"><span className="font-medium text-gray-200">{day.day}</span><span className="text-right text-gray-400">{day.isClosed ? 'Closed' : [day.open ? formatClockTime(day.open) : '', day.close ? formatClockTime(day.close) : ''].filter(Boolean).join(' – ') || 'See current schedule'}</span></div>)}</div> : <p className="text-[13px] leading-6 text-gray-400">Hours vary by event. Check the official schedule before visiting.</p>}
               {club.specialScheduleNotes ? <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12px] leading-5 text-gray-400">{club.specialScheduleNotes}</p> : null}
             </Section>
 
-            {club.generalAmenities.length ? <Disclosure title="Amenities"><div className="flex flex-wrap gap-2">{club.generalAmenities.map((amenity) => <span key={amenity} className="rounded-full bg-white/[0.055] px-2.5 py-1 text-[11px] text-gray-300">{amenity}</span>)}</div></Disclosure> : null}
+            {generalAmenities.length ? <Disclosure title="Amenities"><div className="flex flex-wrap gap-2">{generalAmenities.map((amenity) => <span key={amenity} className="rounded-full bg-white/[0.055] px-2.5 py-1 text-[11px] text-gray-300">{amenity}</span>)}</div></Disclosure> : null}
             <Disclosure title="About this club"><p>{club.description_short}</p></Disclosure>
 
             <Section title="Upcoming events" icon={<CalendarDays className="h-4 w-4" />}>
@@ -214,6 +216,7 @@ export const MobileEventPage: React.FC = () => {
     ? getPublicLocationLabel(event)
     : formatListingPhysicalAddress(event, locationCollections) || getListingPhysicalCityLabel(event, locationCollections);
   const saved = isSaved(event.id);
+  const tags = Array.isArray(event.tags) ? event.tags : [];
   const website = event.website?.trim();
   const logoSrc = event.logoImageUrl || event.mediaAssets?.some((asset) => asset.role === 'logo') ? getListingLogoUrl(event) : null;
   return (
@@ -238,7 +241,7 @@ export const MobileEventPage: React.FC = () => {
             </Section>
 
             <Section title="About this event" icon={<Info className="h-4 w-4" />}><p className="text-[13px] leading-6 text-gray-300">{event.description_full}</p></Section>
-            {event.tags.length ? <Disclosure title="Attendance rules & event details" initiallyOpen><div className="flex flex-wrap gap-2">{event.tags.map((tag) => <span key={tag} className="rounded-full bg-white/[0.055] px-2.5 py-1 text-[11px] text-gray-300">{tag}</span>)}</div>{event.entryRequirements?.length ? <p className="mt-3 text-[12px] text-gray-400">Entry: {event.entryRequirements.map(entryLabel).join(' · ')}</p> : null}</Disclosure> : null}
+            {tags.length ? <Disclosure title="Attendance rules & event details" initiallyOpen><div className="flex flex-wrap gap-2">{tags.map((tag) => <span key={tag} className="rounded-full bg-white/[0.055] px-2.5 py-1 text-[11px] text-gray-300">{tag}</span>)}</div>{event.entryRequirements?.length ? <p className="mt-3 text-[12px] text-gray-400">Entry: {event.entryRequirements.map(entryLabel).join(' · ')}</p> : null}</Disclosure> : null}
 
             <Section title="Venue details" icon={<MapPin className="h-4 w-4" />}>
               {venue ? <button type="button" onClick={() => navigate(getDevMobileListingPath(venue, index))} className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-white/[0.045] px-3 text-left"><MapPin className="h-4 w-4 shrink-0 text-red-200" /><span><span className="block text-[13px] font-semibold text-white">{venue.name}</span><span className="mt-1 block text-[11px] text-gray-400">Open club details</span></span></button> : <p className="text-[13px] leading-6 text-gray-400">{privateLocation ? 'The precise venue is intentionally withheld. Follow the host’s confirmation process.' : event.location || 'Venue details are not yet published.'}</p>}

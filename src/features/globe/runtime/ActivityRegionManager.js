@@ -156,6 +156,10 @@ export class ActivityRegionManager {
   }
 
   #handleClick(event) {
+    if (event) {
+      this.#handlePointerMove(event);
+      this.#updateHover();
+    }
     if (!this.group.visible || !this.hoveredRegionId) return;
     const marker = this.markers.get(this.hoveredRegionId);
     if (!marker) return;

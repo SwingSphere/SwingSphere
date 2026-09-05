@@ -36,12 +36,6 @@ export class CountryVectorBorderLayer {
     this.disposed = false;
     this.sourceMode = normalizeSourceMode(this.hybridOptions.sourceMode ?? "hybrid");
     this.allowedHybridStatuses = normalizeAllowedStatuses(this.hybridOptions.allowedStatuses);
-    this.presentationGroups = normalizePresentationGroups(config.countryPresentationGroups);
-    this.suppressedCountryKeys = new Set(
-      this.presentationGroups
-        .filter((group) => group.suppressVectorBorders)
-        .flatMap((group) => group.members)
-    );
     this.lines = [];
     this.selectionTransition = 0;
     this.selectionTransitionTarget = 0;
@@ -78,6 +72,8 @@ export class CountryVectorBorderLayer {
     this.surfaceCandidate = new THREE.Vector3();
     this.edgeCounts = new Map();
     this.shorelinePaths = [];
+    this.borderSurgeryPreview = null;
+    this.borderSurgeryPreviewRevision = 0;
     this.experimentalPhysicalCoastlineSnap = this.options.experimentalPhysicalCoastlineSnap === true;
     this.shorelineSnapExcludedCountryKeys = this.experimentalPhysicalCoastlineSnap
       ? normalizeCountryKeys(this.options.shorelineSnapExcludedCountryKeys ?? [])
@@ -118,8 +114,7 @@ export class CountryVectorBorderLayer {
 
   setSelectedCountry(country) {
     const feature = findFeature(this.featuresByKey, country);
-    const suppressed = countryKeys(country).some((key) => this.suppressedCountryKeys.has(key));
-    const renderableFeature = !suppressed && this.#isRenderableCountry(country, feature) ? feature : null;
+    const renderableFeature = this.#isRenderableCountry(country, feature) ? feature : null;
     const sameSelection = renderableFeature === this.feature && countryKeys(country).join("|") === countryKeys(this.selectedCountry).join("|");
     this.selectedCountry = country;
     if (sameSelection) return;
@@ -146,8 +141,7 @@ export class CountryVectorBorderLayer {
   setHoveredCountry(country) {
     if (this.feature || this.options.hoverEnabled === false) return;
     const feature = findFeature(this.featuresByKey, country);
-    const suppressed = countryKeys(country).some((key) => this.suppressedCountryKeys.has(key));
-    const renderableFeature = !suppressed && this.#isRenderableCountry(country, feature) ? feature : null;
+    const renderableFeature = this.#isRenderableCountry(country, feature) ? feature : null;
     if (renderableFeature === this.hoverFeature) return;
     this.hoverFeature = renderableFeature;
     if (renderableFeature) this.#prefetchHybridAsset(country, renderableFeature);
@@ -169,6 +163,12 @@ export class CountryVectorBorderLayer {
     const normalized = normalizeSourceMode(mode);
     if (normalized === this.sourceMode) return;
     this.sourceMode = normalized;
+    if (this.feature) this.#rebuild();
+  }
+
+  setBorderSurgeryPreview(preview = null) {
+    this.borderSurgeryPreview = normalizeBorderSurgeryPreview(preview);
+    this.borderSurgeryPreviewRevision += 1;
     if (this.feature) this.#rebuild();
   }
 
@@ -485,6 +485,22 @@ export class CountryVectorBorderLayer {
   }
 
   #resolveBorderSource(feature, hover) {
+    const previewCountryKeys = new Set([
+      ...countryKeys(this.selectedCountry),
+      ...featureKeys(feature)
+    ]);
+    if (
+      this.borderSurgeryPreview
+      && previewCountryKeys.has(this.borderSurgeryPreview.countryId)
+    ) {
+      const asset = borderSurgeryPreviewToHybridAsset(this.borderSurgeryPreview);
+      return {
+        id: `border-surgery-preview:${this.borderSurgeryPreviewRevision}`,
+        asset,
+        loadDurationMs: 0,
+        segments: hybridAssetToBoundarySegments(asset, "hybrid")
+      };
+    }
     const entry = this.#findHybridManifestEntry(this.selectedCountry, feature);
     const hybridAllowed = this.#isHybridEntryAllowed(entry);
     if (this.sourceMode !== "geojson" && hybridAllowed) {
@@ -621,11 +637,30 @@ export class CountryVectorBorderLayer {
       const start = points[index - 1];
       const end = points[index];
       if (start.coastalToNext) {
-        appendStraightPreservingSegment(result, start, end);
+        const coastalControls = [start];
+        appendStraightPreservingSegment(coastalControls, start, end);
+        let coastalStart = anchored(coastalControls[0]);
+        if (result.length) result[result.length - 1] = coastalStart;
+        for (let controlIndex = 1; controlIndex < coastalControls.length; controlIndex += 1) {
+          const coastalEnd = anchored(coastalControls[controlIndex]);
+          const conformedSegment = [coastalStart];
+          this.#subdivideTerrainSegment({
+            start: coastalStart,
+            end: coastalEnd,
+            depth: 0,
+            result: conformedSegment,
+            anchored
+          });
+          result.push(...conformedSegment.slice(1));
+          coastalStart = coastalEnd;
+        }
         continue;
       }
-      const politicalSegment = [start];
-      this.#subdivideTerrainSegment({ start, end, depth: 0, result: politicalSegment, anchored });
+      const politicalStart = anchored(start);
+      const politicalEnd = anchored(end);
+      if (result.length) result[result.length - 1] = politicalStart;
+      const politicalSegment = [politicalStart];
+      this.#subdivideTerrainSegment({ start: politicalStart, end: politicalEnd, depth: 0, result: politicalSegment, anchored });
       result.push(...politicalSegment.slice(1));
     }
     return result;
@@ -877,6 +912,51 @@ function extractBoundarySegments(feature, pointStep, edgeCounts) {
     }
   }
   return segments;
+}
+
+function normalizeBorderSurgeryPreview(preview) {
+  if (!preview || typeof preview !== "object") return null;
+  const countryId = String(preview.countryId ?? "").trim().toUpperCase();
+  const ringId = String(preview.ringId ?? "mainland").trim() || "mainland";
+  const coordinates = (preview.coordinates ?? [])
+    .filter((coordinate) => Array.isArray(coordinate)
+      && Number.isFinite(Number(coordinate[0]))
+      && Number.isFinite(Number(coordinate[1])))
+    .map((coordinate) => [Number(coordinate[0]), Number(coordinate[1])]);
+  if (!countryId || coordinates.length < 3) return null;
+  if (
+    coordinates.length > 1
+    && Math.abs(coordinates[0][0] - coordinates[coordinates.length - 1][0]) < 1e-8
+    && Math.abs(coordinates[0][1] - coordinates[coordinates.length - 1][1]) < 1e-8
+  ) coordinates.pop();
+  if (coordinates.length < 3) return null;
+  const edgeKinds = Array.from({ length: coordinates.length }, (_, index) =>
+    preview.edgeKinds?.[index] === "coastline" ? "coastline" : "political"
+  );
+  return { countryId, ringId, coordinates, edgeKinds };
+}
+
+function borderSurgeryPreviewToHybridAsset(preview) {
+  const closedCoordinates = [...preview.coordinates, [...preview.coordinates[0]]];
+  const segments = preview.coordinates.map((coordinate, index) => ({
+    kind: preview.edgeKinds[index] === "coastline" ? "coastline" : "political",
+    coordinates: [
+      [...coordinate],
+      [...preview.coordinates[(index + 1) % preview.coordinates.length]]
+    ]
+  }));
+  return {
+    version: "border-surgery-preview",
+    countryId: preview.countryId,
+    status: "preview",
+    rings: [{
+      id: preview.ringId,
+      coordinates: closedCoordinates,
+      segments,
+      manualOverride: true,
+      presentation: true
+    }]
+  };
 }
 
 function hybridAssetToBoundarySegments(asset, sourceMode) {
@@ -1594,19 +1674,6 @@ function normalizeCountryKeys(countries) {
 
 function normalizeSourceMode(mode) {
   return ["geojson", "coastline", "hybrid"].includes(mode) ? mode : "hybrid";
-}
-
-function normalizePresentationGroups(groups) {
-  if (!Array.isArray(groups)) return [];
-  return groups
-    .map((group) => ({
-      ...group,
-      members: Array.isArray(group?.members)
-        ? group.members.map((value) => String(value).trim().toUpperCase()).filter(Boolean)
-        : [],
-      suppressVectorBorders: group?.suppressVectorBorders !== false
-    }))
-    .filter((group) => group.members.length > 0);
 }
 
 function normalizeAllowedStatuses(statuses) {

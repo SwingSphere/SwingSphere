@@ -3,6 +3,13 @@ import { disposeObject3D } from "./math/objectPools.js";
 
 const Y_UP = new THREE.Vector3(0, 1, 0);
 const RIPPLE_RING_COUNT = 1;
+const LISTING_PULSE_COUNT = 2;
+const LISTING_PULSE_SPEED = 0.58;
+const LISTING_PULSE_END_SCALE = 2.3;
+const MOBILE_LISTING_PULSE_OPACITY_MULTIPLIER = 1.5;
+const MOBILE_LISTING_PULSE_DISTANCE_MULTIPLIER = 1.5;
+const MOBILE_LISTING_MARKER_SCALE = 1.15;
+const MOBILE_LISTING_PULSE_HOLD_PHASE = 0.45;
 const RIPPLE_SPEED = 0.62;
 const RIPPLE_START_SCALE = 0.35;
 const RIPPLE_END_SCALE = 4.35;
@@ -329,7 +336,8 @@ export class GlobeMarker {
 
     if (this.flatIdleMarker) {
       const baseScale = this.flatIdleMarker.userData.baseFlatScale ?? style.tipRadius * 3.6;
-      const markerScale = selected ? 1.16 : hovered ? 1.1 : 1;
+      const mobileVisibilityScale = isCoarsePointerDevice() ? MOBILE_LISTING_MARKER_SCALE : 1;
+      const markerScale = (selected ? 1.16 : hovered ? 1.1 : 1) * mobileVisibilityScale;
       this.flatIdleMarker.scale.set(baseScale * markerScale, baseScale * markerScale, 1);
       this.flatIdleMarker.material.opacity = presentationOpacity * this.currentOpacity * THREE.MathUtils.lerp(1, 0.42, activeReveal);
       this.flatIdleMarker.visible = presentationOpacity > 0.01;
@@ -416,14 +424,14 @@ export class GlobeMarker {
     }
 
     const qualityTier = this.config?.quality?.currentTier ?? "high";
-    const showLowQualityArrivalRipple = qualityTier === "low" && this.arrivalPulse > 0.01;
     const showAttentionRipple = Boolean(attention && !selected);
-    if (
-      style.showRipple &&
-      (selected || showAttentionRipple) &&
-      (qualityTier !== "low" || showLowQualityArrivalRipple || showAttentionRipple)
-    ) {
-      this.#updateRipple(delta, presentationOpacity, qualityTier, { attention: showAttentionRipple });
+    const showLocatorRipple = Boolean(style.showRipple && presentationOpacity > 0.02);
+    if (showLocatorRipple) {
+      this.#updateRipple(delta, presentationOpacity, qualityTier, {
+        attention: showAttentionRipple,
+        locator: true,
+        active: selected || hovered,
+      });
     } else this.#hideRipple();
   }
 
@@ -498,7 +506,11 @@ export class GlobeMarker {
     });
   }
 
-  #updateRipple(delta, presentationOpacity = 1, qualityTier = "high", { attention = false } = {}) {
+  #updateRipple(delta, presentationOpacity = 1, qualityTier = "high", { attention = false, locator = false, active = false } = {}) {
+    if (this.markerType === "listing") {
+      this.#updateListingShapePulse(delta, presentationOpacity, { attention, active });
+      return;
+    }
     if (!this.rippleRings.length) {
       for (let index = 0; index < RIPPLE_RING_COUNT; index += 1) {
         const ring = new THREE.Mesh(
@@ -515,9 +527,9 @@ export class GlobeMarker {
     }
     const qualitySpeedMultiplier = qualityTier === "balanced" ? 0.72 : qualityTier === "low" ? 0.5 : 1;
     const qualityOpacityMultiplier = qualityTier === "balanced" ? 0.62 : qualityTier === "low" ? 0.45 : 1;
-    const attentionSpeedMultiplier = attention ? 2.45 : 1;
-    const attentionOpacityMultiplier = attention ? 5.8 : 1;
-    const attentionColor = attention ? "#FFFFFF" : this.style.rippleColor;
+    const attentionSpeedMultiplier = attention ? 2.45 : locator ? 1.35 : 1;
+    const attentionOpacityMultiplier = attention ? 5.8 : locator ? 3.2 : 1;
+    const attentionColor = attention || locator ? "#FFFFFF" : this.style.rippleColor;
     for (const ring of this.rippleRings) {
       ring.material.color.set(attentionColor);
       ring.userData.progress = (
@@ -540,6 +552,56 @@ export class GlobeMarker {
         * presentationOpacity;
       ring.visible = true;
     }
+  }
+
+  #updateListingShapePulse(delta, presentationOpacity = 1, { attention = false, active = false } = {}) {
+    if (!this.rippleRings.length) {
+      const baseScale = this.flatIdleMarker?.userData?.baseFlatScale ?? this.style.tipRadius * 3.6;
+      for (let index = 0; index < LISTING_PULSE_COUNT; index += 1) {
+        const pulse = createListingPulseSprite(this.variant);
+        pulse.position.y = this.flatIdleMarker
+          ? this.flatIdleMarker.position.y - 0.0005
+          : this.style.surfaceOffset + this.style.baseStemHeight + 0.0005;
+        pulse.scale.set(baseScale, baseScale, 1);
+        pulse.userData.baseScale = baseScale;
+        pulse.userData.progress = index / LISTING_PULSE_COUNT;
+        pulse.renderOrder = 8;
+        this.group.add(pulse);
+        this.rippleRings.push(pulse);
+      }
+    }
+
+    const isMobilePulse = isCoarsePointerDevice();
+    const pulseStrength = (active ? 0.42 : attention ? 0.34 : 0.12)
+      * (isMobilePulse ? MOBILE_LISTING_PULSE_OPACITY_MULTIPLIER : 1);
+    const pulseEndScale = isMobilePulse
+      ? 1.05 + (LISTING_PULSE_END_SCALE - 1.05) * MOBILE_LISTING_PULSE_DISTANCE_MULTIPLIER
+      : LISTING_PULSE_END_SCALE;
+    const activePulseCount = active || attention ? LISTING_PULSE_COUNT : 1;
+    this.rippleRings.forEach((pulse, index) => {
+      if (index >= activePulseCount || presentationOpacity <= 0.01) {
+        pulse.visible = false;
+        pulse.material.opacity = 0;
+        return;
+      }
+      pulse.userData.progress = (pulse.userData.progress + delta * LISTING_PULSE_SPEED) % 1;
+      const phase = pulse.userData.progress;
+      const eased = smootherstep(phase);
+      const baseScale = (pulse.userData.baseScale ?? this.style.tipRadius * 3.6)
+        * (isMobilePulse ? MOBILE_LISTING_MARKER_SCALE : 1);
+      const scale = baseScale * THREE.MathUtils.lerp(1.05, pulseEndScale, eased) * this.currentDistanceScale;
+      pulse.scale.set(scale, scale, 1);
+      const fade = isMobilePulse
+        ? phase <= MOBILE_LISTING_PULSE_HOLD_PHASE
+          ? 1
+          : Math.pow(
+            1 - ((phase - MOBILE_LISTING_PULSE_HOLD_PHASE) / (1 - MOBILE_LISTING_PULSE_HOLD_PHASE)),
+            1.35
+          )
+        : Math.pow(1 - phase, 1.65);
+      pulse.material.opacity = presentationOpacity * pulseStrength * fade;
+      pulse.visible = pulse.material.opacity > 0.006;
+    });
   }
 
   #updateSavedHalo(saved, presentationOpacity = 1) {
@@ -576,6 +638,52 @@ function smootherstep(value) {
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
+function createListingPulseSprite(variant) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  const center = 64;
+  const radius = 38;
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.save();
+  context.strokeStyle = "#FFFFFF";
+  context.lineWidth = 6;
+  context.lineJoin = "round";
+  context.shadowColor = "#FFFFFF";
+  context.shadowBlur = 10;
+  context.beginPath();
+  if (variant === "club") {
+    context.moveTo(center, center - radius);
+    context.lineTo(center + radius, center);
+    context.lineTo(center, center + radius);
+    context.lineTo(center - radius, center);
+    context.closePath();
+  } else if (variant === "promoter") {
+    const size = radius * 1.72;
+    context.rect(center - size / 2, center - size / 2, size, size);
+  } else {
+    context.arc(center, center, radius, 0, Math.PI * 2);
+  }
+  context.stroke();
+  context.restore();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  return new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    depthTest: true,
+    depthWrite: false,
+  }));
+}
+
 function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   const canvas = document.createElement("canvas");
   canvas.width = 96;
@@ -584,16 +692,17 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   const center = 48;
   const radius = 26;
   const fill = new THREE.Color(style.tipColor).getStyle();
+  const mobileVisibilityBoost = isCoarsePointerDevice();
 
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.save();
-  context.shadowColor = fill;
-  context.shadowBlur = 15;
+  context.shadowColor = mobileVisibilityBoost ? "#FFFFFF" : fill;
+  context.shadowBlur = mobileVisibilityBoost ? 24 : 15;
   context.shadowOffsetX = 0;
   context.shadowOffsetY = 0;
   context.fillStyle = fill;
-  context.strokeStyle = "rgba(255,255,255,0.92)";
-  context.lineWidth = 4;
+  context.strokeStyle = mobileVisibilityBoost ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.92)";
+  context.lineWidth = mobileVisibilityBoost ? 6 : 4;
   context.lineJoin = "round";
 
   context.beginPath();
@@ -635,6 +744,10 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   sprite.scale.set(baseScale, baseScale, 1);
   sprite.userData.baseFlatScale = baseScale;
   return sprite;
+}
+
+function isCoarsePointerDevice() {
+  return typeof window !== "undefined" && Boolean(window.matchMedia?.("(pointer: coarse)").matches);
 }
 
 function createTipGeometry(style, variant) {

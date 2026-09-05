@@ -55,7 +55,7 @@ const CleanRoomGlobePage = import.meta.env.DEV ? React.lazy(() => import('./comp
 const PinMarkerStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/PinMarkerStudioPage')) : null;
 const DevImageLibraryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevImageLibraryPage')) : null;
 const MobileExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/MobileExplorerWorkbenchPage')) : null;
-const DevMobileApp = import.meta.env.DEV ? React.lazy(() => import('./components/dev/mobile/DevMobileApp')) : null;
+const DevMobileApp = React.lazy(() => import('./components/dev/mobile/DevMobileApp'));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -105,7 +105,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const root = ReactDOM.createRoot(rootElement);
 const SITE_MODE = import.meta.env.VITE_SITE_MODE === 'coming-soon' ? 'coming-soon' : 'full';
-const APP_BASENAME = import.meta.env.VITE_APP_BASENAME || undefined;
+const configuredBasename = import.meta.env.VITE_APP_BASENAME || undefined;
+const APP_BASENAME = configuredBasename && window.location.pathname.startsWith(configuredBasename)
+  ? configuredBasename
+  : undefined;
 console.log("Mounting React App...");
 root.render(
   <React.StrictMode>
@@ -122,8 +125,8 @@ root.render(
               element={DEV_TOOLS_ENABLED && MobileExplorerWorkbenchPage ? <ProtectedRoute roles={['Admin']}><MobileExplorerWorkbenchPage /></ProtectedRoute> : <Navigate to="/" replace />}
             />
             <Route
-              path="/dev/mobile-preview/*"
-              element={DEV_TOOLS_ENABLED && DevMobileApp ? <ProtectedRoute roles={['Admin']}><DevMobileApp /></ProtectedRoute> : <Navigate to="/" replace />}
+              path="/mobile/*"
+              element={<DevMobileApp />}
             />
             <Route
               path="/dev/building-inspector"

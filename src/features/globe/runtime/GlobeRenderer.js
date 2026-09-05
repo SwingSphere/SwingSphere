@@ -6,14 +6,16 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { applyGraphiteFacetBoost } from "./shaders/graphiteFacetBoost.js";
 import { createEnvironmentBackgroundTexture } from "./shaders/backgroundGlowShader.js";
 import { disposeObject3D } from "./math/objectPools.js";
+import { shouldIgnoreProgrammaticControlsChange } from "./mobileRuntimePolicy.js";
 
 export class GlobeRenderer {
-  constructor({ container, assets, config, onInteraction = null, onContextLost = null, onContextRestored = null }) {
+  constructor({ container, assets, config, onInteraction = null, onInteractionEnd = null, onContextLost = null, onContextRestored = null }) {
     if (!container) throw new Error("GlobeRenderer requires a container.");
     this.container = container;
     this.assets = assets;
     this.config = config;
     this.onInteraction = onInteraction;
+    this.onInteractionEnd = onInteractionEnd;
     this.onContextLost = onContextLost;
     this.onContextRestored = onContextRestored;
     this.frameListeners = new Set();
@@ -28,6 +30,7 @@ export class GlobeRenderer {
     this.idleMotionSuppressed = false;
     this.idleMotionSpeedMultiplier = 1;
     this.controlsUpdateSuppressed = false;
+    this.programmaticControlsUpdateDepth = 0;
     this.animationFrame = 0;
     this.clock = new THREE.Clock();
     this.lastRenderedAt = 0;
@@ -356,6 +359,15 @@ export class GlobeRenderer {
     this.controls.enabled = !this.controlsUpdateSuppressed;
   }
 
+  updateControlsProgrammatically() {
+    this.programmaticControlsUpdateDepth += 1;
+    try {
+      this.controls.update();
+    } finally {
+      this.programmaticControlsUpdateDepth = Math.max(0, this.programmaticControlsUpdateDepth - 1);
+    }
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -503,8 +515,12 @@ export class GlobeRenderer {
     this.boundControlEnd = () => {
       this.controlsActive = false;
       this.noteInteraction();
+      this.onInteractionEnd?.();
     };
-    this.boundInteraction = () => this.noteInteraction();
+    this.boundInteraction = () => {
+      if (shouldIgnoreProgrammaticControlsChange(this.programmaticControlsUpdateDepth)) return;
+      this.noteInteraction();
+    };
     this.#listen(this.controls, "start", this.boundControlStart);
     this.#listen(this.controls, "end", this.boundControlEnd);
     this.#listen(this.controls, "change", this.boundInteraction);
@@ -647,9 +663,18 @@ export class GlobeRenderer {
   }
 
   setIdleMotionSpeedMultiplier(multiplier = 1) {
+    // The mobile entrance deliberately accelerates the existing idle-spin
+    // system, then eases it back to 1x so the direction/phase stays continuous.
+    // Keep a generous safety ceiling while preventing unbounded values.
+    const previousMultiplier = this.idleMotionSpeedMultiplier;
     this.idleMotionSpeedMultiplier = Number.isFinite(multiplier)
-      ? THREE.MathUtils.clamp(multiplier, 0, 2)
+      ? THREE.MathUtils.clamp(multiplier, 0, 120)
       : 1;
+    // Finishing an accelerated entrance should flow directly into idle motion,
+    // rather than inheriting a stale interaction hold from startup/layout work.
+    if (previousMultiplier > 1 && this.idleMotionSpeedMultiplier <= 1) {
+      this.visualIdleMotion.lastInteractionAt = -Infinity;
+    }
   }
 
   #resolveFramePolicy(now) {
@@ -690,9 +715,12 @@ export class GlobeRenderer {
 
   #updateVisualIdleMotion(delta, elapsed) {
     const motion = this.config.idleMotion;
-    const interactionHeld = elapsed - this.visualIdleMotion.lastInteractionAt < motion.idleResumeDelaySeconds;
-    const idleSuppressed = this.idleMotionSuppressed;
     const speedMultiplier = this.idleMotionSpeedMultiplier;
+    // An accelerated cinematic entrance is intentional motion and must not be
+    // blocked by the normal post-touch idle delay. Positive land rotation reads
+    // rightward while the ocean intentionally counter-rotates leftward.
+    const interactionHeld = speedMultiplier <= 1 && elapsed - this.visualIdleMotion.lastInteractionAt < motion.idleResumeDelaySeconds;
+    const idleSuppressed = this.idleMotionSuppressed;
     const landTargetSpeed = interactionHeld || idleSuppressed ? 0 : motion.idleRotationSpeed * speedMultiplier;
     const oceanTargetSpeed = idleSuppressed ? 0 : -motion.idleRotationSpeed * speedMultiplier * (interactionHeld ? motion.oceanInteractionSpeedRatio : 1);
     const easeSeconds = interactionHeld ? motion.landInteractionEaseSeconds : motion.idleResumeEaseSeconds;

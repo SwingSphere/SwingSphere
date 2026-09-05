@@ -52,7 +52,7 @@ const MobileExplorerWorkbenchPage: React.FC = () => {
             <span className="hidden sm:inline">Reset preview</span>
           </button>
           <a
-            href="/dev/mobile-preview/"
+            href="/mobile/"
             target="_blank"
             rel="noreferrer"
             className="ss-glass ss-glass--liquid ss-glass--interactive inline-flex h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-gray-200"
@@ -77,7 +77,7 @@ const MobileExplorerWorkbenchPage: React.FC = () => {
           <iframe
             key={frameKey}
             title="SwingSphere iPhone 12 Pro mobile preview"
-            src="/dev/mobile-preview/"
+            src="/mobile/"
             className="relative h-[844px] w-[390px] overflow-hidden rounded-[32px] border-0 bg-[#030407]"
           />
         </div>

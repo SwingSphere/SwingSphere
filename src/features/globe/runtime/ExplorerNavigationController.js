@@ -23,18 +23,22 @@ export class ExplorerNavigationController {
       focusDistance: Number.isFinite(focusDistance)
         ? focusDistance
         : this.config.progressiveDisclosure.clusterFocusDistance,
-      arrivalMode: "accurate-center"
+      arrivalMode: "accurate-center",
+      heroArrival: false
     });
   }
 
-  selectCountry({ worldPosition, elapsed = 0 }) {
+  selectCountry({ worldPosition, elapsed = 0, focusDistance = null }) {
     if (!worldPosition) return;
     this.cameraFocus?.focus(worldPosition, elapsed, {
       // Country selection is an orientation step, not a venue arrival. Keep it
       // meaningfully farther out than cluster/listing focus so drilling into a
       // discovery marker produces a visible second level instead of replaying
-      // nearly the same camera move.
-      focusDistance: this.config.progressiveDisclosure.worldExitDistance,
+      // nearly the same camera move. Large activity footprints can request a
+      // wider framing distance so all active areas remain in view.
+      focusDistance: Number.isFinite(focusDistance)
+        ? focusDistance
+        : this.config.progressiveDisclosure.worldExitDistance,
       durationMs: this.config.selection?.focusDurationMs
     });
   }

@@ -30,8 +30,12 @@ export const useDevMobileSaved = () => {
       const next = current.includes(listingId)
         ? current.filter((id) => id !== listingId)
         : [...current, listingId];
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      window.dispatchEvent(new Event('swingsphere:dev-mobile-saved'));
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        window.dispatchEvent(new Event('swingsphere:dev-mobile-saved'));
+      } catch (error) {
+        console.warn('Unable to persist Dev Mobile saved listings', error);
+      }
       return next;
     });
   }, []);

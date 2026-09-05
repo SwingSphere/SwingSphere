@@ -368,12 +368,10 @@ export class CountryGeoJsonBorderLayer {
 
   #applyAlignmentUniforms() {
     const alignment = this.config.alignment;
-    this.uniforms.longitudeOffset.value = THREE.MathUtils.degToRad(
-      Number(alignment.longitudeOffsetDeg ?? 0) + this.alignment.longitudeOffsetDeg
-    );
-    this.uniforms.latitudeOffset.value = THREE.MathUtils.degToRad(
-      Number(alignment.latitudeOffsetDeg ?? 0) + this.alignment.latitudeOffsetDeg
-    );
+    // GeoJSON raster masks have their own calibrated WGS84 transform. Do not
+    // inherit the country-atlas offset; the two sources use different bases.
+    this.uniforms.longitudeOffset.value = THREE.MathUtils.degToRad(this.alignment.longitudeOffsetDeg);
+    this.uniforms.latitudeOffset.value = THREE.MathUtils.degToRad(this.alignment.latitudeOffsetDeg);
     this.uniforms.longitudeSign.value = Number(alignment.longitudeSign ?? -1);
     this.uniforms.flipU.value = alignment.flipU ? 1 : 0;
     this.uniforms.flipV.value = alignment.flipV ? 1 : 0;
@@ -607,8 +605,8 @@ function createUniforms(baseTexture, activeTexture, fillTexture, activityTexture
     countryGeoJsonGlowHazeStrength: { value: Number(options.glowHazeStrength ?? 0.55) },
     countryGeoJsonGlowColor: { value: new THREE.Color(options.glowColor ?? config.colors.accent) },
     countryGeoJsonBaseTexelSize: { value: new THREE.Vector2(1 / baseTexture.image.width, 1 / baseTexture.image.height) },
-    longitudeOffset: { value: THREE.MathUtils.degToRad(config.alignment.longitudeOffsetDeg) },
-    latitudeOffset: { value: THREE.MathUtils.degToRad(config.alignment.latitudeOffsetDeg) },
+    longitudeOffset: { value: THREE.MathUtils.degToRad(Number(options.longitudeOffsetDeg ?? 0)) },
+    latitudeOffset: { value: THREE.MathUtils.degToRad(Number(options.latitudeOffsetDeg ?? 0)) },
     longitudeSign: { value: config.alignment.longitudeSign },
     flipU: { value: config.alignment.flipU ? 1 : 0 },
     flipV: { value: config.alignment.flipV ? 1 : 0 }

@@ -13,32 +13,64 @@ const bundledById = new Map(bundledPublicListings.map((listing) => [listing.id, 
  * This intentionally does not overwrite exact-public remote listings with
  * bundled data. It only upgrades privacy protection.
  */
+const normalizeDevMobileListing = (listing: Listing): Listing => {
+  const common = {
+    ...listing,
+    location: typeof listing.location === 'string' ? listing.location : '',
+    mediaAssets: Array.isArray(listing.mediaAssets) ? listing.mediaAssets : [],
+    entryRequirements: Array.isArray(listing.entryRequirements) ? listing.entryRequirements : [],
+  };
+
+  if (listing.type === 'club') {
+    return {
+      ...common,
+      schedule: Array.isArray(listing.schedule) ? listing.schedule : [],
+      generalAmenities: Array.isArray(listing.generalAmenities) ? listing.generalAmenities : [],
+      description_short: typeof listing.description_short === 'string' ? listing.description_short : '',
+    } as ClubData;
+  }
+
+  if (listing.type === 'event') {
+    const start = typeof listing.time?.start === 'string' ? listing.time.start : '';
+    const end = typeof listing.time?.end === 'string' ? listing.time.end : start;
+    return {
+      ...common,
+      tags: Array.isArray(listing.tags) ? listing.tags : [],
+      time: { ...listing.time, start, end },
+      description_full: typeof listing.description_full === 'string' ? listing.description_full : '',
+    } as EventData;
+  }
+
+  return common as Listing;
+};
+
 export const applyDevMobileListingSafety = (listing: Listing): Listing => {
-  const bundled = bundledById.get(listing.id);
-  if (!bundled || !isApproximateLocation(bundled)) return listing;
+  const normalized = normalizeDevMobileListing(listing);
+  const bundled = bundledById.get(normalized.id);
+  if (!bundled || !isApproximateLocation(bundled)) return normalized;
 
   const base = {
-    ...listing,
+    ...normalized,
     location: bundled.location,
     geopoint: bundled.geopoint,
     locationMeta: bundled.locationMeta,
   };
 
-  if (listing.type === 'club' && bundled.type === 'club') {
+  if (normalized.type === 'club' && bundled.type === 'club') {
     return {
       ...base,
       locationVisibility: bundled.locationVisibility ?? 'approximate_public',
     } as ClubData;
   }
 
-  if (listing.type === 'event' && bundled.type === 'event') {
+  if (normalized.type === 'event' && bundled.type === 'event') {
     return {
       ...base,
       isAddressPrivate: true,
     } as EventData;
   }
 
-  return listing;
+  return normalized;
 };
 
 export const applyDevMobileListingSafetyToAll = (listings: Listing[]): Listing[] =>

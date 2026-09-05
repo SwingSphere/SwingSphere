@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">Cinematic upscale club lounge</title>
+  <desc id="desc">A moody modern lounge with sculptural arches, velvet seating, warm table lights, reflected city glow, and silhouettes of guests.</desc>
+  <defs>
+    <linearGradient id="room" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#09080d"/>
+      <stop offset=".42" stop-color="#1b0b12"/>
+      <stop offset=".72" stop-color="#231016"/>
+      <stop offset="1" stop-color="#07080c"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171117"/>
+      <stop offset="1" stop-color="#050609"/>
+    </linearGradient>
+    <linearGradient id="velvet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b1730"/>
+      <stop offset=".5" stop-color="#4a1020"/>
+      <stop offset="1" stop-color="#1e0a12"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6c1b2b" stop-opacity=".35"/>
+      <stop offset=".5" stop-color="#171522" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#d44b32" stop-opacity=".14"/>
+    </linearGradient>
+    <radialGradient id="amberGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd8a6" stop-opacity=".95"/>
+      <stop offset=".16" stop-color="#f1a15f" stop-opacity=".52"/>
+      <stop offset=".48" stop-color="#df493d" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#b51632" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="redGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ef334f" stop-opacity=".58"/>
+      <stop offset=".4" stop-color="#9e1029" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#25040a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="tableGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffddb3" stop-opacity=".85"/>
+      <stop offset=".38" stop-color="#ff9d66" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ff7c56" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur28"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="blur14"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grain" width="6" height="6" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r=".5" fill="#fff" opacity=".08"/>
+      <circle cx="4.5" cy="3.5" r=".45" fill="#fff" opacity=".045"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="600" fill="url(#room)"/>
+
+  <!-- distant architectural light -->
+  <ellipse cx="985" cy="120" rx="330" ry="230" fill="url(#redGlow)" filter="url(#blur28)"/>
+  <ellipse cx="300" cy="92" rx="260" ry="180" fill="url(#amberGlow)" opacity=".42" filter="url(#blur28)"/>
+
+  <!-- back wall / windows -->
+  <rect x="640" y="42" width="510" height="320" rx="14" fill="#080a10" stroke="#6d2734" stroke-opacity=".28" stroke-width="3"/>
+  <rect x="662" y="62" width="466" height="278" rx="8" fill="url(#glass)"/>
+  <g opacity=".24" stroke="#ae5560" stroke-width="3">
+    <path d="M778 62v278M894 62v278M1010 62v278"/>
+    <path d="M662 197h466"/>
+  </g>
+  <g opacity=".75" filter="url(#softGlow)">
+    <circle cx="710" cy="118" r="3" fill="#ffb37e"/>
+    <circle cx="754" cy="158" r="2.5" fill="#ff784f"/>
+    <circle cx="824" cy="112" r="3.5" fill="#ffd39b"/>
+    <circle cx="866" cy="238" r="2.5" fill="#e84b55"/>
+    <circle cx="950" cy="141" r="3" fill="#ff9d6e"/>
+    <circle cx="1036" cy="211" r="2.5" fill="#ffcf94"/>
+    <circle cx="1090" cy="124" r="3" fill="#e34c5f"/>
+  </g>
+
+  <!-- sculptural arches -->
+  <path d="M-40 376V146C-40 57 34 4 130 4h150c105 0 176 68 176 166v206h-42V179c0-79-49-128-136-128H136C58 51 4 93 4 158v218z" fill="#151118" opacity=".98"/>
+  <path d="M54 376V190c0-65 48-106 113-106h82c73 0 116 47 116 116v176h-31V206c0-55-31-88-88-88h-74c-52 0-86 30-86 79v179z" fill="#36101d" opacity=".5"/>
+  <path d="M437 374V155c0-86 63-139 152-139h48v39h-39c-72 0-118 40-118 108v211z" fill="#120f15"/>
+
+  <!-- pendant / wall lighting -->
+  <g filter="url(#blur14)" opacity=".9">
+    <circle cx="212" cy="120" r="92" fill="url(#amberGlow)"/>
+    <circle cx="514" cy="112" r="76" fill="url(#amberGlow)"/>
+    <circle cx="1115" cy="103" r="72" fill="url(#amberGlow)"/>
+  </g>
+  <g stroke="#9d6454" stroke-width="3" fill="#ffd9a5" opacity=".9">
+    <path d="M212 0v83"/><circle cx="212" cy="87" r="6"/>
+    <path d="M514 0v73"/><circle cx="514" cy="77" r="6"/>
+    <path d="M1115 0v67"/><circle cx="1115" cy="71" r="6"/>
+  </g>
+
+  <!-- bar shelf -->
+  <g opacity=".86">
+    <rect x="750" y="259" width="336" height="10" rx="5" fill="#7c3d31"/>
+    <rect x="780" y="292" width="275" height="7" rx="3.5" fill="#4f2828"/>
+    <g filter="url(#softGlow)">
+      <rect x="792" y="230" width="9" height="26" rx="3" fill="#c27c53"/>
+      <rect x="825" y="222" width="8" height="34" rx="3" fill="#8f3243"/>
+      <rect x="855" y="235" width="8" height="21" rx="3" fill="#e2a56e"/>
+      <rect x="930" y="226" width="9" height="30" rx="3" fill="#9d4650"/>
+      <rect x="970" y="219" width="8" height="37" rx="3" fill="#d68a59"/>
+      <rect x="1015" y="232" width="9" height="24" rx="3" fill="#a7394d"/>
+    </g>
+  </g>
+
+  <!-- floor and reflections -->
+  <path d="M0 366h1200v234H0z" fill="url(#floor)"/>
+  <path d="M0 400c257-42 503-37 721 5 166 32 322 36 479 2v193H0z" fill="#08090d" opacity=".8"/>
+  <ellipse cx="760" cy="520" rx="390" ry="42" fill="#a51a31" opacity=".08" filter="url(#blur28)"/>
+  <ellipse cx="305" cy="535" rx="250" ry="34" fill="#f0a061" opacity=".055" filter="url(#blur28)"/>
+
+  <!-- velvet banquettes -->
+  <path d="M-18 417c130-29 288-30 451 2v105H-18z" fill="#110b10"/>
+  <path d="M20 437c126-26 260-26 392 0v71H20z" fill="url(#velvet)"/>
+  <path d="M774 421c121-31 270-28 444 7v100H774z" fill="#100a0f"/>
+  <path d="M807 441c109-22 230-19 365 8v62H807z" fill="url(#velvet)"/>
+  <g opacity=".18" stroke="#f48b92" stroke-width="1.5">
+    <path d="M52 447v51M106 440v61M162 436v66M220 434v70M280 435v67M340 441v59"/>
+    <path d="M848 449v55M904 442v64M962 441v67M1022 444v63M1082 450v55"/>
+  </g>
+
+  <!-- guests, kept silhouette-like -->
+  <g fill="#06070a">
+    <circle cx="470" cy="315" r="26"/><path d="M438 347c17-25 53-26 68 0l18 113h-102z"/>
+    <circle cx="548" cy="298" r="28"/><path d="M517 333c19-27 57-28 76 0l22 130H499z"/>
+    <circle cx="670" cy="311" r="25"/><path d="M641 343c18-24 53-25 70 0l17 118H626z"/>
+    <circle cx="735" cy="325" r="24"/><path d="M707 356c17-23 51-23 66 0l17 107H691z"/>
+  </g>
+  <path d="M526 334h36l13 124h-68z" fill="#6b1d31" opacity=".72"/>
+  <path d="M716 357h31l12 102h-58z" fill="#7f2134" opacity=".62"/>
+
+  <!-- cocktail tables -->
+  <g fill="#050609">
+    <ellipse cx="474" cy="475" rx="78" ry="14"/><rect x="469" y="475" width="10" height="78"/><ellipse cx="474" cy="553" rx="45" ry="8"/>
+    <ellipse cx="650" cy="451" rx="67" ry="12"/><rect x="646" y="451" width="9" height="67"/><ellipse cx="650" cy="518" rx="40" ry="7"/>
+  </g>
+  <g filter="url(#blur14)">
+    <circle cx="474" cy="455" r="34" fill="url(#tableGlow)"/>
+    <circle cx="650" cy="433" r="30" fill="url(#tableGlow)"/>
+  </g>
+  <g fill="#ffd3a1" filter="url(#softGlow)">
+    <circle cx="474" cy="454" r="4.5"/>
+    <circle cx="650" cy="432" r="4"/>
+  </g>
+  <g opacity=".85">
+    <path d="M453 454h8l-2 18h-4z" fill="#c6825d"/>
+    <path d="M635 431h8l-2 17h-4z" fill="#d09063"/>
+  </g>
+
+  <!-- cinematic finish -->
+  <rect width="1200" height="600" fill="url(#grain)" opacity=".22"/>
+  <rect width="1200" height="600" fill="none" stroke="#d13b50" stroke-opacity=".07" stroke-width="2"/>
+  <rect width="1200" height="600" fill="url(#room)" opacity=".05"/>
+</svg>

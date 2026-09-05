@@ -160,7 +160,8 @@ export class CameraFocusController {
       .multiplyScalar(targetDistance);
     if (arrivalMode === "accurate-center") {
       const hero = focus.heroArrival ?? {};
-      if (hero.enabled !== false) {
+      const heroArrivalEnabled = overrides.heroArrival !== false && hero.enabled !== false;
+      if (heroArrivalEnabled) {
         if (Number.isFinite(hero.fov)) {
           this.camera.fov = hero.fov;
           this.camera.updateProjectionMatrix();
@@ -551,7 +552,11 @@ export class CameraFocusController {
       .normalize();
 
     target.copy(this.tmpGlobeCenter).addScaledVector(this.tmpHeroViewDirection, heroDistance);
-    this.#applyHeroProjection(hero);
+    if (hero.useViewOffset === false) {
+      this.#clearHeroProjection();
+    } else {
+      this.#applyHeroProjection(hero);
+    }
     this.#applyHeroCompositionCorrection(this.#createDestinationTiltComposition(hero), target, heroCompositionMeasure);
     return target;
   }

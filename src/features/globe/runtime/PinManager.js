@@ -401,6 +401,10 @@ export class PinManager {
   }
 
   #handleClick(event) {
+    if (event) {
+      this.#handlePointerMove(event);
+      this.#updateHover();
+    }
     if (!this.group.visible || !this.hoveredEvent) return;
     // This click belongs to the pin layer. Prevent the same DOM click from
     // falling through to discovery markers or the country surface underneath.

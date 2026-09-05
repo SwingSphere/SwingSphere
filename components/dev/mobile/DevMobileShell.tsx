@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Bookmark, CalendarDays, Globe2, Plus, Share2, UserRound } from 'lucide-react';
+import { ArrowLeft, Bookmark, Globe2, MapPin, Plus, Share2, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../store/appStore';
 import { DEV_MOBILE_BASE, toDevMobilePath } from './devMobileRouting';
@@ -8,12 +8,13 @@ type MobileHeaderProps = {
   title: string;
   eyebrow?: string;
   showBack?: boolean;
+  onBack?: () => void;
   onSave?: () => void;
   saved?: boolean;
   onShare?: () => void;
 };
 
-export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, showBack = true, onSave, saved, onShare }) => {
+export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, showBack = true, onBack, onSave, saved, onShare }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAppStore();
@@ -23,6 +24,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
       <button
         type="button"
         onClick={() => {
+          if (onBack) {
+            onBack();
+            return;
+          }
           if (!showBack) {
             navigate(DEV_MOBILE_BASE);
             return;
@@ -58,21 +63,23 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
   );
 };
 
-const navItems: Array<{ label: string; path: string; icon: typeof Globe2; emphasized?: boolean }> = [
+export const mobileNavItems: Array<{ label: string; path: string; icon: typeof Globe2; emphasized?: boolean }> = [
   { label: 'Explore', path: '', icon: Globe2 },
-  { label: 'Events', path: '/events', icon: CalendarDays },
+  { label: 'Nearby', path: '/nearby', icon: MapPin },
   { label: 'Add', path: '/add', icon: Plus, emphasized: true },
   { label: 'Saved', path: '/saved', icon: Bookmark },
   { label: 'Account', path: '/account', icon: UserRound },
 ];
 
+export const getMobileNavTarget = (path: string) => `${DEV_MOBILE_BASE}${path}`;
+
 export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   return (
-    <nav className="grid h-[68px] shrink-0 grid-cols-5 border-t border-white/[0.07] bg-[rgba(6,8,11,0.96)] px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-2xl" aria-label="Mobile navigation">
-      {navItems.map(({ label, path, icon: Icon, emphasized }) => {
-        const target = `${DEV_MOBILE_BASE}${path}`;
+    <nav className="grid min-h-[68px] shrink-0 grid-cols-5 border-t border-white/[0.07] bg-[rgba(6,8,11,0.96)] px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-2xl" aria-label="Mobile navigation">
+      {mobileNavItems.map(({ label, path, icon: Icon, emphasized }) => {
+        const target = getMobileNavTarget(path);
         const active = path ? location.pathname === target || location.pathname.startsWith(`${target}/`) : location.pathname === DEV_MOBILE_BASE || location.pathname === `${DEV_MOBILE_BASE}/`;
         return (
           <button key={label} type="button" onClick={() => navigate(target)} className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300 ${active ? 'text-red-200' : 'text-gray-500'}`} aria-current={active ? 'page' : undefined}>
@@ -86,7 +93,7 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export const DevMobileScreen: React.FC<{ children: React.ReactNode; className?: string; withNav?: boolean }> = ({ children, className = '', withNav = true }) => (
-  <div className="mx-auto flex h-[100dvh] max-h-[844px] min-h-0 w-full max-w-[390px] flex-col overflow-hidden bg-[#07090d] text-gray-100 shadow-2xl shadow-black/60">
+  <div className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-[#07090d] text-gray-100">
     <div className={`min-h-0 flex-1 ${className}`}>{children}</div>
     {withNav ? <MobileBottomNav /> : null}
   </div>

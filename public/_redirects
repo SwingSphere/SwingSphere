@@ -1,3 +1,5 @@
+/mobile /preview/ 200
+/mobile/* /preview/ 200
 /preview /preview/ 301
 /preview/submission /preview/ 200
 /preview/globe /preview/ 200

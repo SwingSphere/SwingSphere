@@ -46,6 +46,25 @@ const DEFAULT_HOVER = {
   sweepRepeat: false
 };
 
+export function resolveActivityBoundaryCoverage(requestedCountryKeys = [], countryGroups = new Map()) {
+  const requestedKeys = [...new Set(
+    requestedCountryKeys
+      .map((value) => String(value ?? "").trim().toUpperCase())
+      .filter(Boolean)
+  )];
+  const resolvedCountryKeys = requestedKeys.filter((key) => {
+    const country = countryGroups.get(key);
+    return (country?.lines?.length ?? 0) > 0
+      && (country.sourceType === "hybrid" || country.sourceType === "geojson-fallback");
+  });
+  const resolved = new Set(resolvedCountryKeys);
+  return {
+    requestedCountryKeys: requestedKeys,
+    resolvedCountryKeys,
+    unresolvedCountryKeys: requestedKeys.filter((key) => !resolved.has(key))
+  };
+}
+
 export class CountryVectorActivityLayer {
   constructor({ renderer, config }) {
     this.renderer = renderer;
@@ -63,12 +82,6 @@ export class CountryVectorActivityLayer {
       idle: { ...DEFAULT_IDLE, ...(this.options.idle ?? {}) },
       hover: { ...DEFAULT_HOVER, ...(this.options.hover ?? {}) }
     };
-    this.presentationGroups = normalizePresentationGroups(config.countryPresentationGroups);
-    this.suppressedCountryKeys = new Set(
-      this.presentationGroups
-        .filter((group) => group.suppressVectorBorders)
-        .flatMap((group) => group.members)
-    );
     this.manifest = null;
     this.assets = new Map();
     this.assetPromises = new Map();
@@ -82,6 +95,7 @@ export class CountryVectorActivityLayer {
     this.selectedKey = null;
     this.hoverStartedAt = null;
     this.lastTransitionElapsed = null;
+    this.lastCoverageGapSignature = "";
     this.renderResolution = new THREE.Vector2();
     this.appliedResolution = new THREE.Vector2(-1, -1);
     this.raycaster = new THREE.Raycaster();
@@ -105,8 +119,13 @@ export class CountryVectorActivityLayer {
   }
 
   async mount() {
-    if (!this.manifestUrl) return;
-    this.manifest = await loadJsonAsset(this.manifestUrl);
+    if (this.manifestUrl) {
+      this.manifest = await loadJsonAsset(this.manifestUrl).catch((error) => {
+        console.warn("[SwingSphere activity boundary manifest]", error);
+        return null;
+      });
+    }
+    if (!this.manifest && !this.fallbackGeoJsonUrl) return;
     if (this.experimentalPhysicalCoastlineSnap) {
       const physicalCoastlineAsset = await loadJsonAsset(
         this.options.physicalCoastlineUrl ?? this.config.countryVectorBorders?.physicalCoastlineUrl ?? "/assets/globe/coastlines/physical-coastlines-v1.json"
@@ -220,6 +239,7 @@ export class CountryVectorActivityLayer {
       const entry = this.manifest?.countries?.[key];
       return Boolean(entry?.url) && !this.#isHybridEntryAllowed(entry);
     });
+    const coverage = resolveActivityBoundaryCoverage(requestedCountryKeys, this.countryGroups);
     return {
       requestedCountryCount: requestedCountryKeys.length,
       countryCount: this.countryGroups.size,
@@ -228,7 +248,8 @@ export class CountryVectorActivityLayer {
       missingHybridCountryKeys: missingCountryKeys,
       fallbackCountryKeys,
       rejectedHybridCountryKeys,
-      unresolvedCountryKeys: requestedCountryKeys.filter((key) => !this.countryGroups.has(key)),
+      resolvedCountryKeys: coverage.resolvedCountryKeys,
+      unresolvedCountryKeys: coverage.unresolvedCountryKeys,
       pathCount,
       drawCalls,
       hoveredCountryKey: this.hoveredKey,
@@ -249,7 +270,7 @@ export class CountryVectorActivityLayer {
   }
 
   async #syncActivityCountries(syncVersion = this.activitySyncVersion) {
-    if (!this.manifest || this.disposed) return;
+    if (this.disposed) return;
     const requested = new Set(this.activityCountries.map((country) => this.#resolveCountryKey(country)).filter(Boolean));
     for (const [key, country] of this.countryGroups) {
       if (requested.has(key)) continue;
@@ -258,10 +279,6 @@ export class CountryVectorActivityLayer {
     }
     await Promise.all([...requested].map(async (key) => {
       if (this.countryGroups.has(key)) return;
-      if (this.suppressedCountryKeys.has(key)) {
-        this.countryGroups.set(key, { key, lines: [], hoverMix: 0, selectedMix: 0, sourceType: "presentation-group" });
-        return;
-      }
       const entry = this.manifest?.countries?.[key];
       let source = null;
       let sourceType = null;
@@ -290,6 +307,19 @@ export class CountryVectorActivityLayer {
     }));
     if (this.disposed || syncVersion !== this.activitySyncVersion) return;
     this.#applyVisibilityAndStaticStyles();
+    this.#reportBoundaryCoverage();
+  }
+
+  #reportBoundaryCoverage() {
+    const { unresolvedCountryKeys } = this.getDiagnostics();
+    const signature = unresolvedCountryKeys.join("|");
+    if (signature === this.lastCoverageGapSignature) return;
+    this.lastCoverageGapSignature = signature;
+    if (!unresolvedCountryKeys.length) return;
+    console.error(
+      "[SwingSphere activity boundary coverage] Active countries without a drawable hybrid or GeoJSON boundary:",
+      unresolvedCountryKeys
+    );
   }
 
   #isHybridEntryAllowed(entry) {
@@ -685,19 +715,6 @@ function fallbackFeatureKeys(feature) {
   ]
     .filter((value) => value != null && String(value).trim())
     .map((value) => String(value).trim().toUpperCase());
-}
-
-function normalizePresentationGroups(groups) {
-  if (!Array.isArray(groups)) return [];
-  return groups
-    .map((group) => ({
-      ...group,
-      members: Array.isArray(group?.members)
-        ? group.members.map((value) => String(value).trim().toUpperCase()).filter(Boolean)
-        : [],
-      suppressVectorBorders: group?.suppressVectorBorders !== false
-    }))
-    .filter((group) => group.members.length > 0);
 }
 
 function normalizeAllowedStatuses(statuses) {

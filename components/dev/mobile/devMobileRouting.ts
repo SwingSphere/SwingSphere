@@ -2,7 +2,7 @@ import type { EntityIndex } from '../../../lib/entityIndex';
 import { getListingCanonicalPath } from '../../../lib/entityUtils';
 import type { Listing } from '../../../types';
 
-export const DEV_MOBILE_BASE = '/dev/mobile-preview';
+export const DEV_MOBILE_BASE = '/mobile';
 
 export const toDevMobilePath = (path: string): string => {
   if (!path || path === '/') return DEV_MOBILE_BASE;

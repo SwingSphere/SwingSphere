@@ -213,5 +213,6 @@ function formatCount(region) {
   const parts = [];
   if (region.clubCount) parts.push(`${region.clubCount} club${region.clubCount === 1 ? "" : "s"}`);
   if (region.eventCount) parts.push(`${region.eventCount} event${region.eventCount === 1 ? "" : "s"}`);
-  return parts.join(" / ") || `${region.listingIds.length} listing${region.listingIds.length === 1 ? "" : "s"}`;
+  const listingCount = Array.isArray(region?.listingIds) ? region.listingIds.length : 0;
+  return parts.join(" / ") || `${listingCount} listing${listingCount === 1 ? "" : "s"}`;
 }

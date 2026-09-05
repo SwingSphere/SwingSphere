@@ -3,6 +3,7 @@ import { applyPresentationCompatibility, createGlobeRuntimeConfig } from "./Glob
 import { cloneGlobePresentation, mergeGlobePresentation } from "./GlobePresentationConfig.js";
 import { GlobeAssetLoader } from "./GlobeAssetLoader.js";
 import { GlobeRenderer } from "./GlobeRenderer.js";
+import { resolveAdaptiveClusterDecision } from "./mobileRuntimePolicy.js";
 import { AtmosphereRenderer } from "./AtmosphereRenderer.js";
 import { CountrySelectionManager } from "./CountrySelectionManager.js";
 import { CountryGeoJsonBorderLayer } from "./CountryGeoJsonBorderLayer.js";
@@ -38,7 +39,8 @@ const CALLBACK_NAMES = [
   "onSurfaceDoubleClick",
   "onContextLost",
   "onContextRestored",
-  "onPerformanceSnapshot"
+  "onPerformanceSnapshot",
+  "onInteractionEnd"
 ];
 
 export class SwingSphereGlobe {
@@ -51,9 +53,15 @@ export class SwingSphereGlobe {
       return callbacks;
     }, {});
     this.events = Array.isArray(options.events) ? options.events : [];
+    this.countryActivityEvents = this.events;
     this.activityRegions = Array.isArray(options.activityRegions) ? options.activityRegions : [];
     this.clusterRegions = [];
     this.countryOverviewEvents = [];
+    this.adaptiveClusteredRegionIds = new Set();
+    this.lastAdaptiveClusterDistance = null;
+    this.lastAdaptiveClusterCameraQuaternion = new THREE.Quaternion();
+    this.hasAdaptiveClusterCameraQuaternion = false;
+    this.adaptiveProjectionTarget = new THREE.Vector3();
     this.activeActivityRegion = null;
     this.directPinsVisible = false;
     this.countryOverviewVisible = false;
@@ -63,6 +71,7 @@ export class SwingSphereGlobe {
     this.navigationGlobeCenter = new THREE.Vector3();
     this.navigationSphere = new THREE.Sphere();
     this.navigationIntersection = new THREE.Vector3();
+    this.navigationYAxis = new THREE.Vector3(0, 1, 0);
     this.heroComposerTarget = new THREE.Vector3();
     this.eventNavigationTarget = new THREE.Vector3();
     this.heroStudioPoseListener = null;
@@ -86,6 +95,7 @@ export class SwingSphereGlobe {
         container: this.container,
         assets: this.assets,
         config: this.config,
+        onInteractionEnd: () => this.callbacks.onInteractionEnd?.(),
         onContextLost: () => this.callbacks.onContextLost?.(),
         onContextRestored: () => this.callbacks.onContextRestored?.()
       });
@@ -149,16 +159,17 @@ export class SwingSphereGlobe {
         });
         await this.countryGeoJsonBorders.mount();
       }
+      const wgs84BoundaryConfig = createWgs84BoundaryConfig(this.config);
       if (this.config.countryVectorBorders?.enabled) {
-        this.countryVectorBorders = new CountryVectorBorderLayer({ renderer: this.renderer, config: this.config });
+        this.countryVectorBorders = new CountryVectorBorderLayer({ renderer: this.renderer, config: wgs84BoundaryConfig });
         await this.countryVectorBorders.mount();
       }
       if (this.config.countryVectorActivity?.enabled) {
-        this.countryVectorActivity = new CountryVectorActivityLayer({ renderer: this.renderer, config: this.config });
+        this.countryVectorActivity = new CountryVectorActivityLayer({ renderer: this.renderer, config: wgs84BoundaryConfig });
         await this.countryVectorActivity.mount();
       }
       if (this.config.administrativeBoundaries?.enabled) {
-        this.administrativeBoundaries = new AdministrativeBoundaryLayer({ renderer: this.renderer, config: this.config });
+        this.administrativeBoundaries = new AdministrativeBoundaryLayer({ renderer: this.renderer, config: wgs84BoundaryConfig });
         await this.administrativeBoundaries.mount();
       }
       if (this.config.geospatialCalibration?.enabled) {
@@ -197,8 +208,13 @@ export class SwingSphereGlobe {
             this.returnToWorld();
             this.callbacks.onSurfaceDoubleClick?.();
           },
-          onCountryFocusRequest: (worldPosition, elapsed) => {
-            this.navigationController.selectCountry({ worldPosition, elapsed });
+          onCountryFocusRequest: (worldPosition, elapsed, country) => {
+            const activityFocus = this.#resolveCountryActivityFocus(country, worldPosition);
+            this.navigationController.selectCountry({
+              worldPosition: activityFocus.worldPosition,
+              elapsed,
+              focusDistance: activityFocus.focusDistance
+            });
           }
         },
         pinManager: this.pinManager,
@@ -227,6 +243,7 @@ export class SwingSphereGlobe {
       this.removeFrameListener = this.renderer.addFrameListener(({ delta, elapsed }) => {
         const completedFocus = this.navigationController.update(elapsed);
         this.#updateProgressiveDisclosure();
+        this.#refreshAdaptiveCountryOverviewIfNeeded(Boolean(completedFocus));
         this.#emitNavigationChange();
         if (completedFocus?.arrivalMode === "accurate-center") {
           this.pinManager.playSelectedArrivalPulse();
@@ -312,7 +329,8 @@ export class SwingSphereGlobe {
 
   setCountryActivityEvents(events = []) {
     if (this.disposed) return;
-    this.countrySelection?.updateEvents(Array.isArray(events) ? events : []);
+    this.countryActivityEvents = Array.isArray(events) ? events : [];
+    this.countrySelection?.updateEvents(this.countryActivityEvents);
   }
 
   updateVisibleEvents(events = []) {
@@ -333,21 +351,69 @@ export class SwingSphereGlobe {
     }
   }
 
-  setGeospatialCalibrationState({ visible, longitudeOffsetDeg, latitudeOffsetDeg, showAuthoritativeBorders } = {}) {
+  setGeospatialCalibrationState({
+    visible,
+    longitudeOffsetDeg,
+    latitudeOffsetDeg,
+    pinLongitudeOffsetDeg,
+    pinLatitudeOffsetDeg,
+    geoJsonLongitudeOffsetDeg,
+    geoJsonLatitudeOffsetDeg,
+    countryAtlasLongitudeOffsetDeg,
+    countryAtlasLatitudeOffsetDeg,
+    showCountryIdTexture,
+    showVisualCountryAtlas,
+    showCountryHighlightMask,
+    showAuthoritativeBorders
+  } = {}) {
     if (this.disposed) return;
+
+    // Keep the legacy shared offsets as fallbacks while allowing the hybrid
+    // alignment bench to move each geospatial representation independently.
+    const pinLongitude = Number.isFinite(pinLongitudeOffsetDeg) ? pinLongitudeOffsetDeg : longitudeOffsetDeg;
+    const pinLatitude = Number.isFinite(pinLatitudeOffsetDeg) ? pinLatitudeOffsetDeg : latitudeOffsetDeg;
+    const geoJsonLongitude = Number.isFinite(geoJsonLongitudeOffsetDeg) ? geoJsonLongitudeOffsetDeg : longitudeOffsetDeg;
+    const geoJsonLatitude = Number.isFinite(geoJsonLatitudeOffsetDeg) ? geoJsonLatitudeOffsetDeg : latitudeOffsetDeg;
+
     const alignmentPatch = {};
-    if (Number.isFinite(longitudeOffsetDeg)) alignmentPatch.pinLongitudeOffsetDeg = longitudeOffsetDeg;
-    if (Number.isFinite(latitudeOffsetDeg)) alignmentPatch.pinLatitudeOffsetDeg = latitudeOffsetDeg;
+    if (Number.isFinite(pinLongitude)) alignmentPatch.pinLongitudeOffsetDeg = pinLongitude;
+    if (Number.isFinite(pinLatitude)) alignmentPatch.pinLatitudeOffsetDeg = pinLatitude;
     if (Object.keys(alignmentPatch).length) deepMerge(this.config, { alignment: alignmentPatch });
 
     if (typeof visible === "boolean") this.geospatialCalibration?.setVisible(visible);
     this.geospatialCalibration?.refreshPositions();
 
-    if (Number.isFinite(longitudeOffsetDeg) || Number.isFinite(latitudeOffsetDeg)) {
+    if (Number.isFinite(geoJsonLongitude) || Number.isFinite(geoJsonLatitude)) {
       this.countryGeoJsonBorders?.updateAlignment({
-        longitudeOffsetDeg: Number.isFinite(longitudeOffsetDeg) ? longitudeOffsetDeg : undefined,
-        latitudeOffsetDeg: Number.isFinite(latitudeOffsetDeg) ? latitudeOffsetDeg : undefined
+        longitudeOffsetDeg: Number.isFinite(geoJsonLongitude) ? geoJsonLongitude : undefined,
+        latitudeOffsetDeg: Number.isFinite(geoJsonLatitude) ? geoJsonLatitude : undefined
       });
+    }
+
+    const countryAtlas = {};
+    if (Number.isFinite(countryAtlasLongitudeOffsetDeg)) countryAtlas.longitudeOffsetDeg = countryAtlasLongitudeOffsetDeg;
+    if (Number.isFinite(countryAtlasLatitudeOffsetDeg)) countryAtlas.latitudeOffsetDeg = countryAtlasLatitudeOffsetDeg;
+    if (
+      Object.keys(countryAtlas).length
+      || typeof showCountryIdTexture === "boolean"
+      || typeof showVisualCountryAtlas === "boolean"
+      || typeof showCountryHighlightMask === "boolean"
+    ) {
+      this.countrySelection?.updateDebugView({
+        ...(Object.keys(countryAtlas).length ? { countryAtlas } : {}),
+        ...(typeof showCountryIdTexture === "boolean" ? { showCountryIdTexture } : {}),
+        ...(typeof showVisualCountryAtlas === "boolean" ? { showVisualCountryAtlas } : {}),
+        ...(typeof showCountryHighlightMask === "boolean" ? { showCountryHighlightMask } : {})
+      });
+    }
+
+    if (
+      Number.isFinite(pinLongitude)
+      || Number.isFinite(pinLatitude)
+      || Number.isFinite(geoJsonLongitude)
+      || Number.isFinite(geoJsonLatitude)
+      || Object.keys(countryAtlas).length
+    ) {
       const selectedEventId = this.pinManager?.selectedEvent
         ? String(this.pinManager.selectedEvent.id ?? this.pinManager.selectedEvent.name)
         : null;
@@ -868,6 +934,59 @@ export class SwingSphereGlobe {
     this.countryVectorBorders?.setSourceMode(mode);
   }
 
+  setCountryVectorBorderPreview(preview = null) {
+    if (this.disposed) return;
+    this.countryVectorBorders?.setBorderSurgeryPreview(preview);
+  }
+
+  projectBorderSurgeryControls(coordinates = [], width = 1, height = 1) {
+    if (!this.#canUseRuntime() || !this.renderer?.camera || !this.renderer?.globe) return [];
+    const viewportWidth = Math.max(1, Number(width) || 1);
+    const viewportHeight = Math.max(1, Number(height) || 1);
+    const radius = this.renderer.globeRadius * Number(this.config.countryVectorBorders?.radiusScale ?? 1.009);
+    this.renderer.globe.updateMatrixWorld(true);
+    this.renderer.camera.updateMatrixWorld(true);
+    return coordinates.map((coordinate, index) => {
+      const lng = Number(coordinate?.[0]);
+      const lat = Number(coordinate?.[1]);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return { index, visible: false };
+      const local = wgs84ToRenderedGlobeLocal(lng, lat, radius, this.config);
+      const world = this.renderer.globe.localToWorld(local.clone());
+      const projected = world.project(this.renderer.camera);
+      return {
+        index,
+        x: (projected.x * 0.5 + 0.5) * viewportWidth,
+        y: (-projected.y * 0.5 + 0.5) * viewportHeight,
+        depth: projected.z,
+        visible: projected.z >= -1 && projected.z <= 1
+      };
+    });
+  }
+
+  borderSurgeryScreenPointToLandGeo(x, y, width = 1, height = 1) {
+    if (!this.#canUseRuntime() || !this.renderer?.camera || !this.renderer?.landHitMesh || !this.renderer?.globe) return null;
+    const viewportWidth = Math.max(1, Number(width) || 1);
+    const viewportHeight = Math.max(1, Number(height) || 1);
+    const ndc = new THREE.Vector2(
+      (Number(x) / viewportWidth) * 2 - 1,
+      -(Number(y) / viewportHeight) * 2 + 1
+    );
+    const raycaster = new THREE.Raycaster();
+    this.renderer.globe.updateMatrixWorld(true);
+    this.renderer.landHitMesh.updateMatrixWorld(true);
+    raycaster.setFromCamera(ndc, this.renderer.camera);
+    const hit = raycaster.intersectObject(this.renderer.landHitMesh, false)[0];
+    if (!hit?.point) return null;
+    const local = hit.point.clone();
+    this.renderer.globe.worldToLocal(local);
+    return renderedGlobeLocalToWgs84(local, this.config);
+  }
+
+  setBorderSurgeryOrbitEnabled(enabled) {
+    if (!this.renderer?.controls) return;
+    this.renderer.controls.enabled = Boolean(enabled);
+  }
+
   getCountryVectorBorderDiagnostics() {
     return this.countryVectorBorders?.getDiagnostics?.() ?? null;
   }
@@ -929,7 +1048,9 @@ export class SwingSphereGlobe {
     const distance = Number.isFinite(pose.distance)
       ? THREE.MathUtils.clamp(pose.distance, minDistance, maxDistance)
       : THREE.MathUtils.lerp(maxDistance, minDistance, zoomIntent);
-    const target = wgs84ToRenderedGlobeLocal(lng, lat, this.renderer.globeRadius, this.config);
+    const target = pose.followVisualLandRotation === false
+      ? wgs84ToRenderedGlobeLocal(lng, lat, this.renderer.globeRadius, this.config)
+      : this.#wgs84ToCurrentVisualLocal(lng, lat, new THREE.Vector3());
     const globeCenter = this.renderer.globe.position;
     const surfaceDirection = target.clone().sub(globeCenter).normalize();
     const currentViewDirection = this.renderer.camera.position.clone().sub(this.renderer.controls.target).normalize();
@@ -937,7 +1058,7 @@ export class SwingSphereGlobe {
     this.navigationController?.dispose();
     this.renderer.controls.target.copy(globeCenter);
     this.renderer.camera.position.copy(globeCenter).addScaledVector(viewDirection, distance);
-    this.renderer.controls.update();
+    this.renderer.updateControlsProgrammatically();
     this.lastNavigationSnapshot = null;
     this.#emitNavigationChange();
     return this.#createNavigationSnapshot();
@@ -1102,6 +1223,48 @@ export class SwingSphereGlobe {
   }
 
   #refreshCountryOverviewData() {
+    const adaptive = this.config.progressiveDisclosure?.adaptiveCountryClustering;
+    if (adaptive?.enabled && this.events.length && this.activityRegions.length) {
+      const eventByListingId = new Map(
+        this.events.map((event) => [String(event.listingId ?? event.id), event])
+      );
+      const clusteredRegionIds = new Set();
+      const directListingIds = new Set();
+      const enterDistancePx = Number(adaptive.enterDistancePx ?? 48);
+      const exitDistancePx = Math.max(enterDistancePx, Number(adaptive.exitDistancePx ?? 64));
+
+      for (const region of this.activityRegions) {
+        const listingIds = (region.listingIds ?? []).map(String);
+        if (listingIds.length <= 1) {
+          listingIds.forEach((listingId) => directListingIds.add(listingId));
+          continue;
+        }
+
+        const members = listingIds.map((listingId) => eventByListingId.get(listingId)).filter(Boolean);
+        const keepClustered = this.adaptiveClusteredRegionIds.has(region.id);
+        const minimumScreenDistance = this.#getMinimumEventScreenDistance(members);
+        const shouldCluster = resolveAdaptiveClusterDecision({
+          minimumScreenDistance,
+          wasClustered: keepClustered,
+          enterDistancePx,
+          exitDistancePx,
+        });
+
+        if (shouldCluster) {
+          clusteredRegionIds.add(region.id);
+        } else {
+          listingIds.forEach((listingId) => directListingIds.add(listingId));
+        }
+      }
+
+      this.adaptiveClusteredRegionIds = clusteredRegionIds;
+      this.clusterRegions = this.activityRegions.filter((region) => clusteredRegionIds.has(region.id));
+      this.countryOverviewEvents = this.events.filter((event) =>
+        directListingIds.has(String(event.listingId ?? event.id))
+      );
+      return;
+    }
+
     this.clusterRegions = this.activityRegions.filter((region) => (region.listingIds?.length ?? 0) > 1);
     const singletonListingIds = new Set(
       this.activityRegions
@@ -1111,6 +1274,72 @@ export class SwingSphereGlobe {
     this.countryOverviewEvents = this.events.filter((event) =>
       singletonListingIds.has(String(event.listingId ?? event.id))
     );
+  }
+
+  #getMinimumEventScreenDistance(events) {
+    if (!Array.isArray(events) || events.length < 2) return Number.POSITIVE_INFINITY;
+    const width = this.renderer?.container?.clientWidth || this.renderer?.renderer?.domElement?.clientWidth || 0;
+    const height = this.renderer?.container?.clientHeight || this.renderer?.renderer?.domElement?.clientHeight || 0;
+    if (!width || !height || !this.renderer?.camera) return null;
+
+    const points = [];
+    for (const event of events) {
+      const worldPosition = this.#getEventNavigationWorldPosition(event, this.adaptiveProjectionTarget);
+      if (!worldPosition) return null;
+      const projected = worldPosition.clone().project(this.renderer.camera);
+      if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y) || projected.z < -1 || projected.z > 1) return null;
+      points.push({
+        x: ((projected.x + 1) * 0.5) * width,
+        y: ((1 - projected.y) * 0.5) * height
+      });
+    }
+
+    let minimum = Number.POSITIVE_INFINITY;
+    for (let left = 0; left < points.length - 1; left += 1) {
+      for (let right = left + 1; right < points.length; right += 1) {
+        minimum = Math.min(minimum, Math.hypot(
+          points[left].x - points[right].x,
+          points[left].y - points[right].y
+        ));
+      }
+    }
+    return minimum;
+  }
+
+  #refreshAdaptiveCountryOverviewIfNeeded(force = false) {
+    const adaptive = this.config.progressiveDisclosure?.adaptiveCountryClustering;
+    if (!adaptive?.enabled || !this.countryOverviewVisible || this.activeActivityRegion || this.pinManager?.selectedEvent) return;
+    if (this.navigationController?.isFocusActive?.()) return;
+    if (!force && this.renderer?.controlsActive) return;
+
+    const distance = this.renderer.camera.position.distanceTo(this.renderer.controls.target);
+    const recheckThreshold = Math.max(0.05, Number(adaptive.distanceRecheckThreshold ?? 0.35));
+    const orientationRecheckRadians = THREE.MathUtils.degToRad(Math.max(0.5, Number(adaptive.orientationRecheckDegrees ?? 3)));
+    const distanceChanged = this.lastAdaptiveClusterDistance == null
+      || Math.abs(distance - this.lastAdaptiveClusterDistance) >= recheckThreshold;
+    const orientationChanged = !this.hasAdaptiveClusterCameraQuaternion
+      || this.lastAdaptiveClusterCameraQuaternion.angleTo(this.renderer.camera.quaternion) >= orientationRecheckRadians;
+    if (!force && !distanceChanged && !orientationChanged) return;
+
+    const previousClusterSignature = this.clusterRegions.map((region) => region.id).sort().join('|');
+    const previousEventSignature = this.countryOverviewEvents
+      .map((event) => String(event.listingId ?? event.id))
+      .sort()
+      .join('|');
+    this.lastAdaptiveClusterDistance = distance;
+    this.lastAdaptiveClusterCameraQuaternion.copy(this.renderer.camera.quaternion);
+    this.hasAdaptiveClusterCameraQuaternion = true;
+    this.#refreshCountryOverviewData();
+    const nextClusterSignature = this.clusterRegions.map((region) => region.id).sort().join('|');
+    const nextEventSignature = this.countryOverviewEvents
+      .map((event) => String(event.listingId ?? event.id))
+      .sort()
+      .join('|');
+    if (previousClusterSignature === nextClusterSignature && previousEventSignature === nextEventSignature) return;
+
+    this.activityRegionManager?.updateRegions(this.#getClusterRegions());
+    this.pinManager?.updateEvents(this.#getRenderableEvents());
+    this.#syncDiscoveryLayerVisibility();
   }
 
   #getClusterRegions() {
@@ -1186,13 +1415,69 @@ export class SwingSphereGlobe {
   #getEventNavigationWorldPosition(event, target = this.eventNavigationTarget) {
     if (!event || !Number.isFinite(event.lon) || !Number.isFinite(event.lat)) return null;
     this.renderer.globe.updateWorldMatrix(true, false);
-    target.copy(wgs84ToRenderedGlobeLocal(
-      event.lon,
-      event.lat,
-      this.renderer.globeRadius,
-      this.config
-    ));
+    this.#wgs84ToCurrentVisualLocal(event.lon, event.lat, target);
     return this.renderer.globe.localToWorld(target);
+  }
+
+  #resolveCountryActivityFocus(country, fallbackWorldPosition) {
+    const fallbackDistance = this.config.progressiveDisclosure.worldExitDistance;
+    const compactActivityDistance = this.config.progressiveDisclosure.clusterFocusDistance;
+    if (!country) return { worldPosition: fallbackWorldPosition, focusDistance: fallbackDistance };
+
+    const countryKeys = new Set([
+      country.id,
+      country.iso2,
+      country.iso3,
+      country.countryIso2,
+      country.countryIso3
+    ].filter((value) => value != null).map((value) => String(value).trim().toUpperCase()));
+    const activityEvents = this.countryActivityEvents?.length ? this.countryActivityEvents : this.events;
+    const matchingEvents = activityEvents.filter((event) => {
+      const eventKeys = [
+        event.countryId,
+        event.countryIso2,
+        event.countryIso3,
+        event.iso2,
+        event.iso3,
+        event.expectedIso3
+      ].filter((value) => value != null).map((value) => String(value).trim().toUpperCase());
+      return eventKeys.some((key) => countryKeys.has(key))
+        && Number.isFinite(event.lon)
+        && Number.isFinite(event.lat);
+    });
+    if (!matchingEvents.length) {
+      return { worldPosition: fallbackWorldPosition, focusDistance: fallbackDistance };
+    }
+
+    this.renderer.globe.updateWorldMatrix(true, false);
+    this.renderer.globe.getWorldPosition(this.navigationGlobeCenter);
+    const globeCenter = this.navigationGlobeCenter;
+    const directions = matchingEvents.map((event) => {
+      const worldPosition = this.#getEventNavigationWorldPosition(event, new THREE.Vector3());
+      return worldPosition?.clone().sub(globeCenter).normalize() ?? null;
+    }).filter(Boolean);
+    if (!directions.length) {
+      return { worldPosition: fallbackWorldPosition, focusDistance: fallbackDistance };
+    }
+
+    const centroid = directions.reduce((sum, direction) => sum.add(direction), new THREE.Vector3());
+    if (centroid.lengthSq() < 0.0001) {
+      return { worldPosition: fallbackWorldPosition, focusDistance: this.renderer.controls.maxDistance };
+    }
+    centroid.normalize();
+    const maxAngularSpread = directions.reduce(
+      (maximum, direction) => Math.max(maximum, centroid.angleTo(direction)),
+      0
+    );
+    const focusDistance = THREE.MathUtils.clamp(
+      compactActivityDistance + maxAngularSpread * 5.5,
+      compactActivityDistance,
+      this.renderer.controls.maxDistance
+    );
+    return {
+      worldPosition: globeCenter.clone().addScaledVector(centroid, this.renderer.globeRadius),
+      focusDistance
+    };
   }
 
   #getSelectedHeroTarget(target) {
@@ -1311,8 +1596,27 @@ export class SwingSphereGlobe {
     });
   }
 
+  #wgs84ToCurrentVisualLocal(lng, lat, target = new THREE.Vector3()) {
+    target.copy(wgs84ToRenderedGlobeLocal(
+      lng,
+      lat,
+      this.renderer.globeRadius,
+      this.config
+    ));
+    const landRotationY = Number(this.renderer.visibleLandMesh?.rotation?.y ?? 0);
+    if (Math.abs(landRotationY) > 0.000001) {
+      target.applyAxisAngle(this.navigationYAxis, landRotationY);
+    }
+    return target;
+  }
+
   #renderedLocalToWgs84(localDirection) {
-    return renderedGlobeLocalToWgs84(localDirection.clone().normalize(), this.config);
+    const visualDirection = localDirection.clone().normalize();
+    const landRotationY = Number(this.renderer.visibleLandMesh?.rotation?.y ?? 0);
+    if (Math.abs(landRotationY) > 0.000001) {
+      visualDirection.applyAxisAngle(this.navigationYAxis, -landRotationY);
+    }
+    return renderedGlobeLocalToWgs84(visualDirection, this.config);
   }
 
   #updateProgressiveDisclosure() {
@@ -1467,6 +1771,21 @@ export function mount(container, options = {}) {
   const globe = new SwingSphereGlobe(container, options);
   void globe.mount();
   return globe;
+}
+
+export function createWgs84BoundaryConfig(config) {
+  const countryGeoJson = config?.countryGeoJson ?? {};
+  return {
+    ...config,
+    alignment: {
+      ...config?.alignment,
+      // Vector country borders, activity outlines, and administrative boundaries
+      // are WGS84 geometry. They follow the authoritative GeoJSON calibration,
+      // never the independently calibrated pin offset.
+      pinLongitudeOffsetDeg: Number(countryGeoJson.longitudeOffsetDeg ?? 0),
+      pinLatitudeOffsetDeg: Number(countryGeoJson.latitudeOffsetDeg ?? 0)
+    }
+  };
 }
 
 function deepMerge(target, source) {
