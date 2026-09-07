@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import * as api from '../lib/api';
-import { buildEntityIndex, EntityIndex } from '../lib/entityIndex';
+import { useEffect, useState } from 'react';
+import type { EntityIndex } from '../lib/entityIndex';
 import type { EventSeriesData, Listing, OrganizationData, OrganizationRelationship, OrganizationVenueRelationship, VenueData } from '../types';
 import type { User } from '../data/mockUsers';
 
@@ -25,6 +24,7 @@ export const useEntityIndex = (): EntityIndexState => {
   const [organizations, setOrganizations] = useState<OrganizationData[]>([]);
   const [organizationVenueRelationships, setOrganizationVenueRelationships] = useState<OrganizationVenueRelationship[]>([]);
   const [organizationRelationships, setOrganizationRelationships] = useState<OrganizationRelationship[]>([]);
+  const [index, setIndex] = useState<EntityIndex | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +33,10 @@ export const useEntityIndex = (): EntityIndexState => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const [{ buildEntityIndex }, api] = await Promise.all([
+          import('../lib/entityIndex'),
+          import('../lib/api'),
+        ]);
         const [listingsResult, usersResult, venuesResult, eventSeriesResult, organizationsResult, relationshipsResult, organizationRelationshipsResult] = await Promise.allSettled([
           api.getListings(),
           api.getUsers(),
@@ -50,7 +54,22 @@ export const useEntityIndex = (): EntityIndexState => {
         setEventSeries(eventSeriesResult.status === 'fulfilled' ? eventSeriesResult.value : []);
         setOrganizations(organizationsResult.status === 'fulfilled' ? organizationsResult.value : []);
         setOrganizationVenueRelationships(relationshipsResult.status === 'fulfilled' ? relationshipsResult.value : []);
-        setOrganizationRelationships(organizationRelationshipsResult.status === 'fulfilled' ? organizationRelationshipsResult.value : []);
+        const nextUsers = usersResult.status === 'fulfilled' ? usersResult.value : [];
+        const nextVenues = venuesResult.status === 'fulfilled' ? venuesResult.value : [];
+        const nextEventSeries = eventSeriesResult.status === 'fulfilled' ? eventSeriesResult.value : [];
+        const nextOrganizations = organizationsResult.status === 'fulfilled' ? organizationsResult.value : [];
+        const nextRelationships = relationshipsResult.status === 'fulfilled' ? relationshipsResult.value : [];
+        const nextOrganizationRelationships = organizationRelationshipsResult.status === 'fulfilled' ? organizationRelationshipsResult.value : [];
+        setOrganizationRelationships(nextOrganizationRelationships);
+        setIndex(buildEntityIndex(
+          listingsResult.value,
+          nextUsers,
+          nextVenues,
+          nextOrganizations,
+          nextRelationships,
+          nextEventSeries,
+          nextOrganizationRelationships,
+        ));
         setError(null);
       } catch (err) {
         if (!active) return;
@@ -64,11 +83,6 @@ export const useEntityIndex = (): EntityIndexState => {
       active = false;
     };
   }, []);
-
-  const index = useMemo(() => {
-    if (!listings.length) return null;
-    return buildEntityIndex(listings, users, venues, organizations, organizationVenueRelationships, eventSeries, organizationRelationships);
-  }, [eventSeries, listings, organizationRelationships, organizationVenueRelationships, organizations, users, venues]);
 
   return {
     index,

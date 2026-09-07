@@ -16,6 +16,7 @@ import ExplorerDiscoveryRail from './explorer/ExplorerDiscoveryRail';
 import ExplorerFilterPanel from './explorer/ExplorerFilterPanel';
 import ExplorerNearbyCarousel from './explorer/ExplorerNearbyCarousel';
 import MobileExplorerPrototype from './explorer/MobileExplorerPrototype';
+import TabletExplorerOverlay from './dev/tablet/TabletExplorerOverlay';
 import { useExplorerState } from '../hooks/useExplorerState';
 import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
 import { useExplorerContext } from './explorer/ExplorerProvider';
@@ -103,11 +104,13 @@ const MOBILE_DEFAULT_WORLD_DISTANCE = 17;
 const MOBILE_MAX_WORLD_DISTANCE = 20;
 const MOBILE_WORLD_FIELD_OF_VIEW = 50;
 const MOBILE_GLOBE_ARRIVAL_BEAT_MS = 10_000;
-const MOBILE_INTRO_DURATION_MS = 3_450;
+const GLOBE_INTRO_DURATION_MS = 3_450;
+const GLOBE_INTRO_IDLE_SPEED_MULTIPLIER = 60;
 const MOBILE_INTRO_CLOSE_DISTANCE = 5.25;
 const MOBILE_INTRO_FAR_DISTANCE = MOBILE_MAX_WORLD_DISTANCE;
 const MOBILE_INTRO_OVERSHOOT_DISTANCE = 14.65;
-const MOBILE_INTRO_IDLE_SPEED_MULTIPLIER = 60;
+const DESKTOP_INTRO_CLOSE_DISTANCE = 4.85;
+const DESKTOP_INTRO_OVERSHOOT_DISTANCE = 6.95;
 const resolveHybridDiscoveryClusterZoom = (zoomIntent: number) => {
   if (zoomIntent < 0.28) return 2;
   if (zoomIntent < 0.52) return 3;
@@ -165,6 +168,7 @@ type GlobeRuntime = {
   clearSelection: () => void;
   clearEventSelection: () => void;
   getNavigationSnapshot: () => GlobeNavigationSnapshot | null;
+  getNavigationDistanceBounds: () => { min: number; max: number } | null;
   updateHeroArrivalProfile: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
   previewHeroArrivalProfile: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
   animateHeroArrivalPreview: (profile: HeroArrivalProfile) => HeroComposerSnapshot | null;
@@ -877,6 +881,7 @@ type ProductionGlobePageProps = {
   showDevTools?: boolean;
   hybridPrototype?: boolean;
   mobilePrototype?: boolean;
+  mobileExperienceBasePath?: string;
 };
 
 const readAtmosphereToolState = (): AtmospherePatch => {
@@ -930,7 +935,8 @@ const getHeroArrivalPresets = (customPreset: HeroArrivalPreset | null): HeroArri
   },
 ];
 
-const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false, mobilePrototype = false }) => {
+const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false, mobilePrototype = false, mobileExperienceBasePath = '/mobile' }) => {
+  const isTabletPrototype = mobilePrototype && mobileExperienceBasePath === '/tablet';
   const devToolsEnabled = shouldShowDevTools(showDevTools);
   const captureParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
   const captureFixtureId = captureParams?.get('scaleFixture');
@@ -1041,7 +1047,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const plannedTravelTimerRef = useRef<number | null>(null);
   const mobileMapHandoffTimerRef = useRef<number | null>(null);
   const mobileMapPreparingRef = useRef(false);
-  const mobileIntroStartedRef = useRef(false);
+  const globeIntroStartedRef = useRef(false);
   const mobileMapRequestHandledRef = useRef<string | null>(null);
   const countryPinRevealTimerRef = useRef<number | null>(null);
   const beginListingTravelRef = useRef<(listingId: string) => void>(() => undefined);
@@ -1084,10 +1090,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       return;
     }
     if (!path || path === '/') {
-      navigate('/mobile');
+      navigate(mobileExperienceBasePath);
       return;
     }
-    navigate(path.startsWith('/mobile') ? path : `/mobile${path.startsWith('/') ? path : `/${path}`}`);
+    navigate(path === mobileExperienceBasePath || path.startsWith(`${mobileExperienceBasePath}/`)
+      ? path
+      : `${mobileExperienceBasePath}${path.startsWith('/') ? path : `/${path}`}`);
   };
   const { setDebugInfo } = useAppStore();
   const { listings, organizations, index: entityIndex } = useEntityIndex();
@@ -1142,28 +1150,49 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                 fieldOfView: MOBILE_WORLD_FIELD_OF_VIEW,
                 defaultDistanceWorld: MOBILE_DEFAULT_WORLD_DISTANCE,
                 maxDistanceWorld: MOBILE_MAX_WORLD_DISTANCE,
+                ...(isTabletPrototype ? {
+                  clusterArrivalDistanceWorld: 6.05,
+                  listingArrivalDistanceWorld: 5.85,
+                  listingArrivalFieldOfView: 34,
+                } : {}),
               },
             }
           : initialGlobePresentationRef.current,
+      ...(isTabletPrototype ? {
+        cameraFocus: {
+          heroArrival: {
+            // Marker landing in the open area left of the detail panel and
+            // above Nearby, matching the tablet portrait reference composition.
+            destinationAnchor: { x: 0.35, y: 0.425 },
+            useViewOffset: false,
+            heroStage: {
+              tiltDegrees: 40,
+              headingDegrees: -6,
+            },
+          },
+        },
+      } : {}),
       renderer: {
         ...(performanceConfig.renderer as Record<string, unknown>),
         ...(mobilePrototype ? {
           clearViewOffsetOnInteraction: false,
           fitWorldToViewport: true,
-          worldViewportFill: 0.82,
+          worldViewportFill: isTabletPrototype ? 0.94 : 0.82,
         } : {}),
       },
       progressiveDisclosure: {
         ...((performanceConfig.progressiveDisclosure as Record<string, unknown> | undefined) ?? {}),
-        ...(mobilePrototype ? {
-          adaptiveCountryClustering: {
-            enabled: true,
-            enterDistancePx: 48,
-            exitDistancePx: 64,
-            distanceRecheckThreshold: 0.35,
-            orientationRecheckDegrees: 3,
-          },
-        } : {}),
+        // Country overview clustering is a screen-space UX decision on every
+        // device. Multiple listings in the same geographic region should only
+        // collapse into a discovery marker when their rendered pins would be
+        // too close to distinguish at the current arrived camera framing.
+        adaptiveCountryClustering: {
+          enabled: true,
+          enterDistancePx: 48,
+          exitDistancePx: 64,
+          distanceRecheckThreshold: 0.35,
+          orientationRecheckDegrees: 3,
+        },
       },
       pinPlacement: {
         ...((performanceConfig.pinPlacement as Record<string, unknown> | undefined) ?? {}),
@@ -1265,7 +1294,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           }
         : { enabled: false },
     };
-  }, [graphicsCapability, hybridPrototype, isHero, mobilePrototype, prefersReducedMotion]);
+  }, [graphicsCapability, hybridPrototype, isHero, isTabletPrototype, mobilePrototype, prefersReducedMotion]);
 
   const performanceFixtureListings = useMemo(
     () => performanceFixtureCount ? buildGlobePerformanceFixtureListings(performanceFixtureCount) : null,
@@ -1763,9 +1792,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   useEffect(() => {
     if (
       runtimeState !== 'ready' ||
-      !mobilePrototype ||
-      mobileIntroStartedRef.current ||
+      isHero ||
+      globeIntroStartedRef.current ||
       prefersReducedMotion ||
+      surfaceModeRef.current !== 'globe' ||
       new URLSearchParams(location.search).has('mapListing')
     ) return;
     const globe = globeRef.current;
@@ -1773,9 +1803,22 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     const snapshot = globe?.getNavigationSnapshot();
     if (!globe || !container || !snapshot) return;
 
-    mobileIntroStartedRef.current = true;
+    globeIntroStartedRef.current = true;
     const baseLng = Number.isFinite(snapshot.cameraDirectionLng) ? snapshot.cameraDirectionLng : snapshot.lng;
     const baseLat = Number.isFinite(snapshot.cameraDirectionLat) ? snapshot.cameraDirectionLat : snapshot.lat;
+    const presentation = globe.getPresentationConfig();
+    const defaultDistance = mobilePrototype
+      ? MOBILE_DEFAULT_WORLD_DISTANCE
+      : Number(presentation?.camera?.defaultDistanceWorld) || 8.04;
+    const closeDistance = mobilePrototype ? MOBILE_INTRO_CLOSE_DISTANCE : DESKTOP_INTRO_CLOSE_DISTANCE;
+    const navigationBounds = globe.getNavigationDistanceBounds();
+    const configuredMaxDistance = Number(presentation?.camera?.maxDistanceWorld);
+    const farDistance = Number.isFinite(navigationBounds?.max)
+      ? navigationBounds.max
+      : mobilePrototype
+        ? MOBILE_INTRO_FAR_DISTANCE
+        : Number.isFinite(configuredMaxDistance) ? configuredMaxDistance : 12.5;
+    const overshootDistance = mobilePrototype ? MOBILE_INTRO_OVERSHOOT_DISTANCE : DESKTOP_INTRO_OVERSHOOT_DISTANCE;
     const startedAt = performance.now();
     let frameId = 0;
     let cancelled = false;
@@ -1799,26 +1842,26 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
 
     const tick = (now: number) => {
       if (cancelled) return;
-      const progress = clamp01((now - startedAt) / MOBILE_INTRO_DURATION_MS);
-      let distance = MOBILE_DEFAULT_WORLD_DISTANCE;
+      const progress = clamp01((now - startedAt) / GLOBE_INTRO_DURATION_MS);
+      let distance = defaultDistance;
 
       if (progress < 0.42) {
         const phase = easeOutCubic(progress / 0.42);
-        distance = lerp(MOBILE_INTRO_CLOSE_DISTANCE, MOBILE_INTRO_FAR_DISTANCE, phase);
+        distance = lerp(closeDistance, farDistance, phase);
       } else if (progress < 0.78) {
         const phase = smoothstep((progress - 0.42) / 0.36);
-        distance = lerp(MOBILE_INTRO_FAR_DISTANCE, MOBILE_INTRO_OVERSHOOT_DISTANCE, phase);
+        distance = lerp(farDistance, overshootDistance, phase);
       } else {
         const phase = smoothstep((progress - 0.78) / 0.22);
         const dampedSettle = Math.sin(phase * Math.PI * 2) * (1 - phase) * 0.28;
-        distance = lerp(MOBILE_INTRO_OVERSHOOT_DISTANCE, MOBILE_DEFAULT_WORLD_DISTANCE, phase) + dampedSettle;
+        distance = lerp(overshootDistance, defaultDistance, phase) + dampedSettle;
       }
 
       const settleSpinProgress = progress < 0.78
         ? 0
         : smoothstep((progress - 0.78) / 0.22);
       globe.setIdleMotionSpeedMultiplier(
-        lerp(MOBILE_INTRO_IDLE_SPEED_MULTIPLIER, 1, settleSpinProgress),
+        lerp(GLOBE_INTRO_IDLE_SPEED_MULTIPLIER, 1, settleSpinProgress),
       );
       globe.setNavigationPose({
         lng: baseLng,
@@ -1837,18 +1880,18 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         lng: baseLng,
         lat: baseLat,
         zoomIntent: 0.5,
-        distance: MOBILE_DEFAULT_WORLD_DISTANCE,
+        distance: defaultDistance,
         followVisualLandRotation: false,
       });
       cancelled = true;
     };
 
-    globe.setIdleMotionSpeedMultiplier(MOBILE_INTRO_IDLE_SPEED_MULTIPLIER);
+    globe.setIdleMotionSpeedMultiplier(GLOBE_INTRO_IDLE_SPEED_MULTIPLIER);
     globe.setNavigationPose({
       lng: baseLng,
       lat: baseLat,
       zoomIntent: 0.5,
-      distance: MOBILE_INTRO_CLOSE_DISTANCE,
+      distance: closeDistance,
       followVisualLandRotation: false,
     });
     frameId = window.requestAnimationFrame(tick);
@@ -1860,7 +1903,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       container.removeEventListener('pointerdown', settleAtCurrentPose);
       container.removeEventListener('touchstart', settleAtCurrentPose);
     };
-  }, [location.search, mobilePrototype, prefersReducedMotion, runtimeState]);
+  }, [isHero, location.search, mobilePrototype, prefersReducedMotion, runtimeState]);
 
   useEffect(() => {
     if (runtimeState !== 'ready' || !fixtureModeEnabled || !captureFixtureId || !activityRegions[0]) return;
@@ -2042,6 +2085,41 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       navigateInCurrentExperience(canonicalPath);
     }, MOBILE_GLOBE_ARRIVAL_BEAT_MS);
   };
+
+  useEffect(() => {
+    if (!mobilePrototype) return;
+
+    const resetPendingListingHandoff = () => {
+      if (mobileMapHandoffTimerRef.current === null) return;
+      const state = navigationStateRef.current;
+      const destination = state.travelDestination;
+      if (destination?.type !== 'listing' || !canScheduleMobileListingHandoff(state, destination.listingId)) return;
+      scheduleMobileListingHandoff(destination.listingId);
+    };
+
+    const resetPendingListingHandoffOnDrag = (event: PointerEvent) => {
+      // Keep the handoff alive while the user is actively rotating/panning the globe,
+      // but do not let ordinary mouse hover movement postpone navigation forever.
+      if (event.buttons === 0) return;
+      resetPendingListingHandoff();
+    };
+
+    window.addEventListener('pointerdown', resetPendingListingHandoff, { passive: true });
+    window.addEventListener('pointermove', resetPendingListingHandoffOnDrag, { passive: true });
+    window.addEventListener('touchstart', resetPendingListingHandoff, { passive: true });
+    window.addEventListener('touchmove', resetPendingListingHandoff, { passive: true });
+    window.addEventListener('wheel', resetPendingListingHandoff, { passive: true });
+    window.addEventListener('keydown', resetPendingListingHandoff);
+
+    return () => {
+      window.removeEventListener('pointerdown', resetPendingListingHandoff);
+      window.removeEventListener('pointermove', resetPendingListingHandoffOnDrag);
+      window.removeEventListener('touchstart', resetPendingListingHandoff);
+      window.removeEventListener('touchmove', resetPendingListingHandoff);
+      window.removeEventListener('wheel', resetPendingListingHandoff);
+      window.removeEventListener('keydown', resetPendingListingHandoff);
+    };
+  }, [mobilePrototype]);
 
   const completeGlobeHeroArrival = () => {
     const { travelDestination: destination, travelPhase: currentTravelPhase } = navigationStateRef.current;
@@ -3102,6 +3180,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             className={[
               'absolute inset-0 z-[2]',
               'origin-center transition-[opacity,transform,filter] duration-700 ease-out will-change-[opacity,transform,filter]',
+              isTabletPrototype && detailListingId ? '[&_.globe-venue-label--selected]:!opacity-0 [&_.globe-venue-label--selected]:!pointer-events-none' : '',
               surfaceMode === 'globe' ? 'pointer-events-auto' : 'pointer-events-none',
             ].join(' ')}
             style={{
@@ -3180,7 +3259,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             </div>
           ) : null}
 
-          <GlobeStageOverlays
+          {!isTabletPrototype ? <GlobeStageOverlays
             variant="fullBleed"
             stats={globeStats}
             onCenter={returnToWorld}
@@ -3203,7 +3282,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               });
             }}
             onWorld={returnToWorld}
-          />
+          /> : null}
 
           {showLocalViewHint ? (
             <div className="pointer-events-none absolute bottom-[5.7rem] left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-300/20 bg-black/58 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-red-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-[20px] backdrop-saturate-150">
@@ -3212,24 +3291,43 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           ) : null}
         </main>
 
-        <MobileExplorerPrototype
-          surfaceMode={surfaceMode}
-          onSurfaceModeChange={setManualSurfaceMode}
-          listings={discoveryRailListings}
-          selectedListingId={detailListingId}
-          activeRegionName={discoveryRailRegionName}
-          searchText={searchText}
-          onSearchTextChange={setSearchText}
-          onSelectListing={selectListingFromRail}
-          onNavigate={navigateInCurrentExperience}
-          onRecenter={returnToWorld}
-          onFilterChange={mobilePrototype ? (filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter]) : undefined}
-          devMobileMode={mobilePrototype}
-          entityIndex={entityIndex ?? undefined}
-          isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
-        />
+        {isTabletPrototype ? (
+          <TabletExplorerOverlay
+            surfaceMode={surfaceMode}
+            listings={discoveryRailListings}
+            selectedListingId={detailListingId}
+            activeRegionName={discoveryRailRegionName}
+            searchText={searchText}
+            onSelectListing={selectListingFromRail}
+            onClearSelection={closePanel}
+            onNavigate={navigateInCurrentExperience}
+            onRecenter={returnToWorld}
+            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter])}
+            experienceBasePath={mobileExperienceBasePath}
+            entityIndex={entityIndex ?? undefined}
+            isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
+          />
+        ) : (
+          <MobileExplorerPrototype
+            surfaceMode={surfaceMode}
+            onSurfaceModeChange={setManualSurfaceMode}
+            listings={discoveryRailListings}
+            selectedListingId={detailListingId}
+            activeRegionName={discoveryRailRegionName}
+            searchText={searchText}
+            onSearchTextChange={setSearchText}
+            onSelectListing={selectListingFromRail}
+            onNavigate={navigateInCurrentExperience}
+            onRecenter={returnToWorld}
+            onFilterChange={mobilePrototype ? (filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter]) : undefined}
+            devMobileMode={mobilePrototype}
+            experienceBasePath={mobileExperienceBasePath}
+            entityIndex={entityIndex ?? undefined}
+            isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
+          />
+        )}
 
-        <div className="pointer-events-none absolute inset-0 z-20 max-md:hidden">
+        <div className={`pointer-events-none absolute inset-0 z-20 max-md:hidden ${mobilePrototype ? 'hidden' : ''}`}>
           <div className="pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(76px,9vh,84px)] w-[clamp(248px,17vw,292px)]">
             <ExplorerFilterPanel
               searchText={searchText}

@@ -1,0 +1,1500 @@
+{
+  "generatedAt": "2026-09-05T20:39:29.300Z",
+  "source": "https://tiles.openfreemap.org/planet/20260830_080001_pt/{z}/{x}/{y}.pbf",
+  "groundTruthLimit": "Saved assets are provisional labels; exact fingerprint equality is conservative across provider versions. Unlabelled cases are not true negatives.",
+  "results": [
+    {
+      "listingId": "club-twist-sf",
+      "name": "Twist SF",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "club-power-exchange-sf",
+      "name": "The Power Exchange",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "true_positive",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 220,
+      "best": {
+        "fingerprint": "footprint-v2-12logpi-1-4",
+        "address": "Power Exchange, 220, Jones Street, Lower Nob Hill, Tenderloin, San Francisco, California, 94102, United States",
+        "distance": 0,
+        "score": 100
+      },
+      "reasons": [
+        "exact normalized address agrees with the footprint address",
+        "pin agrees within the strict tolerance",
+        "candidate outranks runner-up by 69.0 points"
+      ]
+    },
+    {
+      "listingId": "club3",
+      "name": "Our Secret Spot",
+      "status": "completed",
+      "outcome": "address_mismatch",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 257,
+      "best": {
+        "fingerprint": "footprint-v2-rekunj-1-20",
+        "address": "189, Parramatta Road, Annandale, Inner West, Sydney, New South Wales, 2038, Australia",
+        "distance": 0,
+        "score": 45
+      },
+      "reasons": [
+        "candidate is on the expected street but has a conflicting house number",
+        "Supplementation missing-target: accepted 223, suppressed overlap 19."
+      ]
+    },
+    {
+      "listingId": "club-club-joi-la",
+      "name": "Club Joi",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-1782366659742",
+      "name": "A Hidden Agenda",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "event-1782943939781",
+      "name": "Connect.Dance.Love",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-1782957638814",
+      "name": "Top Floor Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 29.089567732978836,
+      "assetDistance": 51.91443618257651,
+      "candidateCount": 420,
+      "best": {
+        "fingerprint": "footprint-v2-gbyrru-1-4",
+        "address": "Dialogue, Allen Street, Manhattan Community Board 3, Manhattan, New York County, New York, 10002, United States",
+        "distance": 39.08500570329121,
+        "score": 51
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "club-1783117266680",
+      "name": "Miami Velvet",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "true_positive",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 29,
+      "best": {
+        "fingerprint": "footprint-v2-1ltnyxx-1-4",
+        "address": "3901, Northwest 77th Avenue, Miami, Miami-Dade County, Florida, 33166, United States",
+        "distance": 0,
+        "score": 100
+      },
+      "reasons": [
+        "exact normalized address agrees with the footprint address",
+        "pin agrees within the strict tolerance",
+        "candidate outranks runner-up by 55.0 points"
+      ]
+    },
+    {
+      "listingId": "club-ice-lounge-wichita",
+      "name": "Ice Lounge Wichita",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 15,
+      "best": {
+        "fingerprint": "footprint-v2-bhuyll-1-4",
+        "address": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+        "distance": 10.011023753395785,
+        "score": 5
+      },
+      "reasons": [
+        "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address",
+        "Supplementation missing-target: accepted 5, suppressed overlap 10."
+      ]
+    },
+    {
+      "listingId": "club-ice-lounge-chicago",
+      "name": "Ice Lounge Chicago",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-ice-lounge-milwaukee",
+      "name": "Ice Lounge - Milwaukee",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-ice-lounge-oklahoma-city",
+      "name": "Ice Lounge Oklahoma City",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-eden-dfw",
+      "name": "Club Eden - DFW",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 0.7809941266358272,
+      "assetDistance": 3.239446292105015,
+      "candidateCount": 69,
+      "best": {
+        "fingerprint": "footprint-v2-1gos400-1-10",
+        "address": "11050, South Pipeline Road, Fort Worth, Tarrant County, Texas, 76040, United States",
+        "distance": 2.874611185050237,
+        "score": 89.2
+      },
+      "reasons": [
+        "top two footprints are separated by only 5.0 points",
+        "Supplementation missing-target: accepted 11, suppressed overlap 53."
+      ]
+    },
+    {
+      "listingId": "club-eden-san-antonio",
+      "name": "Club Eden - SAT",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 80.92334732890257,
+      "assetDistance": 57.718956235869854,
+      "candidateCount": 53,
+      "best": {
+        "fingerprint": "footprint-v2-1897qs0-1-4",
+        "address": "4240, Thousand Oaks Drive, San Antonio, Bexar County, Texas, 78217, United States",
+        "distance": 28.253058280733466,
+        "score": 0
+      },
+      "reasons": [
+        "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address",
+        "Supplementation missing-target: accepted 4, suppressed overlap 42."
+      ]
+    },
+    {
+      "listingId": "club-eden-oklahoma-city",
+      "name": "Club Eden - OKC",
+      "status": "completed",
+      "outcome": "probable",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 32,
+      "best": {
+        "fingerprint": "footprint-v2-1a88dii-1-18",
+        "address": "Days Inn, 2801, Northwest 39th Street, Oklahoma City, Oklahoma County, Oklahoma, 73112, United States",
+        "distance": 0,
+        "score": 100
+      },
+      "reasons": [
+        "evidence favors one footprint but does not satisfy auto-accept"
+      ]
+    },
+    {
+      "listingId": "club-colette-dallas",
+      "name": "Colette - Dallas",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 1.5801771302439662e-9,
+      "assetDistance": 0,
+      "candidateCount": 18,
+      "best": {
+        "fingerprint": "footprint-v2-xv3asp-1-18",
+        "address": "Colette Swingers Club, 10821, Composite Drive, Dallas, Dallas County, Texas, 75220, United States",
+        "distance": 0,
+        "score": 100
+      },
+      "reasons": [
+        "top two footprints are separated by only 11.0 points"
+      ]
+    },
+    {
+      "listingId": "club-colette-austin",
+      "name": "Colette - Austin",
+      "status": "completed",
+      "outcome": "probable",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 9.826072823676885,
+      "candidateCount": 99,
+      "best": {
+        "fingerprint": "footprint-v2-1ycfw0t-1-10",
+        "address": "13800, Dragline Drive, Wells Branch, Travis County, Texas, 78728, United States",
+        "distance": 9.826072823676885,
+        "score": 85
+      },
+      "reasons": [
+        "evidence favors one footprint but does not satisfy auto-accept",
+        "Supplementation missing-target: accepted 2, suppressed overlap 69."
+      ]
+    },
+    {
+      "listingId": "club-colette-houston",
+      "name": "Colette - Houston",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 111.79943578805535,
+      "assetDistance": 117.27602675821106,
+      "candidateCount": 62,
+      "best": {
+        "fingerprint": "footprint-v2-156crbf-1-5",
+        "address": "Tinders Houston, 16940, Ella Boulevard, Houston, Harris County, Texas, 77090, United States",
+        "distance": 29.26448532755326,
+        "score": 2
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 5, suppressed overlap 38."
+      ]
+    },
+    {
+      "listingId": "club-colette-new-orleans",
+      "name": "Colette - New Orleans",
+      "status": "completed",
+      "outcome": "address_mismatch",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 1.5801771302439662e-9,
+      "assetDistance": 0,
+      "candidateCount": 127,
+      "best": {
+        "fingerprint": "footprint-v2-2ob85i-1-10",
+        "address": "Good Catch Urban Bistro, 826, Gravier Street, Central Business District, Storyville, New Orleans, Orleans Parish, Louisiana, 70170, United States",
+        "distance": 0,
+        "score": 37
+      },
+      "reasons": [
+        "mapped locality evidence disagrees: postalCode; resolve address provenance before acceptance"
+      ]
+    },
+    {
+      "listingId": "club-colette-san-antonio",
+      "name": "Colette - San Antonio",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 1.769879840383869,
+      "candidateCount": 63,
+      "best": {
+        "fingerprint": "footprint-v2-15ylojs-1-25",
+        "address": "Naco Perrin Boulevard, San Antonio, Bexar County, Texas, 78284, United States",
+        "distance": 1.769879840383869,
+        "score": 14
+      },
+      "reasons": [
+        "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address",
+        "Supplementation missing-target: accepted 26, suppressed overlap 34."
+      ]
+    },
+    {
+      "listingId": "club-voluptuous-tokyo",
+      "name": "Voluptuous Tokyo",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-2a2-rio-de-janeiro",
+      "name": "Clube 2A2",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "true_positive",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 844,
+      "best": {
+        "fingerprint": "footprint-v2-810jmx-1-10",
+        "address": "Botequim, 184, Rua Visconde de Caravelas, Humaitá, Rio de Janeiro, Região Sudeste, 22271-060, Brasil",
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "authoritative venue coordinate falls inside exactly one individual footprint",
+        "nearest-object reverse address is treated as missing context, not a contradiction",
+        "no second footprint intersects the trusted coordinate"
+      ]
+    },
+    {
+      "listingId": "club-fetish-haven-sa-johannesburg",
+      "name": "Fetish Haven SA",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 74,
+      "best": {
+        "fingerprint": "footprint-v2-16bcv73-1-12",
+        "address": "5th Street, Wynberg, Johannesburg Ward 91, Sandton, City of Johannesburg Metropolitan Municipality, Gauteng, 2096, South Africa",
+        "distance": 1.1208946864262759,
+        "score": 19
+      },
+      "reasons": [
+        "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address",
+        "Supplementation missing-target: accepted 62, suppressed overlap 9."
+      ]
+    },
+    {
+      "listingId": "club-kiwiklub-durban",
+      "name": "KiwiKlub Durban",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-dungeon-tel-aviv",
+      "name": "The Dungeon",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 161,
+      "best": {
+        "fingerprint": "footprint-v2-k98i8h-1-4",
+        "address": "10, הארבעה, תל־אביב–יפו, גני שרונה, תל־אביב–יפו, נפת תל אביב, מחוז תל אביב, 6473906, ישראל",
+        "distance": 0,
+        "score": 81
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision"
+      ]
+    },
+    {
+      "listingId": "event-little-black-dress-santa-cruz-2026-08-29",
+      "name": "Little Black Dress Party",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-taken-paris",
+      "name": "Taken Club",
+      "status": "completed",
+      "outcome": "address_mismatch",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 18.43175506294369,
+      "assetDistance": 0,
+      "candidateCount": 261,
+      "best": {
+        "fingerprint": "footprint-v2-n6c70d-1-7",
+        "address": "14, Rue le Regrattier, Quartier Les Îles, Paris 4e Arrondissement, Paris, Île-de-France, France métropolitaine, 75004, France",
+        "distance": 12.338895343922287,
+        "score": 24
+      },
+      "reasons": [
+        "candidate is on the expected street but has a conflicting house number",
+        "Supplementation missing-target: accepted 15, suppressed overlap 19."
+      ]
+    },
+    {
+      "listingId": "club-black-diamond-belgrade",
+      "name": "Black Diamond Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 174,
+      "best": {
+        "fingerprint": "footprint-v2-hrxiwo-1-14",
+        "address": "1a, Звечанска, МЗ Војвода Мишић (Савски венац), Градска општина Савски венац, Београд, Град Београд, Централна Србија, 11000, Србија",
+        "distance": 0,
+        "score": 81
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision"
+      ]
+    },
+    {
+      "listingId": "club-sweet-buenos-aires",
+      "name": "Sweet Club",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "true_positive",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 9.83103063126519,
+      "assetDistance": 0,
+      "candidateCount": 162,
+      "best": {
+        "fingerprint": "footprint-v2-l4hd9d-1-6",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "authoritative venue coordinate falls inside exactly one individual footprint",
+        "nearest-object reverse address is treated as missing context, not a contradiction",
+        "no second footprint intersects the trusted coordinate",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-dalliance-columbia",
+      "name": "Club Dalliance",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 299.2467609219057,
+      "assetDistance": 292.7123963775437,
+      "candidateCount": 13,
+      "best": {
+        "fingerprint": "footprint-v2-1ue4gbc-1-14",
+        "address": null,
+        "distance": 33.26873068746212,
+        "score": 0
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 7, suppressed overlap 6.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-zcretclub-lima",
+      "name": "ZcretClub",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Needs address research: no street number."
+      ]
+    },
+    {
+      "listingId": "club-lorage-montreal",
+      "name": "Club L'Orage",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0.7452012798175437,
+      "assetDistance": 0,
+      "candidateCount": 130,
+      "best": {
+        "fingerprint": "footprint-v2-iq52gw-1-8",
+        "address": null,
+        "distance": 0,
+        "score": 27
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 130, suppressed overlap 0.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-the-69-las-vegas",
+      "name": "The 69",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-le-boudoir-london",
+      "name": "Le Boudoir Club",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-insolitam-spa-bogota",
+      "name": "Insolitam Spa",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 127,
+      "best": {
+        "fingerprint": "footprint-v2-1u2mtkc-1-4",
+        "address": null,
+        "distance": 16.740172363674613,
+        "score": 5
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 22, suppressed overlap 43.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-lizas-lounge-cape-town",
+      "name": "Liza's Lounge",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 312,
+      "best": {
+        "fingerprint": "footprint-v2-1fe90lo-1-4",
+        "address": null,
+        "distance": 13.4276003942658,
+        "score": 5
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 299, suppressed overlap 13.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-coliseum-mexico-city",
+      "name": "Coliseum Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 203.2214429481132,
+      "assetDistance": 175.32726242068955,
+      "candidateCount": 79,
+      "best": {
+        "fingerprint": "footprint-v2-p2ac2r-1-12",
+        "address": "Camarón Buchon, Calle Río Pánuco, Cuauhtémoc, Condesa, Ciudad de México, Cuauhtémoc, Ciudad de México, 06500, México",
+        "distance": 17.776106264038773,
+        "score": 29.666666666666664
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 70, suppressed overlap 4.",
+        "1 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-privata-portland",
+      "name": "Club Privata",
+      "status": "completed",
+      "outcome": "address_mismatch",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 113,
+      "best": {
+        "fingerprint": "footprint-v2-1vcg7t2-1-4",
+        "address": "Patrick Building, 828, Southwest 1st Avenue, Downtown, Portland, Multnomah County, Oregon, 97204, United States",
+        "distance": 0,
+        "score": 36.33333333333333
+      },
+      "reasons": [
+        "candidate is on the expected street but has a conflicting house number"
+      ]
+    },
+    {
+      "listingId": "club-oasis-aqualounge-toronto",
+      "name": "Oasis Aqualounge",
+      "status": "completed",
+      "outcome": "probable",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 270,
+      "best": {
+        "fingerprint": "footprint-v2-rjwnrm-1-19",
+        "address": "Oasis Aqualounge, 231, Mutual Street, Downtown Yonge East, Toronto Centre, Toronto, Golden Horseshoe, Ontario, M5B 1M1, Canada",
+        "distance": 0,
+        "score": 100
+      },
+      "reasons": [
+        "exact normalized address agrees with the footprint address",
+        "pin agrees within the strict tolerance",
+        "candidate outranks runner-up by 96.0 points",
+        "Incomplete address evaluation prevents the address-based definitive tier.",
+        "3 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-trapeze-atlanta",
+      "name": "Trapeze - Atlanta",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 38,
+      "best": {
+        "fingerprint": "footprint-v2-9olo5t-1-4",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "pin intersects multiple individual footprints; resolve overlapping geometry before acceptance",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "event-her-fantasy-kink-twist-2026-08-02",
+      "name": "Her Fantasy - Kink",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "event-her-fantasy-back-to-school-twist-2026-08-16",
+      "name": "Her Fantasy - Back to School",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "event-her-fantasy-white-party-twist-2026-08-30",
+      "name": "Her Fantasy - White Party",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "event-bronze-very-little-black-dress-twist-2026-09-06",
+      "name": "Very Little Black Dress",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "event-bronze-halloween-kickoff-twist-2026-10-24",
+      "name": "Halloween Kickoff",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 12.417865552014305,
+      "assetDistance": 0.16586291933253322,
+      "candidateCount": 225,
+      "best": {
+        "fingerprint": "footprint-v2-1jooo3k-1-4",
+        "address": "Secrets a romantic boutique, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+        "distance": 0.16586291933253322,
+        "score": 68
+      },
+      "reasons": [
+        "top two footprints are separated by only 0.0 points",
+        "Supplementation missing-target: accepted 5, suppressed overlap 47."
+      ]
+    },
+    {
+      "listingId": "club-lussuria-bangkok",
+      "name": "Lussuria Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 98,
+      "best": {
+        "fingerprint": "footprint-v2-1my7m9s-1-6",
+        "address": null,
+        "distance": 14.192142664565223,
+        "score": 2
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 58, suppressed overlap 26.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-soho-graz",
+      "name": "soho Lifestyle Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 1.5801771302439662e-9,
+      "assetDistance": 0,
+      "candidateCount": 36,
+      "best": {
+        "fingerprint": "footprint-v2-1t6fe68-1-4",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-attraction-bucharest",
+      "name": "Attraction Club",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 13.555238672888802,
+      "assetDistance": 3.000440241233652,
+      "candidateCount": 416,
+      "best": {
+        "fingerprint": "footprint-v2-e75as7-1-8",
+        "address": null,
+        "distance": 2.4895999214882845,
+        "score": 19
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 63, suppressed overlap 222.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-fun4two-moordrecht",
+      "name": "Fun4Two",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 39,
+      "best": {
+        "fingerprint": "footprint-v2-k4o722-1-4",
+        "address": null,
+        "distance": 52.89686860931089,
+        "score": 0
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 27, suppressed overlap 9.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-fata-morgana-muiden",
+      "name": "Fata Morgana",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 59,
+      "best": {
+        "fingerprint": "footprint-v2-92daic-1-26",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-swingland-ishoj",
+      "name": "Swingland",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 63,
+      "best": {
+        "fingerprint": "footprint-v2-1ftwnz9-1-14",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-more-helsinki",
+      "name": "Club MORE",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-trapeze-fort-lauderdale",
+      "name": "Trapeze Fort Lauderdale",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0.7578495615105049,
+      "assetDistance": 0,
+      "candidateCount": 57,
+      "best": {
+        "fingerprint": "footprint-v2-1onquo7-1-6",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 57, suppressed overlap 0.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-sauna-paradise-tel-aviv",
+      "name": "Sauna Paradise",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 277,
+      "best": {
+        "fingerprint": "footprint-v2-iqcul4-1-4",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-sauna-club-tel-aviv",
+      "name": "Sauna Club Tel Aviv",
+      "status": "completed",
+      "outcome": "ambiguous",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 207,
+      "best": {
+        "fingerprint": "footprint-v2-1pon4h6-1-11",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "pin intersects multiple individual footprints; resolve overlapping geometry before acceptance",
+        "4 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-rich-moscow",
+      "name": "Swinger Club RICH",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-day-ognya-saint-petersburg",
+      "name": "Day Ognya",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Needs address research: no street number."
+      ]
+    },
+    {
+      "listingId": "club-zona-x-costa-rica",
+      "name": "Club Zona X",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-la-casa-de-eros-lima",
+      "name": "La Casa de Eros",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Needs address research: no street number."
+      ]
+    },
+    {
+      "listingId": "club-interspa-bogota",
+      "name": "InterSpa",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 68,
+      "best": {
+        "fingerprint": "footprint-v2-1c6vu7q-1-4",
+        "address": null,
+        "distance": 0.9349929949990594,
+        "score": 17
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 58, suppressed overlap 5.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-cupids-swinton",
+      "name": "Cupid's Swingers Club",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "true_positive",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 8,
+      "best": {
+        "fingerprint": "footprint-v2-nu72h8-1-8",
+        "address": "Rutland Street, Newtown, Swinton, Salford, Greater Manchester, England, M27 6AU, United Kingdom",
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "authoritative venue coordinate falls inside exactly one individual footprint",
+        "nearest-object reverse address is treated as missing context, not a contradiction",
+        "no second footprint intersects the trusted coordinate",
+        "UK target supplemented from Ordnance Survey OpenMap Local (1 footprint)."
+      ]
+    },
+    {
+      "listingId": "club-krystal-vicenza",
+      "name": "Krystal Club Privè",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "false_negative",
+      "exactRediscovery": true,
+      "geometryEquivalentRediscovery": true,
+      "rediscoveredGroundTruth": true,
+      "candidateToAssetCenterMeters": 0,
+      "assetDistance": 0,
+      "candidateCount": 21,
+      "best": {
+        "fingerprint": "footprint-v2-1bazuae-1-21",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-syn-tulsa",
+      "name": "Syn Tulsa",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Private, hidden, or approximate location: no provider requests made."
+      ]
+    },
+    {
+      "listingId": "club-idiza-club-desire-seoul",
+      "name": "idiza Lounge (Club Desire)",
+      "status": "skipped",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 0,
+      "best": null,
+      "reasons": [
+        "Needs address research: no street number."
+      ]
+    },
+    {
+      "listingId": "club-epicure-cape-town",
+      "name": "Epicure Club Cape Town",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 114,
+      "best": {
+        "fingerprint": "footprint-v2-fyh5mm-1-12",
+        "address": null,
+        "distance": 19.70588555840768,
+        "score": 5
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 52, suppressed overlap 69.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-insomnia-berlin",
+      "name": "Insomnia Berlin",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "unvalidated_acceptance",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 166,
+      "best": {
+        "fingerprint": "footprint-v2-2wb9z0-1-8",
+        "address": null,
+        "distance": 0,
+        "score": 30
+      },
+      "reasons": [
+        "authoritative venue coordinate falls inside exactly one individual footprint",
+        "nearest-object reverse address is treated as missing context, not a contradiction",
+        "no second footprint intersects the trusted coordinate",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    },
+    {
+      "listingId": "club-casa-swinger-cdmx",
+      "name": "Casa Swinger",
+      "status": "completed",
+      "outcome": "needs_location_review",
+      "autoAccept": false,
+      "verdict": "refused_or_unlabelled",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": 185.63333120796102,
+      "assetDistance": 176.92962939383688,
+      "candidateCount": 131,
+      "best": {
+        "fingerprint": "footprint-v2-1lj8t7e-1-4",
+        "address": null,
+        "distance": 24.958435438446934,
+        "score": 2
+      },
+      "reasons": [
+        "available evidence is insufficient for a building-level decision",
+        "Supplementation missing-target: accepted 99, suppressed overlap 19.",
+        "5 address provider failures; missing evidence is not contradiction."
+      ]
+    }
+  ]
+}

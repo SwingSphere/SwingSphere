@@ -88,8 +88,11 @@ export interface BuildingVerificationMeta {
 
 export interface ListingLocationMeta {
   status: LocationValidationStatus;
+  coordinatePrecision?: 'address' | 'building' | 'poi' | 'street' | 'locality' | 'unknown';
   validatedAt?: string;
   geocoderSource?: string;
+  /** Legacy provenance field used by older curated location records. New writes should use geocoderSource. */
+  source?: string;
   geocoderLabel?: string;
   confidence?: number;
   normalizedAddress?: string;
@@ -393,6 +396,7 @@ export interface ClubData {
   logoImageUrl?: string;
   headerImageUrl?: string;
   galleryImageUrls?: string[];
+  mediaPresentation?: 'default' | 'monochrome';
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: 'pending_approval' | 'approved' | 'flagged';
   postedByUserId: string;
@@ -447,6 +451,10 @@ export interface BuildingAsset {
   provider: {
     source: string;
     featureIds: string[];
+    origin?: 'provider' | 'generated' | 'manual';
+    generationMethod?: string;
+    generationConfidence?: number;
+    provenanceNote?: string;
   };
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
   renderHeightMeters?: number;

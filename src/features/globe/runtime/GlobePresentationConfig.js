@@ -46,7 +46,7 @@ export const GLOBE_PRESENTATION = Object.freeze({
   globeScale: 1.12,
   camera: {
     fieldOfView: 43,
-    defaultDistanceWorld: 8.04,
+    defaultDistanceWorld: 11.9,
     minDistanceWorld: 3.65,
     maxDistanceWorld: 12.5,
     worldEnterDistanceWorld: 7.25,

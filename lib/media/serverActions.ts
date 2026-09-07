@@ -17,12 +17,12 @@ const getBearerToken = (authorization?: string | null) => {
 
 const getAuthenticatedSupabase = async (authorization?: string | null) => {
   const token = getBearerToken(authorization);
-  if (!token) throw new Error('Authentication is required for media uploads.');
+  if (!token) throw new Error('Authentication is required for media changes.');
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase server credentials for media uploads.');
+    throw new Error('Missing Supabase server credentials for media changes.');
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -39,6 +39,21 @@ const getAuthenticatedSupabase = async (authorization?: string | null) => {
 const validateUploadOwnership = (ownerType: string, ownerId: string, userId: string) => {
   if (ownerType === 'user' && ownerId !== userId) {
     throw new Error('You can only upload media for your own profile.');
+  }
+};
+
+const deleteCloudflareImage = async (externalId: string) => {
+  const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  const apiToken = requireEnv('CLOUDFLARE_IMAGES_API_TOKEN');
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/images/v1/${encodeURIComponent(externalId)}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${apiToken}` } },
+  );
+  if (response.status === 404) return;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.success) {
+    const message = payload?.errors?.[0]?.message || payload?.messages?.[0]?.message || `Cloudflare image deletion failed (${response.status}).`;
+    throw new Error(message);
   }
 };
 
@@ -122,4 +137,82 @@ export const completeMediaUpload = async (body: any, authorization?: string | nu
 
   if (error) throw new Error(error.message);
   return { asset: data };
+};
+
+export const moderateMediaAsset = async (body: any, authorization?: string | null) => {
+  const assetId = String(body?.assetId ?? body?.asset_id ?? '').trim();
+  const nextStatus = String(body?.status ?? '').trim().toLowerCase();
+  if (!assetId) throw new Error('Missing media asset id.');
+  if (!['pending_review', 'approved', 'rejected', 'archived'].includes(nextStatus)) {
+    throw new Error('Invalid media moderation status.');
+  }
+
+  const { supabase } = await getAuthenticatedSupabase(authorization);
+  const { data, error } = await supabase.rpc('admin_set_media_asset_status', {
+    p_asset_id: assetId,
+    p_status: nextStatus,
+  });
+  if (error) throw new Error(error.message);
+
+  const result = (data ?? {}) as {
+    updated?: boolean;
+    assetId?: string;
+    status?: string;
+    previousStatus?: string;
+  };
+  if (!result.assetId || !result.status) {
+    throw new Error('Supabase did not confirm the media moderation update. Refresh the Image Library and try again.');
+  }
+  return result;
+};
+
+export const deleteMediaAsset = async (body: any, authorization?: string | null) => {
+  const assetId = String(body?.assetId ?? body?.asset_id ?? '').trim();
+  const expectedExternalId = String(body?.externalId ?? body?.external_id ?? '').trim();
+  if (!assetId) throw new Error('Missing media asset id.');
+
+  const { supabase: userClient, user } = await getAuthenticatedSupabase(authorization);
+  const { data: adminProfile, error: adminError } = await userClient
+    .from('profiles')
+    .select('role, status')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (adminError) throw new Error(`Could not verify admin access: ${adminError.message}`);
+  if (adminProfile?.role !== 'admin' || adminProfile.status !== 'active') {
+    throw new Error('Active admin access is required to delete media assets.');
+  }
+
+  const { data: cleanupData, error: cleanupError } = await userClient.rpc('admin_delete_unused_media_asset', {
+    p_asset_id: assetId,
+    p_expected_external_id: expectedExternalId || null,
+  });
+  if (cleanupError) throw new Error(cleanupError.message);
+
+  const cleanup = (cleanupData ?? {}) as {
+    deleted?: boolean;
+    assetId?: string;
+    externalId?: string;
+    retainedCloudflareImage?: boolean;
+    remainingReferences?: number;
+  };
+  if (!cleanup.deleted || !cleanup.externalId) {
+    throw new Error('Supabase did not confirm media cleanup. Refresh the Image Library and try again.');
+  }
+
+  let cloudflareDeleted = false;
+  let cleanupWarning: string | null = null;
+  if (!cleanup.retainedCloudflareImage) {
+    try {
+      await deleteCloudflareImage(cleanup.externalId);
+      cloudflareDeleted = true;
+    } catch (error) {
+      cleanupWarning = error instanceof Error ? error.message : 'Cloudflare cleanup could not be confirmed.';
+    }
+  }
+
+  return {
+    ...cleanup,
+    cloudflareDeleted,
+    cleanupWarning,
+  };
 };

@@ -51,6 +51,8 @@ export class CameraFocusController {
     this.tmpHeroStageUp = new THREE.Vector3();
     this.tmpHeroCorrectionRight = new THREE.Vector3();
     this.tmpHeroCorrectionUp = new THREE.Vector3();
+    this.tmpHeroPanOffset = new THREE.Vector3();
+    this.heroFramingCamera = null;
   }
 
   focusNearby(fromWorldTarget, worldTarget, elapsed = 0) {
@@ -172,9 +174,11 @@ export class CameraFocusController {
           this.animation.toCameraPosition,
           overrides.heroCompositionMeasure
         );
+        this.#composeDestinationPan(hero, worldTarget, this.animation.toCameraPosition, this.tmpGlobeCenter, this.tmpHeroPanOffset);
+        this.animation.toCameraPosition.add(this.tmpHeroPanOffset);
         this.animation.toFov = this.camera.fov;
         this.animation.toViewOffset = this.#captureHeroProjection();
-        this.animation.toTarget.copy(this.tmpGlobeCenter);
+        this.animation.toTarget.copy(this.tmpGlobeCenter).add(this.tmpHeroPanOffset);
         this.animation.heroArrival = true;
       } else {
         this.animation.toViewOffset = null;
@@ -557,8 +561,34 @@ export class CameraFocusController {
     } else {
       this.#applyHeroProjection(hero);
     }
-    this.#applyHeroCompositionCorrection(this.#createDestinationTiltComposition(hero), target, heroCompositionMeasure);
+    if (!hero.destinationAnchor) {
+      this.#applyHeroCompositionCorrection(this.#createDestinationTiltComposition(hero), target, heroCompositionMeasure);
+    }
     return target;
+  }
+
+  #composeDestinationPan(hero, worldTarget, cameraPosition, targetPosition, out) {
+    out.set(0, 0, 0);
+    const anchor = hero.destinationAnchor;
+    if (!Number.isFinite(anchor?.x) || !Number.isFinite(anchor?.y)) return out;
+
+    // Solve a screen-plane pan at the destination's depth, not at the globe
+    // center. Translating camera and OrbitControls target equally preserves
+    // orientation, perspective scale and tilt, just like a manual screen pan.
+    // Use a scratch camera so endpoint measurement never moves the live view.
+    const camera = this.heroFramingCamera ??= this.camera.clone();
+    camera.copy(this.camera);
+    camera.position.copy(cameraPosition);
+    camera.lookAt(targetPosition);
+    camera.updateMatrixWorld(true);
+    this.tmpHeroProjection.copy(worldTarget).project(camera);
+    this.tmpHeroProjection.set(
+      anchor.x * 2 - 1,
+      1 - anchor.y * 2,
+      this.tmpHeroProjection.z
+    ).unproject(camera);
+    out.copy(worldTarget).sub(this.tmpHeroProjection);
+    return out;
   }
 
   #createDestinationTiltComposition(hero) {

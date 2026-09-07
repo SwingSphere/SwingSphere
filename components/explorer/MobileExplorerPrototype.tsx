@@ -26,6 +26,8 @@ export type MobileExplorerPrototypeProps = {
   onRecenter?: () => void;
   onFilterChange?: (filter: MobileFilter) => void;
   devMobileMode?: boolean;
+  experienceBasePath?: string;
+  tabletMode?: boolean;
   entityIndex?: EntityIndex;
   isUpdating?: boolean;
 };
@@ -55,6 +57,8 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   onRecenter,
   onFilterChange,
   devMobileMode = false,
+  experienceBasePath = '/mobile',
+  tabletMode = false,
   entityIndex,
   isUpdating = false,
 }) => {
@@ -93,37 +97,37 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   };
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[75] md:hidden" aria-label="SwingSphere mobile explorer">
-      <div className="pointer-events-auto absolute inset-x-3 top-[max(1.45rem,env(safe-area-inset-top))]">
+    <div className={`pointer-events-none absolute inset-0 z-[75] ${devMobileMode ? '' : 'md:hidden'}`} aria-label={tabletMode ? 'SwingSphere tablet explorer' : 'SwingSphere mobile explorer'}>
+      <div className={`pointer-events-auto absolute top-[max(1.45rem,env(safe-area-inset-top))] ${tabletMode ? 'left-6 w-[min(360px,calc(100%-3rem))]' : 'inset-x-3'}`}>
         <button
           type="button"
           onClick={() => onNavigate('/home')}
-          className="flex min-h-11 items-center gap-2.5 px-1 text-left"
+          className={`flex items-center gap-2.5 px-1 text-left ${tabletMode ? 'min-h-12' : 'min-h-11'}`}
           aria-label="SwingSphere home"
         >
-          <img src="/swingsphere-logo.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
-          <span className="text-[17px] font-black uppercase tracking-[0.04em] leading-none">
+          <img src="/swingsphere-logo.png" alt="" className={`${tabletMode ? 'h-10 w-10' : 'h-9 w-9'} shrink-0 object-contain`} />
+          <span className={`${tabletMode ? 'text-[19px]' : 'text-[17px]'} font-black uppercase tracking-[0.04em] leading-none`}>
             <span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span>
           </span>
         </button>
 
-        <div className="ss-glass ss-glass--liquid mt-2 flex h-[52px] min-w-0 items-center rounded-[18px] border-white/[0.09] px-3 shadow-[0_18px_50px_rgba(0,0,0,0.36)]">
+        <div className={`ss-glass ss-glass--liquid mt-3 flex min-w-0 items-center border-white/[0.09] shadow-[0_18px_50px_rgba(0,0,0,0.36)] ${tabletMode ? 'h-[64px] rounded-[22px] px-4' : 'h-[52px] rounded-[18px] px-3'}`}>
           <div className="min-w-0 flex-1 px-1">
-            <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-300/75">
+            <div className={`${tabletMode ? 'text-[10px]' : 'text-[9px]'} font-bold uppercase tracking-[0.2em] text-red-300/75`}>
               {surfaceMode === 'map' ? 'Local view' : 'Explore'}
             </div>
-            <div className="mt-0.5 truncate text-[14px] font-semibold text-white">
+            <div className={`mt-0.5 truncate font-semibold text-white ${tabletMode ? 'text-[16px]' : 'text-[14px]'}`}>
               {destinationName}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute right-3 top-[calc(max(1.45rem,env(safe-area-inset-top))+7.55rem)] flex flex-col gap-2">
+      <div className={`pointer-events-auto absolute flex flex-col gap-2 ${tabletMode ? 'right-6 top-[max(1.5rem,env(safe-area-inset-top))]' : 'right-3 top-[calc(max(1.45rem,env(safe-area-inset-top))+7.55rem)]'}`}>
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
-          className="ss-glass ss-glass--liquid relative grid h-11 w-11 place-items-center rounded-2xl text-gray-100 shadow-xl shadow-black/30"
+          className={`ss-glass ss-glass--liquid relative grid place-items-center text-gray-100 shadow-xl shadow-black/30 ${tabletMode ? 'h-12 w-12 rounded-[18px]' : 'h-11 w-11 rounded-2xl'}`}
           aria-label="Open filters"
         >
           <ListFilter className="h-[18px] w-[18px]" />
@@ -132,7 +136,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
         <button
           type="button"
           onClick={onRecenter}
-          className="ss-glass ss-glass--liquid grid h-11 w-11 place-items-center rounded-2xl text-gray-100 shadow-xl shadow-black/30"
+          className={`ss-glass ss-glass--liquid grid place-items-center text-gray-100 shadow-xl shadow-black/30 ${tabletMode ? 'h-12 w-12 rounded-[18px]' : 'h-11 w-11 rounded-2xl'}`}
           aria-label="Return to world view"
         >
           <Globe2 className="h-[19px] w-[19px]" />
@@ -141,10 +145,11 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
 
       <section
         className={[
-          'pointer-events-auto absolute inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] overflow-hidden rounded-[28px]',
-          'border border-white/[0.09] bg-[rgba(8,10,14,0.94)] shadow-[0_-22px_70px_rgba(0,0,0,0.58)] backdrop-blur-[30px] backdrop-saturate-150',
-          'transition-[height] duration-300 ease-out',
-          sheetOpen ? 'h-[330px]' : 'h-[158px]',
+          'pointer-events-auto absolute overflow-hidden border border-white/[0.09] bg-[rgba(8,10,14,0.94)] backdrop-blur-[30px] backdrop-saturate-150 transition-[height] duration-300 ease-out',
+          tabletMode
+            ? 'bottom-5 left-6 w-[min(430px,calc(100%-3rem))] rounded-[28px] shadow-[0_24px_70px_rgba(0,0,0,0.48)]'
+            : 'inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] rounded-[28px] shadow-[0_-22px_70px_rgba(0,0,0,0.58)]',
+          sheetOpen ? (tabletMode ? 'h-[320px]' : 'h-[330px]') : (tabletMode ? 'h-[170px]' : 'h-[158px]'),
         ].join(' ')}
         aria-label="Destination and nearby listings"
       >
@@ -218,7 +223,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
                 }
                 if (!devMobileMode && label === 'Saved') return;
                 const target = devMobileMode
-                  ? getMobileNavTarget(path)
+                  ? getMobileNavTarget(path, experienceBasePath)
                   : label === 'Add'
                     ? '/submission'
                     : path;

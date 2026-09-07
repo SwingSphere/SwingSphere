@@ -7,7 +7,7 @@ import {
   type EntityCollections,
 } from './entityCompatibility';
 import { auditBuildingGeometry, haversineMeters, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from './buildingGeometry';
-import { getBuildingVerificationForListing, listingHasExactBuildingAddress } from './buildingVerification';
+import { getBuildingVerificationForListing, listingHasExactBuildingAddress, normalizeAddressText } from './buildingVerification';
 import { isApproximateLocation } from './publicLocation';
 import { latestBuildingEvidenceByListing, type BuildingVerificationEvidenceRecord } from './buildingVerificationEvidence';
 
@@ -124,7 +124,8 @@ export const buildBuildingCatalogShadowReport = (
     const physicalVenue = getVenueForListing(listing, catalogCollections);
     const approximate = isApproximateLocation(listing)
       || physicalVenue?.visibility === 'private'
-      || physicalVenue?.visibility === 'public_approximate';
+      || physicalVenue?.visibility === 'public_approximate'
+      || physicalVenue?.visibility === 'admin_only';
     const exactAddress = listingHasExactBuildingAddress(listing, catalogCollections);
     const resolvedAsset = getBuildingAssetForListing(listing, buildingAssets, catalogCollections);
     const explicitAsset = listing.buildingAssetId
@@ -145,12 +146,18 @@ export const buildBuildingCatalogShadowReport = (
       ? explicitAsset.id
       : null;
     const warnings: string[] = [];
-    const evidence = evidenceByListing.get(listing.id) ?? null;
+    const storedEvidence = evidenceByListing.get(listing.id) ?? null;
+    const evidenceIsCurrent = Boolean(storedEvidence && coordinate
+      && haversineMeters(coordinate, storedEvidence.canonicalCoordinate) <= 1
+      && normalizeAddressText(storedEvidence.normalizedAddress) === normalizeAddressText(address)
+      && Number.isFinite(Date.parse(storedEvidence.evaluatedAt))
+      && Date.parse(generatedAt) - Date.parse(storedEvidence.evaluatedAt) <= 7 * 24 * 60 * 60 * 1000);
+    const evidence = !approximate && evidenceIsCurrent ? storedEvidence : null;
     const evidenceCoordinate = evidence?.canonicalCoordinate ?? null;
     const legacyCoordinateDriftMeters = storedCoordinate && evidenceCoordinate
       ? haversineMeters(storedCoordinate, evidenceCoordinate)
       : null;
-    if (resolvedAsset && evidenceCoordinate) coordinate = evidenceCoordinate;
+    if (storedEvidence && !evidenceIsCurrent && !approximate) warnings.push('Stored evidence is stale or belongs to a different location; rerun verification.');
     if (ignoredDuplicateAssetId) warnings.push(`duplicate listing-owned asset ${ignoredDuplicateAssetId} is ignored in favor of the Venue asset`);
     if (resolvedAsset && !resolvedAsset.provider.featureIds.length) warnings.push('asset has no provider feature ID; geometry remains usable and provenance is incomplete');
 
@@ -193,7 +200,7 @@ export const buildBuildingCatalogShadowReport = (
         }
       }
     } else {
-      const storedCategory = evidence ? categoryFromEvidence(evidence) : categoryFromStoredVerification(verification?.outcome);
+      const storedCategory = evidence ? categoryFromEvidence(evidence) : null;
       category = storedCategory ?? 'needs_provider_evaluation';
       reason = evidence
         ? evidence.providerSnapshot.status === 'provider_unavailable'
@@ -212,17 +219,17 @@ export const buildBuildingCatalogShadowReport = (
       listingId: listing.id,
       listingName: listing.name,
       listingType: listing.type,
-      address,
-      coordinate,
+      address: approximate ? 'Private / approximate — redacted' : address,
+      coordinate: approximate ? null : coordinate,
       category,
       reason,
-      assetId: resolvedAsset?.id ?? null,
-      assetOwnerListingId: resolvedAsset?.listingId ?? null,
+      assetId: approximate ? null : resolvedAsset?.id ?? null,
+      assetOwnerListingId: approximate ? null : resolvedAsset?.listingId ?? null,
       inheritedAsset,
       ignoredDuplicateAssetId,
       footprintFingerprint: fingerprint,
-      providerSource: resolvedAsset?.provider.source ?? null,
-      providerFeatureIds: resolvedAsset?.provider.featureIds ?? [],
+      providerSource: approximate ? null : resolvedAsset?.provider.source ?? null,
+      providerFeatureIds: approximate ? [] : resolvedAsset?.provider.featureIds ?? [],
       pinIntersects,
       pinToFootprintMeters,
       warnings,

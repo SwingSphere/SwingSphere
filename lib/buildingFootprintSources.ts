@@ -1,3 +1,4 @@
+import { adminFetch } from './adminApi';
 import {
   extractIndividualBuildingFootprints,
   getBuildingGeometryCenter,
@@ -8,6 +9,63 @@ import {
 
 export const MICROSOFT_BUILDING_SOURCE = 'Microsoft Global ML Building Footprints';
 export const MICROSOFT_BUILDING_ID_PREFIX = 'microsoft-ml:';
+export const OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL = 'https://services.arcgis.com/qHLhLQrcvEnxjtPr/arcgis/rest/services/OS_OpenMap_Local_Buildings/FeatureServer/1/query';
+export const OS_OPENMAP_LOCAL_SOURCE = 'Ordnance Survey OpenMap Local';
+export const OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX = 'os-openmap-local:';
+export const OS_OPENMAP_LOCAL_ATTRIBUTION = 'Contains OS data © Crown copyright and database right 2026';
+
+export const isUnitedKingdomCountry = (country: string | null | undefined): boolean => {
+  const normalized = country?.trim().toLowerCase() ?? '';
+  return normalized === 'united kingdom' || normalized === 'uk' || normalized === 'great britain';
+};
+
+type OsOpenMapLocalFeature = {
+  id?: string | number;
+  geometry?: GeoJSON.Geometry | null;
+  properties?: Record<string, unknown> | null;
+};
+
+export const fetchOsOpenMapLocalBuildingAtPoint = async (
+  point: LngLat,
+  options: { fetchImpl?: typeof fetch; signal?: AbortSignal; renderHeightMeters?: number } = {},
+): Promise<ProviderFootprintFeature[]> => {
+  const query = new URLSearchParams({
+    where: '1=1',
+    geometry: `${point.lng},${point.lat}`,
+    geometryType: 'esriGeometryPoint',
+    inSR: '4326',
+    outSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects',
+    outFields: 'OBJECTID,ID,FEATCODE,ESRIUKCASTID',
+    returnGeometry: 'true',
+    f: 'geojson',
+  });
+  const response = await (options.fetchImpl ?? fetch)(`${OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL}?${query.toString()}`, {
+    signal: options.signal,
+  });
+  if (!response.ok) throw new Error(`${OS_OPENMAP_LOCAL_SOURCE} returned ${response.status}`);
+  const payload = await response.json() as { features?: OsOpenMapLocalFeature[] };
+  return (payload.features ?? []).flatMap((feature) => {
+    const geometry = feature.geometry;
+    if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) return [];
+    const properties = feature.properties ?? {};
+    const sourceId = properties.ESRIUKCASTID ?? properties.ID ?? properties.OBJECTID ?? feature.id;
+    if (sourceId === undefined || sourceId === null) return [];
+    const providerFeatureId = `${OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX}${String(sourceId)}`;
+    return [{
+      id: providerFeatureId,
+      properties: {
+        ...properties,
+        render_height: options.renderHeightMeters ?? 5,
+        swingsphere_provider_source: OS_OPENMAP_LOCAL_SOURCE,
+        swingsphere_provider_attribution: OS_OPENMAP_LOCAL_ATTRIBUTION,
+      },
+      geometry,
+      source: 'os-openmap-local-buildings',
+      sourceLayer: 'building',
+    } satisfies ProviderFootprintFeature];
+  });
+};
 
 export type SupplementalBuildingFootprintResponse = {
   type: 'FeatureCollection';
@@ -34,10 +92,18 @@ export const fetchSupplementalBuildingFootprints = async (args: {
   center: LngLat;
   radiusMeters: number;
   maxFeatures?: number;
+  signal?: AbortSignal;
 }): Promise<SupplementalBuildingFootprintResponse> => {
-  const response = await fetch('/api/admin/building-footprints/supplemental', {
+  const controller = new AbortController();
+  const relayAbort = () => controller.abort(args.signal?.reason);
+  args.signal?.addEventListener('abort', relayAbort, { once: true });
+  if (args.signal?.aborted) relayAbort();
+  const timer = setTimeout(() => controller.abort(new Error('Supplemental building request timed out.')), 45_000);
+  try {
+  const response = await adminFetch('/api/admin/building-footprints/supplemental', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: controller.signal,
     body: JSON.stringify({
       listingId: args.listingId,
       lat: args.center.lat,
@@ -50,7 +116,11 @@ export const fetchSupplementalBuildingFootprints = async (args: {
     const message = await response.text().catch(() => '');
     throw new Error(message || `Supplemental building provider returned ${response.status}`);
   }
-  return response.json();
+  return await response.json();
+  } finally {
+    clearTimeout(timer);
+    args.signal?.removeEventListener('abort', relayAbort);
+  }
 };
 
 export const filterSupplementalBuildingFeatures = (

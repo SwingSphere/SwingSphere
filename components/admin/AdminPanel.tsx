@@ -146,7 +146,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 api.getOrganizations(),
                 api.getOrganizationRelationships(),
                 api.getOrganizationVenueRelationships(),
-                api.getBuildingAssets(),
+                api.getAdminBuildingAssets(),
                 api.getEventSeries(),
                 api.getClubBrands(),
                 api.getResorts(),

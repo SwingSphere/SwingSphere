@@ -33,6 +33,10 @@ export type BuildingVerificationEvidenceRecord = {
   version: 1;
   listingId: string;
   venueId: string | null;
+  /** Immutable snapshot of the physical-location inputs used for this run. */
+  inputSnapshotHash?: string;
+  verificationEngineVersion?: string;
+  runId?: string;
   listingName: string;
   normalizedAddress: string;
   canonicalCoordinate: { lat: number; lng: number };
@@ -54,11 +58,24 @@ export type BuildingVerificationEvidenceRecord = {
   scoreMargin: number | null;
   acceptanceReasons: string[];
   rejectionReasons: string[];
+  /** Legacy inline review field. New reviews are append-only review events. */
   review?: {
     disposition: BuildingReviewDisposition;
     reviewedAt: string;
     note?: string;
   };
+};
+
+export type BuildingVerificationReviewEvent = {
+  version: 1;
+  id: string;
+  listingId: string;
+  evidenceEvaluatedAt: string;
+  evidenceSnapshotHash?: string;
+  disposition: BuildingReviewDisposition;
+  reviewedAt: string;
+  reviewedBy?: string;
+  note?: string;
 };
 
 export const latestBuildingEvidenceByListing = (

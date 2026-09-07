@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node", "vite/client"] },
+  "include": [
+    "lib/buildingVerificationPipeline.ts",
+    "lib/buildingVerification.ts",
+    "lib/buildingShadowAudit.ts",
+    "lib/buildingAddressResolver.ts",
+    "lib/listingLocationValidation.ts",
+    "lib/listingLocationQuality.ts",
+    "lib/addressParsing.ts",
+    "lib/buildingStaleAssetAudit.ts",
+    "lib/buildingPersistenceGuard.ts",
+    "lib/buildingAssetSupabase.ts",
+    "lib/buildingAssetHistory.ts",
+    "lib/buildingNeighborhoodFusion.ts",
+    "scripts/audit-location-quality.ts",
+    "scripts/benchmark-building-verification.ts",
+    "tests/buildingVerification.test.ts"
+  ]
+}

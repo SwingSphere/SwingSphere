@@ -1,49 +1,87 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { listSavedEntities, removeSavedEntity, saveEntity } from '../../../lib/profile/profileService';
+import type { SavedEntity, SavedEntityType } from '../../../lib/profile/profileTypes';
+import { useAppStore } from '../../../store/appStore';
+import { useDeviceExperience } from '../../device/DeviceExperienceContext';
 
-const STORAGE_KEY = 'swingsphere:dev-mobile:saved-listings';
-
-const readSavedIds = (): string[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-  } catch {
-    return [];
-  }
-};
+const MOBILE_SAVED_CHANGED_EVENT = 'swingsphere:mobile-saved-changed';
 
 export const useDevMobileSaved = () => {
-  const [savedIds, setSavedIds] = useState<string[]>(readSavedIds);
+  const navigate = useNavigate();
+  const { toPath } = useDeviceExperience();
+  const { currentUser, isAuthLoading, addToast } = useAppStore();
+  const [savedEntities, setSavedEntities] = useState<SavedEntity[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(currentUser));
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!currentUser) {
+      setSavedEntities([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const saved = await listSavedEntities(currentUser.id);
+      setSavedEntities(saved);
+      setError(null);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load your saved places.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
-    const onStorage = () => setSavedIds(readSavedIds());
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('swingsphere:dev-mobile-saved', onStorage);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('swingsphere:dev-mobile-saved', onStorage);
-    };
-  }, []);
+    void refresh();
+  }, [refresh]);
 
-  const toggleSaved = useCallback((listingId: string) => {
-    setSavedIds((current) => {
-      const next = current.includes(listingId)
-        ? current.filter((id) => id !== listingId)
-        : [...current, listingId];
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event('swingsphere:dev-mobile-saved'));
-      } catch (error) {
-        console.warn('Unable to persist Dev Mobile saved listings', error);
+  useEffect(() => {
+    const onSavedChanged = () => void refresh();
+    window.addEventListener(MOBILE_SAVED_CHANGED_EVENT, onSavedChanged);
+    return () => window.removeEventListener(MOBILE_SAVED_CHANGED_EVENT, onSavedChanged);
+  }, [refresh]);
+
+  const savedIds = useMemo(() => savedEntities.map((item) => item.entityId), [savedEntities]);
+
+  const toggleSaved = useCallback(async (listingId: string, entityType: Extract<SavedEntityType, 'club' | 'event'>) => {
+    if (isAuthLoading) return;
+    if (!currentUser) {
+      navigate(`${toPath('/account')}?intent=save`);
+      return;
+    }
+
+    const existing = savedEntities.find((item) => item.entityId === listingId && item.entityType === entityType);
+    try {
+      if (existing) {
+        await removeSavedEntity(currentUser.id, existing.id);
+        setSavedEntities((current) => current.filter((item) => item.id !== existing.id));
+        addToast({ message: 'Removed from your private saved library.', type: 'success' });
+      } else {
+        const created = await saveEntity(currentUser.id, entityType, listingId);
+        setSavedEntities((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+        addToast({ message: 'Saved privately to your SwingSphere account.', type: 'success' });
       }
-      return next;
-    });
-  }, []);
+      window.dispatchEvent(new Event(MOBILE_SAVED_CHANGED_EVENT));
+      setError(null);
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : 'Unable to update your saved places.';
+      setError(message);
+      addToast({ message, type: 'error' });
+    }
+  }, [addToast, currentUser, isAuthLoading, navigate, savedEntities, toPath]);
 
   return {
+    savedEntities,
     savedIds,
+    isLoading: isLoading || isAuthLoading,
+    error,
     isSaved: (listingId: string) => savedIds.includes(listingId),
     toggleSaved,
+    refresh,
   };
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useContext, createContext, useRef, useCallback, useMemo, useEffect } from 'react';
 import type { AppState, Toast, TimeLens } from '../types';
 import type { User } from '../data/mockUsers';
-import * as api from '../lib/api';
+import { getPublicTagCategories, getPublicTags } from '../lib/taxonomySupabase';
 import { supabase } from '../lib/supabase';
 import { getCloudflareImageUrl } from '../lib/media/getCloudflareImageUrl';
 
@@ -267,7 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const fetchTags: AppState['fetchTags'] = useCallback(async () => {
     try {
-      const [tagsData, categoriesData] = await Promise.all([api.getTags(), api.getTagCategories()]);
+      const [tagsData, categoriesData] = await Promise.all([getPublicTags(), getPublicTagCategories()]);
       setTags(tagsData);
       setTagCategories(categoriesData);
     } catch {

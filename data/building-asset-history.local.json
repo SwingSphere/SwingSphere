@@ -1,0 +1,76 @@
+[
+  {
+    "version": 1,
+    "id": "building-history-club-lussuria-bangkok-1788731882093",
+    "listingId": "club-lussuria-bangkok",
+    "venueId": null,
+    "action": "create",
+    "occurredAt": "2026-09-06T21:58:01.577Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-lussuria-bangkok",
+      "venueId": null,
+      "normalizedAddress": "785 5 pracha uthit road bangkok bangkok 10310 thailand",
+      "latitude": 13.769349848946902,
+      "longitude": 100.59203821603026,
+      "visibility": "public_exact",
+      "coordinateProvenance": "official-site+official-venue-map",
+      "coordinateConfidence": 0.99,
+      "validatedAt": "2026-09-06T20:45:07.000Z",
+      "hash": "bvs-fe1aaf33"
+    },
+    "evidenceEvaluatedAt": "2026-09-06T21:57:51.270Z",
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-lussuria-bangkok",
+      "listingId": "club-lussuria-bangkok",
+      "version": 1,
+      "provider": {
+        "source": "Microsoft Global ML Building Footprints",
+        "featureIds": [
+          "microsoft-ml:footprint-v2-14of6w4-1-4"
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              100.59222682199835,
+              13.769417392188387
+            ],
+            [
+              100.59185763035033,
+              13.769435612390382
+            ],
+            [
+              100.59184961006218,
+              13.769282305717368
+            ],
+            [
+              100.5922188017102,
+              13.769264085503423
+            ],
+            [
+              100.59222682199835,
+              13.769417392188387
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-09-06T21:58:00.820Z",
+        "updatedAt": "2026-09-06T21:58:01.577Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  }
+]

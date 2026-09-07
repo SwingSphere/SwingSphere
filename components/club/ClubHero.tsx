@@ -18,6 +18,7 @@ type ClubHeroProps = {
   tags: string[];
   backgroundImageUrl?: string;
   logoImageUrl?: string;
+  mediaPresentation?: 'default' | 'monochrome';
   thumbnails?: string[];
   onQuickEdit?: (field: ClubQuickEditField) => void;
 };
@@ -37,6 +38,7 @@ const ClubHero: React.FC<ClubHeroProps> = ({
   tags,
   backgroundImageUrl,
   logoImageUrl,
+  mediaPresentation = 'default',
   thumbnails = [],
   onQuickEdit,
 }) => {
@@ -44,9 +46,15 @@ const ClubHero: React.FC<ClubHeroProps> = ({
   const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
   const uniqueThumbs = Array.from(new Set(thumbnails.filter(Boolean)));
   const hasLogo = Boolean(logoImageUrl);
+  const monochrome = mediaPresentation === 'monochrome' || clubId === 'club-epicure-cape-town';
 
   return (
-    <HeroContainer title={clubName} imageUrl={backgroundImageUrl} heightClassName={uiTokens.hero.clubHeight}>
+    <HeroContainer
+      title={clubName}
+      imageUrl={backgroundImageUrl}
+      imageClassName={monochrome ? 'grayscale contrast-[1.08]' : ''}
+      heightClassName={uiTokens.hero.clubHeight}
+    >
       <PublicFeedbackHeroBadge targetType="club" sourceId={clubId} onClick={() => document.getElementById(`club-feedback-${clubId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
       {showQuickControls ? (
         <div className="absolute right-4 top-4 z-30 flex flex-wrap justify-end gap-2 sm:right-6 sm:top-6">
@@ -61,7 +69,7 @@ const ClubHero: React.FC<ClubHeroProps> = ({
           }`}
         >
           {logoImageUrl ? (
-            <img src={logoImageUrl} alt={`${clubName} logo`} className="h-full w-full object-contain" />
+            <img src={logoImageUrl} alt={`${clubName} logo`} className={`h-full w-full object-contain ${monochrome ? 'grayscale contrast-[1.12]' : ''}`} />
           ) : (
             <span>{initials(clubName)}</span>
           )}

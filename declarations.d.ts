@@ -29,6 +29,13 @@ declare module 'virtual:swingsphere-public-listings' {
   export default listings;
 }
 
+declare module 'virtual:swingsphere-public-street-view-building-assets' {
+  import type { BuildingAsset } from './types';
+
+  const buildingAssets: BuildingAsset[];
+  export default buildingAssets;
+}
+
 declare module 'virtual:swingsphere-schema-version' {
   const schemaVersion: {
     version: string;

@@ -69,13 +69,13 @@ const BuildingVerificationAuditPanel: React.FC<Props> = ({
             <div className="mt-1 text-[11px] text-zinc-500">No automatic writes · {report.totals.publicListings} public listings classified</div>
           </div>
           <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-sky-100">
-            {report.totals.needsProviderEvaluation} exceptions
+            {report.entries.filter((entry) => !['has_verified_shared_asset', 'private_approximate_skipped', 'automatic_verification_candidate'].includes(entry.category)).length} exceptions
           </span>
         </div>
       </summary>
       <div className="space-y-3 border-t border-white/10 px-4 py-4">
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-white/10 bg-black/20 p-2"><div className="text-lg font-black text-zinc-100">{report.totals.publicExactAddressListingsEvaluated}</div><div className="text-[9px] uppercase tracking-wide text-zinc-600">Exact-address audited</div></div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-2"><div className="text-lg font-black text-zinc-100">{report.totals.publicExactAddressListingsEvaluated}</div><div className="text-[9px] uppercase tracking-wide text-zinc-600">Exact-address catalog</div></div>
           <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] p-2"><div className="text-lg font-black text-emerald-200">{report.totals.hasVerifiedOrSharedAsset}</div><div className="text-[9px] uppercase tracking-wide text-emerald-300/60">Preserved assets</div></div>
           <div className="rounded-lg border border-rose-400/20 bg-rose-400/[0.06] p-2"><div className="text-lg font-black text-rose-200">{report.totals.pinLocationReview + report.totals.noUsableProviderFootprint}</div><div className="text-[9px] uppercase tracking-wide text-rose-300/60">Location / geometry</div></div>
         </div>

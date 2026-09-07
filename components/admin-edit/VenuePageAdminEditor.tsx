@@ -39,7 +39,7 @@ const VenuePageAdminEditor: React.FC<VenuePageAdminEditorProps> = ({
   useEffect(() => {
     if (!currentUser || !canEdit || !isEditing || !isAdvancedEditorOpen) return;
     let active = true;
-    api.getBuildingAssets()
+    api.getAdminBuildingAssets()
       .then((assets) => {
         if (active) setBuildingAssets(assets);
       })

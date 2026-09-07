@@ -27,12 +27,12 @@ const resolveImageCandidate = (candidate: unknown): string | null => {
   return null;
 };
 
-const getMediaAssetUrl = (listing: Listing | null | undefined, role: 'logo' | 'hero') => {
+const getMediaAssetUrl = (listing: Listing | null | undefined, role: 'logo' | 'hero' | 'flyer') => {
   const asset = listing?.mediaAssets?.find((item) => item.role === role);
   if (!asset) return null;
   return getCloudflareImageUrl({
     externalId: asset.external_id,
-    variant: role === 'logo' ? 'logosquare' : 'herocard',
+    variant: role === 'logo' ? 'logosquare' : role === 'flyer' ? 'flyercard' : 'herocard',
   });
 };
 
@@ -43,11 +43,19 @@ export const getListingLogoUrl = (listing: Listing | null | undefined): string =
     ?? LISTING_IMAGE_FALLBACK;
 };
 
+export const getListingFlyerUrl = (listing: Listing | null | undefined): string => {
+  if (!listing) return LISTING_IMAGE_FALLBACK;
+  return getMediaAssetUrl(listing, 'flyer')
+    ?? resolveImageCandidate(listing.headerImageUrl)
+    ?? getListingLogoUrl(listing);
+};
+
 export const getListingHeroUrl = (listing: Listing | null | undefined): string => {
   if (!listing) return LISTING_IMAGE_FALLBACK;
   return getMediaAssetUrl(listing, 'hero')
     ?? resolveImageCandidate(listing.headerImageUrl)
     ?? resolveImageCandidate(listing.galleryImageUrls?.[0])
+    ?? (listing.type === 'event' ? getListingFlyerUrl(listing) : null)
     ?? getListingLogoUrl(listing);
 };
 

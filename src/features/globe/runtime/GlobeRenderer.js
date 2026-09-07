@@ -686,6 +686,12 @@ export class GlobeRenderer {
       this.activityState.selectionAnimation ||
       this.activityState.transition;
     if (interactive) return { policy: "interactive", targetFps: 60 };
+    // The mobile/tablet entrance intentionally drives the idle-motion system at
+    // a large multiplier. Treat that cinematic spin as foreground animation so
+    // it is never quantized to the normal 30 FPS ambient cadence.
+    if (this.idleMotionSpeedMultiplier > 1.001) {
+      return { policy: "cinematic", targetFps: 60 };
+    }
     if (this.activityState.ambientAnimation) return { policy: "ambient", targetFps: 30 };
 
     const reducedMotion = Boolean(this.config.motion?.reduced);

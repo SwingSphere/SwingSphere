@@ -5,7 +5,7 @@ import { communityHostVenueRelationships } from './communityHostSeed';
 const isClub = (listing: Listing): listing is ClubData => listing.type === 'club';
 
 export const mockOrganizationVenueRelationships: OrganizationVenueRelationship[] = [
-  ...mockData.filter(isClub).map((club) => ({
+  ...mockData.filter(isClub).map((club): OrganizationVenueRelationship => ({
     // SEMv2 Phase 1 compatibility ID. Replace with persisted relationship IDs when relationships are stored independently.
     id: `rel-${club.id}-primary-venue`,
     organizationId: `org-${club.id}`,

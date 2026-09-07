@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
+  Box,
   CornerDownRight,
   Crosshair,
   ExternalLink,
@@ -11,6 +12,7 @@ import {
   MousePointer2,
   Plus,
   Redo2,
+  RefreshCw,
   RotateCcw,
   Save,
   Scissors,
@@ -135,6 +137,47 @@ type CountryOption = {
   hasAsset: boolean;
   neighborIntersectionCount: number;
   neighborIntersectionCountryIds: string[];
+};
+
+type BorderSurfaceDiagnostics = {
+  borderSource?: string;
+  renderedPointCount?: number;
+  anchorRaycastCount?: number;
+  fallbackAnchorCount?: number;
+  subdivisionCount?: number;
+  unsafeSegmentSplitCount?: number;
+  acceptedClearanceViolationCount?: number;
+  maxTerrainDeviation?: number;
+  maxClearanceDeficit?: number;
+  linePathCount?: number;
+};
+
+type BorderSurfaceRuntime = {
+  mount: () => Promise<BorderSurfaceRuntime>;
+  dispose: () => void;
+  selectCountry: (countryId: string) => unknown;
+  setCountrySelectionEventOnly: (enabled: boolean) => void;
+  setCountryLayerVisibility: (visibility: { atlasHighlight?: boolean; geoJsonBorders?: boolean }) => void;
+  setCountryVectorBorderVisible: (visible: boolean) => void;
+  setCountryVectorBorderRenderableCountries: (countries: string[]) => void;
+  setCountryVectorBorderPreview: (preview: {
+    countryId: string;
+    ringId: string;
+    coordinates: Coord[];
+    edgeKinds: EdgeKind[];
+  } | null) => void;
+  setLandCoastlineAuditLayers: (layers: Record<string, boolean>) => void;
+  projectBorderSurgeryControls: (coordinates: Coord[], width: number, height: number) => Array<{ index: number; x?: number; y?: number; depth?: number; visible?: boolean }>;
+  borderSurgeryScreenPointToLandGeo: (x: number, y: number, width: number, height: number) => { lng: number; lat: number } | null;
+  setBorderSurgeryOrbitEnabled: (enabled: boolean) => void;
+  setNavigationPose: (pose: {
+    lng: number;
+    lat: number;
+    distance?: number;
+    zoomIntent?: number;
+    followVisualLandRotation?: boolean;
+  }) => unknown;
+  getCountryVectorBorderDiagnostics: () => BorderSurfaceDiagnostics | null;
 };
 
 const copyCoord = (coord: Coord): Coord => [coord[0], coord[1]];
@@ -370,11 +413,620 @@ const findNeighborIntersections = (
   return result;
 };
 
+type CoastMatch = {
+  pathId: string;
+  pathIndex: number;
+  segmentIndex: number;
+  t: number;
+  point: Coord;
+  distance: number;
+};
+
+type RepairIssue = {
+  edgeIndex: number;
+  kind: 'rim-deviation' | 'transition';
+  severity: 'warning' | 'error';
+  message: string;
+  point: Coord;
+};
+
+const nearestCoastMatch = (coord: Coord, coastlines?: PhysicalCoastlines | null, preferredPathId?: string): CoastMatch | null => {
+  let best: CoastMatch | null = null;
+  const paths = coastlines?.paths ?? [];
+  for (let pathIndex = 0; pathIndex < paths.length; pathIndex += 1) {
+    const path = paths[pathIndex];
+    if (preferredPathId && path.id !== preferredPathId) continue;
+    const coordinates = path.simplifiedCoordinates ?? [];
+    for (let segmentIndex = 0; segmentIndex < coordinates.length - 1; segmentIndex += 1) {
+      const rawA = coordinates[segmentIndex];
+      const rawB = coordinates[segmentIndex + 1];
+      const a: Coord = [unwrapLongitudeNear(rawA[0], coord[0]), rawA[1]];
+      const b: Coord = [unwrapLongitudeNear(rawB[0], a[0]), rawB[1]];
+      const candidate = pointSegmentProjection(coord, a, b);
+      if (!best || candidate.distance < best.distance) {
+        best = {
+          pathId: path.id,
+          pathIndex,
+          segmentIndex,
+          t: candidate.t,
+          point: candidate.point,
+          distance: candidate.distance,
+        };
+      }
+    }
+  }
+  return best;
+};
+
+const solveContinuousCoastPath = (start: Coord, end: Coord, coastlines?: PhysicalCoastlines | null): Coord[] | null => {
+  const paths = coastlines?.paths ?? [];
+  let best: { score: number; coordinates: Coord[] } | null = null;
+  for (let pathIndex = 0; pathIndex < paths.length; pathIndex += 1) {
+    const path = paths[pathIndex];
+    const coordinates = path.simplifiedCoordinates ?? [];
+    if (coordinates.length < 2) continue;
+    const startMatch = nearestCoastMatch(start, { paths: [path] });
+    const endMatch = nearestCoastMatch(end, { paths: [path] });
+    if (!startMatch || !endMatch) continue;
+    const from = startMatch.segmentIndex;
+    const to = endMatch.segmentIndex;
+    const forward = from <= to;
+    const intermediate = forward
+      ? coordinates.slice(from + 1, to + 1)
+      : coordinates.slice(to + 1, from + 1).reverse();
+    const aligned: Coord[] = [copyCoord(startMatch.point)];
+    let referenceLongitude = startMatch.point[0];
+    for (const coordinate of intermediate) {
+      const next: Coord = [unwrapLongitudeNear(coordinate[0], referenceLongitude), coordinate[1]];
+      aligned.push(next);
+      referenceLongitude = next[0];
+    }
+    aligned.push([
+      unwrapLongitudeNear(endMatch.point[0], referenceLongitude),
+      endMatch.point[1],
+    ]);
+    const deduped = aligned.filter((coordinate, index) => index === 0 || !coordEqual(coordinate, aligned[index - 1]));
+    const endpointPenalty = startMatch.distance + endMatch.distance;
+    const pathLength = deduped.slice(1).reduce((sum, coordinate, index) => sum + Math.hypot(
+      coordinate[0] - deduped[index][0],
+      coordinate[1] - deduped[index][1],
+    ), 0);
+    const directLength = Math.max(0.001, Math.hypot(end[0] - start[0], end[1] - start[1]));
+    const detourPenalty = Math.max(0, pathLength - directLength * 5) * 0.2;
+    const score = endpointPenalty + detourPenalty;
+    if (!best || score < best.score) best = { score, coordinates: deduped };
+  }
+  if (!best || best.coordinates.length < 2) return null;
+  const maxControls = 72;
+  if (best.coordinates.length <= maxControls) return best.coordinates;
+  const sampled: Coord[] = [];
+  for (let index = 0; index < maxControls; index += 1) {
+    const sourceIndex = Math.round((index / (maxControls - 1)) * (best.coordinates.length - 1));
+    const coordinate = best.coordinates[sourceIndex];
+    if (!sampled.length || !coordEqual(sampled[sampled.length - 1], coordinate)) sampled.push(copyCoord(coordinate));
+  }
+  return sampled;
+};
+
+const autoFixBoundary = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: PhysicalCoastlines | null): EditorSnapshot => {
+  if (nodes.length < 3) return { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+  const rebuiltNodes: Coord[] = [];
+  const rebuiltKinds: EdgeKind[] = [];
+
+  for (let edgeIndex = 0; edgeIndex < nodes.length; edgeIndex += 1) {
+    const start = nodes[edgeIndex];
+    const end = nodes[(edgeIndex + 1) % nodes.length];
+    const midpoint: Coord = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
+    const startCoast = nearestCoastMatch(start, coastlines);
+    const middleCoast = nearestCoastMatch(midpoint, coastlines);
+    const endCoast = nearestCoastMatch(end, coastlines);
+    const span = Math.max(0.001, Math.hypot(end[0] - start[0], end[1] - start[1]));
+    const inferredCoast = Boolean(
+      startCoast && middleCoast && endCoast
+      && startCoast.pathId === middleCoast.pathId
+      && middleCoast.pathId === endCoast.pathId
+      && Math.max(startCoast.distance, middleCoast.distance, endCoast.distance) <= clamp(span * 0.18, 0.12, 0.7)
+    );
+    const shouldFollowCoast = edgeKinds[edgeIndex] === 'coastline' || inferredCoast;
+
+    if (!rebuiltNodes.length) rebuiltNodes.push(copyCoord(start));
+    if (shouldFollowCoast) {
+      const solved = solveContinuousCoastPath(start, end, coastlines);
+      if (solved && solved.length >= 2) {
+        const directLength = span;
+        const routeLength = solved.slice(1).reduce((sum, coordinate, index) => sum + Math.hypot(
+          coordinate[0] - solved[index][0], coordinate[1] - solved[index][1],
+        ), 0);
+        if (routeLength <= Math.max(directLength * 8, directLength + 2.5)) {
+          rebuiltNodes[rebuiltNodes.length - 1] = copyCoord(solved[0]);
+          for (let index = 1; index < solved.length; index += 1) {
+            rebuiltNodes.push(copyCoord(solved[index]));
+            rebuiltKinds.push('coastline');
+          }
+          continue;
+        }
+      }
+    }
+
+    rebuiltNodes.push(copyCoord(end));
+    rebuiltKinds.push('political');
+  }
+
+  if (rebuiltNodes.length > 1 && coordEqual(rebuiltNodes[0], rebuiltNodes[rebuiltNodes.length - 1])) rebuiltNodes.pop();
+  while (rebuiltKinds.length > rebuiltNodes.length) rebuiltKinds.pop();
+  while (rebuiltKinds.length < rebuiltNodes.length) rebuiltKinds.push('political');
+
+  // Remove small inland zig-zags while preserving coast controls and meaningful corners.
+  let simplifiedNodes = rebuiltNodes.map(copyCoord);
+  let simplifiedKinds = [...rebuiltKinds];
+  let changed = true;
+  for (let pass = 0; pass < 3 && changed && simplifiedNodes.length > 3; pass += 1) {
+    changed = false;
+    for (let index = simplifiedNodes.length - 1; index >= 0; index -= 1) {
+      if (simplifiedNodes.length <= 3) break;
+      const previous = (index - 1 + simplifiedNodes.length) % simplifiedNodes.length;
+      const next = (index + 1) % simplifiedNodes.length;
+      if (simplifiedKinds[previous] === 'coastline' || simplifiedKinds[index] === 'coastline') continue;
+      const a = simplifiedNodes[previous];
+      const b = simplifiedNodes[index];
+      const c = simplifiedNodes[next];
+      const chord = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (chord < 0.001) continue;
+      const deviation = pointSegmentProjection(b, a, c).distance;
+      const incoming = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const outgoing = Math.hypot(c[0] - b[0], c[1] - b[1]);
+      const tinyDetour = incoming + outgoing <= chord * 1.12;
+      if (deviation <= clamp(chord * 0.055, 0.025, 0.22) && tinyDetour) {
+        simplifiedNodes.splice(index, 1);
+        simplifiedKinds.splice(index, 1);
+        simplifiedKinds[previous > index ? previous - 1 : previous] = 'political';
+        changed = true;
+      }
+    }
+  }
+
+  return { nodes: simplifiedNodes, edgeKinds: simplifiedKinds };
+};
+
+const buildRepairIssues = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: PhysicalCoastlines | null): RepairIssue[] => {
+  const issues: RepairIssue[] = [];
+  if (nodes.length < 2) return issues;
+  for (let edgeIndex = 0; edgeIndex < nodes.length; edgeIndex += 1) {
+    const start = nodes[edgeIndex];
+    const end = nodes[(edgeIndex + 1) % nodes.length];
+    const kind = edgeKinds[edgeIndex] ?? 'political';
+    if (kind === 'coastline') {
+      const samples: Coord[] = [
+        start,
+        [start[0] * 0.75 + end[0] * 0.25, start[1] * 0.75 + end[1] * 0.25],
+        [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2],
+        [start[0] * 0.25 + end[0] * 0.75, start[1] * 0.25 + end[1] * 0.75],
+        end,
+      ];
+      const deviations = samples.map((sample) => nearestCoastMatch(sample, coastlines)?.distance ?? Number.POSITIVE_INFINITY);
+      const maxDeviation = Math.max(...deviations);
+      const span = Math.hypot(end[0] - start[0], end[1] - start[1]);
+      const tolerance = clamp(span * 0.08, 0.06, 0.45);
+      if (maxDeviation > tolerance) {
+        issues.push({
+          edgeIndex,
+          kind: 'rim-deviation',
+          severity: maxDeviation > tolerance * 2.5 ? 'error' : 'warning',
+          message: `Coast edge departs from the physical rim by ${maxDeviation.toFixed(2)}° at its worst sample.`,
+          point: samples[deviations.indexOf(maxDeviation)],
+        });
+      }
+    }
+    const previousKind = edgeKinds[(edgeIndex - 1 + edgeKinds.length) % edgeKinds.length] ?? 'political';
+    if (previousKind !== kind) {
+      const coastMatch = nearestCoastMatch(start, coastlines);
+      if (coastMatch && coastMatch.distance > 0.12) {
+        issues.push({
+          edgeIndex,
+          kind: 'transition',
+          severity: coastMatch.distance > 0.4 ? 'error' : 'warning',
+          message: `Coast/terrain transition is ${coastMatch.distance.toFixed(2)}° away from the physical rim.`,
+          point: copyCoord(start),
+        });
+      }
+    }
+  }
+  return issues;
+};
+
 const snapshotKey = (snapshot: EditorSnapshot) => JSON.stringify(snapshot);
+
+const formatModelUnits = (value?: number) => Number.isFinite(value)
+  ? Number(value).toFixed(4)
+  : '—';
+
+const BorderSurfacePreview: React.FC<{
+  countryId: string;
+  ringId: string;
+  nodes: Coord[];
+  edgeKinds: EdgeKind[];
+  baselineNodes: Coord[];
+  baselineEdgeKinds: EdgeKind[];
+  selectedNode: number | null;
+  selectedEdge: number | null;
+  onSelectNode: (index: number) => void;
+  onSelectEdge: (index: number) => void;
+  onBeginNodeDrag: (index: number) => void;
+  onMoveNodeDrag: (index: number, coordinate: Coord) => void;
+  onEndNodeDrag: (index: number) => void;
+  onAttachSelectedNodeToRim: () => void;
+  onAttachSelectedEdgeToRim: () => void;
+  onAttachSelectedEdgeToTerrain: () => void;
+  onFixTransition: () => void;
+  onAutoRepair: () => void;
+  onAutoFixAll: () => void;
+}> = ({
+  countryId,
+  ringId,
+  nodes,
+  edgeKinds,
+  baselineNodes,
+  baselineEdgeKinds,
+  selectedNode,
+  selectedEdge,
+  onSelectNode,
+  onSelectEdge,
+  onBeginNodeDrag,
+  onMoveNodeDrag,
+  onEndNodeDrag,
+  onAttachSelectedNodeToRim,
+  onAttachSelectedEdgeToRim,
+  onAttachSelectedEdgeToTerrain,
+  onFixTransition,
+  onAutoRepair,
+  onAutoFixAll,
+}) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRef = useRef<BorderSurfaceRuntime | null>(null);
+  const lastFramedSelectionRef = useRef('');
+  const [readyRevision, setReadyRevision] = useState(0);
+  const [diagnostics, setDiagnostics] = useState<BorderSurfaceDiagnostics | null>(null);
+  const [showMeshRim, setShowMeshRim] = useState(true);
+  const [showSavedVersion, setShowSavedVersion] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [controlHandles, setControlHandles] = useState<Array<{ index: number; x: number; y: number; visible: boolean }>>([]);
+  const [draggingNode, setDraggingNode] = useState<number | null>(null);
+  const previewNodes = showSavedVersion && baselineNodes.length >= 3 ? baselineNodes : nodes;
+  const previewEdgeKinds = showSavedVersion && baselineNodes.length >= 3 ? baselineEdgeKinds : edgeKinds;
+
+  const center = useMemo<Coord>(() => {
+    if (!previewNodes.length) return [0, 0];
+    return [
+      previewNodes.reduce((sum, coordinate) => sum + coordinate[0], 0) / previewNodes.length,
+      previewNodes.reduce((sum, coordinate) => sum + coordinate[1], 0) / previewNodes.length,
+    ];
+  }, [previewNodes]);
+
+  const reframe = useCallback(() => {
+    runtimeRef.current?.setNavigationPose({
+      lng: center[0],
+      lat: center[1],
+      distance: 3.4,
+      followVisualLandRotation: false,
+    });
+  }, [center]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let mountedRuntime: BorderSurfaceRuntime | null = null;
+
+    const mount = async () => {
+      try {
+        const module = await import('../../src/features/globe/runtime/index.js');
+        if (cancelled || !containerRef.current) return;
+        const SwingSphereGlobe = module.SwingSphereGlobe as unknown as new (
+          container: HTMLElement,
+          options?: Record<string, unknown>,
+        ) => BorderSurfaceRuntime;
+        const runtime = new SwingSphereGlobe(containerRef.current, {
+          events: [],
+          activityRegions: [],
+          config: {
+            assets: {
+              landModel: '/assets/globe/models/land.glb',
+              oceanModel: '/assets/globe/models/ocean.glb',
+              countryIdTexture: '/assets/globe/textures/countryIdTexture_v4.png',
+              visualCountryAtlas: '/assets/globe/textures/visualCountryAtlas_v4.png',
+              countryLookup: '/assets/globe/data/countryLookup.json',
+            },
+            alignment: {
+              longitudeOffsetDeg: 1.5,
+              latitudeOffsetDeg: 0,
+              pinLongitudeOffsetDeg: 1.5,
+              pinLatitudeOffsetDeg: 0,
+            },
+            renderer: {
+              antialias: true,
+              maxPixelRatio: 1.5,
+              controlsMinDistance: 3.4,
+              controlsMaxDistance: 8.04,
+            },
+            selection: {
+              enabledEventOnly: false,
+              highlightVisible: false,
+              useSphereRaycast: true,
+              highlightMaskSource: 'id',
+            },
+            idleMotion: { idleRotationSpeed: 0 },
+            renderEffects: {
+              bloom: false,
+              innerAtmosphere: false,
+              outerAtmosphere: false,
+            },
+            hybridCountryBorders: {
+              enabled: true,
+              manifestUrl: '/assets/globe/borders/hybrid/v1/manifest.json',
+              sourceMode: 'hybrid',
+            },
+            countryVectorBorders: {
+              enabled: true,
+              url: '/geo/countries.json',
+              coreWidth: 3,
+              opacity: 1,
+              glowWidth: 8,
+              glowOpacity: 0.12,
+              speed: 0,
+              coreVisible: true,
+              glowVisible: true,
+              animationEnabled: false,
+              hoverEnabled: false,
+              palette: ['#ff465c', '#ff465c'],
+              radiusScale: 1.009,
+              conformToLand: true,
+              shorelineSnap: true,
+              shorelineSnapStrength: 1,
+              maxSegmentDegrees: 0.55,
+              experimentalPhysicalCoastlineSnap: true,
+              physicalCoastlineUrl: '/assets/globe/coastlines/physical-coastlines-v1.json',
+              maxShorelineSnapDegrees: 5,
+              shorelineSnapExcludedCountryKeys: ['ISR'],
+              preparedCacheSize: 2,
+            },
+            countryVectorActivity: { enabled: false },
+            countryGeoJson: { enabled: false },
+            landCoastlineAudit: {
+              enabled: true,
+              url: '/assets/globe/models/audit/land-coastline-diagnostics.json',
+              layers: {
+                terrainWallRim: true,
+                radialSilhouette: false,
+                openEdges: false,
+                nonManifoldEdges: false,
+                rejectedInternalEdges: false,
+              },
+            },
+          },
+          onReady: () => {
+            if (!cancelled) setReadyRevision((revision) => revision + 1);
+          },
+          onError: (nextError: unknown) => {
+            if (!cancelled) setRuntimeError(nextError instanceof Error ? nextError.message : String(nextError));
+          },
+        });
+        runtimeRef.current = runtime;
+        mountedRuntime = runtime;
+        await runtime.mount();
+      } catch (nextError) {
+        if (!cancelled) setRuntimeError(nextError instanceof Error ? nextError.message : String(nextError));
+      }
+    };
+
+    void mount();
+    return () => {
+      cancelled = true;
+      if (runtimeRef.current === mountedRuntime) runtimeRef.current = null;
+      mountedRuntime?.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || !readyRevision || previewNodes.length < 3) return;
+    runtime.setCountrySelectionEventOnly(false);
+    runtime.setCountryLayerVisibility({ atlasHighlight: false, geoJsonBorders: false });
+    runtime.setCountryVectorBorderVisible(true);
+    runtime.setCountryVectorBorderRenderableCountries([countryId]);
+    runtime.setCountryVectorBorderPreview({
+      countryId,
+      ringId,
+      coordinates: closeRing(previewNodes),
+      edgeKinds: previewEdgeKinds,
+    });
+    const frameKey = `${readyRevision}:${countryId}:${ringId}`;
+    if (lastFramedSelectionRef.current !== frameKey) {
+      lastFramedSelectionRef.current = frameKey;
+      runtime.selectCountry(countryId);
+      reframe();
+    }
+    const timer = window.setTimeout(() => {
+      setDiagnostics(runtime.getCountryVectorBorderDiagnostics());
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [countryId, previewEdgeKinds, previewNodes, readyRevision, reframe, ringId]);
+
+  useEffect(() => {
+    runtimeRef.current?.setLandCoastlineAuditLayers({ terrainWallRim: showMeshRim });
+  }, [readyRevision, showMeshRim]);
+
+  useEffect(() => {
+    if (!readyRevision) return;
+    let cancelled = false;
+    const refresh = () => {
+      if (cancelled || !containerRef.current || !runtimeRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const projected = runtimeRef.current.projectBorderSurgeryControls(previewNodes, rect.width, rect.height)
+        .filter((handle) => handle.visible && Number.isFinite(handle.x) && Number.isFinite(handle.y))
+        .map((handle) => ({ index: handle.index, x: Number(handle.x), y: Number(handle.y), visible: true }));
+      setControlHandles(projected);
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 80);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [previewNodes, readyRevision]);
+
+  const moveSurfaceNode = (event: React.PointerEvent<HTMLButtonElement>, index: number) => {
+    if (draggingNode !== index || showSavedVersion || !containerRef.current || !runtimeRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const hit = runtimeRef.current.borderSurgeryScreenPointToLandGeo(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+      rect.width,
+      rect.height,
+    );
+    if (!hit) return;
+    onMoveNodeDrag(index, [hit.lng, hit.lat]);
+  };
+
+  const endSurfaceNodeDrag = (event: React.PointerEvent<HTMLButtonElement>, index: number) => {
+    if (draggingNode !== index) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    runtimeRef.current?.setBorderSurgeryOrbitEnabled(true);
+    setDraggingNode(null);
+    onEndNodeDrag(index);
+  };
+
+  const handleByIndex = new Map(controlHandles.map((handle) => [handle.index, handle]));
+  const selectedEdgeKind = selectedEdge != null ? edgeKinds[selectedEdge] ?? 'political' : null;
+  const previewSourceActive = diagnostics?.borderSource?.startsWith('border-surgery-preview:') ?? false;
+  const hasHardSurfaceIssue = Boolean(
+    diagnostics
+    && (!previewSourceActive
+      || (diagnostics.fallbackAnchorCount ?? 0) > 0
+      || (diagnostics.unsafeSegmentSplitCount ?? 0) > 0
+      || (diagnostics.acceptedClearanceViolationCount ?? 0) > 0),
+  );
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#080b10] shadow-2xl shadow-black/30">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-4">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200/70">
+            <Box className="h-4 w-4" />
+            Primary surgery view
+          </div>
+          <h2 className="mt-1 text-lg font-black text-white">Edit directly on land.glb</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">
+            This is the final globe fit. Click a red control span to select it, or drag a control handle directly across the mesh. Orange is the physical terrain-to-wall rim.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setShowSavedVersion((value) => !value)} disabled={!baselineNodes.length} className={`inline-flex h-9 items-center rounded-lg border px-3 text-[10px] font-black uppercase tracking-[0.12em] transition ${showSavedVersion ? 'border-amber-300/25 bg-amber-500/10 text-amber-100' : 'border-white/10 bg-white/[0.035] text-gray-300 hover:bg-white/[0.07]'} disabled:opacity-35`}>
+            {showSavedVersion ? 'Saved A' : 'Working B'}
+          </button>
+          <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[10px] font-bold text-gray-300">
+            <input type="checkbox" checked={showMeshRim} onChange={(event) => setShowMeshRim(event.target.checked)} className="h-4 w-4 accent-orange-400" />
+            Mesh rim
+          </label>
+          <button type="button" onClick={reframe} disabled={!readyRevision} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[10px] font-bold text-gray-300 hover:bg-white/[0.07] disabled:opacity-35">
+            <RefreshCw className="h-3.5 w-3.5" /> Reframe
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.08] bg-black/25 px-4 py-3">
+        <div className="mr-2 min-w-[190px] text-[10px] leading-4 text-gray-500">
+          {selectedNode != null ? <><span className="font-black text-white">Point {selectedNode}</span> selected · drag the white handle to reposition it on the mesh.</> : selectedEdge != null ? <><span className="font-black text-white">Edge {selectedEdge}</span> selected · {selectedEdgeKind === 'coastline' ? 'coastline' : 'terrain'}.</> : <>Click a control edge or handle in the 3D view to begin.</>}
+        </div>
+        <button type="button" disabled={showSavedVersion || selectedNode == null} onClick={onAttachSelectedNodeToRim} className="rounded-lg border border-cyan-300/15 bg-cyan-500/[0.06] px-3 py-2 text-[10px] font-black text-cyan-100 hover:bg-cyan-500/[0.1] disabled:opacity-30">Attach Point to Rim</button>
+        <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onAttachSelectedEdgeToRim} className="rounded-lg border border-red-300/15 bg-red-500/[0.07] px-3 py-2 text-[10px] font-black text-red-100 hover:bg-red-500/[0.12] disabled:opacity-30">Attach Coast to Rim</button>
+        <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onAttachSelectedEdgeToTerrain} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-[10px] font-black text-gray-200 hover:bg-white/[0.07] disabled:opacity-30">Attach to Terrain</button>
+        <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onFixTransition} className="rounded-lg border border-amber-300/15 bg-amber-500/[0.05] px-3 py-2 text-[10px] font-black text-amber-100 hover:bg-amber-500/[0.09] disabled:opacity-30">Fix Coast → Land</button>
+        <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onAutoRepair} className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-300 disabled:opacity-30">Try Automatic Repair</button>
+        <button type="button" disabled={showSavedVersion || nodes.length < 3} onClick={onAutoFixAll} className="rounded-lg border border-cyan-300/20 bg-cyan-500/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-cyan-100 hover:bg-cyan-500/[0.14] disabled:opacity-30">Auto Fix Whole Border</button>
+      </div>
+
+      <div className="relative h-[680px] bg-[radial-gradient(circle_at_50%_45%,rgba(85,91,105,0.14),rgba(3,5,8,0.96)_66%)]">
+        <div ref={containerRef} className="absolute inset-0" />
+        {!showSavedVersion ? (
+          <svg className="absolute inset-0 z-10 h-full w-full" viewBox={`0 0 ${Math.max(1, containerRef.current?.clientWidth ?? 1)} ${Math.max(1, containerRef.current?.clientHeight ?? 1)}`} preserveAspectRatio="none">
+            {nodes.map((_, index) => {
+              const a = handleByIndex.get(index);
+              const b = handleByIndex.get((index + 1) % nodes.length);
+              if (!a || !b) return null;
+              const selected = selectedEdge === index;
+              return (
+                <line
+                  key={`surface-edge-${index}`}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke={selected ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.001)'}
+                  strokeWidth={selected ? 5 : 18}
+                  strokeLinecap="round"
+                  className="cursor-pointer pointer-events-auto"
+                  onPointerDown={(event) => { event.stopPropagation(); onSelectEdge(index); }}
+                />
+              );
+            })}
+          </svg>
+        ) : null}
+        {!showSavedVersion ? controlHandles.map((handle) => {
+          const active = selectedNode === handle.index;
+          return (
+            <button
+              key={`surface-control-${handle.index}`}
+              type="button"
+              title={`Control point ${handle.index}`}
+              className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border shadow-lg ${active ? 'h-5 w-5 border-white bg-red-500 shadow-red-500/30' : 'h-3.5 w-3.5 border-red-200 bg-[#0b0d11] shadow-black/50'} cursor-grab active:cursor-grabbing`}
+              style={{ left: handle.x, top: handle.y }}
+              onClick={(event) => { event.stopPropagation(); onSelectNode(handle.index); }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                runtimeRef.current?.setBorderSurgeryOrbitEnabled(false);
+                setDraggingNode(handle.index);
+                onSelectNode(handle.index);
+                onBeginNodeDrag(handle.index);
+              }}
+              onPointerMove={(event) => moveSurfaceNode(event, handle.index)}
+              onPointerUp={(event) => endSurfaceNodeDrag(event, handle.index)}
+              onPointerCancel={(event) => endSurfaceNodeDrag(event, handle.index)}
+            />
+          );
+        }) : null}
+        {!readyRevision && !runtimeError ? (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs font-bold uppercase tracking-[0.18em] text-gray-600">Loading production surface…</div>
+        ) : null}
+        {runtimeError ? (
+          <div className="absolute inset-0 grid place-items-center p-8 text-center text-sm text-red-200/80">{runtimeError}</div>
+        ) : null}
+        <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-white/10 bg-black/65 px-3 py-2 text-[10px] leading-5 text-gray-400 backdrop-blur-xl">
+          <div><span className="text-red-300">Red</span> · working border</div>
+          <div><span className="text-orange-300">Orange</span> · physical bevel rim</div>
+          <div className="text-gray-600">Drag to orbit · wheel to inspect the bevel</div>
+        </div>
+        <div className={`pointer-events-none absolute right-4 top-4 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] backdrop-blur-xl ${hasHardSurfaceIssue ? 'border-red-300/25 bg-red-500/12 text-red-200' : 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200'}`}>
+          {diagnostics && !previewSourceActive ? 'Preview not active' : hasHardSurfaceIssue ? 'Surface warning' : diagnostics ? 'Surface resolved' : 'Analyzing'}
+        </div>
+      </div>
+
+      <div className="grid gap-px border-t border-white/[0.08] bg-white/[0.06] sm:grid-cols-2 xl:grid-cols-4">
+        <SurfaceMetric label="Raycast anchors" value={diagnostics?.anchorRaycastCount ?? '—'} />
+        <SurfaceMetric label="Fallback misses" value={diagnostics?.fallbackAnchorCount ?? '—'} alert={Boolean(diagnostics?.fallbackAnchorCount)} />
+        <SurfaceMetric label="Unsafe splits" value={diagnostics?.unsafeSegmentSplitCount ?? '—'} alert={Boolean(diagnostics?.unsafeSegmentSplitCount)} />
+        <SurfaceMetric label="Clearance violations" value={diagnostics?.acceptedClearanceViolationCount ?? '—'} alert={Boolean(diagnostics?.acceptedClearanceViolationCount)} />
+        <SurfaceMetric label="Rendered points" value={diagnostics?.renderedPointCount ?? '—'} />
+        <SurfaceMetric label="Terrain subdivisions" value={diagnostics?.subdivisionCount ?? '—'} />
+        <SurfaceMetric label="Max terrain deviation" value={formatModelUnits(diagnostics?.maxTerrainDeviation)} />
+        <SurfaceMetric label="Max clearance deficit" value={formatModelUnits(diagnostics?.maxClearanceDeficit)} />
+      </div>
+    </section>
+  );
+};
 
 const BorderSurgeryPage: React.FC = () => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ index: number; before: EditorSnapshot } | null>(null);
+  const surfaceDragRef = useRef<{ index: number; before: EditorSnapshot } | null>(null);
   const panRef = useRef<{ pointerId: number; start: Coord; center: Coord; lonSpan: number; latSpan: number } | null>(null);
   const [manifest, setManifest] = useState<BorderManifest | null>(null);
   const [geojson, setGeojson] = useState<GeoCollection | null>(null);
@@ -406,6 +1058,7 @@ const BorderSurgeryPage: React.FC = () => {
   const [crossingSummaries, setCrossingSummaries] = useState<Record<string, CrossingSummary>>({});
   const [hybridRingsByCountry, setHybridRingsByCountry] = useState<Record<string, Coord[][]>>({});
   const [crossingScanActive, setCrossingScanActive] = useState(false);
+  const [issueCursor, setIssueCursor] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -680,6 +1333,7 @@ const BorderSurgeryPage: React.FC = () => {
   }, [coastlines, editorBounds, editorCenterLongitude, projection.latSpan, projection.lonSpan, showCoast]);
 
   const intersections = useMemo(() => findIntersections(nodes), [nodes]);
+  const repairIssues = useMemo(() => buildRepairIssues(nodes, edgeKinds, coastlines), [coastlines, edgeKinds, nodes]);
   const currentSnapshot = useMemo<EditorSnapshot>(() => ({ nodes, edgeKinds }), [edgeKinds, nodes]);
   const dirty = useMemo(() => snapshotKey(currentSnapshot) !== snapshotKey(baseline), [baseline, currentSnapshot]);
 
@@ -978,11 +1632,163 @@ const BorderSurgeryPage: React.FC = () => {
     setMessage(mode === 'coastline' ? 'Node snapped to physical land.glb coastline.' : 'Node snapped to neighboring political edge.');
   };
 
+  const attachSelectedNodeToMeshRim = () => {
+    if (selectedNodes.length !== 1) return;
+    const index = selectedNodes[0];
+    const match = nearestCoastMatch(nodes[index], coastlines);
+    if (!match) {
+      setMessage('No physical mesh rim could be resolved for this control point.');
+      return;
+    }
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const nextNodes = nodes.map((coord, nodeIndex) => nodeIndex === index ? copyCoord(match.point) : copyCoord(coord));
+    pushSnapshot(before, { nodes: nextNodes, edgeKinds: [...edgeKinds] });
+    setMessage(`Attached control point ${index} directly to the physical land.glb rim.`);
+  };
+
+  const beginSurfaceNodeDrag = (index: number) => {
+    surfaceDragRef.current = {
+      index,
+      before: { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] },
+    };
+    setSelectedNodes([index]);
+    setSelectedEdge(null);
+  };
+
+  const moveSurfaceNodeDrag = (index: number, coordinate: Coord) => {
+    if (surfaceDragRef.current?.index !== index) return;
+    setNodes((current) => current.map((coord, nodeIndex) => nodeIndex === index ? copyCoord(coordinate) : coord));
+  };
+
+  const endSurfaceNodeDrag = (index: number) => {
+    const drag = surfaceDragRef.current;
+    if (!drag || drag.index !== index) return;
+    surfaceDragRef.current = null;
+    const after = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    if (snapshotKey(drag.before) !== snapshotKey(after)) {
+      setUndoStack((stack) => [...stack.slice(-79), drag.before]);
+      setRedoStack([]);
+      setMessage(`Moved control point ${index} directly on the land.glb surface.`);
+    }
+  };
+
+  const selectSurfaceNode = (index: number) => {
+    setSelectedNodes([index]);
+    setSelectedEdge(null);
+    setToolMode('select');
+  };
+
+  const selectSurfaceEdge = (index: number) => {
+    setSelectedEdge(index);
+    setSelectedNodes([]);
+    setToolMode('select');
+  };
+
   const setSelectedEdgeKind = (kind: EdgeKind) => {
     if (selectedEdge == null) return;
     const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
     const nextKinds = edgeKinds.map((value, index) => index === selectedEdge ? kind : value);
     pushSnapshot(before, { nodes: nodes.map(copyCoord), edgeKinds: nextKinds });
+  };
+
+  const snapSelectedEdgeToMeshRim = () => {
+    if (selectedEdge == null || nodes.length < 2) return;
+    const startIndex = selectedEdge;
+    const endIndex = (selectedEdge + 1) % nodes.length;
+    const solved = solveContinuousCoastPath(nodes[startIndex], nodes[endIndex], coastlines);
+    if (!solved || solved.length < 2) {
+      setMessage('No continuous physical mesh-rim route could be resolved for this edge.');
+      return;
+    }
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const interior = solved.slice(1, -1);
+    const nextNodes = nodes.map(copyCoord);
+    if (selectedEdge === nodes.length - 1) nextNodes.push(...interior.map(copyCoord));
+    else nextNodes.splice(selectedEdge + 1, 0, ...interior.map(copyCoord));
+    const replacementEdgeCount = interior.length + 1;
+    const nextKinds = [...edgeKinds];
+    nextKinds.splice(selectedEdge, 1, ...Array.from({ length: replacementEdgeCount }, () => 'coastline' as const));
+    nextNodes[startIndex] = copyCoord(solved[0]);
+    const adjustedEndIndex = selectedEdge === nodes.length - 1 ? 0 : selectedEdge + replacementEdgeCount;
+    nextNodes[adjustedEndIndex] = copyCoord(solved[solved.length - 1]);
+    pushSnapshot(before, { nodes: nextNodes, edgeKinds: nextKinds });
+    setSelectedEdge(selectedEdge);
+    setSelectedNodes([]);
+    setMessage(`Rebuilt edge ${selectedEdge} along one continuous land.glb mesh-rim path with ${replacementEdgeCount} coastline segment${replacementEdgeCount === 1 ? '' : 's'}.`);
+  };
+
+  const drapeSelectedEdgeToTerrain = () => {
+    if (selectedEdge == null) return;
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const nextKinds = edgeKinds.map((kind, index) => index === selectedEdge ? 'political' as const : kind);
+    pushSnapshot(before, { nodes: nodes.map(copyCoord), edgeKinds: nextKinds });
+    setMessage(`Edge ${selectedEdge} is terrain-conforming. The live surface renderer will raycast and adaptively subdivide it over hills, peaks, and valleys.`);
+  };
+
+  const repairSelectedTransition = () => {
+    if (selectedEdge == null || nodes.length < 3) return;
+    const previousEdge = (selectedEdge - 1 + edgeKinds.length) % edgeKinds.length;
+    const nextEdge = (selectedEdge + 1) % edgeKinds.length;
+    const candidateNodeIndices = new Set<number>();
+    if (edgeKinds[previousEdge] !== edgeKinds[selectedEdge]) candidateNodeIndices.add(selectedEdge);
+    if (edgeKinds[nextEdge] !== edgeKinds[selectedEdge]) candidateNodeIndices.add((selectedEdge + 1) % nodes.length);
+    if (!candidateNodeIndices.size) {
+      setMessage('This edge does not currently contain a coast-to-terrain transition.');
+      return;
+    }
+    const nextNodes = nodes.map(copyCoord);
+    let repaired = 0;
+    for (const nodeIndex of candidateNodeIndices) {
+      const match = nearestCoastMatch(nextNodes[nodeIndex], coastlines);
+      if (!match) continue;
+      nextNodes[nodeIndex] = copyCoord(match.point);
+      repaired += 1;
+    }
+    if (!repaired) {
+      setMessage('No physical rim was found for this transition.');
+      return;
+    }
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    pushSnapshot(before, { nodes: nextNodes, edgeKinds: [...edgeKinds] });
+    setMessage(`Repaired ${repaired} coast-to-terrain junction${repaired === 1 ? '' : 's'} by anchoring the shared node to the physical mesh rim.`);
+  };
+
+  const autoRepairSelectedEdge = () => {
+    if (selectedEdge == null) return;
+    if (edgeKinds[selectedEdge] === 'coastline') snapSelectedEdgeToMeshRim();
+    else {
+      const previousEdge = (selectedEdge - 1 + edgeKinds.length) % edgeKinds.length;
+      const nextEdge = (selectedEdge + 1) % edgeKinds.length;
+      if (edgeKinds[previousEdge] === 'coastline' || edgeKinds[nextEdge] === 'coastline') repairSelectedTransition();
+      else drapeSelectedEdgeToTerrain();
+    }
+  };
+
+  const autoFixWholeBorder = () => {
+    if (nodes.length < 3) return;
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const repaired = autoFixBoundary(nodes, edgeKinds, coastlines);
+    if (snapshotKey(before) === snapshotKey(repaired)) {
+      setMessage('Auto Fix inspected the whole border but did not find a safer shoreline or straightening change to apply.');
+      return;
+    }
+    pushSnapshot(before, repaired);
+    setSelectedNodes([]);
+    setSelectedEdge(null);
+    setMessage(`Auto Fix rebuilt shoreline spans against the physical mesh rim and simplified obvious inland zig-zags. Controls: ${nodes.length} → ${repaired.nodes.length}. Review Working B before saving.`);
+  };
+
+  const focusRepairIssue = (requestedIndex: number) => {
+    if (!repairIssues.length) return;
+    const index = ((requestedIndex % repairIssues.length) + repairIssues.length) % repairIssues.length;
+    const issue = repairIssues[index];
+    setIssueCursor(index);
+    setSelectedEdge(issue.edgeIndex);
+    setSelectedNodes([]);
+    setToolMode('select');
+    setViewCenter(copyCoord(issue.point));
+    setViewZoom((zoom) => Math.max(zoom, 5));
+    setMessage(issue.message);
   };
 
   const resetWorking = () => {
@@ -1097,6 +1903,35 @@ const BorderSurgeryPage: React.FC = () => {
             </button>
           </div>
         </header>
+
+        <BorderSurfacePreview
+          countryId={countryId}
+          ringId={ringId}
+          nodes={nodes}
+          edgeKinds={edgeKinds}
+          baselineNodes={baseline.nodes}
+          baselineEdgeKinds={baseline.edgeKinds}
+          selectedNode={selectedNodes.length === 1 ? selectedNodes[0] : null}
+          selectedEdge={selectedEdge}
+          onSelectNode={selectSurfaceNode}
+          onSelectEdge={selectSurfaceEdge}
+          onBeginNodeDrag={beginSurfaceNodeDrag}
+          onMoveNodeDrag={moveSurfaceNodeDrag}
+          onEndNodeDrag={endSurfaceNodeDrag}
+          onAttachSelectedNodeToRim={attachSelectedNodeToMeshRim}
+          onAttachSelectedEdgeToRim={snapSelectedEdgeToMeshRim}
+          onAttachSelectedEdgeToTerrain={drapeSelectedEdgeToTerrain}
+          onFixTransition={repairSelectedTransition}
+          onAutoRepair={autoRepairSelectedEdge}
+          onAutoFixAll={autoFixWholeBorder}
+        />
+
+        <div className="mb-3 mt-5 flex items-center justify-between gap-3 px-1">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Topology reference</div>
+            <div className="mt-1 text-xs text-gray-600">Use the 2D editor for country topology, adding/removing controls, and neighbor-boundary checks. Selections stay synchronized with the 3D surgery view above.</div>
+          </div>
+        </div>
 
         <div className="grid min-h-[760px] grid-cols-1 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_330px]">
           <aside className="rounded-2xl border border-white/10 bg-[#090c11]/90 p-4 shadow-xl shadow-black/20">
@@ -1248,6 +2083,17 @@ const BorderSurgeryPage: React.FC = () => {
                 );
               })}
 
+              {repairIssues.map((issue, index) => {
+                const point = geoToScreen(issue.point, projection);
+                const active = index === issueCursor;
+                return (
+                  <g key={`repair-issue-${issue.kind}-${issue.edgeIndex}-${index}`} transform={`translate(${point[0]} ${point[1]})`} className="pointer-events-none">
+                    <circle r={active ? 11 : 8} fill={issue.severity === 'error' ? 'rgba(255,59,83,0.2)' : 'rgba(251,191,36,0.16)'} stroke={issue.severity === 'error' ? '#ff465c' : '#fbbf24'} strokeWidth={active ? 3 : 2} />
+                    <circle r="2.5" fill="#fff" />
+                  </g>
+                );
+              })}
+
               {nodes.map((coord, index) => {
                 const point = geoToScreen(coord, projection);
                 const selected = selectedNodes.includes(index);
@@ -1291,6 +2137,28 @@ const BorderSurgeryPage: React.FC = () => {
                 <button type="button" disabled={selectedEdge == null} onClick={() => setSelectedEdgeKind('coastline')} className={`rounded-lg border px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] ${selectedEdge != null && edgeKinds[selectedEdge] === 'coastline' ? 'border-red-300/35 bg-red-500/15 text-red-100' : 'border-white/10 bg-white/[0.03] text-gray-500'} disabled:opacity-30`}>Coastline</button>
                 <button type="button" disabled={selectedEdge == null} onClick={() => setSelectedEdgeKind('political')} className={`rounded-lg border px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] ${selectedEdge != null && edgeKinds[selectedEdge] === 'political' ? 'border-white/25 bg-white/[0.07] text-white' : 'border-white/10 bg-white/[0.03] text-gray-500'} disabled:opacity-30`}>Terrain</button>
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <ActionButton icon={<Waves className="h-4 w-4" />} label="Snap segment to mesh rim" disabled={selectedEdge == null} onClick={snapSelectedEdgeToMeshRim} />
+                <ActionButton icon={<Activity className="h-4 w-4" />} label="Drape to terrain" disabled={selectedEdge == null} onClick={drapeSelectedEdgeToTerrain} />
+                <ActionButton icon={<GitMerge className="h-4 w-4" />} label="Repair transition" disabled={selectedEdge == null} onClick={repairSelectedTransition} />
+                <ActionButton icon={<Crosshair className="h-4 w-4" />} label="Auto repair edge" disabled={selectedEdge == null} onClick={autoRepairSelectedEdge} />
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/20 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-gray-200">Conformance issues</div>
+                  <div className="mt-1 text-[10px] text-gray-500">Rim departures and coast/terrain junctions that need review.</div>
+                </div>
+                <div className={`rounded-lg border px-2 py-1 font-mono text-[10px] ${repairIssues.length ? 'border-amber-300/20 bg-amber-500/[0.06] text-amber-200' : 'border-emerald-300/15 bg-emerald-500/[0.05] text-emerald-200'}`}>{repairIssues.length}</div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <button type="button" disabled={!repairIssues.length} onClick={() => focusRepairIssue(issueCursor - 1)} className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-2 text-[10px] font-bold text-gray-400 hover:bg-white/[0.07] disabled:opacity-30">Previous</button>
+                <button type="button" disabled={!repairIssues.length} onClick={() => focusRepairIssue(issueCursor)} className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-2 text-[10px] font-bold text-gray-300 hover:bg-white/[0.07] disabled:opacity-30">Fit issue</button>
+                <button type="button" disabled={!repairIssues.length} onClick={() => focusRepairIssue(issueCursor + 1)} className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-2 text-[10px] font-bold text-gray-400 hover:bg-white/[0.07] disabled:opacity-30">Next</button>
+              </div>
+              {repairIssues.length ? <div className="mt-2 text-[10px] leading-4 text-amber-100/65">{repairIssues[Math.min(issueCursor, repairIssues.length - 1)]?.message}</div> : <div className="mt-2 text-[10px] text-emerald-200/55">No 2D conformance warnings detected.</div>}
             </div>
 
             <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/20 p-3">
@@ -1305,9 +2173,9 @@ const BorderSurgeryPage: React.FC = () => {
               <ol className="mt-2 space-y-1.5">
                 <li>1. Drag a bad node or press Delete to remove a divot.</li>
                 <li>2. Use Add Point to split an edge exactly where needed.</li>
-                <li>3. Snap coastline nodes to cyan physical shoreline segments.</li>
-                <li>4. Mark coastline edges red so the runtime preserves their physical radius.</li>
-                <li>5. Save & regenerate, then verify on the live globe.</li>
+                <li>3. Select a coastal edge and use Snap segment to mesh rim to rebuild it along one continuous cyan shoreline path.</li>
+                <li>4. Mark inland edges Terrain; the runtime raycasts and adaptively drapes them over peaks, slopes, and valleys.</li>
+                <li>5. Repair coast/terrain transitions, step through conformance issues, then verify Working B against Saved A below.</li>
               </ol>
             </div>
 
@@ -1338,6 +2206,13 @@ const BorderSurgeryPage: React.FC = () => {
     </div>
   );
 };
+
+const SurfaceMetric: React.FC<{ label: string; value: React.ReactNode; alert?: boolean }> = ({ label, value, alert = false }) => (
+  <div className="bg-[#090c11] px-4 py-3">
+    <div className="text-[9px] font-black uppercase tracking-[0.16em] text-gray-600">{label}</div>
+    <div className={`mt-1 font-mono text-sm font-bold ${alert ? 'text-red-300' : 'text-gray-200'}`}>{value}</div>
+  </div>
+);
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; active?: boolean; disabled?: boolean; onClick: () => void }> = ({ icon, label, active = false, disabled = false, onClick }) => (
   <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${active ? 'border-red-300/30 bg-red-500/15 text-red-100' : 'border-white/10 bg-white/[0.035] text-gray-400 hover:bg-white/[0.075] hover:text-white'} disabled:opacity-30`}>

@@ -74,12 +74,22 @@ const sameCoordinate = (a: number[], b: number[]): boolean =>
 
 const canonicalRotation = (tokens: string[]): string => {
   if (!tokens.length) return '';
-  let best = '';
-  for (let index = 0; index < tokens.length; index += 1) {
-    const candidate = [...tokens.slice(index), ...tokens.slice(0, index)].join(';');
-    if (!best || candidate < best) best = candidate;
+  // Booth's minimum rotation: linear comparisons rather than allocating every
+  // rotated 20,000-vertex ring. Include the separator in lexical comparison to
+  // preserve the existing v2 fingerprint ordering when one token is a prefix.
+  const values = tokens.map((token) => `${token};`);
+  const length = values.length;
+  let left = 0; let right = 1; let offset = 0;
+  while (left < length && right < length && offset < length) {
+    const a = values[(left + offset) % length];
+    const b = values[(right + offset) % length];
+    if (a === b) { offset += 1; continue; }
+    if (a > b) { left += offset + 1; if (left <= right) left = right + 1; }
+    else { right += offset + 1; if (right <= left) right = left + 1; }
+    offset = 0;
   }
-  return best;
+  const start = Math.min(left, right);
+  return [...tokens.slice(start), ...tokens.slice(0, start)].join(';');
 };
 
 const canonicalRing = (ring: number[][]): string => {

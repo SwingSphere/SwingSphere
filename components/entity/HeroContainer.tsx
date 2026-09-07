@@ -5,6 +5,7 @@ import { LISTING_IMAGE_FALLBACK, handleListingImageError } from '../../lib/listi
 type HeroContainerProps = {
   title: string;
   imageUrl?: string;
+  imageClassName?: string;
   heightClassName?: string;
   children?: React.ReactNode;
 };
@@ -12,6 +13,7 @@ type HeroContainerProps = {
 const HeroContainer: React.FC<HeroContainerProps> = ({
   title,
   imageUrl,
+  imageClassName = '',
   heightClassName = uiTokens.hero.defaultHeight,
   children,
 }) => {
@@ -22,7 +24,7 @@ const HeroContainer: React.FC<HeroContainerProps> = ({
           src={imageUrl ?? LISTING_IMAGE_FALLBACK}
           onError={handleListingImageError}
           alt={title}
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover ${imageClassName}`}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-[#070707]/70 to-[#070707]/20" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-transparent to-black/55 lg:to-black/35" />

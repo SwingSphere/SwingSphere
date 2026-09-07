@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import maplibregl, { type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { ArrowLeft, CircleHelp, Copy, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeft, CircleHelp, Copy, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as api from '../../lib/api';
+import { adminFetch, adminFetchJson } from '../../lib/adminApi';
+import type { BuildingAssetHistoryEvent } from '../../lib/buildingAssetHistory';
+import { BUILDING_PERSISTENCE_POLICY_VERSION, createBuildingAssetRevision, createBuildingVerificationInputSnapshot } from '../../lib/buildingPersistenceGuard';
 import { isDevRouteEnabled } from '../../lib/devRoutes';
 import {
   formatListingPhysicalAddress,
@@ -37,15 +40,25 @@ import type {
 import { buildBuildingsSource, getBuildingsSourceId, venueArrival } from '../maps/venueArrival';
 import { swingMapStyle } from '../maps/mapStyle';
 import BuildingVerificationAuditPanel from './BuildingVerificationAuditPanel';
-import { inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
+import { buildingAddressBelongsToFootprint, inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
 import { geometryFingerprint, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
 import {
+  fetchOsOpenMapLocalBuildingAtPoint,
   fetchSupplementalBuildingFootprints,
-  filterSupplementalBuildingFeatures,
   MICROSOFT_BUILDING_ID_PREFIX,
   MICROSOFT_BUILDING_SOURCE,
-  primaryCoverageNeedsSupplement,
+  OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX,
+  OS_OPENMAP_LOCAL_SOURCE,
+  OS_OPENMAP_LOCAL_ATTRIBUTION,
 } from '../../lib/buildingFootprintSources';
+import { fuseBuildingNeighborhood } from '../../lib/buildingNeighborhoodFusion';
+import {
+  createGeneratedBuildingCandidate,
+  GENERATED_BUILDING_ID_PREFIX,
+  GENERATED_BUILDING_SOURCE,
+  isGeneratedBuildingFeatureId,
+  type GeneratedBuildingCandidate,
+} from '../../lib/buildingReconstruction';
 import type { BuildingCandidateEvidence, BuildingReviewDisposition, BuildingVerificationEvidenceRecord } from '../../lib/buildingVerificationEvidence';
 
 const DEFAULT_FEATURE_ID = '13581200';
@@ -59,10 +72,6 @@ const BUILDING_INSPECTOR_DIAGNOSTIC_LIMIT = 10000;
 const MAX_CONNECTED_PIECE_DIAGNOSTIC_POLYGONS = 250;
 const DEFAULT_NEIGHBORHOOD_RADIUS_METERS = 100;
 const EXPANDED_NEIGHBORHOOD_RADII_METERS = [150, 250] as const;
-const OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL = 'https://services.arcgis.com/qHLhLQrcvEnxjtPr/arcgis/rest/services/OS_OpenMap_Local_Buildings/FeatureServer/1/query';
-const OS_OPENMAP_LOCAL_SOURCE = 'Ordnance Survey OpenMap Local';
-const OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX = 'os-openmap-local:';
-const OS_OPENMAP_LOCAL_ATTRIBUTION = 'Contains OS data © Crown copyright and database right 2026';
 const BUILDING_VERIFICATION_MODE: 'shadow' | 'enabled' = 'shadow';
 type BuildingSourceMode = 'auto' | 'openfreemap' | 'microsoft';
 const BUILDING_SOURCE_MODE_ORDER: BuildingSourceMode[] = ['auto', 'openfreemap', 'microsoft'];
@@ -317,7 +326,7 @@ const selectedBuildingAddressCache = new Map<string, Omit<SelectedBuildingAddres
 const reverseGeocodeBuildingAddressDetailed = (
   lat: number,
   lng: number,
-  context: { listingId: string; footprintFingerprint?: string },
+  context: { listingId: string; footprintFingerprint?: string; signal?: AbortSignal },
 ): Promise<BuildingAddressResolution> => inspectorBuildingAddressResolver.resolveDetailed(lat, lng, context);
 
 type BuildingResolution = {
@@ -691,63 +700,6 @@ const formatListingAddress = (
   listing: Listing,
   collections: EntityCollections = {},
 ): string => formatListingPhysicalAddress(listing, collections);
-
-const isUnitedKingdomListing = (
-  listing: Listing,
-  collections: EntityCollections = {},
-): boolean => {
-  const country = getListingPhysicalAddress(listing, collections).country?.trim().toLowerCase();
-  return country === 'united kingdom' || country === 'uk' || country === 'great britain';
-};
-
-type OsOpenMapLocalFeature = {
-  id?: string | number;
-  geometry?: GeoJSON.Geometry | null;
-  properties?: Record<string, unknown> | null;
-};
-
-const fetchOsOpenMapLocalBuildingAtPoint = async (
-  point: { lng: number; lat: number },
-): Promise<MapGeoJSONFeature[]> => {
-  const query = new URLSearchParams({
-    where: '1=1',
-    geometry: `${point.lng},${point.lat}`,
-    geometryType: 'esriGeometryPoint',
-    inSR: '4326',
-    outSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects',
-    outFields: 'OBJECTID,ID,FEATCODE,ESRIUKCASTID',
-    returnGeometry: 'true',
-    f: 'geojson',
-  });
-  const response = await fetch(`${OS_OPENMAP_LOCAL_BUILDINGS_QUERY_URL}?${query.toString()}`);
-  if (!response.ok) {
-    throw new Error(`${OS_OPENMAP_LOCAL_SOURCE} returned ${response.status}`);
-  }
-  const payload = await response.json() as { features?: OsOpenMapLocalFeature[] };
-  return (payload.features ?? []).flatMap((feature) => {
-    const geometry = feature.geometry;
-    if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) return [];
-    const properties = feature.properties ?? {};
-    const sourceId = properties.ESRIUKCASTID ?? properties.ID ?? properties.OBJECTID ?? feature.id;
-    if (sourceId === undefined || sourceId === null) return [];
-    const providerFeatureId = `${OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX}${String(sourceId)}`;
-    return [{
-      type: 'Feature',
-      id: providerFeatureId,
-      properties: {
-        ...properties,
-        render_height: EXTRUDE_HEIGHT_METERS,
-        swingsphere_provider_source: OS_OPENMAP_LOCAL_SOURCE,
-        swingsphere_provider_attribution: OS_OPENMAP_LOCAL_ATTRIBUTION,
-      },
-      geometry,
-      source: 'os-openmap-local-buildings',
-      sourceLayer: SOURCE_LAYER,
-      state: {},
-    } as unknown as MapGeoJSONFeature];
-  });
-};
 
 const getListingCityLabel = (
   listing: Listing,
@@ -1617,19 +1569,26 @@ const rankWorkspaceAddressCandidates = async (
   point: { lng: number; lat: number },
   collections: EntityCollections,
   maxCandidates = 7,
+  signal?: AbortSignal,
 ): Promise<BuildingAddressIntelligenceCandidate[]> => {
   const listingAddress = getListingPhysicalAddress(listing, collections);
   const candidates: BuildingAddressIntelligenceCandidate[] = [];
   const buildings = workspace.buildings
-    .filter((building) => building.center && building.polygonIndices.length)
+    .filter((building) => (
+      building.center
+      && building.polygonIndices.length
+      && !building.providerFeatureIds.some((featureId) => isGeneratedBuildingFeatureId(featureId))
+    ))
     .slice(0, maxCandidates);
 
   for (const building of buildings) {
     const center = building.center;
     if (!center) continue;
+    if (signal?.aborted) break;
     const addressResolution = await reverseGeocodeBuildingAddressDetailed(center[1], center[0], {
       listingId: listing.id,
       footprintFingerprint: building.id,
+      signal,
     });
     const address = addressResolution.status === 'resolved' ? addressResolution.address : null;
     const geometry = getWorkspaceBuildingGeometry(workspace, building);
@@ -1682,11 +1641,12 @@ const classifyBuildingAddressCandidates = (
     pinToFootprintMeters: candidate.distanceMeters ?? Number.POSITIVE_INFINITY,
     pinToCentroidMeters: candidate.pinToCentroidMeters,
     address: candidate.address?.candidate ?? null,
+    addressScope: candidate.address && !buildingAddressBelongsToFootprint(candidate.address, candidate.geometry) ? 'nearby_object' as const : 'footprint' as const,
     addressLabel: candidate.address?.displayName ?? candidate.address?.primary ?? null,
   })), {
     listingAddress: getListingPhysicalAddress(listing, collections),
     locationConfidence: locationMeta?.confidence,
-    geocoderSource: locationMeta?.geocoderSource,
+    geocoderSource: locationMeta?.geocoderSource ?? locationMeta?.source,
     manuallyAdjusted: locationMeta?.manualAdjustment,
   });
   const bestCandidate = decision.candidate
@@ -2497,9 +2457,16 @@ const applySceneMeshStyles = (
     const isSelected = selectedPolygonIndices.has(entry.record.polygonIndex);
     const isHovered = entry.record.polygonIndex === hoveredPolygonIndex;
     const isSuggested = suggestedPolygonIndices.has(entry.record.polygonIndex);
+    const isGenerated = isGeneratedBuildingFeatureId(entry.record.providerFeatureId);
     const isDimmed = isolateSelected && hasSelection && !isSelected;
     const baseColor = new THREE.Color(
-      isSelected ? '#37d97a' : (isHovered || isSuggested) && !isDimmed ? '#f1c35a' : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
+      isSelected
+        ? '#37d97a'
+        : (isHovered || isSuggested) && !isDimmed
+          ? '#f1c35a'
+          : isGenerated
+            ? '#35d6f4'
+            : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
     );
     entry.material.color.copy(baseColor);
     entry.material.emissive.set(isSelected ? '#10301c' : (isHovered || isSuggested) && !isDimmed ? '#231c08' : '#000000');
@@ -2588,9 +2555,17 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const animationFrameRef = useRef<number | null>(null);
   const pendingSelectAllRef = useRef(false);
   const addressIntelligenceRunRef = useRef(0);
+  const venueLoadAbortRef = useRef<AbortController | null>(null);
   const featureIdInputRef = useRef(DEFAULT_FEATURE_ID);
   const [featureIdInput, setFeatureIdInput] = useState(DEFAULT_FEATURE_ID);
   const [resolution, setResolution] = useState<BuildingResolution | null>(null);
+  const venueLoadRunRef = useRef(0);
+  const [showAdvancedSidebar, setShowAdvancedSidebar] = useState(false);
+  useEffect(() => () => {
+    venueLoadRunRef.current += 1;
+    addressIntelligenceRunRef.current += 1;
+    venueLoadAbortRef.current?.abort(new Error('Building Inspector unmounted.'));
+  }, []);
   const [fragmentRecords, setFragmentRecords] = useState<FragmentRecord[]>([]);
   const [duplicateSummaries, setDuplicateSummaries] = useState<DuplicateSummary[]>([]);
   const [loadedFeatureCount, setLoadedFeatureCount] = useState(0);
@@ -2610,6 +2585,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [showGrid, setShowGrid] = useState(false);
   const [buildingSourceMode, setBuildingSourceMode] = useState<BuildingSourceMode>('auto');
   const [loadedBuildingSourceLabel, setLoadedBuildingSourceLabel] = useState('Not loaded');
+  const [generatedBuildingCandidate, setGeneratedBuildingCandidate] = useState<GeneratedBuildingCandidate | null>(null);
   const [streetReferenceSnapshot, setStreetReferenceSnapshot] = useState<StreetReferenceSnapshot | null>(null);
   const [streetReferenceStatus, setStreetReferenceStatus] = useState('Map ready');
   const [selectedBuildingAddress, setSelectedBuildingAddress] = useState<SelectedBuildingAddressState>({
@@ -2651,6 +2627,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [localVenues, setLocalVenues] = useState<VenueData[]>([]);
   const [localBuildingAssets, setLocalBuildingAssets] = useState<BuildingAsset[]>([]);
   const [buildingEvidenceRecords, setBuildingEvidenceRecords] = useState<BuildingVerificationEvidenceRecord[]>([]);
+  const [buildingAssetHistory, setBuildingAssetHistory] = useState<BuildingAssetHistoryEvent[]>([]);
   const listings = listingsProp ?? localListings;
   const venues = venuesProp ?? localVenues;
   const organizations = organizationsProp ?? EMPTY_ORGANIZATIONS;
@@ -2798,6 +2775,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const selectedPolygonRecords = useMemo(
     () => selectedPolygonIndices.map((index) => polygonRecords[index]).filter((record): record is PolygonRecord => Boolean(record)),
     [polygonRecords, selectedPolygonIndices],
+  );
+  const generatedPolygonIndices = useMemo(
+    () => polygonRecords
+      .filter((record) => isGeneratedBuildingFeatureId(record.providerFeatureId))
+      .map((record) => record.polygonIndex),
+    [polygonRecords],
   );
   const selectedSummary = useMemo(
     () => buildSelectionSummary(selectedPolygonRecords),
@@ -2967,13 +2950,20 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   }, [featureIdInput]);
 
   useEffect(() => {
-    if (embedded || listingsProp || buildingAssetsProp) return;
     let cancelled = false;
+    const evidencePromise = adminFetchJson<BuildingVerificationEvidenceRecord[]>('/api/admin/building-verification/evidence', { cache: 'no-store' })
+      .catch(() => []);
+    if (embedded || listingsProp || buildingAssetsProp) {
+      evidencePromise.then((nextEvidence) => {
+        if (!cancelled) setBuildingEvidenceRecords(Array.isArray(nextEvidence) ? nextEvidence : []);
+      });
+      return () => { cancelled = true; };
+    }
     Promise.all([
       api.getListings(),
       api.getVenues(),
-      api.getBuildingAssets(),
-      fetch('/api/admin/building-verification/evidence').then((response) => response.ok ? response.json() : []),
+      api.getAdminBuildingAssets(),
+      evidencePromise,
     ])
       .then(([nextListings, nextVenues, nextAssets, nextEvidence]) => {
         if (cancelled) return;
@@ -2989,10 +2979,21 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         setLocalBuildingAssets([]);
         setBuildingEvidenceRecords([]);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [buildingAssetsProp, embedded, listingsProp]);
+
+  useEffect(() => {
+    const ownerListingId = selectedVenueAsset?.listingId ?? selectedVenue?.id ?? null;
+    if (!ownerListingId || ownerListingId.startsWith('landmark-test-')) {
+      setBuildingAssetHistory([]);
+      return;
+    }
+    let cancelled = false;
+    api.getBuildingAssetHistory(ownerListingId)
+      .then((events) => { if (!cancelled) setBuildingAssetHistory(events); })
+      .catch(() => { if (!cancelled) setBuildingAssetHistory([]); });
+    return () => { cancelled = true; };
+  }, [selectedVenue?.id, selectedVenueAsset?.listingId, selectedVenueAsset?.capture.updatedAt]);
 
   useEffect(() => {
     const candidateIds = new Set(providerCandidates.map((candidate) => candidate.featureId));
@@ -3782,18 +3783,23 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       : providerStatus === 'footprints_address_unresolved'
         ? 'footprints_address_unresolved'
         : classification.outcome;
+    const inputSnapshot = createBuildingVerificationInputSnapshot(listing, semv2Collections);
+    const evaluatedAt = new Date().toISOString();
     const evidence: BuildingVerificationEvidenceRecord = {
       version: 1,
       listingId: listing.id,
       venueId: resolvedVenue?.id ?? null,
+      inputSnapshotHash: inputSnapshot?.hash,
+      verificationEngineVersion: BUILDING_PERSISTENCE_POLICY_VERSION,
+      runId: `${listing.id}:${evaluatedAt}`,
       listingName: listing.name,
-      normalizedAddress: normalizeAddressText(formatListingAddress(listing, semv2Collections)),
+      normalizedAddress: inputSnapshot?.normalizedAddress ?? normalizeAddressText(formatListingAddress(listing, semv2Collections)),
       canonicalCoordinate: center,
-      coordinateProvenance: locationMeta?.geocoderSource ?? (locationMeta?.manualAdjustment ? 'manual-adjustment' : null),
+      coordinateProvenance: locationMeta?.geocoderSource ?? locationMeta?.source ?? (locationMeta?.manualAdjustment ? 'manual-adjustment' : null),
       coordinateConfidence: locationMeta?.confidence ?? null,
-      evaluatedAt: new Date().toISOString(),
+      evaluatedAt,
       providerSnapshot: {
-        source: 'OpenFreeMap',
+        source: loadedBuildingSourceLabel || 'OpenFreeMap',
         status: providerStatus,
         searchRadiusMeters: workspace.radiusMeters,
         tileFeatureCount: workspace.providerTileFeatureCount,
@@ -3809,12 +3815,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       rejectionReasons: classification.autoAccept ? [] : classification.decision.reasons,
     };
     try {
-      const response = await fetch('/api/admin/building-verification/evidence/save', {
+      await adminFetchJson('/api/admin/building-verification/evidence/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ evidence }),
       });
-      if (!response.ok) throw new Error(await response.text());
       setBuildingEvidenceRecords((current) => [
         ...current.filter((record) => record.listingId !== evidence.listingId),
         evidence,
@@ -3831,8 +3836,9 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     initialWorkspace: WorkspaceGeometryResult;
     fragments: MapGeoJSONFeature[];
     center: { lng: number; lat: number };
+    signal?: AbortSignal;
   }): Promise<void> => {
-    const { listing, seedFeatureId, allFeatures, initialWorkspace, fragments, center } = args;
+    const { listing, seedFeatureId, allFeatures, initialWorkspace, fragments, center, signal } = args;
     const runId = ++addressIntelligenceRunRef.current;
     const resolvedVenue = getVenueForListing(listing, semv2Collections);
     const isApproximateOrPrivate = isApproximateLocation(listing)
@@ -3896,6 +3902,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         center,
         semv2Collections,
         maxCandidates,
+        signal,
       );
       if (runId !== addressIntelligenceRunRef.current) return;
       classification = classifyBuildingAddressCandidates(finalCandidates, listing, semv2Collections);
@@ -3949,8 +3956,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       featureIdInputRef.current = bestFeatureId;
       setStatus(`Address intelligence highlighted the best nearby candidate in gold for review: ${bestCandidate.address?.primary ?? bestCandidate.buildingId}.`);
     } else if (classification.status === 'mismatch' || classification.status === 'unconfirmed') {
-      setSuggestedPolygonIndices([]);
-      setStatus(`${classification.message} The record has been marked for building-location review in admin.`);
+      const generatedPolygonIndices = finalWorkspace.polygons
+        .map((polygon, index) => isGeneratedBuildingFeatureId(polygon.providerFeatureId) ? index : -1)
+        .filter((index) => index >= 0);
+      setSelectedPolygonIndices([]);
+      setSuggestedPolygonIndices(generatedPolygonIndices);
+      setStatus(generatedPolygonIndices.length
+        ? `${classification.message} A SwingSphere-generated footprint estimate is highlighted in gold for visual review; it will never be auto-saved.`
+        : `${classification.message} The record has been marked for building-location review in admin.`);
     }
 
     const verification: BuildingVerificationMeta = {
@@ -3985,8 +3998,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       workspaceCenter?: { lng: number; lat: number };
       intelligenceListing?: Listing;
       buildingSourceMode?: BuildingSourceMode;
+      signal?: AbortSignal;
     } = {},
   ) => {
+    const ownerRun = venueLoadRunRef.current;
+    const isCurrentRun = () => ownerRun === venueLoadRunRef.current && !options.signal?.aborted;
     const startedAt = performance.now();
     const requestedBuildingSourceMode = options.buildingSourceMode ?? buildingSourceMode;
     const map = mapRef.current;
@@ -4011,17 +4027,20 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setLoadingPhase(`Loading feature ${featureId}`);
     try {
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      if (!isCurrentRun()) return;
       const deadline = Date.now() + 8000;
       let allFeatures: MapGeoJSONFeature[] = [];
       let fragments: MapGeoJSONFeature[] = [];
       let workspace: WorkspaceGeometryResult | null = null;
       let scanIterations = 0;
-      let osOpenMapLocalFallbackAttempted = false;
+      let neighborhoodFusionAttempted = false;
+      let fusedFeatureCache: MapGeoJSONFeature[] | null = null;
+      let neighborhoodSourceLabel = 'OSM · OpenFreeMap';
       let usedOsOpenMapLocalFallback = false;
-      let supplementalFallbackAttempted = false;
       let usedSupplementalFallback = false;
       let supplementalAcceptedCount = 0;
-      let microsoftOnlyFeatures: MapGeoJSONFeature[] | null = null;
+      let neighborhoodFusionWarnings: string[] = [];
+      let generatedCandidateForRun: GeneratedBuildingCandidate | null = null;
 
       while (Date.now() < deadline) {
         scanIterations += 1;
@@ -4041,43 +4060,118 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           sourceLayer: SOURCE_LAYER,
         }) as MapGeoJSONFeature[];
         allFeatures = openFreeMapFeatures;
-        if (requestedBuildingSourceMode === 'microsoft') {
-          const canUseMicrosoftSource = Boolean(
-            options.useWorkspace &&
-            options.workspaceCenter &&
-            options.intelligenceListing &&
-            listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
-            !isApproximateLocation(options.intelligenceListing)
-          );
-          if (!canUseMicrosoftSource) {
-            allFeatures = [];
-            microsoftOnlyFeatures = [];
-            supplementalFallbackAttempted = true;
-          } else if (!supplementalFallbackAttempted) {
-            supplementalFallbackAttempted = true;
-            setLoadingPhase('Loading Microsoft building footprints');
+        const canUseNeighborhoodFusion = Boolean(
+          options.useWorkspace &&
+          options.workspaceCenter &&
+          options.intelligenceListing &&
+          listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
+          !isApproximateLocation(options.intelligenceListing)
+        );
+        const sourceReadyForFusion = requestedBuildingSourceMode === 'microsoft'
+          || openFreeMapFeatures.length > 0
+          || map.isSourceLoaded(getBuildingsSourceId())
+          || scanIterations >= 3;
+        if (canUseNeighborhoodFusion && requestedBuildingSourceMode !== 'openfreemap') {
+          if (fusedFeatureCache) {
+            allFeatures = fusedFeatureCache;
+          } else if (sourceReadyForFusion && !neighborhoodFusionAttempted) {
+            neighborhoodFusionAttempted = true;
+            const fusionRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
+            setLoadingPhase(requestedBuildingSourceMode === 'microsoft'
+              ? 'Loading Microsoft building footprints'
+              : 'Checking fused building coverage');
             try {
-              const supplementalRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
-              const supplemental = await fetchSupplementalBuildingFootprints({
+              const fusion = await fuseBuildingNeighborhood({
+                mode: requestedBuildingSourceMode,
                 listingId: options.intelligenceListing.id,
+                country: getListingPhysicalAddress(options.intelligenceListing, semv2Collections).country,
                 center: options.workspaceCenter,
-                radiusMeters: supplementalRadiusMeters,
-                maxFeatures: 900,
+                radiusMeters: fusionRadiusMeters,
+                primaryFeatures: openFreeMapFeatures,
+                signal: options.signal,
+                minimumContextFootprints: 6,
+                loadOsAtPoint: (point, signal) => fetchOsOpenMapLocalBuildingAtPoint(point, {
+                  renderHeightMeters: EXTRUDE_HEIGHT_METERS,
+                  signal,
+                }),
+                loadSupplemental: async (signal) => {
+                  const supplemental = await fetchSupplementalBuildingFootprints({
+                    listingId: options.intelligenceListing!.id,
+                    center: options.workspaceCenter!,
+                    radiusMeters: fusionRadiusMeters,
+                    maxFeatures: 900,
+                    signal,
+                  });
+                  return {
+                    features: supplemental.features,
+                    provider: supplemental.provider,
+                    truncated: supplemental.truncated,
+                  };
+                },
               });
-              microsoftOnlyFeatures = supplemental.features.map((supplementalFeature) => ({
-                ...supplementalFeature,
-                source: 'microsoft-global-ml-buildings',
-                sourceLayer: SOURCE_LAYER,
+              if (!isCurrentRun()) return;
+              fusedFeatureCache = fusion.features.map((providerFeature) => ({
+                ...providerFeature,
                 state: {},
               } as unknown as MapGeoJSONFeature));
-              usedSupplementalFallback = microsoftOnlyFeatures.length > 0;
-              supplementalAcceptedCount = microsoftOnlyFeatures.length;
+              allFeatures = fusedFeatureCache;
+              neighborhoodSourceLabel = fusion.sourceLabel;
+              usedOsOpenMapLocalFallback = fusion.usedOsOpenMapLocal;
+              usedSupplementalFallback = fusion.usedSupplemental;
+              supplementalAcceptedCount = fusion.supplementalStats?.accepted
+                ?? (requestedBuildingSourceMode === 'microsoft' ? fusion.features.length : 0);
+              neighborhoodFusionWarnings = fusion.warnings;
             } catch (error) {
-              microsoftOnlyFeatures = [];
-              logBuildingInspector('microsoftBuildingSource:failed', { featureId, error });
+              if (options.signal?.aborted) return;
+              neighborhoodFusionWarnings = [error instanceof Error ? error.message : String(error)];
+              allFeatures = requestedBuildingSourceMode === 'microsoft' ? [] : openFreeMapFeatures;
+              neighborhoodSourceLabel = requestedBuildingSourceMode === 'microsoft'
+                ? 'Microsoft ML · unavailable'
+                : 'OSM · OpenFreeMap';
+              logBuildingInspector('buildingNeighborhoodFusion:failed', { featureId, error });
             }
+          } else if (!sourceReadyForFusion) {
+            allFeatures = [];
           }
-          allFeatures = microsoftOnlyFeatures ?? [];
+        } else if (requestedBuildingSourceMode === 'microsoft') {
+          allFeatures = [];
+          neighborhoodSourceLabel = 'Microsoft ML · unavailable for this listing';
+        }
+
+        if (
+          requestedBuildingSourceMode === 'auto'
+          && canUseNeighborhoodFusion
+          && sourceReadyForFusion
+          && neighborhoodFusionAttempted
+          && options.intelligenceListing
+          && options.workspaceCenter
+          && !generatedCandidateForRun
+        ) {
+          const resolvedVenue = getVenueForListing(options.intelligenceListing, semv2Collections);
+          const locationMeta = resolvedVenue?.locationMeta ?? options.intelligenceListing.locationMeta;
+          const generated = createGeneratedBuildingCandidate({
+            listingId: options.intelligenceListing.id,
+            center: options.workspaceCenter,
+            primaryFeatures: allFeatures,
+            locationConfidence: locationMeta?.confidence,
+            geocoderSource: locationMeta?.geocoderSource ?? locationMeta?.source,
+            manuallyAdjusted: locationMeta?.manualAdjustment,
+          });
+          if (generated) {
+            generatedCandidateForRun = generated;
+            const generatedFeature = {
+              ...generated.feature,
+              state: {},
+            } as unknown as MapGeoJSONFeature;
+            allFeatures = [...allFeatures, generatedFeature];
+            fusedFeatureCache = allFeatures;
+            neighborhoodSourceLabel = `${neighborhoodSourceLabel} + SwingSphere estimate`;
+            setGeneratedBuildingCandidate(generated);
+            neighborhoodFusionWarnings = [
+              ...neighborhoodFusionWarnings,
+              'No sourced footprint intersected the authoritative venue pin; a SwingSphere reconstruction candidate was added for human review.',
+            ];
+          }
         }
         logBuildingInspector('querySourceFeatures:exit', {
           featureId,
@@ -4105,110 +4199,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             }
           }
         }
-        const workspaceContainsPin = Boolean(
-          workspace &&
-          options.workspaceCenter &&
-          workspace.buildings.some((building) => workspaceBuildingContainsPoint(workspace, building, options.workspaceCenter!)),
-        );
-        if (
-          options.useWorkspace &&
-          options.workspaceCenter &&
-          options.intelligenceListing &&
-          requestedBuildingSourceMode === 'auto' &&
-          !osOpenMapLocalFallbackAttempted &&
-          !workspaceContainsPin &&
-          isUnitedKingdomListing(options.intelligenceListing, semv2Collections)
-        ) {
-          osOpenMapLocalFallbackAttempted = true;
-          setLoadingPhase('Checking UK building coverage');
-          try {
-            const supplementalFeatures = await fetchOsOpenMapLocalBuildingAtPoint(options.workspaceCenter);
-            if (supplementalFeatures.length) {
-              usedOsOpenMapLocalFallback = true;
-              allFeatures = [...allFeatures, ...supplementalFeatures];
-              workspace = null;
-              for (const radius of [DEFAULT_NEIGHBORHOOD_RADIUS_METERS, ...EXPANDED_NEIGHBORHOOD_RADII_METERS]) {
-                const candidateWorkspace = buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, radius);
-                if (candidateWorkspace.geometry) {
-                  workspace = candidateWorkspace;
-                  break;
-                }
-              }
-              logBuildingInspector('osOpenMapLocalFallback:loaded', {
-                featureId,
-                featureCount: supplementalFeatures.length,
-                workspaceBuildingCount: workspace?.buildings.length ?? 0,
-              });
-            }
-          } catch (error) {
-            logBuildingInspector('osOpenMapLocalFallback:skipped', { featureId, error });
-          }
-        }
-
-        if (
-          options.useWorkspace &&
-          options.workspaceCenter &&
-          options.intelligenceListing &&
-          requestedBuildingSourceMode === 'auto' &&
-          !supplementalFallbackAttempted &&
-          listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
-          !isApproximateLocation(options.intelligenceListing)
-        ) {
-          const supplementalRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
-          const coverage = primaryCoverageNeedsSupplement(allFeatures, options.workspaceCenter, {
-            radiusMeters: supplementalRadiusMeters,
-            minimumContextFootprints: 6,
-          });
-          if (coverage.needed) {
-            supplementalFallbackAttempted = true;
-            setLoadingPhase(coverage.reason === 'missing-target' ? 'Filling missing building coverage' : 'Filling sparse building context');
-            try {
-              const supplemental = await fetchSupplementalBuildingFootprints({
-                listingId: options.intelligenceListing.id,
-                center: options.workspaceCenter,
-                radiusMeters: supplementalRadiusMeters,
-                maxFeatures: 900,
-              });
-              const fused = filterSupplementalBuildingFeatures(
-                allFeatures,
-                supplemental.features,
-                options.workspaceCenter,
-                supplementalRadiusMeters,
-              );
-              const supplementalFeatures = fused.features.map((supplementalFeature) => ({
-                ...supplementalFeature,
-                source: supplementalFeature.source ?? 'microsoft-global-ml-buildings',
-                sourceLayer: supplementalFeature.sourceLayer ?? SOURCE_LAYER,
-                state: {},
-              } as unknown as MapGeoJSONFeature));
-              if (supplementalFeatures.length) {
-                usedSupplementalFallback = true;
-                supplementalAcceptedCount = supplementalFeatures.length;
-                allFeatures = [...allFeatures, ...supplementalFeatures];
-                workspace = null;
-                for (const radius of [DEFAULT_NEIGHBORHOOD_RADIUS_METERS, ...EXPANDED_NEIGHBORHOOD_RADII_METERS]) {
-                  const candidateWorkspace = buildWorkspaceGeometryFromFeatures(allFeatures, options.workspaceCenter, radius);
-                  if (candidateWorkspace.geometry) {
-                    workspace = candidateWorkspace;
-                    if (candidateWorkspace.buildings.some((building) => workspaceBuildingContainsPoint(candidateWorkspace, building, options.workspaceCenter!))) break;
-                  }
-                }
-                logBuildingInspector('supplementalBuildingFallback:loaded', {
-                  featureId,
-                  coverageReason: coverage.reason,
-                  provider: supplemental.provider,
-                  requestedCount: supplemental.features.length,
-                  acceptedCount: supplementalFeatures.length,
-                  suppressedExact: fused.stats.suppressedExact,
-                  suppressedOverlap: fused.stats.suppressedOverlap,
-                  workspaceBuildingCount: workspace?.buildings.length ?? 0,
-                });
-              }
-            } catch (error) {
-              logBuildingInspector('supplementalBuildingFallback:skipped', { featureId, error });
-            }
-          }
-        }
         logBuildingInspector('resolveFeature:fragment filter exit', {
           featureId,
           scanIterations,
@@ -4222,16 +4212,17 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
 
         setLoadingPhase('Waiting for source tiles');
         await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
+        if (!isCurrentRun()) return;
       }
+      if (!isCurrentRun()) return;
 
-      const nextLoadedBuildingSourceLabel = requestedBuildingSourceMode === 'microsoft'
-        ? (usedSupplementalFallback ? 'Microsoft ML' : 'Microsoft ML · no geometry')
-        : usedSupplementalFallback
-          ? 'Hybrid · OSM + Microsoft'
-          : usedOsOpenMapLocalFallback
-            ? 'Hybrid · OSM + OS OpenMap'
-            : 'OSM · OpenFreeMap';
-      setLoadedBuildingSourceLabel(nextLoadedBuildingSourceLabel);
+      setLoadedBuildingSourceLabel(neighborhoodSourceLabel);
+      if (neighborhoodFusionWarnings.length) {
+        logBuildingInspector('buildingNeighborhoodFusion:warnings', {
+          featureId,
+          warnings: neighborhoodFusionWarnings,
+        });
+      }
       setLoadingPhase(`Filtering feature ${featureId}`);
       logBuildingInspector('resolveFeature:located feature summary', {
         featureId,
@@ -4396,12 +4387,27 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           : `Resolved feature id ${featureId}: ${editableResolution.fragmentCount} candidate fragment(s), rendered ${editableResolution.primaryTile}. Geometry: ${formatPolygonCountLabel(editableResolution.polygonCount)}. Diagnostics pending.`,
       );
       window.setTimeout(async () => {
+        if (!isCurrentRun()) return;
         logBuildingInspector('resolveFeature:deferred diagnostics enter', {
           featureId,
           featureCount: allFeatures.length,
           fragmentCount: fragments.length,
         });
         try {
+          // Verification must not depend on optional forensic metrics succeeding.
+          if (workspace?.geometry && options.intelligenceListing && options.workspaceCenter) {
+            setLoadingPhase('Checking building addresses');
+            await runAddressIntelligence({
+              listing: options.intelligenceListing,
+              seedFeatureId: featureId,
+              allFeatures,
+              initialWorkspace: workspace,
+              fragments,
+              center: options.workspaceCenter,
+              signal: options.signal,
+            });
+            if (!isCurrentRun()) return;
+          }
           setLoadingPhase('Computing optional diagnostics');
           const nextFragmentRecords = fragments
             .map(getFragmentRecord)
@@ -4440,17 +4446,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               workspaceBuildingCount: workspace.buildings.length,
               workspacePolygonCount: workspace.polygons.length,
             });
-            if (options.intelligenceListing && options.workspaceCenter) {
-              setLoadingPhase('Checking building addresses');
-              await runAddressIntelligence({
-                listing: options.intelligenceListing,
-                seedFeatureId: featureId,
-                allFeatures,
-                initialWorkspace: workspace,
-                fragments,
-                center: options.workspaceCenter,
-              });
-            }
             return;
           }
           let scopedCache = buildScopedNeighborhoodCache(
@@ -4499,6 +4494,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             providerCandidateCount: scopedCache.candidates.length,
           });
         } catch (error) {
+          if (!isCurrentRun()) return;
           logBuildingInspector('resolveFeature:deferred diagnostics skipped', {
             featureId,
             error,
@@ -4511,7 +4507,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             suggestions: ['Manual Feature ID'],
           }));
         } finally {
-          setLoadingPhase(null);
+          if (isCurrentRun()) setLoadingPhase(null);
         }
       }, 0);
       logBuildingInspector('resolveFeature:exit', {
@@ -4522,6 +4518,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         elapsedMs: performance.now() - startedAt,
       });
     } catch (error) {
+      if (!isCurrentRun()) return;
       logBuildingInspector('resolveFeature:error', {
         featureId,
         error,
@@ -4529,8 +4526,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       });
       throw error;
     } finally {
-      setLoadingPhase(null);
-      setIsLoading(false);
+      if (isCurrentRun()) {
+        setLoadingPhase(null);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -4538,6 +4537,25 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     listing: Listing,
     options: { forceProvider?: boolean; buildingSourceMode?: BuildingSourceMode } = {},
   ) => {
+    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection?')) {
+      logBuildingInspector('loadVenueGeometry:exit cancelled unsaved changes', { listingId: listing.id });
+      return;
+    }
+    venueLoadAbortRef.current?.abort(new Error('A newer venue lookup started.'));
+    const controller = new AbortController();
+    venueLoadAbortRef.current = controller;
+    const signal = controller.signal;
+    const ownerRun = ++venueLoadRunRef.current;
+    addressIntelligenceRunRef.current += 1;
+    const isCurrentRun = () => ownerRun === venueLoadRunRef.current && !signal.aborted;
+    const physicalVenue = getVenueForListing(listing, semv2Collections);
+    if (isApproximateLocation(listing) || (physicalVenue && physicalVenue.visibility !== 'public_exact')) {
+      setResolution(null);
+      setIsLoading(false);
+      setLoadingPhase(null);
+      setStatus('Precise building lookup is disabled for private, hidden, or approximate locations.');
+      return;
+    }
     const startedAt = performance.now();
     const requestedBuildingSourceMode = options.buildingSourceMode ?? buildingSourceMode;
     logBuildingInspector('loadVenueGeometry:enter', {
@@ -4545,10 +4563,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       listingName: listing.name,
       saveStateLabel,
     });
-    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection?')) {
-      logBuildingInspector('loadVenueGeometry:exit cancelled unsaved changes', { listingId: listing.id });
-      return;
-    }
     const map = mapRef.current;
     if (!map) {
       setStatus('Map is not ready yet. Try again after the building source loads.');
@@ -4592,6 +4606,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setResolvedVenueFeatureId(null);
     setSavedGeometrySignature(getGeometrySignature(savedAsset?.geometry));
     setAssetStatusMessage(null);
+    setGeneratedBuildingCandidate(null);
     setResolution(null);
     setReferencePolygonRecords([]);
     setProviderCandidates([]);
@@ -4635,6 +4650,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       logBuildingInspector('loadVenueGeometry:jumpTo exit', { listingId: listing.id });
       setLoadingPhase('Waiting for venue building tiles');
       const idleResult = await waitForMapIdle(map);
+      if (!isCurrentRun()) return;
       setResolverState((current) =>
         updateResolverStep(
           current,
@@ -4671,6 +4687,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         workspaceCenter: coords,
         intelligenceListing: listing,
         buildingSourceMode: requestedBuildingSourceMode,
+        signal,
       });
       logBuildingInspector('loadVenueGeometry:exit', {
         listingId: listing.id,
@@ -4678,15 +4695,19 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         elapsedMs: performance.now() - startedAt,
       });
     } catch (error) {
+      if (!isCurrentRun()) return;
       logBuildingInspector('loadVenueGeometry:error', {
         listingId: listing.id,
         error,
         elapsedMs: performance.now() - startedAt,
       });
-      throw error;
+      setStatus(`Could not load ${listing.name}: ${(error as Error).message || 'provider or geometry failure'}. Retry the venue lookup.`);
     } finally {
-      setLoadingPhase(null);
-      setIsLoading(false);
+      if (isCurrentRun()) {
+        setLoadingPhase(null);
+        setIsLoading(false);
+      }
+      if (venueLoadAbortRef.current === controller) venueLoadAbortRef.current = null;
     }
   };
 
@@ -4809,13 +4830,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       !value.startsWith('building-asset-') &&
       !value.startsWith('workspace:'),
     ))));
-    const selectedProviderSource = providerFeatureIds.some((providerFeatureId) =>
-      providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX)
-    )
-      ? OS_OPENMAP_LOCAL_SOURCE
-      : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(MICROSOFT_BUILDING_ID_PREFIX))
-        ? MICROSOFT_BUILDING_SOURCE
-        : resolution?.source ?? 'OpenFreeMap';
+    const selectedIncludesGenerated = providerFeatureIds.some((providerFeatureId) =>
+      isGeneratedBuildingFeatureId(providerFeatureId)
+    );
+    const selectedProviderSource = selectedIncludesGenerated
+      ? GENERATED_BUILDING_SOURCE
+      : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX))
+        ? OS_OPENMAP_LOCAL_SOURCE
+        : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(MICROSOFT_BUILDING_ID_PREFIX))
+          ? MICROSOFT_BUILDING_SOURCE
+          : resolution?.source ?? 'OpenFreeMap';
     const renderHeightMeters = selectedSummary.maxRenderHeightMeters ??
       venueArrival.buildingFallbackHeight * venueArrival.selectedBuilding.heightBoost;
     const renderMinHeightMeters = minMetric(selectedPolygonRecords.map((record) => record.renderMinHeightMeters)) ?? 0;
@@ -4838,6 +4862,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           ? `${selectedProviderSource} (manually corrected)`
           : selectedProviderSource,
         featureIds: providerFeatureIds,
+        origin: selectedIncludesGenerated ? 'generated' : 'provider',
+        generationMethod: selectedIncludesGenerated ? generatedBuildingCandidate?.method : undefined,
+        generationConfidence: selectedIncludesGenerated ? generatedBuildingCandidate?.confidence : undefined,
+        provenanceNote: selectedIncludesGenerated ? generatedBuildingCandidate?.sourceDetail : undefined,
       },
       geometry: selectedSummary.geoJson.geometry,
       renderHeightMeters,
@@ -4851,11 +4879,28 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       },
     };
 
+    const assetOwnerListing = listings.find((listing) => listing.id === assetOwnerListingId) ?? selectedVenue;
+    const expectedSnapshot = createBuildingVerificationInputSnapshot(assetOwnerListing, { listings });
+    if (!expectedSnapshot) {
+      setAssetStatusMessage('Save blocked: the canonical asset owner has no valid location snapshot.');
+      return;
+    }
+    const matchingEvidence = selectedBuildingEvidence?.listingId === assetOwnerListingId
+      && selectedBuildingEvidence.inputSnapshotHash === expectedSnapshot.hash
+      ? selectedBuildingEvidence
+      : null;
+
     setIsLoading(true);
     setLoadingPhase('Saving building asset');
     setAssetStatusMessage(null);
     try {
-      const saved = await api.saveBuildingAsset(assetOwnerListingId, asset);
+      const saved = await api.saveBuildingAsset(assetOwnerListingId, asset, {
+        expectedSnapshot,
+        evidence: matchingEvidence,
+        mode: 'manual',
+        allowReplaceExisting: Boolean(existingAsset),
+        expectedExistingAsset: createBuildingAssetRevision(existingAsset),
+      });
       setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
       setAssetStatusMessage(`Saved building asset at ${new Date(saved.asset.capture.updatedAt).toLocaleString()}.`);
       setStatus(`Saved building asset for ${selectedVenue.name}: ${saved.asset.capture.polygonCount} polygon(s).`);
@@ -4870,8 +4915,50 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         setLocalListings((current) => current.map((item) => (item.id === saved.listing?.id ? saved.listing : item)));
       }
       onBuildingAssetSaved?.(saved.asset, saved.listing);
+      api.getBuildingAssetHistory(assetOwnerListingId)
+        .then(setBuildingAssetHistory)
+        .catch(() => undefined);
     } catch (error) {
       setAssetStatusMessage((error as Error).message || 'Failed to save building asset.');
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const rollbackLastBuildingSave = async () => {
+    if (!selectedVenue) return;
+    const ownerListingId = selectedVenueAsset?.listingId ?? selectedVenue.id;
+    const ownerListing = listings.find((listing) => listing.id === ownerListingId) ?? selectedVenue;
+    const expectedSnapshot = createBuildingVerificationInputSnapshot(ownerListing, { listings });
+    const expectedExistingAsset = createBuildingAssetRevision(selectedVenueAsset);
+    const restorable = buildingAssetHistory.find((event) => event.action === 'replace' && event.previousAsset);
+    if (!expectedSnapshot || !expectedExistingAsset || !restorable) {
+      setAssetStatusMessage('No previous BuildingAsset revision is available to restore.');
+      return;
+    }
+    setIsLoading(true);
+    setLoadingPhase('Restoring previous building asset');
+    setAssetStatusMessage(null);
+    try {
+      const saved = await api.rollbackBuildingAsset(ownerListingId, expectedSnapshot, expectedExistingAsset, restorable.id);
+      setLocalBuildingAssets((current) => {
+        const index = current.findIndex((item) => item.id === saved.asset.id || item.listingId === ownerListingId);
+        if (index < 0) return [...current, saved.asset];
+        const next = [...current];
+        next[index] = saved.asset;
+        return next;
+      });
+      if (saved.listing) {
+        setLocalListings((current) => current.map((item) => item.id === saved.listing?.id ? saved.listing : item));
+      }
+      setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
+      setBuildingAssetHistory(await api.getBuildingAssetHistory(ownerListingId));
+      onBuildingAssetSaved?.(saved.asset, saved.listing);
+      setAssetStatusMessage(`Restored the previous BuildingAsset revision from ${new Date(restorable.occurredAt).toLocaleString()}. Reload the saved asset to inspect it.`);
+      setStatus(`Restored the previous building geometry for ${ownerListing.name}.`);
+    } catch (error) {
+      setAssetStatusMessage((error as Error).message || 'Failed to restore the previous BuildingAsset.');
     } finally {
       setLoadingPhase(null);
       setIsLoading(false);
@@ -4955,22 +5042,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       setAssetStatusMessage('Run the live provider comparison before recording a building review.');
       return;
     }
-    const response = await fetch('/api/admin/building-verification/evidence/review', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ listingId: selectedVenue.id, disposition, note }),
-    });
-    if (!response.ok) {
-      setAssetStatusMessage(`Building review was not recorded: ${await response.text()}`);
-      return;
+    try {
+      await adminFetchJson('/api/admin/building-verification/evidence/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: selectedVenue.id, disposition, note }),
+      });
+      setAssetStatusMessage('Building review decision recorded as an append-only audit event. Canonical changes remain explicit.');
+    } catch (error) {
+      setAssetStatusMessage(`Building review was not recorded: ${(error as Error).message || 'unknown error'}`);
     }
-    const payload = await response.json();
-    setBuildingEvidenceRecords((current) => current.map((record) => (
-      record.listingId === selectedVenue.id && record.evaluatedAt === selectedBuildingEvidence.evaluatedAt
-        ? payload.evidence
-        : record
-    )));
-    setAssetStatusMessage('Building review decision recorded. Canonical changes remain explicit.');
   };
 
   const acceptRecommendedBuildingForReview = async () => {
@@ -5483,6 +5564,37 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             : 'Missing asset'}
           help="Building geometry belongs to the physical venue. Events at a venue automatically reuse its verified asset instead of requiring a second building selection."
         />
+        {generatedBuildingCandidate && generatedPolygonIndices.length > 0 && (
+          <div className="mt-3 rounded-xl border border-cyan-300/25 bg-cyan-300/[0.06] p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">Generated footprint estimate</div>
+                <p className="mt-1 text-[10px] leading-4 text-zinc-400">No sourced building footprint intersected the verified venue pin, so SwingSphere created a reviewable geometry candidate instead of leaving the venue blank.</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[9px] font-semibold text-cyan-100">Human review</span>
+            </div>
+            <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px] leading-4">
+              <span className="text-zinc-600">Source</span><span className="text-zinc-300">{generatedBuildingCandidate.sourceLabel}</span>
+              <span className="text-zinc-600">Inputs</span><span className="text-zinc-300">Verified venue pin + nearby open building geometry</span>
+              <span className="text-zinc-600">Method</span><span className="text-zinc-300">{generatedBuildingCandidate.method === 'nearby-orientation-estimate' ? 'Nearby-building orientation and size estimate' : 'Conservative rectangle centered on verified pin'}</span>
+              <span className="text-zinc-600">Estimate</span><span className="text-zinc-300">{generatedBuildingCandidate.widthMeters.toFixed(0)} × {generatedBuildingCandidate.depthMeters.toFixed(0)} m · {generatedBuildingCandidate.heightMeters.toFixed(1)} m tall</span>
+              <span className="text-zinc-600">Confidence</span><span className="text-zinc-300">{Math.round(generatedBuildingCandidate.confidence * 100)}% geometry estimate</span>
+            </div>
+            <p className="mt-2 text-[9px] leading-3.5 text-zinc-500">{generatedBuildingCandidate.sourceDetail} This geometry is never automatically accepted or saved.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSuggestedPolygonIndices([]);
+                setSelectedPolygonIndices(generatedPolygonIndices);
+                setAssetStatusMessage('Generated footprint selected for review. Save Building remains an explicit manual confirmation.');
+                setStatus('Generated SwingSphere footprint selected. Compare it with the street plane before saving.');
+              }}
+              className="mt-3 w-full rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left text-[10px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/20"
+            >
+              Select generated footprint
+            </button>
+          </div>
+        )}
         {selectedVenueAsset && (
           <Row
             label="Asset updated"
@@ -5533,7 +5645,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           0% { transform: translateX(-140%); }
           100% { transform: translateX(240%); }
         }
-        .building-inspector-sidebar > :nth-child(n+3) { display: none; }
+        .building-inspector-sidebar:not(.show-advanced-controls) > :nth-child(n+3):not(.building-inspector-venue-picker) { display: none; }
       `}</style>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,76,76,0.08),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_30%)]" />
 
@@ -5591,6 +5703,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             <summary className={menuSummaryClassName} title="Technical resolver status and failure details.">Diagnostics</summary>
             <div className={menuPanelClassName}>
               {resolverStatusPanel}
+              <button type="button" onClick={() => setShowAdvancedSidebar((value) => !value)} className="mt-3 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-200">{showAdvancedSidebar ? 'Hide advanced controls' : 'Show advanced controls'}</button>
               <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
                 <div className="text-xs font-semibold text-zinc-100">Current status</div>
                 <p className="mt-2 text-[11px] leading-5 text-zinc-400">{status}</p>
@@ -5605,7 +5718,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] gap-3">
-      <aside className={`building-inspector-sidebar ${sidebarClassName}`}>
+      <aside className={`building-inspector-sidebar ${showAdvancedSidebar ? 'show-advanced-controls' : ''} ${sidebarClassName}`}>
         <div className="border-b border-white/10 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -5654,7 +5767,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         />
 
         {(
-          <section className="border-b border-white/10 px-4 py-4">
+          <section className="building-inspector-venue-picker border-b border-white/10 px-4 py-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-zinc-50">Select venue</h2>
@@ -5719,7 +5832,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   <button
                     key={listing.id}
                     type="button"
-                    disabled={isLoading}
                     onClick={() => void loadVenueGeometry(listing)}
                     className={`w-full rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       isSelected
@@ -6247,11 +6359,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             type="button"
             disabled={!selectedVenue || isLoading}
             onClick={() => void reloadBuildingSource()}
-            title={`Reload ${selectedVenue?.name ?? 'the selected venue'} using ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} building coverage.`}
-            aria-label="Reload building source"
-            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#08090d]/88 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-white/10 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+            title={loadedBuildingSourceLabel.startsWith('Saved ·')
+              ? `Load the live ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} neighborhood around ${selectedVenue?.name ?? 'the selected venue'} so the saved asset can be compared or re-authored in context.`
+              : `Reload ${selectedVenue?.name ?? 'the selected venue'} using ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} building coverage.`}
+            aria-label={loadedBuildingSourceLabel.startsWith('Saved ·') ? 'Load live neighborhood' : 'Reload building source'}
+            className={`pointer-events-auto flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#08090d]/88 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-white/10 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 ${loadedBuildingSourceLabel.startsWith('Saved ·') ? 'px-3' : 'w-9'}`}
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+            {loadedBuildingSourceLabel.startsWith('Saved ·') && <span className="text-[10px] font-semibold">Live neighborhood</span>}
           </button>
         </div>
         <div className="absolute right-4 top-4 z-30 w-[min(24rem,calc(100%-2rem))] overflow-hidden rounded-xl border border-white/15 bg-[#08090d]/95 shadow-2xl shadow-black/50">
@@ -6408,6 +6523,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                   className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-3 py-2 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading && loadingPhase === 'Moving venue pin' ? 'Moving Pin...' : 'Move Pin to Building'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedVenueAsset || !buildingAssetHistory.some((event) => event.action === 'replace' && event.previousAsset) || isLoading}
+                  onClick={() => void rollbackLastBuildingSave()}
+                  title="Restore the previous authored BuildingAsset revision. This creates a new audit event instead of deleting history."
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {isLoading && loadingPhase === 'Restoring previous building asset' ? 'Restoring...' : 'Restore Previous'}
                 </button>
                 <button
                   type="button"

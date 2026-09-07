@@ -240,6 +240,7 @@ export class SwingSphereGlobe {
       this.updateEvents(this.events);
       this.updateActivityRegions(this.activityRegions);
       let readyEmitted = false;
+      let startupFrameCount = 0;
       this.removeFrameListener = this.renderer.addFrameListener(({ delta, elapsed }) => {
         const completedFocus = this.navigationController.update(elapsed);
         this.#updateProgressiveDisclosure();
@@ -280,7 +281,12 @@ export class SwingSphereGlobe {
             || this.countryVectorBorders?.isAnimationActive?.()
           )
         });
-        if (!readyEmitted) {
+        startupFrameCount += 1;
+        // Keep the loading state through two completed WebGL/composer frames.
+        // The first frame can pay shader compilation/render-target allocation
+        // costs; revealing React overlays before that settles produces a
+        // one-time hitch at the start of the globe's visible rotation.
+        if (!readyEmitted && startupFrameCount >= 3) {
           readyEmitted = true;
           this.ready = true;
           this.heroStudioDefaultPose = this.#createHeroStudioPose();
@@ -1036,6 +1042,14 @@ export class SwingSphereGlobe {
   getNavigationSnapshot() {
     if (!this.renderer?.camera || !this.renderer?.controls) return null;
     return this.#createNavigationSnapshot();
+  }
+
+  getNavigationDistanceBounds() {
+    if (!this.renderer?.controls) return null;
+    return {
+      min: this.renderer.controls.minDistance ?? this.config.renderer.controlsMinDistance,
+      max: this.renderer.controls.maxDistance ?? this.config.renderer.controlsMaxDistance,
+    };
   }
 
   setNavigationPose(pose = {}) {

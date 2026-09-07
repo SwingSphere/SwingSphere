@@ -46,7 +46,7 @@ const HostSidebar: React.FC<HostSidebarProps> = ({ organization, events, onClose
           <X className="h-5 w-5" />
         </button>
         <div className="ss-glass ss-glass--liquid absolute left-4 top-4 h-16 w-16 overflow-hidden rounded-[18px]">
-          <img src={logoImage} alt={`${organization.name} logo`} className="h-full w-full object-contain p-1" />
+          <img src={logoImage} alt={`${organization.name} logo`} className="h-full w-full object-contain" />
         </div>
         <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-4">
           <div className="min-w-0">

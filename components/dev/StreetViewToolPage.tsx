@@ -19,12 +19,14 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import buildingAssetsJson from '../../data/building-assets.local.json';
-import {
-  fetchSupplementalBuildingFootprints,
-  filterSupplementalBuildingFeatures,
-  primaryCoverageNeedsSupplement,
-} from '../../lib/buildingFootprintSources';
+import buildingAssetsJson from 'virtual:swingsphere-public-street-view-building-assets';
+import listingsJson from 'virtual:swingsphere-public-listings';
+import { getListingHeroUrl, getListingLogoUrl } from '../../lib/listingImage';
+import { getCountryFlagImageUrl } from '../../lib/formatting';
+import { useEntityIndex } from '../../hooks/useEntityIndex';
+import { adminFetch } from '../../lib/adminApi';
+import { fetchSupplementalBuildingFootprints } from '../../lib/buildingFootprintSources';
+import { fuseBuildingNeighborhood } from '../../lib/buildingNeighborhoodFusion';
 import { swingMapStyle } from '../maps/mapStyle';
 import {
   createPyramidalLandmarkLayer,
@@ -34,10 +36,60 @@ import {
   type StreetViewLandmarkLayer,
 } from './streetViewLandmarks';
 
-const LISTING_ID = 'club-twist-sf';
-const LISTING_NAME = 'Twist SF';
-const LISTING_ADDRESS = '387 Bay Street, San Francisco, CA 94133';
-const FALLBACK_CENTER: [number, number] = [-122.4132692, 37.8055766];
+const DEFAULT_LISTING_ID = 'club-twist-sf';
+const formatClockTime = (value?: string): string => {
+  if (!value) return '';
+  const [hourPart, minutePart = '00'] = value.split(':');
+  const hour = Number(hourPart);
+  if (!Number.isFinite(hour)) return value;
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  const minutes = minutePart === '00' ? '' : `:${minutePart}`;
+  return `${displayHour}${minutes} ${suffix}`;
+};
+const buildingAssets = buildingAssetsJson as unknown as Array<any>;
+const listings = listingsJson as unknown as Array<any>;
+const buildingAssetListingIds = new Set(buildingAssets.map((asset) => String(asset?.listingId ?? '')).filter(Boolean));
+const PUBLIC_STREET_VIEW_VENUES = listings
+  .filter((listing) => (
+    listing?.status === 'approved'
+    && listing?.type === 'club'
+    && listing?.isAddressPrivate !== true
+    && listing?.locationVisibility !== 'approximate_public'
+    && buildingAssetListingIds.has(String(listing?.id ?? ''))
+  ))
+  .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
+const requestedListingId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('listingId') : null;
+const selectedListing = PUBLIC_STREET_VIEW_VENUES.find((listing) => listing?.id === requestedListingId)
+  ?? PUBLIC_STREET_VIEW_VENUES.find((listing) => listing?.id === DEFAULT_LISTING_ID)
+  ?? PUBLIC_STREET_VIEW_VENUES[0];
+const LISTING_ID = String(selectedListing?.id ?? DEFAULT_LISTING_ID);
+const LISTING_NAME = String(selectedListing?.name ?? 'Twist SF');
+const LISTING_ADDRESS = String(selectedListing?.location ?? '387 Bay Street, San Francisco, California 94133, United States');
+const LISTING_ADDRESS_LINE1 = String(selectedListing?.geopoint?.address?.addressLine1 ?? LISTING_ADDRESS);
+const LISTING_LOCALITY = [
+  selectedListing?.geopoint?.address?.city,
+  selectedListing?.geopoint?.address?.region,
+  selectedListing?.geopoint?.address?.postalCode,
+].filter(Boolean).join(', ');
+const LISTING_REGION_LABEL = [
+  selectedListing?.geopoint?.address?.city,
+  selectedListing?.geopoint?.address?.region,
+].filter(Boolean).join(', ');
+const LISTING_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LISTING_ADDRESS)}`;
+const LISTING_DESCRIPTION = String(selectedListing?.description_short ?? '').trim();
+const LISTING_AMENITIES = Array.isArray(selectedListing?.generalAmenities)
+  ? selectedListing.generalAmenities.filter(Boolean).slice(0, 3).map(String)
+  : [];
+const LISTING_SCHEDULE = Array.isArray(selectedListing?.schedule) ? selectedListing.schedule : [];
+const LISTING_FIRST_OPEN_DAY = LISTING_SCHEDULE.find((day: any) => !day?.isClosed && day?.open && day?.close);
+const LISTING_AVAILABILITY = LISTING_FIRST_OPEN_DAY
+  ? `${LISTING_FIRST_OPEN_DAY.day} ${formatClockTime(LISTING_FIRST_OPEN_DAY.open)}–${formatClockTime(LISTING_FIRST_OPEN_DAY.close)}`
+  : '';
+const FALLBACK_CENTER: [number, number] = [
+  Number(selectedListing?.geopoint?.longitude ?? -122.4132692),
+  Number(selectedListing?.geopoint?.latitude ?? 37.8055766),
+];
 const CONTEXT_LAYER_ID = 'street-view-context-buildings';
 const SUPPLEMENTAL_CONTEXT_SOURCE_ID = 'street-view-supplemental-buildings';
 const SUPPLEMENTAL_CONTEXT_LAYER_ID = 'street-view-supplemental-context-buildings';
@@ -73,6 +125,12 @@ const NEIGHBORHOOD_PULSE_ATTACK_MS = 240;
 const NEIGHBORHOOD_PULSE_HOLD_MS = 180;
 const NEIGHBORHOOD_PULSE_RELEASE_MS = 520;
 const NEIGHBORHOOD_PULSE_COLOR_MIX = 0.22;
+const ARRIVAL_HOLD_MS = 140;
+const ARRIVAL_DURATION_MS = 1300;
+const ARRIVAL_ZOOM_OFFSET = 0.55;
+const ARRIVAL_PITCH_OFFSET = 3;
+const ARRIVAL_SELECTED_OPACITY_SCALE = 0.84;
+const ARRIVAL_BLOOM_SCALE = 0.35;
 
 type CameraState = {
   center: [number, number];
@@ -145,16 +203,18 @@ type StreetViewProfile = {
 
 const DEFAULT_CAMERA: CameraState = {
   center: FALLBACK_CENTER,
-  zoom: 17.25,
-  pitch: 60,
+  zoom: 18,
+  pitch: 75,
   bearing: 162,
 };
 
 const DEFAULT_VISUAL: VisualState = {
+  // Baseline Street View palette authored on Twist SF. New venues inherit
+  // this treatment unless they have their own saved visual profile.
   skyColor: '#22191f',
-  horizonColor: '#d86e72',
+  horizonColor: '#ff0008',
   hazeStrength: 0.46,
-  buildingColor: '#b8b0ae',
+  buildingColor: '#0d0d0d',
   buildingOpacity: 1,
   selectedColor: '#dc2538',
   selectedOpacity: 1,
@@ -162,7 +222,7 @@ const DEFAULT_VISUAL: VisualState = {
   groundBrightness: 0.3,
   streetLabelOpacity: 0.72,
   streetLabelSize: 13.5,
-  lightColor: '#f2e7e2',
+  lightColor: '#ffffff',
   lightIntensity: 0.48,
   lightAzimuth: 225,
   lightPolar: 44,
@@ -173,8 +233,7 @@ const DEFAULT_VISUAL: VisualState = {
   occlusionFadeMs: 1000,
 };
 
-const buildingAssets = buildingAssetsJson as unknown as Array<any>;
-const twistBuildingAsset = buildingAssets.find((asset) => asset?.listingId === LISTING_ID) ?? null;
+const currentBuildingAsset = buildingAssets.find((asset) => asset?.listingId === LISTING_ID) ?? null;
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -228,12 +287,13 @@ function geometryCenter(features: StreetFeature[]): [number, number] | null {
   return [total[0] / coords.length, total[1] / coords.length];
 }
 
-function featuresFromTwistAsset(): StreetFeature[] {
-  const geometry = twistBuildingAsset?.geometry;
+function featuresFromCurrentAsset(): StreetFeature[] {
+  const geometry = currentBuildingAsset?.geometry;
   if (!geometry) return [];
-  const providerIds = Array.isArray(twistBuildingAsset?.provider?.featureIds)
-    ? twistBuildingAsset.provider.featureIds.map(String)
+  const providerIds = Array.isArray(currentBuildingAsset?.provider?.featureIds)
+    ? currentBuildingAsset.provider.featureIds.map(String)
     : [];
+  const authoredHeight = clamp(Number(currentBuildingAsset?.renderHeightMeters) || 9, 3, 350);
   if (geometry.type === 'Polygon') {
     return [{
       type: 'Feature',
@@ -241,7 +301,7 @@ function featuresFromTwistAsset(): StreetFeature[] {
       properties: {
         selectionId: 'asset:0',
         providerId: providerIds[0],
-        height: 9,
+        height: authoredHeight,
         source: 'asset',
       },
       geometry: clone(geometry),
@@ -254,7 +314,7 @@ function featuresFromTwistAsset(): StreetFeature[] {
       properties: {
         selectionId: `asset:${index}`,
         providerId: providerIds[index] ?? providerIds[0],
-        height: 9,
+        height: authoredHeight,
         source: 'asset' as const,
       },
       geometry: { type: 'Polygon', coordinates: clone(coordinates) },
@@ -263,7 +323,7 @@ function featuresFromTwistAsset(): StreetFeature[] {
   return [];
 }
 
-const DEFAULT_SELECTION = featuresFromTwistAsset();
+const DEFAULT_SELECTION = featuresFromCurrentAsset();
 const DEFAULT_CENTER = geometryCenter(DEFAULT_SELECTION) ?? FALLBACK_CENTER;
 
 function createDefaultProfile(): StreetViewProfile {
@@ -911,7 +971,37 @@ const Metric: React.FC<{ label: string; value: string }> = ({ label, value }) =>
   </div>
 );
 
-const StreetViewToolPage: React.FC = () => {
+type StreetViewPresentationKind = 'desktop' | 'mobile' | 'tablet';
+
+type StreetViewToolPageProps = {
+  presentationOnly?: boolean;
+  presentationKind?: StreetViewPresentationKind;
+};
+
+const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnly = false, presentationKind = 'desktop' }) => {
+  const isMobilePresentation = presentationOnly && presentationKind === 'mobile';
+  const isTabletPresentation = presentationOnly && presentationKind === 'tablet';
+  const { listings: liveListings } = useEntityIndex();
+  const presentationListing = liveListings.find((listing) => listing.id === LISTING_ID) ?? selectedListing;
+  const presentationLogoUrl = getListingLogoUrl(presentationListing);
+  const presentationHeroUrl = getListingHeroUrl(presentationListing);
+  const presentationName = String(presentationListing?.name ?? LISTING_NAME);
+  const presentationDescription = String(presentationListing?.description_short ?? LISTING_DESCRIPTION).trim();
+  const presentationCountry = String(presentationListing?.geopoint?.address?.country ?? selectedListing?.geopoint?.address?.country ?? '').trim();
+  const presentationCountryFlagUrl = getCountryFlagImageUrl(presentationCountry);
+  const presentationRegionLabel = [
+    presentationListing?.geopoint?.address?.city ?? selectedListing?.geopoint?.address?.city,
+    presentationListing?.geopoint?.address?.region ?? selectedListing?.geopoint?.address?.region,
+  ].filter(Boolean).join(', ');
+  const presentationAmenities = Array.isArray(presentationListing?.generalAmenities)
+    ? presentationListing.generalAmenities.filter(Boolean).map(String)
+    : LISTING_AMENITIES;
+  const compactAmenityCount = isMobilePresentation ? 2 : 3;
+  const presentationSchedule = Array.isArray(presentationListing?.schedule) ? presentationListing.schedule : LISTING_SCHEDULE;
+  const presentationFirstOpenDay = presentationSchedule.find((day: any) => !day?.isClosed && day?.open && day?.close);
+  const presentationAvailability = presentationFirstOpenDay
+    ? `${presentationFirstOpenDay.day} ${formatClockTime(presentationFirstOpenDay.open)}–${formatClockTime(presentationFirstOpenDay.close)}`
+    : LISTING_AVAILABILITY;
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const selectedFeaturesRef = useRef<StreetFeature[]>(clone(DEFAULT_SELECTION));
@@ -934,10 +1024,11 @@ const StreetViewToolPage: React.FC = () => {
   const [overlappingProviderIds, setOverlappingProviderIds] = useState<string[]>([]);
   const [occludingPolygonCount, setOccludingPolygonCount] = useState(0);
   const [venueScreenPoint, setVenueScreenPoint] = useState<{ x: number; y: number } | null>(null);
+  const [arrivalBloomScale, setArrivalBloomScale] = useState(1);
   const [loadProgress, setLoadProgress] = useState(4);
-  const [loadStage, setLoadStage] = useState('Preparing Twist SF');
+  const [loadStage, setLoadStage] = useState(`Preparing ${LISTING_NAME}`);
   const [sceneReady, setSceneReady] = useState(false);
-  const [terrainEnabled, setTerrainEnabled] = useState(false);
+  const [terrainEnabled, setTerrainEnabled] = useState(true);
   const [loadDurationMs, setLoadDurationMs] = useState<number | null>(null);
   const [fps, setFps] = useState<number | null>(null);
   const [sourceReady, setSourceReady] = useState(false);
@@ -948,13 +1039,14 @@ const StreetViewToolPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('Loading saved Street View profile…');
   const [openPanels, setOpenPanels] = useState({ selection: true, camera: true, visual: false, performance: false });
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const loadProfile = async () => {
       const fallback = createDefaultProfile();
       try {
-        const response = await fetch(`/api/admin/street-view/profile?listingId=${encodeURIComponent(LISTING_ID)}`);
+        const response = await adminFetch(`/api/admin/street-view/profile?listingId=${encodeURIComponent(LISTING_ID)}`);
         if (!response.ok) throw new Error(await response.text());
         const payload = await response.json();
         const profile = (payload?.profile ?? fallback) as StreetViewProfile;
@@ -970,7 +1062,7 @@ const StreetViewToolPage: React.FC = () => {
         setSelectedFeatures(nextFeatures);
         setCameraState(nextCamera);
         setVisualState(nextVisual);
-        setStatus(payload?.profile ? 'Saved Street View profile loaded.' : 'Using Twist SF building asset as the prototype baseline.');
+        setStatus(payload?.profile ? `Saved Street View profile loaded for ${LISTING_NAME}.` : `Using the authored ${LISTING_NAME} building asset as the prototype baseline.`);
       } catch (error) {
         if (cancelled) return;
         console.warn('Street View profile load failed; using defaults.', error);
@@ -982,7 +1074,7 @@ const StreetViewToolPage: React.FC = () => {
         setSelectedFeatures(clone(DEFAULT_SELECTION));
         setCameraState(fallbackCamera);
         setVisualState({ ...DEFAULT_VISUAL });
-        setStatus('Saved profile unavailable; using the Twist SF building asset baseline.');
+        setStatus(`Saved profile unavailable; using the authored ${LISTING_NAME} building asset baseline.`);
       } finally {
         if (!cancelled) setProfileLoaded(true);
       }
@@ -996,6 +1088,7 @@ const StreetViewToolPage: React.FC = () => {
     revealRef.current = false;
     prewarmStartedRef.current = false;
     let disposed = false;
+    let attributionCollapsed = false;
     loadStartedAtRef.current = performance.now();
     setSceneReady(false);
     setLoadDurationMs(null);
@@ -1043,7 +1136,14 @@ const StreetViewToolPage: React.FC = () => {
       const rect = canvas.getBoundingClientRect();
       setCanvasLayout(`${Math.round(rect.width)}×${Math.round(rect.height)} css · ${canvas.width}×${canvas.height} px`);
     };
-    window.requestAnimationFrame(() => window.requestAnimationFrame(measureAndResize));
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      measureAndResize();
+      if (presentationOnly) {
+        const attribution = mapContainerRef.current?.querySelector('.maplibregl-ctrl-attrib');
+        attribution?.classList.remove('maplibregl-compact-show');
+        attribution?.removeAttribute('open');
+      }
+    }));
 
     const providerFeatureCache = new Map<string, any>();
     const maskedProviderIds = new Set<string>();
@@ -1052,6 +1152,8 @@ const StreetViewToolPage: React.FC = () => {
     const nearFieldLayers = new Map<string, { layerId: string; targetOpacity: number; targetBase: number; distanceMeters: number }>();
     const neighborhoodPulseTimeouts = new Set<number>();
     let neighborhoodPulseInterval = 0;
+    let arrivalStartTimeout = 0;
+    let arrivalFinishTimeout = 0;
 
     const scheduleNeighborhoodPulseTimeout = (callback: () => void, delayMs: number) => {
       const timeoutId = window.setTimeout(() => {
@@ -1095,45 +1197,47 @@ const StreetViewToolPage: React.FC = () => {
         sourceLayer: 'building',
       }));
       const primaryCoverageFeatures = [...providerFeatureCache.values(), ...authoredCoverage];
-      const coverage = primaryCoverageNeedsSupplement(primaryCoverageFeatures, center, {
-        radiusMeters: SUPPLEMENTAL_CONTEXT_RADIUS_METERS,
-        minimumContextFootprints: SUPPLEMENTAL_CONTEXT_MIN_PRIMARY_FOOTPRINTS,
-        minimumContextCells: 7,
-        contextGridSize: 4,
-      });
-      if (!coverage.needed) {
-        supplementalContextAttempted = true;
-        return;
-      }
-
       supplementalContextAttempted = true;
       try {
-        const supplemental = await fetchSupplementalBuildingFootprints({
+        const fusion = await fuseBuildingNeighborhood({
+          mode: 'auto',
           listingId: LISTING_ID,
+          country: selectedListing?.geopoint?.address?.country,
           center,
           radiusMeters: SUPPLEMENTAL_CONTEXT_RADIUS_METERS,
-          maxFeatures: 1_000,
+          primaryFeatures: primaryCoverageFeatures,
+          minimumContextFootprints: SUPPLEMENTAL_CONTEXT_MIN_PRIMARY_FOOTPRINTS,
+          minimumContextCells: 7,
+          loadSupplemental: async (signal) => {
+            const supplemental = await fetchSupplementalBuildingFootprints({
+              listingId: LISTING_ID,
+              center,
+              radiusMeters: SUPPLEMENTAL_CONTEXT_RADIUS_METERS,
+              maxFeatures: 1_000,
+              signal,
+            });
+            return {
+              features: supplemental.features,
+              provider: supplemental.provider,
+              truncated: supplemental.truncated,
+            };
+          },
         });
         if (disposed) return;
-        const fused = filterSupplementalBuildingFeatures(
-          primaryCoverageFeatures,
-          supplemental.features,
-          center,
-          SUPPLEMENTAL_CONTEXT_RADIUS_METERS,
-        );
+        const supplementalFeatures = fusion.features.slice(primaryCoverageFeatures.length);
         const source = map.getSource(SUPPLEMENTAL_CONTEXT_SOURCE_ID) as GeoJSONSource | undefined;
         source?.setData({
           type: 'FeatureCollection',
-          features: fused.features.map((feature) => ({
+          features: supplementalFeatures.map((feature) => ({
             type: 'Feature',
             id: feature.id ?? undefined,
             properties: feature.properties ?? {},
             geometry: feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon,
           })),
         } as any);
-        if (fused.features.length) {
+        if (supplementalFeatures.length) {
           setStatus(
-            `Street View filled ${fused.features.length} local building gap${fused.features.length === 1 ? '' : 's'} with supplemental Microsoft footprints; OpenFreeMap remains primary where coverage overlaps.`,
+            `Street View filled ${supplementalFeatures.length} local building gap${supplementalFeatures.length === 1 ? '' : 's'} using the shared ${fusion.sourceLabel} coverage policy.`,
           );
         }
       } catch (error) {
@@ -1414,6 +1518,96 @@ const StreetViewToolPage: React.FC = () => {
       });
     };
 
+    const playArrivalAnimation = (authoredCamera: CameraState) => {
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      const restoreArrivalLayerTransitions = () => {
+        if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
+          map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+        }
+        if (map.getLayer(SELECTED_LAYER_ID)) {
+          map.setPaintProperty(SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+        }
+        if (map.getLayer(STREET_LABEL_LAYER_ID)) {
+          map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity-transition', { duration: 0, delay: 0 } as any);
+        }
+      };
+      const applyFinalArrivalEmphasis = () => {
+        if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
+          map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-opacity', visualRef.current.selectedOpacity);
+        }
+        if (map.getLayer(SELECTED_LAYER_ID)) {
+          map.setPaintProperty(SELECTED_LAYER_ID, 'fill-extrusion-opacity', visualRef.current.selectedOpacity);
+        }
+        if (map.getLayer(STREET_LABEL_LAYER_ID)) {
+          map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity', visualRef.current.streetLabelOpacity);
+        }
+        setArrivalBloomScale(1);
+      };
+
+      if (reducedMotion) {
+        map.jumpTo(authoredCamera);
+        applyFinalArrivalEmphasis();
+        restoreArrivalLayerTransitions();
+        refreshVenueScreenPoint();
+        setSceneReady(true);
+        setLoadDurationMs(performance.now() - loadStartedAtRef.current);
+        startNeighborhoodPulseLoop();
+        return;
+      }
+
+      const startCamera: CameraState = {
+        ...authoredCamera,
+        zoom: clamp(authoredCamera.zoom - ARRIVAL_ZOOM_OFFSET, 15.5, 19),
+        pitch: clamp(authoredCamera.pitch - ARRIVAL_PITCH_OFFSET, 52, 85),
+      };
+      map.jumpTo(startCamera);
+      refreshVenueScreenPoint();
+      if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
+        map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+        map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-opacity', visualRef.current.selectedOpacity * ARRIVAL_SELECTED_OPACITY_SCALE);
+      }
+      if (map.getLayer(SELECTED_LAYER_ID)) {
+        map.setPaintProperty(SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+        map.setPaintProperty(SELECTED_LAYER_ID, 'fill-extrusion-opacity', visualRef.current.selectedOpacity * ARRIVAL_SELECTED_OPACITY_SCALE);
+      }
+      if (map.getLayer(STREET_LABEL_LAYER_ID)) {
+        map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity-transition', { duration: 0, delay: 0 } as any);
+        map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity', 0);
+      }
+      setArrivalBloomScale(ARRIVAL_BLOOM_SCALE);
+      setSceneReady(true);
+      setLoadDurationMs(performance.now() - loadStartedAtRef.current);
+
+      arrivalStartTimeout = window.setTimeout(() => {
+        if (disposed) return;
+        if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
+          map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: ARRIVAL_DURATION_MS, delay: 0 } as any);
+        }
+        if (map.getLayer(SELECTED_LAYER_ID)) {
+          map.setPaintProperty(SELECTED_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: ARRIVAL_DURATION_MS, delay: 0 } as any);
+        }
+        if (map.getLayer(STREET_LABEL_LAYER_ID)) {
+          map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity-transition', { duration: ARRIVAL_DURATION_MS, delay: 0 } as any);
+        }
+        applyFinalArrivalEmphasis();
+        map.easeTo({
+          ...authoredCamera,
+          duration: ARRIVAL_DURATION_MS,
+          easing: (t) => 1 - Math.pow(1 - t, 4),
+        });
+        const onArrivalMove = () => refreshVenueScreenPoint();
+        map.on('move', onArrivalMove);
+        arrivalFinishTimeout = window.setTimeout(() => {
+          map.off('move', onArrivalMove);
+          if (disposed) return;
+          map.jumpTo(authoredCamera);
+          refreshVenueScreenPoint();
+          restoreArrivalLayerTransitions();
+          startNeighborhoodPulseLoop();
+        }, ARRIVAL_DURATION_MS + 40);
+      }, ARRIVAL_HOLD_MS);
+    };
+
     const finishRevealIfReady = async () => {
       if (disposed || revealRef.current || prewarmStartedRef.current || !map.isStyleLoaded() || !map.getSource(BUILDING_SOURCE_ID)) return;
       if (!map.isSourceLoaded(BUILDING_SOURCE_ID)) return;
@@ -1527,10 +1721,11 @@ const StreetViewToolPage: React.FC = () => {
           console.warn('Street View render probe failed.', error);
         }
         setLoadProgress(100);
-        setLoadStage('Ready');
-        setSceneReady(true);
-        startNeighborhoodPulseLoop();
-        setLoadDurationMs(performance.now() - loadStartedAtRef.current);
+        setLoadStage('Arriving');
+        playArrivalAnimation(authoredCamera);
+        window.setTimeout(() => {
+          if (!disposed) setLoadStage('Ready');
+        }, ARRIVAL_HOLD_MS + ARRIVAL_DURATION_MS);
       }, 180);
     };
 
@@ -1542,6 +1737,7 @@ const StreetViewToolPage: React.FC = () => {
         type: 'raster-dem',
         url: TERRAIN_SOURCE_URL,
       } as any);
+      map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
       map.addSource(BUILDING_SOURCE_ID, {
         type: 'vector',
         url: 'https://tiles.openfreemap.org/planet',
@@ -1693,7 +1889,7 @@ const StreetViewToolPage: React.FC = () => {
       } as any);
       applyVisuals();
       setLoadProgress(55);
-      setLoadStage('Resolving Twist SF footprint');
+      setLoadStage(`Resolving ${LISTING_NAME} footprint`);
       updateSelectionSource();
       map.jumpTo(cameraRef.current);
       setLoadProgress(68);
@@ -1715,6 +1911,14 @@ const StreetViewToolPage: React.FC = () => {
       installLandmarks();
       void loadSupplementalContextIfNeeded();
       finishRevealIfReady();
+      if (presentationOnly && !attributionCollapsed) {
+        const attribution = mapContainerRef.current?.querySelector('.maplibregl-ctrl-attrib');
+        if (attribution) {
+          attribution.classList.remove('maplibregl-compact-show');
+          attribution.removeAttribute('open');
+          attributionCollapsed = true;
+        }
+      }
     };
     const onRender = () => {
       const now = performance.now();
@@ -1782,8 +1986,10 @@ const StreetViewToolPage: React.FC = () => {
       canvas.style.cursor = 'grab';
       if (drag.moved) {
         suppressClickRef.current = true;
-        setDirty(true);
-        setStatus('Camera angle changed. Save State to keep this arrival view.');
+        if (!presentationOnly) {
+          setDirty(true);
+          setStatus('Camera angle changed. Save State to keep this arrival view.');
+        }
       }
     };
 
@@ -1847,7 +2053,7 @@ const StreetViewToolPage: React.FC = () => {
     map.on('sourcedata', onSourceData);
     map.on('idle', onIdle);
     map.on('render', onRender);
-    map.on('click', onMapClick);
+    if (!presentationOnly) map.on('click', onMapClick);
 
     return () => {
       disposed = true;
@@ -1855,6 +2061,8 @@ const StreetViewToolPage: React.FC = () => {
       setTerrainProviderPlateVisibilityRef.current = () => {};
       if (cameraMotion.raf) window.cancelAnimationFrame(cameraMotion.raf);
       if (neighborhoodPulseInterval) window.clearInterval(neighborhoodPulseInterval);
+      if (arrivalStartTimeout) window.clearTimeout(arrivalStartTimeout);
+      if (arrivalFinishTimeout) window.clearTimeout(arrivalFinishTimeout);
       neighborhoodPulseTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
       neighborhoodPulseTimeouts.clear();
       canvas.removeEventListener('pointerdown', onPointerDown);
@@ -1865,13 +2073,13 @@ const StreetViewToolPage: React.FC = () => {
       map.off('sourcedata', onSourceData);
       map.off('idle', onIdle);
       map.off('render', onRender);
-      map.off('click', onMapClick);
+      if (!presentationOnly) map.off('click', onMapClick);
       map.remove();
       landmarkLayersRef.current = [];
       nearFieldLayerIdsRef.current = [];
       mapRef.current = null;
     };
-  }, [profileLoaded]);
+  }, [presentationOnly, profileLoaded]);
 
   useEffect(() => {
     selectedFeaturesRef.current = selectedFeatures;
@@ -1990,7 +2198,7 @@ const StreetViewToolPage: React.FC = () => {
 
   const applyConceptPreset = () => {
     applyVisual({ ...DEFAULT_VISUAL });
-    setStatus('Applied the soft Street View concept preset with horizon haze, venue bloom, and occlusion assist.');
+    setStatus('Applied the Twist SF Street View baseline palette with crimson horizon, dark context buildings, venue bloom, and occlusion assist.');
   };
 
   const resetSelection = () => {
@@ -1998,7 +2206,7 @@ const StreetViewToolPage: React.FC = () => {
     selectedFeaturesRef.current = features;
     setSelectedFeatures(features);
     setDirty(true);
-    setStatus('Restored the two authored Twist SF footprint polygons.');
+    setStatus(`Restored ${features.length} authored ${LISTING_NAME} footprint${features.length === 1 ? '' : 's'}.`);
   };
 
   const clearSelection = () => {
@@ -2025,7 +2233,7 @@ const StreetViewToolPage: React.FC = () => {
   const resetCamera = () => {
     const center = geometryCenter(selectedFeaturesRef.current) ?? DEFAULT_CENTER;
     applyCamera({ ...DEFAULT_CAMERA, center });
-    setStatus('Camera reset to the Twist SF prototype arrival.');
+    setStatus(`Camera reset to the ${LISTING_NAME} prototype arrival.`);
   };
 
   const saveState = async () => {
@@ -2056,7 +2264,7 @@ const StreetViewToolPage: React.FC = () => {
       },
     };
     try {
-      const response = await fetch('/api/admin/street-view/profile/save', {
+      const response = await adminFetch('/api/admin/street-view/profile/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile }),
@@ -2068,7 +2276,7 @@ const StreetViewToolPage: React.FC = () => {
         throw new Error(`Sky color round-trip mismatch: expected ${profile.visual.skyColor}, received ${savedSkyColor || 'missing'}.`);
       }
       setDirty(false);
-      setStatus(`Saved ${selectedFeatures.length} highlighted footprint${selectedFeatures.length === 1 ? '' : 's'}, arrival camera, and sky ${savedSkyColor} for Twist SF.`);
+      setStatus(`Saved ${selectedFeatures.length} highlighted footprint${selectedFeatures.length === 1 ? '' : 's'}, arrival camera, and sky ${savedSkyColor} for ${LISTING_NAME}.`);
     } catch (error) {
       console.error('Street View profile save failed', error);
       setStatus(error instanceof Error ? `Save failed: ${error.message}` : 'Save failed.');
@@ -2079,28 +2287,50 @@ const StreetViewToolPage: React.FC = () => {
 
   const selectedProviderIds = providerIds(selectedFeatures);
 
+  const selectVenue = (listingId: string) => {
+    if (!listingId || listingId === LISTING_ID) return;
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('listingId', listingId);
+    window.location.assign(nextUrl.toString());
+  };
+
   return (
-    <div className="h-full min-h-0 overflow-auto bg-[#050608] text-zinc-100 xl:overflow-hidden">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1900px] flex-col gap-3 p-3 lg:p-4">
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.09] bg-[rgba(12,14,18,0.86)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
+    <div className={presentationOnly ? 'fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-[#050608] text-zinc-100' : 'h-full min-h-0 overflow-auto bg-[#050608] text-zinc-100 xl:overflow-hidden'}>
+      <div className={presentationOnly ? 'h-full min-h-0 w-full' : 'mx-auto flex h-full min-h-0 w-full max-w-[1900px] flex-col gap-3 p-3 lg:p-4'}>
+        {!presentationOnly ? <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.09] bg-[rgba(12,14,18,0.86)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-red-300"><Building2 size={14} /><span className="text-[9px] font-bold uppercase tracking-[0.2em]">Fixed-location 3D venue prototype</span></div>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="text-lg font-semibold tracking-tight text-white">Street View Tool</h1>
-              <p className="max-w-3xl text-[10px] text-zinc-500">Twist SF · load the neighborhood first, then orbit from a constrained venue anchor.</p>
+              <p className="max-w-3xl text-[10px] text-zinc-500">{LISTING_NAME} · load the neighborhood first, then orbit from a constrained venue anchor.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-8 min-w-[280px] items-center gap-2 rounded-lg border border-white/10 bg-black/35 px-2.5 text-[9px] text-zinc-400">
+              <span className="shrink-0 font-bold uppercase tracking-[0.12em] text-zinc-500">Venue</span>
+              <select
+                value={LISTING_ID}
+                onChange={(event) => selectVenue(event.target.value)}
+                className="min-w-0 flex-1 cursor-pointer bg-transparent text-[10px] text-zinc-100 outline-none"
+                aria-label="Select confirmed public venue"
+              >
+                {PUBLIC_STREET_VIEW_VENUES.map((venue) => {
+                  const locality = [venue?.geopoint?.address?.city, venue?.geopoint?.address?.country].filter(Boolean).join(', ');
+                  return <option key={venue.id} value={venue.id} className="bg-zinc-950 text-zinc-100">{venue.name}{locality ? ` — ${locality}` : ''}</option>;
+                })}
+              </select>
+              <span className="shrink-0 font-mono text-[8px] text-zinc-600">{PUBLIC_STREET_VIEW_VENUES.length}</span>
+            </label>
             <button type="button" onClick={() => window.location.reload()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-black/35 px-2.5 text-[10px] text-zinc-300 hover:border-white/20 hover:text-white"><RefreshCw size={12} />Reload scene</button>
             <button type="button" onClick={resetCamera} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-black/35 px-2.5 text-[10px] text-zinc-300 hover:border-white/20 hover:text-white"><RotateCcw size={12} />Reset view</button>
             <button type="button" onClick={() => void saveState()} disabled={saving || !selectedFeatures.length} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-400/35 bg-red-500/12 px-2.5 text-[10px] font-semibold text-red-100 hover:border-red-300/55 disabled:cursor-not-allowed disabled:opacity-45"><Save size={12} />{saving ? 'Saving…' : dirty ? 'Save state*' : 'Save state'}</button>
           </div>
-        </header>
+        </header> : null}
 
-        <main className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.62fr)]">
-          <section className="relative min-h-[560px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#020305] shadow-[0_30px_90px_rgba(0,0,0,0.42)] xl:min-h-0">
+        <main className={presentationOnly ? 'h-full min-h-0' : 'grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.62fr)]'}>
+          <section className={presentationOnly ? 'relative h-full min-h-[560px] overflow-hidden bg-[#020305]' : 'relative min-h-[560px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#020305] shadow-[0_30px_90px_rgba(0,0,0,0.42)] xl:min-h-0'}>
             <div className="absolute inset-0 z-0">
-              <div ref={mapContainerRef} className="h-full w-full" aria-label="Twist SF Street View prototype" />
+              <div ref={mapContainerRef} className="h-full w-full" aria-label={`${LISTING_NAME} Street View prototype`} />
             </div>
             <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_50%,rgba(0,0,0,0.2))]" />
             <div
@@ -2119,7 +2349,8 @@ const StreetViewToolPage: React.FC = () => {
                   top: venueScreenPoint.y,
                   background: `radial-gradient(ellipse at center, ${visualState.selectedColor} 0%, transparent 67%)`,
                   filter: 'blur(20px)',
-                  opacity: visualState.venueBloomStrength,
+                  opacity: visualState.venueBloomStrength * arrivalBloomScale,
+                  transition: `opacity ${ARRIVAL_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
                   mixBlendMode: 'screen',
                 }}
               />
@@ -2138,30 +2369,84 @@ const StreetViewToolPage: React.FC = () => {
               </div>
             ) : null}
 
-            <div className="pointer-events-auto absolute left-3 top-3 z-30 w-[min(360px,calc(100%-24px))] rounded-2xl border border-white/10 bg-[rgba(12,13,17,0.82)] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
+            {presentationOnly ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign(presentationKind === 'mobile' ? '/mobile' : presentationKind === 'tablet' ? '/tablet' : '/globe')}
+                  className={`pointer-events-auto absolute z-30 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[rgba(10,11,15,0.78)] px-3 text-[11px] font-semibold text-zinc-200 shadow-[0_12px_35px_rgba(0,0,0,0.3)] backdrop-blur-xl hover:border-white/20 hover:text-white ${isMobilePresentation ? 'left-4 top-[max(16px,env(safe-area-inset-top))] h-11' : 'left-5 top-5 h-10'}`}
+                >
+                  <ChevronRight size={14} className="rotate-180" />Back
+                </button>
+                <div className={`pointer-events-none absolute z-30 flex items-center ${isMobilePresentation ? 'left-4 top-[72px] max-w-[calc(100%-32px)] gap-3' : isTabletPresentation ? 'left-5 top-[78px] gap-4' : 'left-5 top-[76px] gap-5'}`}>
+                  <div className={`flex shrink-0 items-center justify-center overflow-hidden border border-white/[0.14] bg-black/65 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl ${isMobilePresentation ? 'h-[84px] w-[84px] rounded-[22px]' : isTabletPresentation ? 'h-[108px] w-[108px] rounded-[26px]' : 'h-[124px] w-[124px] rounded-[28px]'}`}>
+                    <img src={presentationLogoUrl} alt={`${presentationName} logo`} className="h-full w-full object-contain" />
+                  </div>
+                  <div className={`min-w-0 drop-shadow-[0_5px_18px_rgba(0,0,0,0.85)] ${isMobilePresentation ? 'max-w-[240px]' : 'max-w-[520px]'}`}>
+                    <p className={`${isMobilePresentation ? 'text-[8px]' : 'text-[10px]'} font-bold uppercase tracking-[0.24em] text-red-200`}>Venue</p>
+                    <h1 className={`mt-1 font-semibold leading-none tracking-[-0.035em] text-white [overflow-wrap:anywhere] ${isMobilePresentation ? 'text-[28px]' : isTabletPresentation ? 'text-[36px]' : 'text-[42px]'}`}>{presentationName}</h1>
+                    <p className={`mt-2 flex items-center gap-1.5 text-zinc-200 ${isMobilePresentation ? 'text-[11px]' : 'text-[13px]'}`}>
+                      <span>{presentationRegionLabel || 'Confirmed public venue'}</span>
+                      {presentationCountryFlagUrl ? <img src={presentationCountryFlagUrl} alt={`${presentationCountry} flag`} className="h-[0.95em] w-auto rounded-[2px] shadow-[0_1px_4px_rgba(0,0,0,0.35)]" /> : null}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            <div className={`pointer-events-auto absolute z-30 overflow-hidden border border-white/10 bg-[rgba(10,12,16,0.88)] shadow-[0_22px_65px_rgba(0,0,0,0.38)] backdrop-blur-2xl ${presentationOnly ? (isMobilePresentation ? 'bottom-[max(12px,env(safe-area-inset-bottom))] left-3 right-3 rounded-[22px]' : isTabletPresentation ? 'bottom-5 left-5 w-[min(520px,calc(100%-40px))] rounded-[22px]' : 'bottom-5 left-5 w-[min(560px,calc(100%-40px))] rounded-[22px]') : 'left-3 top-3 w-[min(560px,calc(100%-40px))] rounded-[22px]'}`}>
+              {presentationOnly ? (
+                <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                  <img src={presentationHeroUrl} alt="" className="h-full w-full object-cover opacity-[0.5]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,10,13,0.88)_0%,rgba(8,10,13,0.72)_50%,rgba(8,10,13,0.58)_100%),linear-gradient(180deg,rgba(8,10,13,0.18)_0%,rgba(8,10,13,0.88)_100%)]" />
+                </div>
+              ) : null}
+              <div className={`relative ${isMobilePresentation ? 'p-4' : 'p-5'}`}>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-300">Venue</span>
-                <span className="rounded-full border border-red-400/30 bg-red-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.14em] text-red-100">Public</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-red-300">Venue context</span>
+                <div className="flex items-center gap-2">
+                  {presentationAvailability ? <span className="rounded-lg border border-white/[0.08] bg-black/35 px-2.5 py-1.5 text-[9px] text-zinc-200">Typical · {presentationAvailability}</span> : null}
+                  <span className="rounded-full border border-red-400/30 bg-red-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.14em] text-red-100">Public</span>
+                </div>
               </div>
-              <h2 className="mt-3 text-[24px] font-semibold tracking-tight text-white">Twist SF</h2>
-              <p className="mt-1 text-[10px] text-zinc-300">Club <span className="mx-1.5 text-zinc-600">•</span><span className="text-red-300">North Beach / Fisherman’s Wharf</span></p>
+              {presentationOnly && presentationDescription ? <p className={`${isMobilePresentation ? 'mt-3 text-[11px] leading-[1.55]' : 'mt-4 text-[11px] leading-5'} text-zinc-200`}>{presentationDescription}</p> : null}
+              {presentationOnly && presentationAmenities.length ? (
+                amenitiesExpanded ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {presentationAmenities.map((amenity) => <span key={amenity} className="rounded-full border border-white/[0.09] bg-black/30 px-2.5 py-1 text-[8px] font-medium text-zinc-100">{amenity}</span>)}
+                    <button type="button" onClick={() => setAmenitiesExpanded(false)} className="rounded-full border border-white/[0.12] bg-black/45 px-2.5 py-1 text-[8px] font-semibold text-zinc-200 hover:text-white">Show less</button>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                    {presentationAmenities.slice(0, compactAmenityCount).map((amenity) => <span key={amenity} className="shrink-0 rounded-full border border-white/[0.09] bg-black/30 px-2.5 py-1 text-[8px] font-medium text-zinc-100">{amenity}</span>)}
+                    {presentationAmenities.length > compactAmenityCount ? <button type="button" onClick={() => setAmenitiesExpanded(true)} className={`shrink-0 rounded-full border border-white/[0.12] bg-black/45 px-2.5 py-1 text-[8px] font-semibold text-zinc-100 hover:text-white ${isMobilePresentation ? 'min-h-8' : ''}`}>+{presentationAmenities.length - compactAmenityCount}</button> : null}
+                  </div>
+                )
+              ) : null}
               <div className="mt-4 flex items-start gap-2 border-t border-white/[0.08] pt-3">
                 <MapPin size={13} className="mt-0.5 shrink-0 text-zinc-500" />
-                <div><p className="text-[10px] text-zinc-200">387 Bay Street</p><p className="mt-0.5 text-[9px] text-zinc-500">San Francisco, CA 94133</p></div>
+                <div><p className="text-[10px] text-zinc-200">{LISTING_ADDRESS_LINE1}</p><p className="mt-0.5 text-[9px] text-zinc-500">{LISTING_LOCALITY || LISTING_ADDRESS}</p></div>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Footprints</span><span className="mt-1 block font-mono text-[11px] text-zinc-200">{selectedFeatures.length}</span></div>
-                <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Sightline</span><span className="mt-1 block text-[10px] text-zinc-200">{occludingPolygonCount ? `${occludingPolygonCount} faded` : 'Clear'}</span></div>
-                <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">View</span><span className="mt-1 block text-[10px] text-zinc-200">Fixed orbit</span></div>
-              </div>
+              {!presentationOnly ? (
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Footprints</span><span className="mt-1 block font-mono text-[11px] text-zinc-200">{selectedFeatures.length}</span></div>
+                  <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Sightline</span><span className="mt-1 block text-[10px] text-zinc-200">{occludingPolygonCount ? `${occludingPolygonCount} faded` : 'Clear'}</span></div>
+                  <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">View</span><span className="mt-1 block text-[10px] text-zinc-200">Fixed orbit</span></div>
+                </div>
+              ) : null}
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <a href="https://www.google.com/maps/search/?api=1&query=387%20Bay%20Street%2C%20San%20Francisco%2C%20CA%2094133" target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-300/35 bg-red-500/90 px-3 text-[9px] font-semibold text-white hover:bg-red-500"><ExternalLink size={11} />Open in Maps</a>
-                <a href="/globe" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3 text-[9px] font-semibold text-zinc-300 hover:border-white/20 hover:text-white"><Navigation size={11} />Back to Globe</a>
+                <a href={LISTING_MAP_URL} target="_blank" rel="noreferrer" className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-300/35 bg-red-500/90 px-3 text-[9px] font-semibold text-white hover:bg-red-500 ${isMobilePresentation ? 'h-11' : 'h-9'}`}><ExternalLink size={11} />Directions</a>
+                {presentationOnly ? (
+                  <button type="button" onClick={resetCamera} className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3 text-[9px] font-semibold text-zinc-300 hover:border-white/20 hover:text-white ${isMobilePresentation ? 'h-11' : 'h-9'}`}><RotateCcw size={11} />Recenter</button>
+                ) : (
+                  <a href="/globe" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3 text-[9px] font-semibold text-zinc-300 hover:border-white/20 hover:text-white"><Navigation size={11} />Back to Globe</a>
+                )}
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[8px] text-zinc-500"><MousePointer2 size={10} />Drag to look around · selected venue remains the visual anchor</p>
+              <p className="mt-2 flex items-center gap-1.5 text-[8px] text-zinc-500"><MousePointer2 size={10} />Drag gently to look around · the venue remains the visual anchor</p>
+              </div>
             </div>
 
-            <div className="pointer-events-auto absolute right-3 top-3 z-30 hidden w-[118px] rounded-2xl border border-white/10 bg-[rgba(10,11,15,0.78)] p-3 shadow-[0_16px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:block">
+            <div className={`pointer-events-auto absolute right-3 top-3 z-30 w-[118px] rounded-2xl border border-white/10 bg-[rgba(10,11,15,0.78)] p-3 shadow-[0_16px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl ${isMobilePresentation ? 'hidden' : 'hidden sm:block'}`}>
               <div className="flex items-center justify-center text-[8px] font-bold uppercase tracking-[0.18em] text-zinc-500">N</div>
               <div className="relative mx-auto mt-2 flex h-[70px] w-[70px] items-center justify-center rounded-full border border-white/10 bg-black/20">
                 <div className="absolute inset-[8px] rounded-full border border-white/[0.06]" />
@@ -2173,7 +2458,7 @@ const StreetViewToolPage: React.FC = () => {
               <button type="button" onClick={resetCamera} className="mt-2 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-white/[0.08] bg-black/25 px-2 py-1.5 text-[8px] text-zinc-400 hover:text-white"><RotateCcw size={10} />Reset</button>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-30 grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+            {!presentationOnly ? <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-30 grid grid-cols-2 gap-1.5 sm:grid-cols-6">
               <Metric label="Selected" value={`${selectedFeatures.length} footprint${selectedFeatures.length === 1 ? '' : 's'}`} />
               <Metric label="Provider IDs" value={selectedProviderIds.length ? String(selectedProviderIds.length) : 'authored'} />
               <Metric label="Load" value={loadDurationMs != null ? `${Math.round(loadDurationMs)} ms` : '—'} />
@@ -2181,12 +2466,12 @@ const StreetViewToolPage: React.FC = () => {
               <Metric label="Buildings" value={sourceReady ? `${renderedBuildingCount} rendered` : 'loading'} />
               <Metric label="Canvas" value={canvasLayout} />
               <Metric label="Canvas probe" value={renderProbe} />
-            </div>
+            </div> : null}
           </section>
 
-          <aside className="min-h-0 space-y-2 xl:overflow-y-auto xl:pr-1">
+          {!presentationOnly ? <aside className="min-h-0 space-y-2 xl:overflow-y-auto xl:pr-1">
             <Panel title="Venue Building Selection" icon={<Crosshair size={14} />} open={openPanels.selection} onToggle={() => setOpenPanels((current) => ({ ...current, selection: !current.selection }))} summary={<span className="rounded-md border border-red-400/20 bg-red-500/[0.06] px-2 py-1 text-[9px] font-mono text-red-200">{selectedFeatures.length}</span>}>
-              <p className="text-[9px] leading-4 text-zinc-500">Click any visible building to add/remove it. Twist starts from the existing authored asset, which contains two polygons so both connected building footprints can be treated as one venue.</p>
+              <p className="text-[9px] leading-4 text-zinc-500">Click any visible building to add/remove it. This venue starts from its authored building asset so saved footprints can be treated as one visual anchor.</p>
               <div className="mt-2 rounded-lg border border-amber-300/10 bg-amber-300/[0.025] p-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-amber-200/80">Overlap provider audit</span>
@@ -2197,10 +2482,10 @@ const StreetViewToolPage: React.FC = () => {
                     <span key={providerId} className="rounded border border-white/[0.08] bg-black/30 px-1.5 py-0.5 font-mono text-[8px] text-zinc-300">{providerId}</span>
                   )) : <span className="text-[8px] text-zinc-600">Waiting for overlapping building tiles…</span>}
                 </div>
-                <p className="mt-1.5 text-[8px] leading-3.5 text-zinc-600">Detected automatically from every loaded provider polygon that physically overlaps either saved Twist footprint. These IDs are masked from the bulk white layer before the authored red geometry is drawn.</p>
+                <p className="mt-1.5 text-[8px] leading-3.5 text-zinc-600">Detected automatically from loaded provider polygons that physically overlap the saved venue footprint. These IDs are masked from the bulk white layer before the authored red geometry is drawn.</p>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <button type="button" onClick={resetSelection} className="rounded-md border border-white/10 bg-black/30 px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-zinc-300 hover:text-white">Twist asset ×2</button>
+                <button type="button" onClick={resetSelection} className="rounded-md border border-white/10 bg-black/30 px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-zinc-300 hover:text-white">Authored asset ×{DEFAULT_SELECTION.length}</button>
                 <button type="button" onClick={centerOnSelection} disabled={!selectedFeatures.length} className="rounded-md border border-white/10 bg-black/30 px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-zinc-300 hover:text-white disabled:opacity-40">Center selection</button>
                 <button type="button" onClick={clearSelection} className="rounded-md border border-red-400/20 bg-red-500/[0.05] px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-red-200"><Trash2 size={10} className="mr-1 inline" />Clear</button>
               </div>
@@ -2229,7 +2514,7 @@ const StreetViewToolPage: React.FC = () => {
 
             <Panel title="Street Materials & Light" icon={<Sparkles size={14} />} open={openPanels.visual} onToggle={() => setOpenPanels((current) => ({ ...current, visual: !current.visual }))} summary={<span className="text-[8px] uppercase tracking-wider text-zinc-600">concept polish</span>}>
               <div className="space-y-1.5">
-                <button type="button" onClick={applyConceptPreset} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-400/20 bg-red-500/[0.06] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-red-200 hover:border-red-300/35 hover:bg-red-500/[0.1]"><Sparkles size={11} />Apply concept preset</button>
+                <button type="button" onClick={applyConceptPreset} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-400/20 bg-red-500/[0.06] px-3 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-red-200 hover:border-red-300/35 hover:bg-red-500/[0.1]"><Sparkles size={11} />Apply Street View baseline</button>
                 <button type="button" onClick={toggleTerrain} className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[8px] font-bold uppercase tracking-[0.12em] ${terrainEnabled ? 'border-amber-300/35 bg-amber-400/10 text-amber-100' : 'border-white/10 bg-black/20 text-zinc-400 hover:text-white'}`}><Navigation size={11} />Terrain experiment · {terrainEnabled ? 'on' : 'off'}</button>
                 <p className="text-[8px] leading-3.5 text-zinc-600">Dev-only DEM comparison. Terrain is not saved to the venue profile yet.</p>
                 <ColorControl label="Sky" value={visualState.skyColor} onChange={(skyColor) => applyVisual({ skyColor })} />
@@ -2279,11 +2564,13 @@ const StreetViewToolPage: React.FC = () => {
                 <LoaderCircle size={12} className="mr-1.5 inline text-red-300" />The scene intentionally waits for the visible building source before reveal. Travel, scroll zoom, keyboard navigation and free panning are disabled so the public viewer can stay focused and predictable.
               </div>
             </Panel>
-          </aside>
+          </aside> : null}
         </main>
       </div>
     </div>
   );
 };
+
+export const StreetViewPresentationPage: React.FC<{ kind?: StreetViewPresentationKind }> = ({ kind = 'desktop' }) => <StreetViewToolPage presentationOnly presentationKind={kind} />;
 
 export default StreetViewToolPage;

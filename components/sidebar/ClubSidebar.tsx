@@ -117,7 +117,7 @@ export const ClubSidebar: React.FC<ClubSidebarProps> = ({
               src={logoImage}
               onError={handleListingImageError}
               alt={`${listing.name} logo`}
-              className="h-full w-full scale-[1.06] object-cover"
+              className="h-full w-full object-contain"
             />
           </div>
         ) : null}

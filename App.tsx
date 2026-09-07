@@ -5,8 +5,9 @@ import { useAppStore } from './store/appStore';
 import { ToastContainer } from './components/Toast';
 import DebugBadge from './components/DebugBadge';
 import { DEV_TOOLS_ENABLED } from './lib/devTools';
-import AdminEditBar from './components/admin-edit/AdminEditBar';
 import { AdminEditModeProvider } from './components/admin-edit/AdminEditModeContext';
+
+const AdminEditBar = React.lazy(() => import('./components/admin-edit/AdminEditBar'));
 
 const App: React.FC = () => {
   const { currentUser, logout, setDebugInfo } = useAppStore();
@@ -36,7 +37,7 @@ const App: React.FC = () => {
     <div className="ss-bg-base relative min-h-screen font-sans text-gray-100 flex flex-col">
        {showDebugBadge ? <DebugBadge /> : null}
        <ToastContainer />
-       <AdminEditBar />
+       <React.Suspense fallback={null}><AdminEditBar /></React.Suspense>
       <div className="ss-bg-geometric pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
       
       <div className={`relative z-10 flex flex-col flex-grow min-h-0 ${!isScrollablePage ? 'h-screen' : ''}`}>

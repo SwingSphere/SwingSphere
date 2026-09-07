@@ -4,31 +4,31 @@
     "version": 1,
     "listingId": "club-twist-sf",
     "venueName": "Twist SF",
-    "address": "387 Bay Street, San Francisco, CA 94133",
+    "address": "387 Bay Street, San Francisco, California 94133, United States",
     "camera": {
       "center": [
         -122.41332608919878,
         37.805453078123904
       ],
       "zoom": 17.95,
-      "pitch": 79.25000000000001,
-      "bearing": 135.23000000000002
+      "pitch": 77.83332061767581,
+      "bearing": 129.67002319335938
     },
     "visual": {
       "skyColor": "#22191f",
-      "horizonColor": "#d86e72",
-      "hazeStrength": 0.46,
-      "buildingColor": "#b8b0ae",
+      "horizonColor": "#ff0008",
+      "hazeStrength": 0.6,
+      "buildingColor": "#0d0d0d",
       "buildingOpacity": 1,
       "selectedColor": "#dc2538",
       "selectedOpacity": 1,
-      "selectedGlowOpacity": 0,
-      "groundBrightness": 0.3,
-      "streetLabelOpacity": 0.72,
-      "streetLabelSize": 13.5,
-      "lightColor": "#f2e7e2",
-      "lightIntensity": 0.48,
-      "lightAzimuth": 225,
+      "selectedGlowOpacity": 0.5,
+      "groundBrightness": 0.47,
+      "streetLabelOpacity": 0.2,
+      "streetLabelSize": 20,
+      "lightColor": "#ffffff",
+      "lightIntensity": 0.5,
+      "lightAzimuth": 191,
       "lightPolar": 44,
       "venueBloomStrength": 0.34,
       "occlusionMode": "fade",
@@ -139,6 +139,660 @@
         ]
       }
     },
-    "updatedAt": "2026-08-16T07:59:19.173Z"
+    "updatedAt": "2026-09-02T07:58:12.722Z"
+  },
+  {
+    "id": "street-view-club-dungeon-tel-aviv",
+    "version": 1,
+    "listingId": "club-dungeon-tel-aviv",
+    "venueName": "The Dungeon",
+    "address": "HaArba'a Street 10, Tel Aviv-Yafo, Tel Aviv District, 6473906, Israel",
+    "camera": {
+      "center": [
+        34.78368365764618,
+        32.07022991836668
+      ],
+      "zoom": 18.15,
+      "pitch": 76.33332061767578,
+      "bearing": 153.1333178710937
+    },
+    "visual": {
+      "skyColor": "#22191f",
+      "horizonColor": "#d86e72",
+      "hazeStrength": 0.46,
+      "buildingColor": "#121212",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#f2e7e2",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "26954410"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "26954410",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    34.78387892246246,
+                    32.07013809329091
+                  ],
+                  [
+                    34.78338003158569,
+                    32.07015173069354
+                  ],
+                  [
+                    34.78339076042175,
+                    32.07036538306917
+                  ],
+                  [
+                    34.78388965129852,
+                    32.07035629148888
+                  ],
+                  [
+                    34.78387892246246,
+                    32.07013809329091
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T06:50:00.555Z"
+  },
+  {
+    "id": "street-view-club-soho-graz",
+    "version": 1,
+    "listingId": "club-soho-graz",
+    "venueName": "soho Lifestyle Club",
+    "address": "Eduard-Ast-Straße 11, 8073 Feldkirchen bei Graz, Styria, Austria",
+    "camera": {
+      "center": [
+        15.455984830856323,
+        46.981384708908756
+      ],
+      "zoom": 18.4,
+      "pitch": 75.49999237060544,
+      "bearing": 129.32000000000005
+    },
+    "visual": {
+      "skyColor": "#ff0000",
+      "horizonColor": "#d86e72",
+      "hazeStrength": 0.46,
+      "buildingColor": "#121212",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#f2e7e2",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "855126110"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "855126110",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    15.455800294876099,
+                    46.98139788422483
+                  ],
+                  [
+                    15.456207990646362,
+                    46.98148571930162
+                  ],
+                  [
+                    15.45626163482666,
+                    46.981364946033864
+                  ],
+                  [
+                    15.455853939056396,
+                    46.98127711075864
+                  ],
+                  [
+                    15.455800294876099,
+                    46.98139788422483
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T06:52:55.113Z"
+  },
+  {
+    "id": "street-view-club-lorage-montreal",
+    "version": 1,
+    "listingId": "club-lorage-montreal",
+    "venueName": "Club L'Orage",
+    "address": "7700 12e Avenue, Montréal, Québec, Canada",
+    "camera": {
+      "center": [
+        -73.60521044049945,
+        45.56279394043135
+      ],
+      "zoom": 17.65,
+      "pitch": 76.83333587646484,
+      "bearing": 148.0666589355469
+    },
+    "visual": {
+      "skyColor": "#ff0000",
+      "horizonColor": "#d86e72",
+      "hazeStrength": 0.58,
+      "buildingColor": "#0a0a0a",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#ffffff",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.44,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "3685100"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "3685100",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -73.60556066036224,
+                    45.56273062944294
+                  ],
+                  [
+                    -73.60538363456726,
+                    45.56292968537372
+                  ],
+                  [
+                    -73.60564649105072,
+                    45.5630461139875
+                  ],
+                  [
+                    -73.605517745018,
+                    45.563196344100305
+                  ],
+                  [
+                    -73.60424637794495,
+                    45.56263673489116
+                  ],
+                  [
+                    -73.60455751419067,
+                    45.56228744578087
+                  ],
+                  [
+                    -73.60556066036224,
+                    45.56273062944294
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T06:54:32.042Z"
+  },
+  {
+    "id": "street-view-club-eden-san-antonio",
+    "version": 1,
+    "listingId": "club-eden-san-antonio",
+    "venueName": "Club Eden - SAT",
+    "address": "4250 Thousand Oaks Drive, San Antonio, Texas 78217, United States",
+    "camera": {
+      "center": [
+        -98.41077446937561,
+        29.551932186104775
+      ],
+      "zoom": 17.65,
+      "pitch": 77.33333587646483,
+      "bearing": 170.61331787109384
+    },
+    "visual": {
+      "skyColor": "#22191f",
+      "horizonColor": "#ff0008",
+      "hazeStrength": 0.46,
+      "buildingColor": "#0f0f0f",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#f2e7e2",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "179313250"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "179313250",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -98.41067254543304,
+                    29.552291869458003
+                  ],
+                  [
+                    -98.41035068035126,
+                    29.552044542589513
+                  ],
+                  [
+                    -98.41053307056427,
+                    29.551867213518747
+                  ],
+                  [
+                    -98.41055452823639,
+                    29.551885879751396
+                  ],
+                  [
+                    -98.4107369184494,
+                    29.55169921726997
+                  ],
+                  [
+                    -98.41071546077728,
+                    29.551685217569954
+                  ],
+                  [
+                    -98.4108817577362,
+                    29.551521887593253
+                  ],
+                  [
+                    -98.41119825839996,
+                    29.551769215740876
+                  ],
+                  [
+                    -98.41103732585907,
+                    29.55192787876217
+                  ],
+                  [
+                    -98.41102123260498,
+                    29.55191854565018
+                  ],
+                  [
+                    -98.41083884239197,
+                    29.55210054117879
+                  ],
+                  [
+                    -98.41085493564606,
+                    29.55211454082125
+                  ],
+                  [
+                    -98.41067254543304,
+                    29.552291869458003
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T06:57:17.419Z"
+  },
+  {
+    "id": "street-view-club-eden-oklahoma-city",
+    "version": 1,
+    "listingId": "club-eden-oklahoma-city",
+    "venueName": "Club Eden - OKC",
+    "address": "2801 NW 39th Street, Oklahoma City, Oklahoma 73112, United States",
+    "camera": {
+      "center": [
+        -97.56410724238346,
+        35.51209689530164
+      ],
+      "zoom": 18.15,
+      "pitch": 72.33332824707031,
+      "bearing": -133.14668212890626
+    },
+    "visual": {
+      "skyColor": "#22191f",
+      "horizonColor": "#ff0008",
+      "hazeStrength": 0.46,
+      "buildingColor": "#0d0d0d",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#ffffff",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "25241420"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "25241420",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -97.56447851657867,
+                    35.51248299399272
+                  ],
+                  [
+                    -97.56427466869354,
+                    35.51248299399272
+                  ],
+                  [
+                    -97.56427466869354,
+                    35.51244806136778
+                  ],
+                  [
+                    -97.56382405757904,
+                    35.51244369478857
+                  ],
+                  [
+                    -97.56382405757904,
+                    35.51205943489009
+                  ],
+                  [
+                    -97.56374895572662,
+                    35.51205943489009
+                  ],
+                  [
+                    -97.56374895572662,
+                    35.51185857102941
+                  ],
+                  [
+                    -97.56381332874298,
+                    35.51185857102941
+                  ],
+                  [
+                    -97.56381332874298,
+                    35.51183237135835
+                  ],
+                  [
+                    -97.56410837173462,
+                    35.51183673797078
+                  ],
+                  [
+                    -97.56410837173462,
+                    35.51186293764043
+                  ],
+                  [
+                    -97.56422102451324,
+                    35.51186293764043
+                  ],
+                  [
+                    -97.56422102451324,
+                    35.51199830246395
+                  ],
+                  [
+                    -97.56401717662811,
+                    35.51199830246395
+                  ],
+                  [
+                    -97.56401717662811,
+                    35.5122821311917
+                  ],
+                  [
+                    -97.56429076194763,
+                    35.5122821311917
+                  ],
+                  [
+                    -97.56429076194763,
+                    35.51185420441816
+                  ],
+                  [
+                    -97.5644838809967,
+                    35.51185420441816
+                  ],
+                  [
+                    -97.56447851657867,
+                    35.51248299399272
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T07:26:17.887Z"
+  },
+  {
+    "id": "street-view-club-privata-portland",
+    "version": 1,
+    "listingId": "club-privata-portland",
+    "venueName": "Club Privata",
+    "address": "824 SW 1st Avenue, Portland, Oregon 97204, United States",
+    "camera": {
+      "center": [
+        -122.67393743991852,
+        45.51659298813868
+      ],
+      "zoom": 18,
+      "pitch": 76.33332824707031,
+      "bearing": -31.81331207275383
+    },
+    "visual": {
+      "skyColor": "#22191f",
+      "horizonColor": "#ff0008",
+      "hazeStrength": 0.46,
+      "buildingColor": "#0d0d0d",
+      "buildingOpacity": 1,
+      "selectedColor": "#dc2538",
+      "selectedOpacity": 1,
+      "selectedGlowOpacity": 0,
+      "groundBrightness": 0.3,
+      "streetLabelOpacity": 0.72,
+      "streetLabelSize": 13.5,
+      "lightColor": "#ffffff",
+      "lightIntensity": 0.48,
+      "lightAzimuth": 225,
+      "lightPolar": 44,
+      "venueBloomStrength": 0.34,
+      "occlusionMode": "fade",
+      "occluderOpacity": 0.12,
+      "occlusionSensitivity": 82,
+      "occlusionFadeMs": 1000
+    },
+    "interaction": {
+      "mode": "fixed-orbit",
+      "allowTravel": false,
+      "allowPublicZoom": false,
+      "minPitch": 52,
+      "maxPitch": 85
+    },
+    "buildingSelection": {
+      "providerFeatureIds": [
+        "16655880"
+      ],
+      "geometry": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "asset:0",
+            "properties": {
+              "selectionId": "asset:0",
+              "providerId": "16655880",
+              "height": 9,
+              "source": "asset"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -122.67410695552826,
+                    45.51657945627875
+                  ],
+                  [
+                    -122.67403721809387,
+                    45.51670725747465
+                  ],
+                  [
+                    -122.6736831665039,
+                    45.516613286035295
+                  ],
+                  [
+                    -122.6737529039383,
+                    45.516485484625974
+                  ],
+                  [
+                    -122.67410695552826,
+                    45.51657945627875
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "updatedAt": "2026-09-02T07:29:45.203Z"
   }
 ]

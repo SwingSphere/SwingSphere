@@ -45,6 +45,7 @@ const BuildingInspectorPage = import.meta.env.DEV ? React.lazy(() => import('./c
 const BuildingCapturePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BuildingCapturePage')) : null;
 const HeroCameraStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/HeroCameraStudioPage')) : null;
 const LightingAuditPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LightingAuditPage')) : null;
+const StreetViewPresentationPage = React.lazy(() => import('./components/dev/StreetViewToolPage').then((module) => ({ default: module.StreetViewPresentationPage })));
 const StreetViewToolPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/StreetViewToolPage')) : null;
 const GlassMaterialLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/GlassMaterialLabPage')) : null;
 const LanguageExplorerGlobeLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LanguageExplorerGlobeLabPage')) : null;
@@ -55,7 +56,9 @@ const CleanRoomGlobePage = import.meta.env.DEV ? React.lazy(() => import('./comp
 const PinMarkerStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/PinMarkerStudioPage')) : null;
 const DevImageLibraryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevImageLibraryPage')) : null;
 const MobileExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/MobileExplorerWorkbenchPage')) : null;
+const TabletExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/TabletExplorerWorkbenchPage')) : null;
 const DevMobileApp = React.lazy(() => import('./components/dev/mobile/DevMobileApp'));
+const DevTabletApp = React.lazy(() => import('./components/dev/tablet/DevTabletApp'));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -104,6 +107,17 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+const shouldUsePhoneExperience = () => {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent || '';
+  return /iPhone|iPod|Android.*Mobile|Mobi/i.test(userAgent);
+};
+
+const RootEntryPage: React.FC = () => (
+  shouldUsePhoneExperience() ? <Navigate to="/mobile" replace /> : <LandingPage />
+);
+
 const SITE_MODE = import.meta.env.VITE_SITE_MODE === 'coming-soon' ? 'coming-soon' : 'full';
 const configuredBasename = import.meta.env.VITE_APP_BASENAME || undefined;
 const APP_BASENAME = configuredBasename && window.location.pathname.startsWith(configuredBasename)
@@ -129,6 +143,15 @@ root.render(
               element={<DevMobileApp />}
             />
             <Route
+              path="/dev/tablet"
+              element={DEV_TOOLS_ENABLED && TabletExplorerWorkbenchPage ? <ProtectedRoute roles={['Admin']}><TabletExplorerWorkbenchPage /></ProtectedRoute> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/tablet/*"
+              element={<DevTabletApp />}
+            />
+            <Route path="/street-view" element={<StreetViewPresentationPage />} />
+            <Route
               path="/dev/building-inspector"
               element={DEV_TOOLS_ENABLED && BuildingInspectorPage ? <ProtectedRoute roles={['Admin']}><BuildingInspectorPage /></ProtectedRoute> : <Navigate to="/" replace />}
             />
@@ -137,7 +160,7 @@ root.render(
               element={DEV_TOOLS_ENABLED && BuildingCapturePage ? <ProtectedRoute roles={['Admin']}><BuildingCapturePage /></ProtectedRoute> : <Navigate to="/" replace />}
             />
             <Route path="/" element={<App />}>
-              <Route index element={<LandingPage />} />
+              <Route index element={<RootEntryPage />} />
               <Route path="submission" element={<ProtectedRoute><ListingSubmissionForm /></ProtectedRoute>} />
               <Route element={<ExplorerLayout />}>
                 <Route path="globe" element={<ProductionGlobePage />} />

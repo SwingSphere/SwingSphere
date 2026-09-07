@@ -793,7 +793,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         },
         locationMeta: {
           ...result.meta,
-          manualAdjustment: current.locationMeta?.manualAdjustment,
+          manualAdjustment: false,
         },
       }));
       setShowAdvancedAddress(result.meta.status !== 'validated');

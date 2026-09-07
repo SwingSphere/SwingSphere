@@ -63,7 +63,7 @@ const HostHero: React.FC<HostHeroProps> = ({
             <div className="ss-glass ss-glass--liquid rounded-[26px] p-4 sm:p-5">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                 <div className="ss-glass ss-glass--liquid relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[22px] text-3xl font-black text-white sm:h-28 sm:w-28">
-                  {logoImageUrl ? <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-cover" /> : <><span className="font-serif text-4xl tracking-[-0.12em] text-white sm:text-5xl">{toInitials(hostName)}</span><span className="absolute bottom-3 h-0.5 w-9 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" /></>}
+                  {logoImageUrl ? <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" /> : <><span className="font-serif text-4xl tracking-[-0.12em] text-white sm:text-5xl">{toInitials(hostName)}</span><span className="absolute bottom-3 h-0.5 w-9 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" /></>}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

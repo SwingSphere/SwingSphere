@@ -139,27 +139,8 @@
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
         "created_at": "2026-07-17T04:06:23.304127+00:00",
         "updated_at": "2026-07-17T04:06:23.304127+00:00"
-      },
-      {
-        "id": "fb628e30-c693-4244-b6c3-a2c93903a65c",
-        "owner_type": "club",
-        "owner_id": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "65593c7f-3ab8-4d05-9f30-3a8df0e8b100",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "twistsf",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-21T23:07:18.145347+00:00",
-        "updated_at": "2026-07-21T23:07:18.145347+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/65593c7f-3ab8-4d05-9f30-3a8df0e8b100/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "screening_approval_required"
@@ -2676,87 +2657,145 @@
     "buildingAssetId": "building-asset-club-2a2-rio-de-janeiro"
   },
   {
-    "id": "club-kiwiklub-johannesburg",
-    "location": "Fetish Haven SA, Wynberg, Sandton, Gauteng, 2096, South Africa",
-    "website": "https://www.kiwiklub.com/",
-    "contactEmail": "help@kiwiklub.com",
-    "locationVisibility": "approximate_public",
+    "id": "club-fetish-haven-sa-johannesburg",
+    "type": "club",
+    "name": "Fetish Haven SA",
+    "location": "Unit 14, 70 5th Street, Wynberg, Sandton, Johannesburg, Gauteng 2090, South Africa",
+    "website": "https://www.fetishhavensa.co.za/",
+    "contactEmail": "fetishhavensa@gmail.com",
+    "phone": "+27 72 364 9779",
     "geopoint": {
       "latitude": -26.099562,
       "longitude": 28.0816191,
       "address": {
-        "addressLine1": "Fetish Haven SA",
+        "addressLine1": "Unit 14, 70 5th Street",
         "addressLine2": "Wynberg",
-        "city": "Sandton",
+        "city": "Johannesburg",
         "region": "Gauteng",
-        "postalCode": "2096",
+        "postalCode": "2090",
         "country": "South Africa",
         "countrySlug": "za",
         "admin1Slug": "gauteng",
-        "citySlug": "sandton",
+        "citySlug": "johannesburg",
         "isCityState": false
       }
     },
     "locationMeta": {
-      "status": "needs_review",
-      "confidence": 0.88,
-      "normalizedAddress": "Fetish Haven SA, Wynberg, Sandton, Gauteng, 2096, South Africa",
-      "geocoderLabel": "5th Street, Wynberg, Sandton, City of Johannesburg Metropolitan Municipality, Gauteng, 2096, South Africa",
-      "geocoderSource": "official-google-maps-link+nominatim-reverse",
-      "warnings": [
-        "venue-name-confirmed-address-number-not-published",
-        "event-schedule-varies"
-      ],
-      "validatedAt": "2026-07-22T02:20:00.000Z"
+      "status": "validated",
+      "confidence": 0.98,
+      "normalizedAddress": "Unit 14, 70 5th Street, Wynberg, Sandton, Johannesburg, Gauteng 2090, South Africa",
+      "geocoderLabel": "5th Street, Wynberg, Sandton, City of Johannesburg Metropolitan Municipality, Gauteng, South Africa",
+      "geocoderSource": "official-site+current-directory-cross-check",
+      "warnings": [],
+      "validatedAt": "2026-09-01T22:36:00.000Z"
     },
     "postedByUserId": "user1",
     "status": "approved",
-    "type": "club",
-    "name": "KiwiKlub Johannesburg",
-    "description_short": "KiwiKlub is a South African swingers community and members-only party organizer with an established Johannesburg club location. It welcomes couples and single swingers, emphasizes a multiracial community, and uses online profiles, verification and attendance requests to help hosts maintain balanced events. Parties may include dancing, social areas, voyeur and exhibitionist spaces, dungeon-style equipment and group play areas, with participation always voluntary.",
-    "schedule": [],
-    "specialScheduleNotes": "KiwiKlub hosts recurring private parties rather than publishing fixed weekly opening hours. Members must create a profile and request attendance for individual events; approval and pricing vary by party. The official FAQ states that attendees must be 21 or older and that verified VIP membership significantly improves approval chances.",
-    "generalAmenities": [
-      "Swinger Community",
-      "Ethical Non-Monogamy",
-      "Multiracial Community",
-      "Members Only",
-      "Application Required",
-      "Themed Events",
-      "Dance Floor",
-      "Voyeur Areas",
-      "Exhibitionist Friendly",
-      "Group Play Areas",
-      "Dungeon / Kink",
-      "Privacy-Focused",
-      "Consent-Focused"
-    ],
-    "attendancePolicy": "application_required",
-    "entryRequirements": [
-      "screening_approval_required",
-      "members_only"
-    ],
-    "mediaAssets": [
+    "description_short": "A permanent sex-positive fetish, kink and swinger club in Johannesburg's Wynberg district with private play rooms, dungeon facilities, a bar, dance floor, daytime rendezvous sessions and themed weekend parties.",
+    "description_full": "Fetish Haven SA is a permanent adult lifestyle, fetish and kink venue in Wynberg, Sandton, Johannesburg. The club explicitly welcomes swingers, BDSM enthusiasts, LGBTQ guests, couples and singles, and operates multiple areas for socializing, themed play and private encounters. Private rooms use clear door-position rules for privacy and observation, while special events include swinger parties, BDSM and fetish nights, open-dungeon events, orgy nights, LGBTQ events and other themed gatherings. The venue emphasizes explicit consent, privacy and non-participation without pressure. Fetish Haven also offers weekday dungeon and fantasy-room rentals, workshops, professional kink services and limited accommodation by advance booking.",
+    "schedule": [
       {
-        "id": "3668d352-fb0b-49c3-a345-386014b535d0",
-        "owner_type": "club",
-        "owner_id": "691887d5-b891-4daf-a330-82cd41cb7fc7",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "14fbf653-2203-46b9-ea82-c8350bcddf00",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "kiwi_logo_small",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-24T23:30:27.028358+00:00",
-        "updated_at": "2026-07-24T23:30:27.028358+00:00"
+        "day": "Monday",
+        "isClosed": true,
+        "rules": [
+          "Private bookings available by arrangement"
+        ]
+      },
+      {
+        "day": "Tuesday",
+        "isClosed": false,
+        "open": "11:00",
+        "close": "20:00",
+        "rules": [
+          "Daytime events and rendezvous sessions"
+        ]
+      },
+      {
+        "day": "Wednesday",
+        "isClosed": true,
+        "rules": [
+          "Private bookings and selected events only"
+        ]
+      },
+      {
+        "day": "Thursday",
+        "isClosed": false,
+        "open": "11:00",
+        "close": "20:00",
+        "rules": [
+          "Daytime events and rendezvous sessions"
+        ]
+      },
+      {
+        "day": "Friday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "02:00",
+        "rules": [
+          "Themed adult event",
+          "RSVP may be required"
+        ]
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "02:00",
+        "rules": [
+          "Themed adult event",
+          "RSVP may be required"
+        ]
+      },
+      {
+        "day": "Sunday",
+        "isClosed": true,
+        "rules": [
+          "Occasional special events only"
+        ]
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/14fbf653-2203-46b9-ea82-c8350bcddf00/logosquare"
+    "specialScheduleNotes": "Fetish Haven publishes regular Tuesday and Thursday daytime sessions and hosts an event every Friday and Saturday. Wednesdays are reserved for private bookings or selected events, and Sundays are normally closed except for occasional special programming. Event themes and audience rules can vary, so guests should check the current calendar before attending.",
+    "generalAmenities": [
+      "Sex-Positive Lifestyle Club",
+      "Swinger Parties",
+      "Fetish / Kink Venue",
+      "BDSM Friendly",
+      "On-Premise Sex Permitted",
+      "Private Play Rooms",
+      "Open Play Events",
+      "Dungeon Room",
+      "Fantasy Rooms",
+      "Bar",
+      "Dance Floor",
+      "Daytime Rendezvous Events",
+      "Orgy Nights",
+      "LGBTQ Events",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "Cross-Dresser Friendly",
+      "Transformation Room",
+      "Lockers",
+      "BDSM Workshops",
+      "Private Room Rentals",
+      "Limited Accommodation",
+      "Secure Gated Parking",
+      "18+ Only",
+      "Registration / RSVP for Selected Events",
+      "Photography Restricted",
+      "Consent-Focused",
+      "Privacy-Focused"
+    ],
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "logoImageUrl": "https://www.fetishhavensa.co.za/wp-content/uploads/2021/12/FHlogo1.png",
+    "headerImageUrl": "https://www.fetishhavensa.co.za/wp-content/uploads/2026/08/Friday.jpg",
+    "galleryImageUrls": [
+      "https://www.fetishhavensa.co.za/wp-content/uploads/2026/08/IMG-20260815-WA0000.jpg"
+    ],
+    "buildingAssetId": "building-asset-club-fetish-haven-sa-johannesburg"
   },
   {
     "id": "club-kiwiklub-durban",
@@ -4067,8 +4106,8 @@
     "status": "approved",
     "postedByUserId": "user1",
     "geopoint": {
-      "latitude": 4.665153,
-      "longitude": -74.0520138,
+      "latitude": 4.6688976,
+      "longitude": -74.0591275,
       "address": {
         "addressLine1": "Calle 82 #19A-05",
         "city": "Bogotá",
@@ -4083,12 +4122,15 @@
     },
     "locationMeta": {
       "status": "validated",
-      "confidence": 0.88,
-      "source": "official-site+nominatim-street",
-      "warnings": [
-        "official-address-confirmed",
-        "map-coordinate-resolved-near-street-segment"
-      ]
+      "coordinatePrecision": "poi",
+      "confidence": 0.99,
+      "geocoderSource": "official-site+google-maps",
+      "source": "official-site+google-maps",
+      "geocoderLabel": "Insolitam Spa - Swinger Bar, Calle 82 #19A-05, Bogotá, Colombia",
+      "normalizedAddress": "Calle 82 #19A-05, Bogotá, Colombia",
+      "warnings": [],
+      "manualAdjustment": true,
+      "validatedAt": "2026-09-06T10:58:57.000Z"
     },
     "schedule": [
       {
@@ -4186,7 +4228,8 @@
         "updated_at": "2026-07-30T01:23:49.227135+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/13be0d6a-4304-4f17-eb36-05591a3a9000/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/13be0d6a-4304-4f17-eb36-05591a3a9000/logosquare",
+    "buildingAssetId": "building-asset-club-insolitam-spa-bogota"
   },
   {
     "id": "club-lizas-lounge-cape-town",
@@ -5356,35 +5399,39 @@
   },
   {
     "id": "club-lussuria-bangkok",
-    "type": "club",
     "name": "Lussuria Club",
-    "description_short": "A private, members-only lifestyle club in Bangkok with on-premise play, lockable rooms, LGBTQ+ programming, themed parties and a women-centered approach to consent and safety.",
-    "description_full": "Lussuria Club is a permanent private lifestyle social club in Bangkok serving members of the lifestyle and LGBTQ+ communities. The club hosts recurring Saturday events and selected special gatherings, including couples-focused nights, mixed-attendance events, erotic masquerades, poolside celebrations and educational experiences. Its on-premise spaces include open play areas and private lockable rooms, while a swimming pool and additional private rooms can be booked through a lifestyle-friendly partner hotel on the same grounds. Advance registration, membership approval and valid photo identification are required. Attendance categories vary by event, and guests should confirm the current theme, admission policy and schedule before visiting.",
-    "location": "785/5 Pracha Uthit Road, Samsen Nok, Huai Khwang, Bangkok 10310, Thailand",
-    "website": "https://lussuria.co.th/",
+    "type": "club",
     "status": "approved",
-    "postedByUserId": "user1",
+    "website": "https://lussuria.co.th/",
     "geopoint": {
-      "latitude": 13.769269,
-      "longitude": 100.5902428,
       "address": {
-        "addressLine1": "785/5 Pracha Uthit Road",
         "city": "Bangkok",
         "region": "Bangkok",
+        "country": "Thailand",
         "postalCode": "10310",
-        "country": "Thailand"
-      }
+        "addressLine1": "785/5 Pracha Uthit Road"
+      },
+      "latitude": 13.769349848946902,
+      "longitude": 100.59203821603026
     },
+    "location": "785/5 Pracha Uthit Road, Samsen Nok, Huai Khwang, Bangkok 10310, Thailand",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-06T20:53:19.419545+00:00",
     "locationMeta": {
+      "source": "official-site+official-venue-map",
       "status": "validated",
-      "confidence": 0.86,
-      "source": "official-site+nominatim-road",
-      "warnings": [
-        "street-address-published-in-official-privacy-policy",
-        "coordinate-resolved-to-road-segment"
-      ]
+      "warnings": [],
+      "confidence": 0.99,
+      "validatedAt": "2026-09-06T20:45:07.000Z",
+      "geocoderLabel": "785/5 Pracha Uthit Road, Samsen Nok, Huai Khwang, Bangkok 10310, Thailand",
+      "geocoderSource": "official-site+official-venue-map",
+      "manualAdjustment": true,
+      "normalizedAddress": "785/5 Pracha Uthit Road, Samsen Nok, Huai Khwang, Bangkok 10310, Thailand"
     },
-    "specialScheduleNotes": "The official rules state that Lussuria hosts events every Saturday night plus selected special events. Exact hours and attendance categories vary by event and require advance registration.",
+    "logoImageUrl": "https://lussuria.co.th/wp-content/uploads/2025/01/Lussuria-Logo-NOBG.png",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_event",
+    "description_full": "Lussuria Club is a permanent private lifestyle social club in Bangkok serving members of the lifestyle and LGBTQ+ communities. The club hosts recurring Saturday events and selected special gatherings, including couples-focused nights, mixed-attendance events, erotic masquerades, poolside celebrations and educational experiences. Its on-premise spaces include open play areas and private lockable rooms, while a swimming pool and additional private rooms can be booked through a lifestyle-friendly partner hotel on the same grounds. Advance registration, membership approval and valid photo identification are required. Attendance categories vary by event, and guests should confirm the current theme, admission policy and schedule before visiting.",
     "generalAmenities": [
       "Private Members Club",
       "On-Premise Club",
@@ -5414,12 +5461,13 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "attendancePolicy": "varies_by_event",
+    "description_short": "A private, members-only lifestyle club in Bangkok with on-premise play, lockable rooms, LGBTQ+ programming, themed parties and a women-centered approach to consent and safety.",
     "entryRequirements": [
       "screening_approval_required",
       "members_only"
     ],
-    "logoImageUrl": "https://lussuria.co.th/wp-content/uploads/2025/01/Lussuria-Logo-NOBG.png"
+    "specialScheduleNotes": "The official rules state that Lussuria hosts events every Saturday night plus selected special events. Exact hours and attendance categories vary by event and require advance registration.",
+    "buildingAssetId": "building-asset-club-lussuria-bangkok"
   },
   {
     "id": "club-soho-graz",
@@ -5615,8 +5663,8 @@
     "status": "approved",
     "postedByUserId": "user1",
     "geopoint": {
-      "latitude": 51.9923702,
-      "longitude": 4.6587441,
+      "latitude": 52.000233,
+      "longitude": 4.650135,
       "address": {
         "addressLine1": "Middelweg 18",
         "city": "Moordrecht",
@@ -5631,13 +5679,15 @@
     },
     "locationMeta": {
       "status": "validated",
-      "confidence": 0.88,
-      "source": "official-site+nominatim-road",
-      "warnings": [
-        "official-address-confirmed",
-        "coordinate-resolved-to-nearby-road-segment",
-        "openstreetmap-club-poi-appears-to-have-conflicting-house-number"
-      ]
+      "coordinatePrecision": "poi",
+      "confidence": 0.99,
+      "normalizedAddress": "Middelweg 18, 2841 LA Moordrecht, South Holland, Netherlands",
+      "geocoderLabel": "Fun4Two, Middelweg 18, 2841 LA Moordrecht, Netherlands",
+      "geocoderSource": "official-site+official-google-map",
+      "source": "official-site+official-google-map",
+      "warnings": [],
+      "manualAdjustment": true,
+      "validatedAt": "2026-09-06T22:05:00.000Z"
     },
     "schedule": [
       {
@@ -6858,7 +6908,8 @@
     "attendancePolicy": "varies_by_event",
     "logoImageUrl": "https://www.intersw.com/images/logo.png",
     "headerImageUrl": "https://www.intersw.com/images/Banners/2021/Banner-2_2.jpg",
-    "galleryImageUrls": []
+    "galleryImageUrls": [],
+    "buildingAssetId": "building-asset-club-interspa-bogota"
   },
   {
     "id": "club-cupids-swinton",
@@ -7197,6 +7248,438 @@
     "headerImageUrl": "https://contents.sixshop.com/thumbnails/uploadedFiles/91948/default/image_1730908828417_1000.png",
     "galleryImageUrls": [
       "https://contents.sixshop.com/thumbnails/uploadedFiles/91948/default/image_1730909328478_1000.png"
+    ]
+  },
+  {
+    "id": "club-epicure-cape-town",
+    "type": "club",
+    "name": "Epicure Club Cape Town",
+    "description_short": "An upscale private sex-positive club and adults-only boutique hotel in Cape Town combining swinging, BDSM and fetish play, spa services, overnight suites, a heated pool and recurring lifestyle events.",
+    "description_full": "Epicure Club Cape Town is a permanent private lifestyle venue and four-star adults-only boutique hotel in Mount Rhodes near Hout Bay. The club explicitly combines a swingers club, sex club, BDSM club, spa and luxury hotel under one roof. Nudity and consensual sexual activity are permitted in public spaces, with additional private suites for invited play and overnight stays. Epicure hosts open adult parties, dedicated swingers events, meet-and-greets, fetish and BDSM programming, erotic dinner parties and private functions. Couples, single women and single men are welcome at many events, while individual event demographics and admission rules vary. The venue emphasizes consent, discretion and privacy, enforces a strict no-photo policy, and states that it has no surveillance cameras in guest areas.",
+    "location": "4 Little Lions Head Rd, Mount Rhodes, Cape Town, Western Cape 7806, South Africa",
+    "website": "https://epicure.club/",
+    "contactEmail": "hello@epicure.club",
+    "phone": "+27 74 878 0000",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "geopoint": {
+      "latitude": -34.01941437498422,
+      "longitude": 18.349134027957916,
+      "address": {
+        "addressLine1": "4 Little Lions Head Rd",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7806",
+        "country": "South Africa",
+        "countrySlug": "za",
+        "admin1Slug": "western-cape",
+        "citySlug": "cape-town",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.94,
+      "geocoderSource": "official-site+nominatim-road+google-business",
+      "normalizedAddress": "4 Little Lions Head Rd, Mount Rhodes, Cape Town, Western Cape 7806, South Africa",
+      "warnings": [
+        "coordinate-resolves-to-published-little-lions-head-road"
+      ]
+    },
+    "specialScheduleNotes": "Epicure operates as a private club and boutique hotel rather than on fixed nightclub hours. Guest membership runs from 14:00 until 11:00 the following day, while event doors commonly open around 20:00 and many parties continue overnight. The club publishes recurring Saturday adult events, with its dedicated luxury swingers party typically held on the first Saturday of the month. Event tickets may be used instead of guest membership for eligible events; audience rules, pricing and closing times vary by event.",
+    "generalAmenities": [
+      "Private Lifestyle Club",
+      "Adults-Only Boutique Hotel",
+      "Four-Star Hotel",
+      "On-Premise Sex Permitted",
+      "Nudity Permitted",
+      "Swingers Club",
+      "Sex-Positive",
+      "BDSM and Fetish Friendly",
+      "BDSM Dungeon",
+      "Open Play Areas",
+      "Private Suites",
+      "Overnight Accommodation",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome at Many Events",
+      "LGBT-Friendly Events",
+      "Newbie Friendly",
+      "Meet and Greet Events",
+      "Swingers Parties",
+      "Fetish Events",
+      "Erotic Dinner Parties",
+      "Heated 18-Meter Saltwater Pool",
+      "Jacuzzi",
+      "Spa and Wellness",
+      "Sensual Massage",
+      "Bar",
+      "Professional Sound System",
+      "Free Wi-Fi",
+      "Secure Parking",
+      "Great Views",
+      "18+ Only",
+      "Valid ID Required",
+      "Guest Membership Available",
+      "Event Tickets Available",
+      "Right of Admission Reserved",
+      "Consent-Focused",
+      "Privacy-Focused",
+      "Photography Prohibited",
+      "No Guest-Area Surveillance Cameras",
+      "Condoms Available"
+    ],
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "logoImageUrl": "https://epicure.club/sites/default/files/epicure-club-logo-2.png",
+    "headerImageUrl": "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-04/epicure-club-cape-town-8020.webp",
+    "mediaPresentation": "monochrome",
+    "galleryImageUrls": [
+      "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-05/epicure-club-cape-town-pool.webp",
+      "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-05/epicure-dj-shuggah.webp"
+    ],
+    "buildingAssetId": "building-asset-club-epicure-cape-town"
+  },
+  {
+    "id": "club-insomnia-berlin",
+    "type": "club",
+    "name": "Insomnia Berlin",
+    "description_short": "A long-running hedonistic sex-positive nightclub in Berlin-Tempelhof combining swinger parties, fetish and BDSM events, queer programming, dance nights and dedicated on-premise play spaces.",
+    "description_full": "Insomnia Berlin is a permanent hedonistic lifestyle club in Tempelhof and one of Berlin's best-established sex-positive nightlife venues. The club explicitly welcomes swingers, couples, singles, queer guests, gender-diverse visitors, fetish and BDSM communities, newcomers and experienced lifestyle guests. Its programming changes by night and includes sex-positive Friday and Saturday club nights, weekday swinger parties, fetish and BDSM events, queer parties, tango evenings and special concept events. Consensual sexual activity is permitted in designated and open play areas, with many weekend events also providing a couples-only area for couples and personally invited play partners. Insomnia emphasizes active consent, discretion, hygiene and respectful behavior; condoms, gloves and lubricant are available, along with showers, towels, changing facilities and a large whirlpool. Admission, audience balance, dress requirements and pricing vary by event, and door staff retain final admission discretion.",
+    "location": "Alt-Tempelhof 17-19, 12099 Berlin, Germany",
+    "website": "https://www.insomnia-berlin.de/index.html",
+    "contactEmail": "Anmeldung@insomnia.berlin",
+    "phone": "+49 177 2333 878",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "geopoint": {
+      "latitude": 52.46552254889207,
+      "longitude": 13.386240005493164,
+      "address": {
+        "addressLine1": "Alt-Tempelhof 17-19",
+        "city": "Berlin",
+        "region": "Berlin",
+        "postalCode": "12099",
+        "country": "Germany",
+        "countrySlug": "de",
+        "admin1Slug": "berlin",
+        "citySlug": "berlin",
+        "isCityState": true
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "geocoderSource": "official-site+berlin.de+published-venue-coordinate",
+      "normalizedAddress": "Alt-Tempelhof 17-19, 12099 Berlin, Germany",
+      "warnings": []
+    },
+    "schedule": [],
+    "specialScheduleNotes": "Insomnia's official site states that the club opens Tuesday through Sunday, but exact door and closing times vary by event. Friday and Saturday are generally sex-positive nightlife nights, while weekday programming rotates among swinger, fetish/BDSM, queer, lounge, tango and concept events. Some events require advance registration; weekend registration is usually optional, but door admission is never guaranteed. Visitors should check the current official party calendar for the exact time, price, dress code and attendance rules before arriving.",
+    "generalAmenities": [
+      "Permanent Lifestyle Club",
+      "Sex-Positive Nightclub",
+      "Swingers Club",
+      "On-Premise Sex Permitted",
+      "Designated Play Areas",
+      "Couples Play Area on Many Weekend Events",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome Depending on Event",
+      "Queer Friendly",
+      "Gender-Diverse Guests Welcome",
+      "Fetish and BDSM Friendly",
+      "BDSM Events",
+      "Swinger Parties",
+      "Queer Events",
+      "Sex-Positive Weekend Parties",
+      "Newbie Friendly",
+      "Dance Floor",
+      "DJs",
+      "Techno and Electronic Music",
+      "Gothic and Dark Wave Events",
+      "Tango Events",
+      "Erotic Dress Code",
+      "Changing Facilities",
+      "Coat Check",
+      "Large Shower Area",
+      "Large Whirlpool",
+      "Free Towels in Wet Area",
+      "Condoms Available",
+      "Lubricant Available",
+      "Latex Gloves Available",
+      "Sex Toys Available at Bar",
+      "Cash Only",
+      "Awareness Team",
+      "Active Consent Policy",
+      "Privacy-Focused",
+      "Hygiene-Focused",
+      "English-Speaking Staff",
+      "Event-Specific Admission",
+      "Door Discretion Applies"
+    ],
+    "attendancePolicy": "varies_by_event",
+    "logoImageUrl": "https://www.insomnia-berlin.de/img/logo_insomnia.png",
+    "headerImageUrl": "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000952.jpg",
+    "galleryImageUrls": [
+      "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000959.jpg",
+      "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000938.jpg"
+    ],
+    "buildingAssetId": "building-asset-club-insomnia-berlin"
+  },
+  {
+    "id": "club-casa-swinger-cdmx",
+    "type": "club",
+    "name": "Casa Swinger",
+    "description_short": "A long-running, all-inclusive swinger club in Mexico City with mixed-attendance Wednesday through Friday nights, couples-and-women-only Saturdays, dark rooms, live shows, DJ dancing and explicit on-premise play.",
+    "description_full": "Casa Swinger is a long-running private adult lifestyle venue in Mexico City that describes itself as an Asociación Civil de Diversidad Sexual and an established swinger club. The club operates Wednesday through Saturday with different attendance formats by night: couples, single women and single men are admitted Wednesday through Friday, while Saturdays are reserved for couples and single women. Friday programming prominently includes a recurring group-orgy event. Admission is promoted as all-inclusive, with national and imported drinks included. The venue advertises three dark rooms, live entertainment, a DJ dance floor and an explicitly sex-positive environment where participation is always optional. Casa Swinger emphasizes consent, says nobody is obligated to do anything, maintains substantial internal and external security, and refuses entry to visibly intoxicated guests.",
+    "location": "Laguna de Mayrán 432, Anáhuac I Secc., Miguel Hidalgo, Ciudad de México 11320, Mexico",
+    "website": "https://www.casaswinger.com.mx/",
+    "contactEmail": "casa.swinger@csw.com.mx",
+    "phone": "+52 55 5687 0969",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "locationVisibility": "exact_public",
+    "geopoint": {
+      "latitude": 19.440269360936014,
+      "longitude": -99.17431515903905,
+      "address": {
+        "addressLine1": "Laguna de Mayrán 432",
+        "city": "Ciudad de México",
+        "region": "Ciudad de México",
+        "postalCode": "11320",
+        "country": "Mexico",
+        "countrySlug": "mx",
+        "admin1Slug": "ciudad-de-mexico",
+        "citySlug": "ciudad-de-mexico",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.98,
+      "source": "official-site+google-maps+waze+directory-corroboration",
+      "normalizedAddress": "Laguna de Mayrán 432, Anáhuac I Secc., Miguel Hidalgo, Ciudad de México 11320, Mexico",
+      "warnings": []
+    },
+    "schedule": [
+      {
+        "day": "Wednesday",
+        "isClosed": false,
+        "open": "18:00",
+        "rules": [
+          "Couples Welcome",
+          "Single Women Welcome",
+          "Single Men Welcome",
+          "Reservations Recommended"
+        ]
+      },
+      {
+        "day": "Thursday",
+        "isClosed": false,
+        "open": "20:00",
+        "rules": [
+          "Couples Welcome",
+          "Single Women Welcome",
+          "Single Men Welcome",
+          "Reservations Recommended"
+        ]
+      },
+      {
+        "day": "Friday",
+        "isClosed": false,
+        "open": "22:00",
+        "rules": [
+          "Couples Welcome",
+          "Single Women Welcome",
+          "Single Men Welcome",
+          "Recurring Group Orgy Event",
+          "Reservations Recommended"
+        ]
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false,
+        "open": "22:00",
+        "rules": [
+          "Couples Welcome",
+          "Single Women Welcome",
+          "No Single Men",
+          "Reservations Recommended"
+        ]
+      }
+    ],
+    "specialScheduleNotes": "Casa Swinger currently opens Wednesday at 18:00, Thursday at 20:00, and Friday and Saturday at 22:00. The official site does not publish a fixed closing time. Friday features a recurring 'Orgía entre todos' program. Audience policy changes on Saturday, when single men are not admitted. Guests should confirm the current weekly theme, reservation status and contribution before visiting.",
+    "generalAmenities": [
+      "Permanent Swinger Club",
+      "On-Premise Club",
+      "Sex Permitted On Premises",
+      "Group Play Events",
+      "Three Dark Rooms",
+      "Live Shows",
+      "Dance Floor",
+      "DJ",
+      "All-Inclusive Drinks",
+      "National and Imported Drinks Included",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome Wednesday Through Friday",
+      "No Single Men Saturdays",
+      "Theme Nights",
+      "Reservations Recommended",
+      "Consent-Focused",
+      "Privacy-Focused",
+      "Security Staff",
+      "No Visible Intoxication"
+    ],
+    "attendancePolicy": "varies_by_night",
+    "logoImageUrl": "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/casaswinger-logo.png",
+    "headerImageUrl": "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/casaswinger-mexico.jpg",
+    "galleryImageUrls": [
+      "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/club-swinger-viernes-ciudad-de-mexico.png",
+      "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/club-swinger-sabado-ciudad-de-mexico.jpeg"
+    ],
+    "buildingAssetId": "building-asset-club-casa-swinger-cdmx"
+  },
+  {
+    "id": "club-swingers-oase-ammerzoden",
+    "type": "club",
+    "name": "Swingers Oase",
+    "description_short": "A long-running, intimate swinger club in Ammerzoden with all-inclusive food and drinks, multiple play rooms, a warm jacuzzi, themed parties and event-specific attendance for couples, women, men and queer guests.",
+    "description_full": "Swingers Oase is a permanent on-premise lifestyle club in Ammerzoden, Gelderland. The venue describes itself as a small, homey but complete swingers club and runs an event-driven calendar with gangbang nights, couples-focused parties, bi-curious and queer events, themed Saturdays and Sunday social/play sessions. Depending on the event, couples, single women, single men, trans women, bi men and queer guests may be admitted. The club advertises multiple play rooms, a warm jacuzzi, dance floor, DJ programming, buffet service and all-inclusive drinks, food and facilities. Consent is central to the venue's published rules: participation is optional and mutual respect is expected. Single men are welcome at many events but are commonly required to reserve in advance.",
+    "location": "Haarstraat 20, 5324 AN Ammerzoden, Gelderland, Netherlands",
+    "website": "https://swingersoase.com/",
+    "phone": "+31 6 303 51 333",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "locationVisibility": "exact_public",
+    "geopoint": {
+      "latitude": 51.7479521,
+      "longitude": 5.2275095,
+      "address": {
+        "addressLine1": "Haarstraat 20",
+        "city": "Ammerzoden",
+        "region": "Gelderland",
+        "postalCode": "5324 AN",
+        "country": "Netherlands",
+        "countrySlug": "nl",
+        "admin1Slug": "gelderland",
+        "citySlug": "ammerzoden",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official-site+nominatim-poi",
+      "warnings": []
+    },
+    "schedule": [],
+    "specialScheduleNotes": "Swingers Oase is event-driven rather than operating on one fixed weekly timetable. Current 2026 events commonly run Wednesday and Thursday around 20:00-00:00, Friday around 20:00-01:00, Saturday around 20:00-02:00 and selected Sundays around 16:00-22:00. Attendance mix, pricing and reservations vary by event, so guests should check the official calendar before visiting.",
+    "generalAmenities": [
+      "Permanent Swinger Club",
+      "On-Premise Club",
+      "Sex Permitted On Premises",
+      "Multiple Play Rooms",
+      "Warm Jacuzzi",
+      "Dance Floor",
+      "DJ",
+      "Buffet",
+      "All-Inclusive Drinks",
+      "All-Inclusive Food",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome at Selected Events",
+      "Queer and Bi-Curious Events",
+      "Trans-Friendly Events",
+      "Gangbang Events",
+      "Theme Nights",
+      "Newcomer Friendly",
+      "Reservations Required for Many Single-Men Events",
+      "Consent-Focused",
+      "Privacy-Focused"
+    ],
+    "attendancePolicy": "varies_by_event",
+    "logoImageUrl": "https://swingersoase.com/wp-content/uploads/2020/04/ico.png",
+    "headerImageUrl": "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3222-scaled.jpeg",
+    "galleryImageUrls": [
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_2763-scaled.jpeg",
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3008-scaled.jpeg",
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3037.jpeg"
+    ]
+  },
+  {
+    "id": "club-tokyo-valentino-lifestyle-atlanta",
+    "type": "club",
+    "name": "Tokyo Valentino Lifestyle Club",
+    "description_short": "A 24-hour Atlanta lifestyle club on Cheshire Bridge Road with open and private play rooms, dark rooms, Amsterdam-style booths, private bedrooms, showers and a strongly consent-focused adult social environment.",
+    "description_full": "Tokyo Valentino Lifestyle Club is the adult lifestyle-club component of the long-running Tokyo Valentino business on Cheshire Bridge Road in Atlanta. The club explicitly advertises open and private play rooms, dark rooms, eight Amsterdam-style booths, private bedrooms with leather day beds, a deluxe master suite, showers, lockers and massage rooms. Condoms, lubricant, towels, shower shoes and locks are available on site. The venue is BYOB and operates around the clock except for a weekly Wednesday-morning closure for deep cleaning and repairs. Its published etiquette emphasizes affirmative consent, privacy, communication and respect; phones, cameras and recording devices are prohibited, prostitution and drugs are banned, and visibly intoxicated guests may be refused entry. Admission is open to adults rather than limited to couples, with some pricing differentiated by gender and event period.",
+    "location": "1739 Cheshire Bridge Road, Atlanta, Georgia 30324, United States",
+    "website": "https://tokyolifestyleclub.com/",
+    "contactEmail": "chris@fegholdings.com",
+    "phone": "+1 404-698-5219",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "locationVisibility": "exact_public",
+    "geopoint": {
+      "latitude": 33.8075108,
+      "longitude": -84.3653154,
+      "address": {
+        "addressLine1": "1739 Cheshire Bridge Road",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30324",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "georgia",
+        "citySlug": "atlanta",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official-site+nominatim-poi",
+      "warnings": []
+    },
+    "schedule": [],
+    "specialScheduleNotes": "Open 24/7 except Wednesday from 02:00 to 10:00, when the club closes for cleaning and repairs. Admission pricing varies substantially by day and time, and selected recurring Wednesday, Friday and Saturday events use their own pricing windows. Guests should check the official site for the current event calendar and admission price before visiting.",
+    "generalAmenities": [
+      "Lifestyle Club",
+      "On-Premise Club",
+      "Sex Permitted On Premises",
+      "Open Play Rooms",
+      "Private Play Rooms",
+      "Dark Rooms",
+      "Eight Amsterdam-Style Booths",
+      "Private Bedrooms",
+      "Deluxe Master Suite",
+      "Showers",
+      "Free Lockers",
+      "Massage Rooms",
+      "Free Wi-Fi",
+      "BYOB",
+      "Condoms Available",
+      "Lubricant Available",
+      "Towels Available",
+      "Private Parking",
+      "Lingerie and Bondage Gear Welcome",
+      "Consent-Focused",
+      "Privacy-Focused",
+      "No Phones or Recording",
+      "LGBTQ Friendly",
+      "No Drugs or Prostitution",
+      "No Visible Intoxication"
+    ],
+    "attendancePolicy": "mixed_open",
+    "logoImageUrl": "https://tokyolifestyleclub.com/assets/img/logo.png",
+    "headerImageUrl": "https://tokyolifestyleclub.com/assets/img/about.jpg",
+    "galleryImageUrls": [
+      "https://tokyolifestyleclub.com/assets/img/relaxation-beds.jpg",
+      "https://tokyolifestyleclub.com/assets/img/amsterdam-booths.jpg",
+      "https://tokyolifestyleclub.com/assets/img/vip-rooms.jpg"
     ]
   }
 ]

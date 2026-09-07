@@ -348,7 +348,7 @@ const ExplorerHostCard: React.FC<{
       <img src={heroImage} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20" />
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/62 to-black/72" />
       <span className="relative z-10 h-[58px] w-[58px] overflow-hidden rounded-md border border-white/10 bg-black/55">
-        <img src={logoImage} alt={`${organization.name} logo`} className="h-full w-full object-contain p-1" />
+        <img src={logoImage} alt={`${organization.name} logo`} className="h-full w-full object-contain" />
       </span>
       <span className="relative z-10 min-w-0">
         <span className="block truncate text-sm font-bold text-white">{organization.name}</span>
@@ -410,7 +410,7 @@ const ExplorerListingCard: React.FC<{
           onError={handleListingImageError}
           alt={`${listing.name} logo`}
           loading="lazy"
-          className="relative z-10 h-full w-full object-contain p-1"
+          className="relative z-10 h-full w-full object-contain"
         />
       </span>
       <span className="relative z-10 min-w-0">

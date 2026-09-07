@@ -8,10 +8,15 @@ import tailwindcss from '@tailwindcss/postcss';
 import autoprefixer from 'autoprefixer';
 import { mockData } from './data/mockData';
 import { normalizeAdmin1, normalizeCountry, normalizePlace, slugifyPlace } from './lib/geoNormalize';
-import { completeMediaUpload, createCloudflareDirectUpload } from './lib/media/serverActions';
+import { completeMediaUpload, createCloudflareDirectUpload, deleteMediaAsset, moderateMediaAsset } from './lib/media/serverActions';
 import { deleteAuthenticatedAccount } from './lib/accountDeletionServer';
 import { createNominatimBuildingAddressResolver } from './lib/buildingAddressResolver';
 import { queryMicrosoftBuildingFootprints } from './lib/microsoftBuildingFootprintsServer';
+import { createAuthenticatedSupabaseServerClient, requireActiveAdmin } from './lib/adminServerAuth';
+import { BUILDING_PERSISTENCE_POLICY_VERSION, createBuildingVerificationInputSnapshot, guardBuildingAssetPersistence } from './lib/buildingPersistenceGuard';
+import { auditBuildingGeometry } from './lib/buildingGeometry';
+import type { BuildingAssetHistoryEvent } from './lib/buildingAssetHistory';
+import type { BuildingVerificationEvidenceRecord, BuildingVerificationReviewEvent } from './lib/buildingVerificationEvidence';
 
 type GeoAddress = {
   country?: string;
@@ -36,8 +41,11 @@ const PYTHON_BIN = process.env.PYTHON || 'python';
 const LISTINGS_STORE = path.join(ROOT_DIR, 'data', 'listings.local.json');
 const BUILDING_ASSETS_STORE = path.join(ROOT_DIR, 'data', 'building-assets.local.json');
 const BUILDING_VERIFICATION_EVIDENCE_STORE = path.join(ROOT_DIR, 'data', 'building-verification-evidence.local.json');
+const BUILDING_VERIFICATION_REVIEW_STORE = path.join(ROOT_DIR, 'data', 'building-verification-reviews.local.json');
+const BUILDING_ASSET_HISTORY_STORE = path.join(ROOT_DIR, 'data', 'building-asset-history.local.json');
 const BUILDING_ADDRESS_CACHE_STORE = path.join(ROOT_DIR, '.codex-temp', 'building-address-cache.local.json');
 const BUILDING_FOOTPRINT_CACHE_DIR = path.join(ROOT_DIR, '.codex-temp', 'microsoft-building-footprints');
+const BUILDING_AUTO_PERSISTENCE_ENV = 'SWINGSPHERE_BUILDING_AUTO_PERSISTENCE';
 const STREET_VIEW_PROFILES_STORE = path.join(ROOT_DIR, 'data', 'street-view-profiles.local.json');
 const GLOBE_RUNTIME_CONFIG_PATH = path.join(ROOT_DIR, 'src', 'features', 'globe', 'runtime', 'GlobeRuntimeConfig.js');
 const GLOBE_BORDER_OVERRIDE_PATH = path.join(ROOT_DIR, 'scripts', 'globe', 'manual-border-overrides.json');
@@ -46,6 +54,8 @@ const GLOBE_SHOWCASE_MODULE_ID = 'virtual:swingsphere-globe-showcase-events';
 const RESOLVED_GLOBE_SHOWCASE_MODULE_ID = `\0${GLOBE_SHOWCASE_MODULE_ID}`;
 const PUBLIC_LISTINGS_MODULE_ID = 'virtual:swingsphere-public-listings';
 const RESOLVED_PUBLIC_LISTINGS_MODULE_ID = `\0${PUBLIC_LISTINGS_MODULE_ID}`;
+const PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID = 'virtual:swingsphere-public-street-view-building-assets';
+const RESOLVED_PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID = `\0${PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID}`;
 const SCHEMA_VERSION_MODULE_ID = 'virtual:swingsphere-schema-version';
 const RESOLVED_SCHEMA_VERSION_MODULE_ID = `\0${SCHEMA_VERSION_MODULE_ID}`;
 const MIGRATIONS_ROOT = path.join(ROOT_DIR, 'supabase', 'migrations');
@@ -98,6 +108,32 @@ const loadPublicListings = () => {
 
     return [publicListing];
   });
+};
+
+const loadPublicStreetViewBuildingAssets = () => {
+  if (!fs.existsSync(BUILDING_ASSETS_STORE)) return [];
+
+  const source = JSON.parse(fs.readFileSync(BUILDING_ASSETS_STORE, 'utf8'));
+  if (!Array.isArray(source)) {
+    throw new Error('Public Street View building-asset source must be an array.');
+  }
+
+  const precisePublicListingIds = new Set(
+    loadPublicListings()
+      .filter((listing: any) => (
+        listing?.status === 'approved'
+        && listing?.type === 'club'
+        && listing?.isAddressPrivate !== true
+        && listing?.locationVisibility !== 'approximate_public'
+        && listing?.locationVisibility !== 'private'
+        && listing?.locationVisibility !== 'hidden'
+        && listing?.locationMeta?.status !== 'private'
+      ))
+      .map((listing: any) => String(listing?.id ?? '').trim())
+      .filter(Boolean),
+  );
+
+  return source.filter((asset: any) => precisePublicListingIds.has(String(asset?.listingId ?? '').trim()));
 };
 
 const loadPublicGlobeShowcaseEvents = () => {
@@ -191,6 +227,7 @@ const globeShowcaseDataPlugin = () => ({
   resolveId(id: string) {
     if (id === GLOBE_SHOWCASE_MODULE_ID) return RESOLVED_GLOBE_SHOWCASE_MODULE_ID;
     if (id === PUBLIC_LISTINGS_MODULE_ID) return RESOLVED_PUBLIC_LISTINGS_MODULE_ID;
+    if (id === PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID) return RESOLVED_PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID;
     if (id === SCHEMA_VERSION_MODULE_ID) return RESOLVED_SCHEMA_VERSION_MODULE_ID;
     return null;
   },
@@ -200,6 +237,9 @@ const globeShowcaseDataPlugin = () => ({
     }
     if (id === RESOLVED_PUBLIC_LISTINGS_MODULE_ID) {
       return `export default ${JSON.stringify(loadPublicListings())};`;
+    }
+    if (id === RESOLVED_PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID) {
+      return `export default ${JSON.stringify(loadPublicStreetViewBuildingAssets())};`;
     }
     if (id === RESOLVED_SCHEMA_VERSION_MODULE_ID) {
       return `export default ${JSON.stringify(loadLocalSchemaVersion())};`;
@@ -274,7 +314,84 @@ const loadJsonArray = (filePath: string) => {
 
 const saveJsonArray = (filePath: string, records: any[]) => {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(records, null, 2));
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const backupPath = `${filePath}.${process.pid}.bak`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(records, null, 2));
+  let backedUp = false;
+  try {
+    if (fs.existsSync(filePath)) {
+      if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+      fs.renameSync(filePath, backupPath);
+      backedUp = true;
+    }
+    fs.renameSync(temporaryPath, filePath);
+    if (backedUp && fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+  } catch (error) {
+    if (fs.existsSync(temporaryPath)) fs.rmSync(temporaryPath, { force: true });
+    if (backedUp && fs.existsSync(backupPath) && !fs.existsSync(filePath)) fs.renameSync(backupPath, filePath);
+    throw error;
+  }
+};
+
+const requireBuildingAdmin = async (req: any, res: any) => {
+  try {
+    return await requireActiveAdmin(req.headers.authorization);
+  } catch (error) {
+    res.statusCode = 401;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Active admin access is required.' }));
+    return null;
+  }
+};
+
+const loadAuthoritativeBuildingCollections = async (authorization?: string | null) => {
+  const { supabase } = createAuthenticatedSupabaseServerClient(authorization);
+  const [listingResult, venueResult, relationshipResult] = await Promise.all([
+    supabase.rpc('list_accessible_listings'),
+    supabase.from('venues').select('*'),
+    supabase.from('organization_venue_relationships').select('*'),
+  ]);
+  if (listingResult.error) throw new Error(`Could not load canonical listings: ${listingResult.error.message}`);
+  if (venueResult.error) throw new Error(`Could not load canonical venues: ${venueResult.error.message}`);
+  if (relationshipResult.error) throw new Error(`Could not load canonical venue relationships: ${relationshipResult.error.message}`);
+
+  const listings = Array.isArray(listingResult.data) ? listingResult.data : [];
+  const venues = (venueResult.data ?? []).map((row: any) => ({
+    id: row.id,
+    type: 'venue',
+    name: row.name,
+    slug: row.slug,
+    description: row.description ?? undefined,
+    address: row.address ?? {},
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+    locationMeta: row.location_meta ?? undefined,
+    visibility: row.visibility,
+    status: row.status,
+    amenities: row.amenities ?? [],
+    parkingNotes: row.parking_notes ?? undefined,
+    accessibilityNotes: row.accessibility_notes ?? undefined,
+    logoImageUrl: row.logo_image_url ?? undefined,
+    headerImageUrl: row.header_image_url ?? undefined,
+    galleryImageUrls: row.gallery_image_urls ?? [],
+    buildingAssetId: row.building_asset_id ?? undefined,
+    createdAt: row.created_at ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
+  }));
+  const relationships = (relationshipResult.data ?? []).map((row: any) => ({
+    id: row.id,
+    organizationId: row.organization_id,
+    venueId: row.venue_id,
+    relationshipType: row.relationship_type,
+    label: row.label ?? undefined,
+    startsAt: row.starts_at ?? undefined,
+    endsAt: row.ends_at ?? undefined,
+    isPrimary: Boolean(row.is_primary),
+    confidence: row.confidence === null || row.confidence === undefined ? undefined : Number(row.confidence),
+    notes: row.notes ?? undefined,
+  }));
+
+  return { listings, venues, relationships };
 };
 
 const serverBuildingAddressResolver = createNominatimBuildingAddressResolver({
@@ -2933,6 +3050,22 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
+    if (req.method === 'POST' && req.url.startsWith('/api/media/delete-asset')) {
+      const body = await readJsonBody(req);
+      const payload = await deleteMediaAsset(body, req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(payload));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/media/moderate-asset')) {
+      const body = await readJsonBody(req);
+      const payload = await moderateMediaAsset(body, req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(payload));
+      return;
+    }
+
     if (req.method === 'POST' && req.url.startsWith('/api/account/delete')) {
       const payload = await deleteAuthenticatedAccount(req.headers.authorization);
       res.setHeader('Content-Type', 'application/json');
@@ -2941,13 +3074,17 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'GET' && req.url.startsWith('/api/admin/listings')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const listings = loadListingsFromDisk();
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(listings));
       return;
     }
 
-    if (req.method === 'GET' && req.url.startsWith('/api/admin/building-assets')) {
+    if (req.method === 'GET' && (req.url === '/api/admin/building-assets' || req.url.startsWith('/api/admin/building-assets?'))) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const assets = loadBuildingAssetsFromDisk();
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(assets));
@@ -2955,6 +3092,8 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'GET' && req.url.startsWith('/api/admin/building-verification/evidence')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(records));
@@ -2962,8 +3101,10 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'POST' && req.url.startsWith('/api/admin/building-verification/evidence/save')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
-      const evidence = body?.evidence;
+      const evidence = body?.evidence as BuildingVerificationEvidenceRecord | undefined;
       const listingId = String(evidence?.listingId ?? '').trim();
       if (!listingId || !evidence?.evaluatedAt || !evidence?.providerSnapshot) {
         res.statusCode = 400;
@@ -2977,20 +3118,29 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
         res.end('Precise building evidence is disabled for this listing.');
         return;
       }
-      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE)
-        .filter((item: any) => !(item.listingId === listingId && item.evaluatedAt === evidence.evaluatedAt));
+      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE) as BuildingVerificationEvidenceRecord[];
+      const existing = records.find((item) => item.listingId === listingId && item.evaluatedAt === evidence.evaluatedAt);
+      if (existing) {
+        if (JSON.stringify(existing) !== JSON.stringify(evidence)) {
+          res.statusCode = 409;
+          res.end('Building verification evidence is immutable once recorded. Start a new verification run instead.');
+          return;
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ success: true, evidence: existing, duplicate: true }));
+        return;
+      }
       records.push(evidence);
-      const latest = records
-        .sort((a: any, b: any) => String(b.evaluatedAt).localeCompare(String(a.evaluatedAt)))
-        .filter((record: any, index: number, all: any[]) => all.slice(0, index).filter((item: any) => item.listingId === record.listingId).length < 5)
-        .sort((a: any, b: any) => String(a.evaluatedAt).localeCompare(String(b.evaluatedAt)));
-      saveJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE, latest);
+      records.sort((a, b) => String(a.evaluatedAt).localeCompare(String(b.evaluatedAt)));
+      saveJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE, records);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ success: true, evidence }));
       return;
     }
 
     if (req.method === 'POST' && req.url.startsWith('/api/admin/building-verification/evidence/review')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
       const listingId = String(body?.listingId ?? '').trim();
       const disposition = String(body?.disposition ?? '').trim();
@@ -3000,27 +3150,37 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
         res.end('Invalid building review disposition.');
         return;
       }
-      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE);
+      const records = loadJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE) as BuildingVerificationEvidenceRecord[];
       const matching = records
-        .map((item: any, index: number) => ({ item, index }))
-        .filter(({ item }: any) => item.listingId === listingId)
-        .sort((a: any, b: any) => String(b.item.evaluatedAt).localeCompare(String(a.item.evaluatedAt)))[0];
+        .filter((item) => item.listingId === listingId)
+        .sort((a, b) => String(b.evaluatedAt).localeCompare(String(a.evaluatedAt)))[0];
       if (!matching) {
         res.statusCode = 404;
         res.end('No building verification evidence exists for this listing.');
         return;
       }
-      records[matching.index] = {
-        ...matching.item,
-        review: { disposition, reviewedAt: new Date().toISOString(), note: String(body?.note ?? '').trim() || undefined },
+      const reviewEvent: BuildingVerificationReviewEvent = {
+        version: 1,
+        id: `building-review-${listingId}-${Date.now()}`,
+        listingId,
+        evidenceEvaluatedAt: matching.evaluatedAt,
+        evidenceSnapshotHash: matching.inputSnapshotHash,
+        disposition: disposition as BuildingVerificationReviewEvent['disposition'],
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: admin.userId,
+        note: String(body?.note ?? '').trim() || undefined,
       };
-      saveJsonArray(BUILDING_VERIFICATION_EVIDENCE_STORE, records);
+      const reviews = loadJsonArray(BUILDING_VERIFICATION_REVIEW_STORE) as BuildingVerificationReviewEvent[];
+      reviews.push(reviewEvent);
+      saveJsonArray(BUILDING_VERIFICATION_REVIEW_STORE, reviews);
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ success: true, evidence: records[matching.index] }));
+      res.end(JSON.stringify({ success: true, evidence: matching, reviewEvent }));
       return;
     }
 
     if (req.method === 'POST' && req.url.startsWith('/api/admin/building-footprints/supplemental')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
       const listingId = String(body?.listingId ?? '').trim();
       const lat = Number(body?.lat);
@@ -3063,6 +3223,8 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'POST' && req.url.startsWith('/api/admin/building-address/reverse')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
       const listingId = String(body?.listingId ?? '').trim();
       const lat = Number(body?.lat);
@@ -3126,6 +3288,8 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'GET' && req.url.startsWith('/api/admin/street-view/profile')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const url = new URL(req.url, 'http://localhost');
       const listingId = String(url.searchParams.get('listingId') ?? '').trim();
       res.setHeader('Content-Type', 'application/json');
@@ -3134,6 +3298,8 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
     }
 
     if (req.method === 'POST' && req.url.startsWith('/api/admin/street-view/profile/save')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
       if (!body?.profile) {
         res.statusCode = 400;
@@ -3174,10 +3340,120 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/building-assets/history')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
+      const url = new URL(req.url, 'http://localhost');
+      const listingId = String(url.searchParams.get('listingId') ?? '').trim();
+      const history = (loadJsonArray(BUILDING_ASSET_HISTORY_STORE) as BuildingAssetHistoryEvent[])
+        .filter((event) => !listingId || event.listingId === listingId)
+        .sort((a, b) => String(b.occurredAt).localeCompare(String(a.occurredAt)));
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(history));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/building-assets/rollback')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
+      const body = await readJsonBody(req);
+      const listingId = String(body?.listingId ?? '').trim();
+      const expectedSnapshot = body?.expectedSnapshot;
+      const expectedExistingAsset = body?.expectedExistingAsset;
+      const historyEventId = String(body?.historyEventId ?? '').trim();
+      const assets = loadBuildingAssetsFromDisk();
+      const localListings = loadListingsFromDisk();
+      const history = loadJsonArray(BUILDING_ASSET_HISTORY_STORE) as BuildingAssetHistoryEvent[];
+      let canonicalCollections;
+      try {
+        canonicalCollections = await loadAuthoritativeBuildingCollections(req.headers.authorization);
+      } catch (error) {
+        res.statusCode = 503;
+        res.end(`Rollback could not verify canonical location data: ${error instanceof Error ? error.message : 'unknown error'}`);
+        return;
+      }
+      const listing = canonicalCollections.listings.find((item: any) => item.id === listingId);
+      const currentAsset = assets.find((item: any) => item.listingId === listingId || item.id === listing?.buildingAssetId) ?? null;
+      const restoreEvent = history.find((event) => (
+        event.id === historyEventId
+        && event.listingId === listingId
+        && event.action === 'replace'
+        && event.previousAsset
+      )) ?? null;
+      if (!listing || !currentAsset || !restoreEvent?.previousAsset) {
+        res.statusCode = 404;
+        res.end('No previous BuildingAsset revision is available to restore.');
+        return;
+      }
+      const guard = guardBuildingAssetPersistence({
+        listing,
+        collections: canonicalCollections,
+        asset: restoreEvent.previousAsset,
+        expectedSnapshot,
+        existingAsset: currentAsset,
+        expectedExistingAsset,
+        mode: 'manual',
+        allowReplaceExisting: true,
+      });
+      if (!guard.ok) {
+        res.statusCode = 409;
+        res.end(`Rollback blocked: ${guard.reasons.join('; ')}`);
+        return;
+      }
+      const now = new Date().toISOString();
+      const restoredAsset = {
+        ...restoreEvent.previousAsset,
+        capture: { ...restoreEvent.previousAsset.capture, updatedAt: now },
+      };
+      const nextAssets = assets.map((item: any) => item.id === currentAsset.id || item.listingId === listingId ? restoredAsset : item);
+      const listingIndex = localListings.findIndex((item: any) => item.id === listingId);
+      const updatedListing = { ...listing, buildingAssetId: restoredAsset.id };
+      const nextListings = [...localListings];
+      if (listingIndex >= 0) nextListings[listingIndex] = updatedListing;
+      else nextListings.push(updatedListing);
+      const historyEvent: BuildingAssetHistoryEvent = {
+        version: 1,
+        id: `building-history-${listingId}-${Date.now()}`,
+        listingId,
+        venueId: restoredAsset.venueId ?? null,
+        action: 'rollback',
+        occurredAt: now,
+        actorUserId: admin.userId,
+        persistenceMode: 'manual',
+        policyVersion: BUILDING_PERSISTENCE_POLICY_VERSION,
+        inputSnapshot: guard.currentSnapshot,
+        previousAsset: currentAsset,
+        nextAsset: restoredAsset,
+        note: `Restored revision from ${restoreEvent.occurredAt}.`,
+      };
+      const nextHistory = [...history, historyEvent];
+      try {
+        saveJsonArray(BUILDING_ASSETS_STORE, nextAssets);
+        saveJsonArray(LISTINGS_STORE, nextListings);
+        saveJsonArray(BUILDING_ASSET_HISTORY_STORE, nextHistory);
+      } catch (error) {
+        saveJsonArray(BUILDING_ASSETS_STORE, assets);
+        saveJsonArray(LISTINGS_STORE, localListings);
+        saveJsonArray(BUILDING_ASSET_HISTORY_STORE, history);
+        throw error;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ asset: restoredAsset, listing: updatedListing, historyEvent }));
+      return;
+    }
+
     if (req.method === 'POST' && req.url.startsWith('/api/admin/building-assets/save')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
       const body = await readJsonBody(req);
       const asset = body?.asset;
       const listingId = String(body?.listingId || asset?.listingId || '').trim();
+      const mode = body?.mode === 'automatic' ? 'automatic' : 'manual';
+      if (mode === 'automatic' && process.env[BUILDING_AUTO_PERSISTENCE_ENV] !== '1') {
+        res.statusCode = 403;
+        res.end(`Automatic building persistence is disabled. Set ${BUILDING_AUTO_PERSISTENCE_ENV}=1 only after benchmark approval.`);
+        return;
+      }
       if (!listingId || !asset?.geometry) {
         res.statusCode = 400;
         res.end('Missing building asset listing id or geometry.');
@@ -3186,8 +3462,23 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
 
       const now = new Date().toISOString();
       const assets = loadBuildingAssetsFromDisk();
-      const listings = loadListingsFromDisk();
-      const existingAsset = assets.find((item: any) => item.listingId === listingId || item.id === asset.id);
+      const localListings = loadListingsFromDisk();
+      const history = loadJsonArray(BUILDING_ASSET_HISTORY_STORE) as BuildingAssetHistoryEvent[];
+      let canonicalCollections;
+      try {
+        canonicalCollections = await loadAuthoritativeBuildingCollections(req.headers.authorization);
+      } catch (error) {
+        res.statusCode = 503;
+        res.end(`Building save could not verify canonical location data: ${error instanceof Error ? error.message : 'unknown error'}`);
+        return;
+      }
+      const listing = canonicalCollections.listings.find((item: any) => item.id === listingId);
+      if (!listing) {
+        res.statusCode = 404;
+        res.end('BuildingAsset owner listing was not found in the canonical listing store.');
+        return;
+      }
+      const existingAsset = assets.find((item: any) => item.listingId === listingId || item.id === asset.id) ?? null;
       const assetId = String(existingAsset?.id || asset.id || `building-asset-${listingId}`);
       const nextAsset = {
         ...asset,
@@ -3200,28 +3491,74 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
           updatedAt: now,
         },
       };
-
-      const assetIndex = assets.findIndex((item: any) => item.id === assetId || item.listingId === listingId);
-      if (assetIndex >= 0) {
-        assets[assetIndex] = nextAsset;
-      } else {
-        assets.push(nextAsset);
+      const guard = guardBuildingAssetPersistence({
+        listing,
+        collections: canonicalCollections,
+        asset: nextAsset,
+        expectedSnapshot: body?.expectedSnapshot,
+        evidence: body?.evidence ?? null,
+        existingAsset,
+        expectedExistingAsset: body?.expectedExistingAsset,
+        mode,
+        allowReplaceExisting: body?.allowReplaceExisting === true,
+      });
+      if (!guard.ok) {
+        res.statusCode = 409;
+        res.end(`Building save blocked: ${guard.reasons.join('; ')}`);
+        return;
       }
-      saveBuildingAssetsToDisk(assets);
+      const geometryAudit = auditBuildingGeometry(nextAsset.geometry);
+      if (!geometryAudit.valid) {
+        res.statusCode = 400;
+        res.end(`Invalid building geometry: ${geometryAudit.failures.join(', ')}`);
+        return;
+      }
+      nextAsset.capture = {
+        ...nextAsset.capture,
+        polygonCount: geometryAudit.polygonCount,
+        ringCount: geometryAudit.ringCount,
+        vertexCount: geometryAudit.vertexCount,
+      };
 
-      let updatedListing: any = null;
-      const listingIndex = listings.findIndex((item: any) => item.id === listingId);
-      if (listingIndex >= 0) {
-        updatedListing = {
-          ...listings[listingIndex],
-          buildingAssetId: assetId,
-        };
-        listings[listingIndex] = updatedListing;
-        saveListingsToDisk(listings);
+      const nextAssets = [...assets];
+      const assetIndex = nextAssets.findIndex((item: any) => item.id === assetId || item.listingId === listingId);
+      if (assetIndex >= 0) nextAssets[assetIndex] = nextAsset;
+      else nextAssets.push(nextAsset);
+      const listingIndex = localListings.findIndex((item: any) => item.id === listingId);
+      const updatedListing = { ...listing, buildingAssetId: assetId };
+      const nextListings = [...localListings];
+      if (listingIndex >= 0) nextListings[listingIndex] = updatedListing;
+      else nextListings.push(updatedListing);
+      const historyEvent: BuildingAssetHistoryEvent = {
+        version: 1,
+        id: `building-history-${listingId}-${Date.now()}`,
+        listingId,
+        venueId: nextAsset.venueId ?? null,
+        action: existingAsset ? 'replace' : 'create',
+        occurredAt: now,
+        actorUserId: admin.userId,
+        persistenceMode: mode,
+        policyVersion: BUILDING_PERSISTENCE_POLICY_VERSION,
+        inputSnapshot: guard.currentSnapshot,
+        evidenceEvaluatedAt: body?.evidence?.evaluatedAt,
+        previousAsset: existingAsset,
+        nextAsset,
+        note: mode === 'automatic' ? 'Definitive verifier persistence.' : 'Explicit Building Inspector save.',
+      };
+      const nextHistory = [...history, historyEvent];
+      try {
+        saveJsonArray(BUILDING_ASSETS_STORE, nextAssets);
+        saveJsonArray(LISTINGS_STORE, nextListings);
+        saveJsonArray(BUILDING_ASSET_HISTORY_STORE, nextHistory);
+      } catch (error) {
+        saveJsonArray(BUILDING_ASSETS_STORE, assets);
+        saveJsonArray(LISTINGS_STORE, localListings);
+        saveJsonArray(BUILDING_ASSET_HISTORY_STORE, history);
+        throw error;
       }
 
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ asset: nextAsset, listing: updatedListing }));
+      res.end(JSON.stringify({ asset: nextAsset, listing: updatedListing, historyEvent }));
       return;
     }
 
@@ -4227,8 +4564,21 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
   } catch (error: any) {
-    res.statusCode = 500;
-    res.end(`Geo admin API error: ${error.message || 'unknown error'}`);
+    const message = error?.message || 'unknown error';
+    const isMediaApi = req.url?.startsWith('/api/media/');
+    const apiLabel = isMediaApi
+      ? 'Media API'
+      : req.url?.startsWith('/api/account/')
+        ? 'Account API'
+        : 'Geo admin API';
+    res.statusCode = isMediaApi && /authentication|session/i.test(message)
+      ? 401
+      : isMediaApi && /administrator access|admin access/i.test(message)
+        ? 403
+        : isMediaApi && /invalid|missing|required|not supported|no longer exists/i.test(message)
+          ? 400
+          : 500;
+    res.end(`${apiLabel} error: ${message}`);
     return;
   }
 
@@ -4273,9 +4623,13 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         watch: {
           ignored: [
+            '**/.codex-temp/**',
+            '**/docs/audits/**',
             '**/data/listings.local.json',
             '**/data/building-assets.local.json',
             '**/data/building-verification-evidence.local.json',
+            '**/data/building-verification-reviews.local.json',
+            '**/data/building-asset-history.local.json',
           ],
         },
       },

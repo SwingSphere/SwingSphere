@@ -32,6 +32,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
   const tags = (listing.type === 'club' ? listing.generalAmenities ?? [] : listing.tags ?? []).slice(0, 2);
   const location = formatCardLocation(listing);
   const logoUrl = getListingLogoUrl(listing);
+  const monochrome = listing.type === 'club' && (listing.mediaPresentation === 'monochrome' || listing.id === 'club-epicure-cape-town');
 
   return (
     <button
@@ -44,7 +45,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
         onError={handleListingImageError}
         alt={listing.name}
         loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105 ${monochrome ? 'grayscale contrast-[1.08]' : ''}`}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/54 to-black/12" />
       <div className="ss-glass ss-glass--liquid absolute left-4 top-4 h-24 w-24 overflow-hidden rounded-[22px] [mask-image:linear-gradient(#000,#000)]">
@@ -53,7 +54,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
           onError={handleListingImageError}
           alt={`${listing.name} logo`}
           loading="lazy"
-          className="h-full w-full scale-[1.04] object-cover"
+          className={`h-full w-full scale-[1.04] object-cover ${monochrome ? 'grayscale contrast-[1.12]' : ''}`}
         />
       </div>
       <div className="absolute inset-x-0 bottom-0 flex min-h-[46%] flex-col justify-end p-4">

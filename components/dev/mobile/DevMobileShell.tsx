@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft, Bookmark, Globe2, MapPin, Plus, Share2, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../store/appStore';
-import { DEV_MOBILE_BASE, toDevMobilePath } from './devMobileRouting';
+import { useDeviceExperience } from '../../device/DeviceExperienceContext';
 
 type MobileHeaderProps = {
   title: string;
@@ -18,6 +18,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAppStore();
+  const { basePath, toPath } = useDeviceExperience();
 
   return (
     <header className="relative z-30 flex min-h-[64px] shrink-0 items-center gap-2 border-b border-white/[0.07] bg-[rgba(7,9,13,0.88)] px-3 pb-2 pt-[max(2rem,env(safe-area-inset-top))] backdrop-blur-2xl">
@@ -29,10 +30,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
             return;
           }
           if (!showBack) {
-            navigate(DEV_MOBILE_BASE);
+            navigate(basePath);
             return;
           }
-          if (location.key === 'default') navigate(DEV_MOBILE_BASE);
+          if (location.key === 'default') navigate(basePath);
           else navigate(-1);
         }}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/[0.055] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
@@ -55,7 +56,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
         </button>
       ) : null}
       {!onSave && !onShare ? (
-        <button type="button" onClick={() => navigate(toDevMobilePath('/account'))} className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-white/[0.055]" aria-label="Account">
+        <button type="button" onClick={() => navigate(toPath('/account'))} className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-white/[0.055]" aria-label="Account">
           {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" /> : <UserRound className="h-5 w-5 text-gray-300" />}
         </button>
       ) : null}
@@ -71,16 +72,17 @@ export const mobileNavItems: Array<{ label: string; path: string; icon: typeof G
   { label: 'Account', path: '/account', icon: UserRound },
 ];
 
-export const getMobileNavTarget = (path: string) => `${DEV_MOBILE_BASE}${path}`;
+export const getMobileNavTarget = (path: string, basePath = '/mobile') => `${basePath}${path}`;
 
 export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { basePath } = useDeviceExperience();
   return (
     <nav className="grid min-h-[68px] shrink-0 grid-cols-5 border-t border-white/[0.07] bg-[rgba(6,8,11,0.96)] px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-2xl" aria-label="Mobile navigation">
       {mobileNavItems.map(({ label, path, icon: Icon, emphasized }) => {
-        const target = getMobileNavTarget(path);
-        const active = path ? location.pathname === target || location.pathname.startsWith(`${target}/`) : location.pathname === DEV_MOBILE_BASE || location.pathname === `${DEV_MOBILE_BASE}/`;
+        const target = getMobileNavTarget(path, basePath);
+        const active = path ? location.pathname === target || location.pathname.startsWith(`${target}/`) : location.pathname === basePath || location.pathname === `${basePath}/`;
         return (
           <button key={label} type="button" onClick={() => navigate(target)} className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300 ${active ? 'text-red-200' : 'text-gray-500'}`} aria-current={active ? 'page' : undefined}>
             <span className={emphasized ? '-mt-5 grid h-11 w-11 place-items-center rounded-2xl bg-red-500 text-white shadow-[0_10px_28px_rgba(239,68,68,0.32)]' : ''}><Icon className="h-[19px] w-[19px]" /></span>

@@ -1,11 +1,13 @@
 import type { BuildingVerificationMeta, Geopoint, Listing } from '../types';
 import { getListingPhysicalAddress, getVenueForListing, type EntityCollections } from './entityCompatibility';
 import type { IndividualBuildingFootprint } from './buildingGeometry';
+import { normalizeCountry } from './geoNormalize';
+import { extractAddressHouseNumber, stripAddressHouseNumber } from './addressParsing';
 
-export type BuildingAddressCandidate = { houseNumber?: string; road?: string; city?: string; region?: string; postalCode?: string; country?: string };
+export type BuildingAddressCandidate = { houseNumber?: string; road?: string; city?: string; region?: string; postalCode?: string; country?: string; countryCode?: string };
 export type BuildingAddressScore = { score: number; confidence: number; houseNumberMatch: boolean; houseNumberConflict: boolean; streetSimilarity: number; cityMatch: boolean; postalCodeMatch: boolean; countryMatch: boolean; reasons: string[] };
 export type BuildingVerificationOutcome = 'verified' | 'probable' | 'ambiguous' | 'address_mismatch' | 'pin_mismatch' | 'no_building_data' | 'needs_location_review' | 'private_or_approximate_skipped' | 'has_verified_asset';
-export type VerificationCandidateInput = Pick<IndividualBuildingFootprint, 'fingerprint' | 'providerFeatureIds' | 'source' | 'pinIntersects' | 'pinToFootprintMeters' | 'pinToCentroidMeters'> & { geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; address?: BuildingAddressCandidate | null; addressLabel?: string | null };
+export type VerificationCandidateInput = Pick<IndividualBuildingFootprint, 'fingerprint' | 'providerFeatureIds' | 'source' | 'pinIntersects' | 'pinToFootprintMeters' | 'pinToCentroidMeters'> & { geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; address?: BuildingAddressCandidate | null; addressLabel?: string | null; addressScope?: 'footprint' | 'nearby_object' };
 export type VerificationLocationContext = { listingAddress: Geopoint['address']; locationConfidence?: number | null; geocoderSource?: string | null; manuallyAdjusted?: boolean; existingVerifiedAsset?: boolean; isPrivateOrApproximate?: boolean; coordinateIsValid?: boolean };
 export type RankedBuildingCandidate = VerificationCandidateInput & { score: number; confidence: number; addressScore: BuildingAddressScore; reasons: string[] };
 export type BuildingVerificationDecision = {
@@ -46,19 +48,11 @@ const STREET_ALIASES: Array<[RegExp, string]> = [
 export const normalizeAddressText = (value: string | undefined): string => {
   let normalized = (value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   for (const [pattern, replacement] of STREET_ALIASES) normalized = normalized.replace(pattern, replacement);
-  return normalized.replace(/[^a-z0-9]+/g, ' ').trim();
+  return normalized.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 };
 
-const HOUSE_NUMBER_RE = /\b\d+[a-z]?(?:[-/]\d+[a-z]?)?\b/i;
-export const extractHouseNumber = (value: string | undefined): string => (value ?? '')
-  .normalize('NFKD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .toLowerCase()
-  .match(HOUSE_NUMBER_RE)?.[0] ?? '';
-const stripHouseNumber = (value: string | undefined): string => {
-  const houseNumber = extractHouseNumber(value);
-  return normalizeAddressText(houseNumber ? (value ?? '').replace(HOUSE_NUMBER_RE, ' ') : value);
-};
+export const extractHouseNumber = (value: string | undefined): string => extractAddressHouseNumber(value);
+const stripHouseNumber = (value: string | undefined): string => normalizeAddressText(stripAddressHouseNumber(value));
 const parseHouseNumberRange = (value: string): { start: number; end: number; suffix: string } | null => {
   const match = value.match(/^(\d+)([a-z]?)(?:[-/](\d+)[a-z]?)?$/);
   if (!match) return null;
@@ -87,6 +81,16 @@ const sameText = (a: string | undefined, b: string | undefined): boolean => {
   const left = normalizeAddressText(a); const right = normalizeAddressText(b);
   return Boolean(left && right && left === right);
 };
+const sameCountry = (a: string | undefined, b: string | undefined): boolean =>
+  sameText(a, b) || Boolean(a && b && normalizeCountry(a) && normalizeCountry(a) === normalizeCountry(b));
+const sameCountryCandidate = (listingCountry: string | undefined, candidate: BuildingAddressCandidate): boolean => {
+  if (sameCountry(listingCountry, candidate.country)) return true;
+  const listingCode = normalizeCountry(listingCountry ?? '');
+  const candidateCode = candidate.countryCode?.trim().toLowerCase() ?? '';
+  return Boolean(listingCode && candidateCode && listingCode === candidateCode);
+};
+const samePostalCode = (a: string | undefined, b: string | undefined): boolean =>
+  Boolean(a && b && normalizeAddressText(a).replace(/ /g, '') === normalizeAddressText(b).replace(/ /g, ''));
 
 export const scoreBuildingAddressCandidate = (
   listingAddress: Geopoint['address'], candidate: BuildingAddressCandidate,
@@ -100,8 +104,8 @@ export const scoreBuildingAddressCandidate = (
   const houseNumberMatch = houseNumbersMatch(listingHouse, candidateHouse);
   const houseNumberConflict = Boolean(listingHouse && candidateHouse && !houseNumberMatch);
   const cityMatch = sameText(listingAddress.city, candidate.city);
-  const postalCodeMatch = sameText(listingAddress.postalCode, candidate.postalCode);
-  const countryMatch = sameText(listingAddress.country, candidate.country);
+  const postalCodeMatch = samePostalCode(listingAddress.postalCode, candidate.postalCode);
+  const countryMatch = sameCountryCandidate(listingAddress.country, candidate);
   if (houseNumberMatch) { score += 40; reasons.push('house number matches'); }
   else if (houseNumberConflict) { score -= 32; reasons.push(`house number conflicts (${candidate.houseNumber})`); }
   else if (!listingHouse) score += 4;
@@ -124,7 +128,10 @@ export const scoreBuildingAddressCandidate = (
   return { score, confidence, houseNumberMatch, houseNumberConflict, streetSimilarity, cityMatch, postalCodeMatch, countryMatch, reasons };
 };
 
-const AUTHORITATIVE_SOURCE_TOKENS = ['manual', 'google-business', 'google-maps', 'official-site', 'official_club', 'government', 'licensing', 'user-verified'];
+const AUTHORITATIVE_SOURCE_TOKENS = [
+  'manual', 'google-business', 'google-maps', 'waze', 'published-venue-coordinate',
+  'published venue coordinate', 'gps', 'government', 'licensing', 'user-verified', 'user verified',
+];
 export const isAuthoritativeLocationSource = (source: string | null | undefined, manuallyAdjusted = false): boolean => {
   if (manuallyAdjusted) return true;
   const normalized = normalizeAddressText(source ?? '');
@@ -132,7 +139,7 @@ export const isAuthoritativeLocationSource = (source: string | null | undefined,
 };
 
 const rankCandidate = (candidate: VerificationCandidateInput, context: VerificationLocationContext): RankedBuildingCandidate => {
-  const addressScore = scoreBuildingAddressCandidate(context.listingAddress, candidate.address ?? {}, { distanceMeters: candidate.pinToFootprintMeters, pinIntersects: candidate.pinIntersects });
+  const addressScore = scoreBuildingAddressCandidate(context.listingAddress, candidate.addressScope === 'nearby_object' ? {} : candidate.address ?? {}, { distanceMeters: candidate.pinToFootprintMeters, pinIntersects: candidate.pinIntersects });
   let score = addressScore.score;
   const reasons = [...addressScore.reasons];
   if (candidate.pinIntersects) { score += 10; reasons.push('stored coordinate falls inside this individual footprint'); }
@@ -158,11 +165,51 @@ export const evaluateBuildingVerification = (candidates: VerificationCandidateIn
   const scoreGap = runnerUp ? candidate.score - runnerUp.score : Number.POSITIVE_INFINITY;
   const address = candidate.addressScore;
   const localityMatches = [address.cityMatch, address.postalCodeMatch, address.countryMatch].filter(Boolean).length;
-  const noContradiction = !address.houseNumberConflict && !(candidate.address?.road && address.streetSimilarity < 0.35);
+  const scopedAddress = candidate.addressScope === 'nearby_object' ? null : candidate.address;
+  const localityConflicts: string[] = [];
+  if (context.listingAddress.country && (scopedAddress?.country || scopedAddress?.countryCode) && !sameCountryCandidate(context.listingAddress.country, scopedAddress)) localityConflicts.push('country');
+  if (context.listingAddress.postalCode && scopedAddress?.postalCode && !samePostalCode(context.listingAddress.postalCode, scopedAddress.postalCode)) localityConflicts.push('postalCode');
+  // City labels vary by borough, municipality and language. When postal code +
+  // country already agree, a different city string is contextual rather than a
+  // hard contradiction.
+  if (context.listingAddress.city && scopedAddress?.city && !sameText(context.listingAddress.city, scopedAddress.city) && !(address.postalCodeMatch && address.countryMatch)) localityConflicts.push('city');
+  const noContradiction = !address.houseNumberConflict && !(scopedAddress?.road && address.streetSimilarity < 0.35) && localityConflicts.length === 0;
+  const intersecting = ranked.filter((item) => item.pinIntersects);
+  const intersectingCount = new Set(intersecting.map((item) => item.fingerprint)).size;
+  if (intersectingCount > 1) return result('ambiguous', candidate.confidence, ['pin intersects multiple individual footprints; resolve overlapping geometry before acceptance'], candidate, runnerUp);
   const exactAddressTier = address.houseNumberMatch && address.streetSimilarity >= BUILDING_AUTO_ACCEPT_POLICY.exactAddress.minimumStreetSimilarity && localityMatches >= BUILDING_AUTO_ACCEPT_POLICY.exactAddress.minimumLocationMatches && (candidate.pinIntersects || candidate.pinToFootprintMeters <= BUILDING_AUTO_ACCEPT_POLICY.exactAddress.maximumPinToFootprintMeters) && candidate.score >= BUILDING_AUTO_ACCEPT_POLICY.exactAddress.minimumCandidateScore && scoreGap >= BUILDING_AUTO_ACCEPT_POLICY.exactAddress.minimumScoreGap && noContradiction;
-  if (exactAddressTier) return result('verified', candidate.confidence, ['exact normalized address agrees with the footprint address', 'pin agrees within the strict tolerance', runnerUp ? `candidate outranks runner-up by ${scoreGap.toFixed(1)} points` : 'no competing footprint has comparable evidence'], candidate, runnerUp, true, 'exact_address_and_pin');
-  const authoritativePinTier = authoritativeLocation && (context.locationConfidence ?? 0) >= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.minimumLocationConfidence && candidate.pinIntersects && candidate.pinToFootprintMeters <= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.maximumPinToFootprintMeters && candidate.score >= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.minimumCandidateScore && scoreGap >= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.minimumScoreGap && noContradiction;
-  if (authoritativePinTier) return result('verified', Math.max(0.96, candidate.confidence), ['authoritative coordinate falls inside one unique footprint', 'mapped address is incomplete but not contradictory', runnerUp ? `candidate outranks runner-up by ${scoreGap.toFixed(1)} points` : 'no competing footprint has comparable evidence'], candidate, runnerUp, true, 'authoritative_unique_pin');
+  if (exactAddressTier && candidate.addressScope !== 'nearby_object') return result('verified', candidate.confidence, ['exact normalized address agrees with the footprint address', 'pin agrees within the strict tolerance', runnerUp ? `candidate outranks runner-up by ${scoreGap.toFixed(1)} points` : 'no competing footprint has comparable evidence'], candidate, runnerUp, true, 'exact_address_and_pin');
+
+  // A trusted, venue-specific coordinate inside exactly one footprint is its
+  // own independent evidence path. Reverse geocoding is nearest-object lookup,
+  // so an address returned inside/near the footprint can support this branch
+  // but must not veto it merely because the object is a neighboring unit.
+  const authoritativeCandidate = intersectingCount === 1 ? intersecting[0] ?? null : null;
+  const authoritativeRunnerUp = authoritativeCandidate
+    ? ranked.find((item) => item.fingerprint !== authoritativeCandidate.fingerprint) ?? null
+    : null;
+  const authoritativeAddress = authoritativeCandidate?.addressScope === 'nearby_object' ? null : authoritativeCandidate?.address;
+  const authoritativePinTier = Boolean(
+    authoritativeLocation
+    && (context.locationConfidence ?? 0) >= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.minimumLocationConfidence
+    && authoritativeCandidate
+    && authoritativeCandidate.pinToFootprintMeters <= BUILDING_AUTO_ACCEPT_POLICY.authoritativePin.maximumPinToFootprintMeters,
+  );
+  if (authoritativePinTier && authoritativeCandidate) return result(
+    'verified',
+    Math.max(0.98, authoritativeCandidate.confidence),
+    [
+      'authoritative venue coordinate falls inside exactly one individual footprint',
+      authoritativeAddress ? 'reverse-address context does not contradict the venue street/country' : 'nearest-object reverse address is treated as missing context, not a contradiction',
+      'no second footprint intersects the trusted coordinate',
+    ],
+    authoritativeCandidate,
+    authoritativeRunnerUp,
+    true,
+    'authoritative_unique_pin',
+  );
+  if (candidate.addressScope === 'nearby_object') return result('needs_location_review', candidate.confidence, ['reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address'], candidate, runnerUp);
+  if (localityConflicts.length) return result('address_mismatch', candidate.confidence, [`mapped locality evidence disagrees: ${localityConflicts.join(', ')}; resolve address provenance before acceptance`], candidate, runnerUp);
   if (address.houseNumberConflict && address.streetSimilarity >= 0.5) return result('address_mismatch', candidate.confidence, ['candidate is on the expected street but has a conflicting house number'], candidate, runnerUp);
   if (runnerUp && runnerUp.score >= BUILDING_AUTO_ACCEPT_POLICY.ambiguity.minimumRunnerUpScore && scoreGap < BUILDING_AUTO_ACCEPT_POLICY.ambiguity.maximumDefinitiveGap) return result('ambiguous', candidate.confidence, [`top two footprints are separated by only ${scoreGap.toFixed(1)} points`], candidate, runnerUp);
   if (candidate.pinToFootprintMeters >= BUILDING_AUTO_ACCEPT_POLICY.pinMismatch.minimumDistanceMeters) return result('pin_mismatch', candidate.confidence, [`best footprint is ${candidate.pinToFootprintMeters.toFixed(1)}m from the stored pin`], candidate, runnerUp);

@@ -1,4 +1,5 @@
 import type { Geopoint, ListingLocationMeta } from '../types';
+import { extractAddressHouseNumber } from './addressParsing';
 
 export type ListingAddress = {
   addressLine1?: string;
@@ -139,20 +140,58 @@ const logRawGeocoderResponse = (query: string, data: NominatimSearchResult[]) =>
   });
 };
 
-const looksLikeStreetAddress = (value: string) =>
-  /\d/.test(value) && /\b(?:st|street|ave|avenue|rd|road|dr|drive|blvd|boulevard|ln|lane|ct|court|way|pkwy|parkway|hwy|highway|nw|ne|sw|se)\b/i.test(value);
+const STREET_DESIGNATOR_PATTERN = /\b(?:st|street|ave|avenue|rd|road|dr|drive|blvd|boulevard|ln|lane|ct|court|way|pkwy|parkway|hwy|highway|calle|carrera|avenida|avda|carretera|camino|paseo|rua|rue|via|viale|strada|strasse|straße|weg|ul|ulica)\b/iu;
 
-const normalizeAddressComparable = (value: string) => value.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+const looksLikeStreetAddress = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed || !/\d/.test(trimmed)) return false;
+  const firstSegment = trimmed.split(',')[0]?.trim() ?? trimmed;
+  const firstSegmentHasLettersAndNumbers = /\p{L}/u.test(firstSegment) && /\d/.test(firstSegment);
+  return firstSegmentHasLettersAndNumbers || STREET_DESIGNATOR_PATTERN.test(trimmed) || /#\s*\d/iu.test(trimmed);
+};
+
+const normalizeAddressComparable = (value: string) => value
+  .normalize('NFKD')
+  .replace(/\p{M}/gu, '')
+  .toLowerCase()
+  .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 const STREET_TOKEN_STOP_WORDS = new Set([
   'east', 'west', 'north', 'south', 'northeast', 'northwest', 'southeast', 'southwest',
   'ave', 'avenue', 'st', 'street', 'rd', 'road', 'dr', 'drive', 'blvd', 'boulevard',
   'ln', 'lane', 'ct', 'court', 'way', 'pkwy', 'parkway', 'hwy', 'highway', 'unit', 'suite',
   'apt', 'apartment', 'floor', 'fl', 'east', 'e', 'west', 'w', 'north', 'n', 'south', 's',
+  'calle', 'carrera', 'avenida', 'avda', 'carretera', 'camino', 'paseo', 'rua', 'rue', 'via',
+  'viale', 'strada', 'strasse', 'straße', 'weg', 'ul', 'ulica', 'de', 'del', 'da', 'do', 'dos',
+  'das', 'la', 'el',
 ]);
 
-const getFirstNumber = (value: string) => normalizeAddressComparable(value).match(/\b\d+\b/)?.[0] ?? '';
-const getPostalCode = (value: string) => normalizeAddressComparable(value).match(/\b\d{5}(?:\s?\d{4})?\b/)?.[0] ?? '';
+const houseNumbersCompatible = (input: string, resolved: string) => {
+  if (input === resolved) return true;
+  const [inputStart, inputEnd] = input.split('-');
+  const [resolvedStart, resolvedEnd] = resolved.split('-');
+  if (inputEnd && !resolvedEnd && inputStart === resolved) return true;
+  if (resolvedEnd && !inputEnd && resolvedStart === input) return true;
+  return false;
+};
+const getPostalCode = (value: string) => {
+  const normalized = value.normalize('NFKD').replace(/\p{M}/gu, '').toUpperCase();
+  const patterns = [
+    /\b(?:GIR\s?0AA|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2})\b/, // United Kingdom
+    /\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b/, // Canada
+    /\b\d{4}\s?[A-Z]{2}\b/, // Netherlands
+    /\b\d{6}\b/, // Colombia, India and other six-digit systems
+    /\b\d{5}(?:[-\s]?\d{4})?\b/, // United States and other five-digit systems
+    /\b\d{4}\b/, // South Africa, Australia, Austria and other four-digit systems
+  ];
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern)?.[0];
+    if (match) return match.replace(/[^A-Z0-9]/g, '');
+  }
+  return '';
+};
 
 const getStreetTokensFromFreeform = (value: string) => {
   const firstSegment = value.split(',')[0] ?? value;
@@ -167,14 +206,15 @@ export const isResolvedAddressPlausibleForInput = (inputAddress: string, resolve
 
   const resolvedLine = normalizeAddressComparable(resolvedAddress.addressLine1 ?? '');
   const resolvedFull = normalizeAddressComparable(formatListingAddress(resolvedAddress));
-  const inputHouseNumber = getFirstNumber(inputAddress);
-  const resolvedHouseNumber = getFirstNumber(resolvedAddress.addressLine1 ?? '');
+  const inputHouseNumber = extractAddressHouseNumber(inputAddress);
+  const resolvedHouseNumber = extractAddressHouseNumber(resolvedAddress.addressLine1 ?? '');
   const inputPostalCode = getPostalCode(inputAddress);
   const resolvedPostalCode = resolvedAddress.postalCode ? getPostalCode(resolvedAddress.postalCode) : '';
   const streetTokens = getStreetTokensFromFreeform(inputAddress);
 
   if (inputPostalCode && resolvedPostalCode && inputPostalCode !== resolvedPostalCode) return false;
-  if (inputHouseNumber && resolvedHouseNumber && inputHouseNumber !== resolvedHouseNumber) return false;
+  if (inputHouseNumber && !resolvedHouseNumber) return false;
+  if (inputHouseNumber && resolvedHouseNumber && !houseNumbersCompatible(inputHouseNumber, resolvedHouseNumber)) return false;
   if (streetTokens.length && !streetTokens.some((token) => resolvedLine.includes(token) || resolvedFull.includes(token))) return false;
 
   return true;
@@ -199,6 +239,7 @@ const buildMeta = (args: {
   normalizedAddress?: string;
   geocoderLabel?: string;
   geocoderSource?: string;
+  coordinatePrecision?: ListingLocationMeta['coordinatePrecision'];
   warnings?: string[];
   manualAdjustment?: boolean;
   validatedAt?: string;
@@ -208,6 +249,7 @@ const buildMeta = (args: {
   normalizedAddress: args.normalizedAddress,
   geocoderLabel: args.geocoderLabel,
   geocoderSource: args.geocoderSource,
+  coordinatePrecision: args.coordinatePrecision,
   warnings: args.warnings,
   manualAdjustment: args.manualAdjustment,
   validatedAt: args.validatedAt,
@@ -349,6 +391,7 @@ export const validateListingLocation = async (
           normalizedAddress,
           geocoderLabel: result.display_name,
           geocoderSource: 'nominatim',
+          coordinatePrecision: precision === 'city' || precision === 'neighborhood' ? 'locality' : precision,
           warnings: warnings.length ? Array.from(new Set(warnings)) : undefined,
           validatedAt: new Date().toISOString(),
         }),

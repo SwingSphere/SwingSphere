@@ -9,7 +9,7 @@ import ClubEventsPreview, { type ClubEventPreviewItem } from './ClubEventsPrevie
 import ClubRhythmSection from './ClubRhythmSection';
 import ClubMapCard from './ClubMapCard';
 import { getListingImageUrl } from '../../lib/listingImage';
-import { getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
+import { formatListingPhysicalAddress, getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
 import { getApproximateLocationCenter, isApproximateLocation } from '../../lib/publicLocation';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
 import ClubReviewsSection from './ClubReviewsSection';
@@ -102,6 +102,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
   const fetlife = normalizeExternalUrl(extended.fetlife);
   const emailHref = club.contactEmail ? `mailto:${club.contactEmail}` : '';
   const clubAddress = getListingPhysicalAddress(club);
+  const clubAddressText = formatListingPhysicalAddress(club);
   const isApproximateVenue = isApproximateLocation(club);
   const approximateCenter = isApproximateVenue ? getApproximateLocationCenter(club) : null;
   const physicalClubCoords = getListingPhysicalCoords(club) ?? { lat: club.geopoint.latitude, lng: club.geopoint.longitude };
@@ -120,6 +121,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           tags={club.generalAmenities ?? []}
           backgroundImageUrl={coverImage}
           logoImageUrl={extended.logoImageUrl}
+          mediaPresentation={club.mediaPresentation}
           thumbnails={thumbnails}
           onQuickEdit={onQuickEdit}
         />
@@ -144,7 +146,9 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
       rail={
         <>
           <ClubMapCard
+            listingId={club.id}
             clubName={club.name}
+            addressText={clubAddressText}
             city={clubAddress.city ?? ''}
             region={clubAddress.region ?? ''}
             lat={clubCoords.lat}

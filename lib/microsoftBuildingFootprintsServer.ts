@@ -84,7 +84,7 @@ const loadDatasetIndex = async (): Promise<DatasetIndex> => {
     let lastError: unknown = null;
     for (const sourceUrl of DATASET_INDEX_URLS) {
       try {
-        const response = await fetch(sourceUrl);
+        const response = await fetch(sourceUrl, { signal: AbortSignal.timeout(15_000) });
         if (!response.ok) throw new Error(`dataset index returned ${response.status}`);
         const text = await response.text();
         const lines = text.split(/\r?\n/).filter(Boolean);
@@ -176,7 +176,20 @@ const boundsIntersect = (
 
 const safeCacheName = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, '_');
 
-const ensureCachedTile = async (
+const tileDownloads = new Map<string, Promise<{ filePath: string; cacheHit: boolean }>>();
+const ensureCachedTile = (
+  record: DatasetRecord,
+  cacheDirectory: string,
+): Promise<{ filePath: string; cacheHit: boolean }> => {
+  const key = `${cacheDirectory}/${record.uploadDate}/${record.quadKey}`;
+  const existing = tileDownloads.get(key);
+  if (existing) return existing;
+  const pending = downloadCachedTile(record, cacheDirectory).finally(() => tileDownloads.delete(key));
+  tileDownloads.set(key, pending);
+  return pending;
+};
+
+const downloadCachedTile = async (
   record: DatasetRecord,
   cacheDirectory: string,
 ): Promise<{ filePath: string; cacheHit: boolean }> => {
@@ -186,7 +199,7 @@ const ensureCachedTile = async (
   if (fs.existsSync(filePath) && fs.statSync(filePath).size > 1_024) {
     return { filePath, cacheHit: true };
   }
-  const response = await fetch(record.url);
+  const response = await fetch(record.url, { signal: AbortSignal.timeout(60_000) });
   if (!response.ok || !response.body) throw new Error(`${PROVIDER_NAME} tile ${record.quadKey} returned ${response.status}`);
   const tempPath = `${filePath}.download`;
   try {
@@ -260,8 +273,11 @@ export const queryMicrosoftBuildingFootprints = async (args: {
     const cached = await ensureCachedTile(record, args.cacheDirectory);
     cacheHits += cached.cacheHit ? 1 : 0;
     downloadedTiles += cached.cacheHit ? 0 : 1;
-    const input = fs.createReadStream(cached.filePath).pipe(createGunzip());
+    const compressed = fs.createReadStream(cached.filePath);
+    const input = compressed.pipe(createGunzip());
+    compressed.on('error', (error) => input.destroy(error));
     const lines = readline.createInterface({ input, crlfDelay: Infinity });
+    try {
     for await (const line of lines) {
       if (!line.trim()) continue;
       let parsed: unknown;
@@ -283,6 +299,11 @@ export const queryMicrosoftBuildingFootprints = async (args: {
         input.destroy();
         break;
       }
+    }
+    } finally {
+      lines.close();
+      input.destroy();
+      compressed.destroy();
     }
     if (truncated) break;
   }

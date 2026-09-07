@@ -237,7 +237,13 @@ export const getListingPhysicalGeopoint = (
   collections: EntityCollections = {},
 ): Geopoint => {
   const venue = getVenueForListing(listing, collections);
-  if (isSyntheticListingVenue(listing, venue)) return listing.geopoint;
+  if (venue && !collections.venues?.some((item) => item.id === venue.id)) {
+    const owner = collections.listings?.find((item) => item.type === 'club' && venue.id === `venue-${item.id}`);
+    if (owner) return owner.geopoint;
+  }
+  // Only bundled compatibility records are synthetic. A persisted Venue can
+  // legitimately retain the historical venue-${listing.id} identifier.
+  if (isSyntheticListingVenue(listing, venue) && !collections.venues?.some((item) => item.id === venue?.id)) return listing.geopoint;
   // TODO(SEMv2 Phase 4): remove the listing.geopoint fallback once Venue is required for physical location.
   return venue ? venueToGeopoint(venue) : listing.geopoint;
 };

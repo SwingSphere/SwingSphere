@@ -1,6 +1,9 @@
 import type { BuildingAsset, Listing } from '../types';
 import { auditBuildingGeometry, haversineMeters, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from './buildingGeometry';
 import { latestBuildingEvidenceByListing, type BuildingVerificationEvidenceRecord } from './buildingVerificationEvidence';
+import { isApproximateLocation } from './publicLocation';
+import { getVenueForListing } from './entityCompatibility';
+import { assessListingCoordinateQuality } from './listingLocationQuality';
 
 export type StaleAssetRecommendation =
   | 'keep_asset'
@@ -45,6 +48,8 @@ export const auditStaleBuildingAssets = (
     const listing = listings.find((item) => item.id === listingId);
     const asset = assets.find((item) => item.listingId === listingId || item.id === listing?.buildingAssetId);
     if (!listing || !asset) return [];
+    const venue = getVenueForListing(listing, { listings });
+    if (isApproximateLocation(listing) || (venue && venue.visibility !== 'public_exact')) return [];
     const geometryAudit = auditBuildingGeometry(asset.geometry);
     if (!geometryAudit.valid || !geometryAudit.geometry) return [];
     const legacyListingCoordinate = finiteListingCoordinate(listing);
@@ -58,6 +63,7 @@ export const auditStaleBuildingAssets = (
     const legacyToCanonicalMeters = canonical ? haversineMeters(legacyListingCoordinate, canonical) : null;
     const sharedProviderFeatureIds = asset.provider.featureIds.filter((id) => evidence?.bestCandidate?.providerFeatureIds.includes(id));
     const reasons: string[] = [];
+    const coordinateQuality = assessListingCoordinateQuality(listing, { listings });
     let recommendation: StaleAssetRecommendation = 'needs_human_research';
 
     if (canonicalPinToAssetMeters !== null && canonicalPinToAssetMeters <= 6) {
@@ -70,8 +76,14 @@ export const auditStaleBuildingAssets = (
       }
       if (liveDistance !== null && liveDistance <= 6) reasons.push('current provider also returns a footprint at the canonical coordinate');
     } else if (canonicalPinToAssetMeters !== null && canonicalPinToAssetMeters >= 60 && liveDistance !== null && liveDistance <= 35) {
-      recommendation = 'keep_pin_replace_asset';
-      reasons.push('saved geometry is stale relative to the pin while current provider geometry is materially closer');
+      if (coordinateQuality.canPreferPinOverSavedAsset) {
+        recommendation = 'keep_pin_replace_asset';
+        reasons.push('saved geometry is stale relative to a high-confidence pin while current provider geometry is materially closer');
+      } else {
+        recommendation = 'needs_human_research';
+        reasons.push('current provider geometry is closer to the pin, but the pin is not authoritative enough to replace an existing asset');
+        reasons.push(...coordinateQuality.reasons);
+      }
     } else if (canonicalPinToAssetMeters !== null && canonicalPinToAssetMeters >= 60 && liveDistance !== null && liveDistance > 35) {
       recommendation = 'needs_human_research';
       reasons.push('neither the saved geometry nor current provider footprint adequately agrees with the canonical pin');

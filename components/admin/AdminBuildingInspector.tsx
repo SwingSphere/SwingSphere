@@ -30,7 +30,7 @@ const AdminBuildingInspector: React.FC<AdminBuildingInspectorProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    api.getBuildingAssets()
+    api.getAdminBuildingAssets()
       .then((assets) => {
         if (!cancelled) setBuildingAssets(assets);
       })

@@ -23,6 +23,11 @@ import type { AuditLogEntry } from '../data/mockAuditLog';
 import type { FlaggedContent } from '../data/mockFlaggedContent';
 import { normalizeHostName } from './identityUtils';
 import { supabase } from './supabase';
+import { adminFetchJson } from './adminApi';
+import type { BuildingAssetHistoryEvent } from './buildingAssetHistory';
+import type { BuildingVerificationEvidenceRecord } from './buildingVerificationEvidence';
+import type { BuildingAssetRevision, BuildingPersistenceMode, BuildingVerificationInputSnapshot } from './buildingPersistenceGuard';
+import { getBuildingAssetHistoryFromSupabase, getBuildingAssetsFromSupabase, rollbackBuildingAssetInSupabase, saveBuildingAssetToSupabase } from './buildingAssetSupabase';
 import * as entityCatalog from './entityCatalogSupabase';
 import * as taxonomy from './taxonomySupabase';
 
@@ -104,6 +109,14 @@ const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
     }
     return res.json() as Promise<T>;
 };
+
+const requestAdminJson = async <T>(url: string, init?: RequestInit): Promise<T> => adminFetchJson<T>(url, {
+    ...init,
+    headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+    },
+});
 
 const upsertLocalListing = (listing: Listing) => {
     const index = db.listings.findIndex((item) => item.id === listing.id);
@@ -240,7 +253,7 @@ const importLegacyListingsIfNeeded = async (state: ListingStoreState | null): Pr
     if (profileError || profile?.role !== 'admin' || profile?.status !== 'active') return false;
 
     try {
-        const legacy = await requestJson<Listing[]>('/api/admin/listings', { cache: 'no-store' });
+        const legacy = await requestAdminJson<Listing[]>('/api/admin/listings', { cache: 'no-store' });
         if (!Array.isArray(legacy) || !legacy.length) return false;
         const source = withCommunityHostSeed(legacy);
         const { error } = await supabase.rpc('admin_import_legacy_listings', { p_listings: source });
@@ -422,7 +435,7 @@ export const saveEvent = async (event: EventData): Promise<EventData> => {
 export const getBuildingAssets = async (): Promise<BuildingAsset[]> => {
     if (USE_MOCK && isDevPersistenceEnabled()) {
         try {
-            const data = await requestJson<BuildingAsset[]>('/api/admin/building-assets', { cache: 'no-store' });
+            const data = await requestAdminJson<BuildingAsset[]>('/api/admin/building-assets', { cache: 'no-store' });
             if (Array.isArray(data)) {
                 db.buildingAssets = data;
                 return simulateRequest(db.buildingAssets);
@@ -434,10 +447,27 @@ export const getBuildingAssets = async (): Promise<BuildingAsset[]> => {
     return simulateRequest(db.buildingAssets);
 };
 
+/** Admin-authoring source. Development uses the guarded local service; deployed
+ * admin tooling uses the durable Supabase RPC store. Public discovery callers
+ * should continue using getBuildingAssets()/public virtual assets instead. */
+export const getAdminBuildingAssets = async (): Promise<BuildingAsset[]> => {
+    if (USE_MOCK && isDevPersistenceEnabled()) return getBuildingAssets();
+    const assets = await getBuildingAssetsFromSupabase();
+    db.buildingAssets = assets;
+    return assets;
+};
+
 export const saveBuildingAsset = async (
     listingId: string,
     asset: BuildingAsset,
-): Promise<{ asset: BuildingAsset; listing: Listing | null }> => {
+    options: {
+        expectedSnapshot?: BuildingVerificationInputSnapshot | null;
+        evidence?: BuildingVerificationEvidenceRecord | null;
+        mode?: BuildingPersistenceMode;
+        allowReplaceExisting?: boolean;
+        expectedExistingAsset?: BuildingAssetRevision | null;
+    } = {},
+): Promise<{ asset: BuildingAsset; listing: Listing | null; historyEvent?: BuildingAssetHistoryEvent }> => {
     const sourceListing = db.listings.find((item) => item.id === listingId) ?? null;
     const assetToSave: BuildingAsset = {
         ...asset,
@@ -450,28 +480,58 @@ export const saveBuildingAsset = async (
     };
 
     if (USE_MOCK && isDevPersistenceEnabled()) {
-        try {
-            const saved = await requestJson<{ asset: BuildingAsset; listing: Listing | null }>('/api/admin/building-assets/save', {
-                method: 'POST',
-                body: JSON.stringify({ listingId, asset: assetToSave }),
-            });
-            const assetIndex = db.buildingAssets.findIndex((item) => item.id === saved.asset.id);
-            if (assetIndex >= 0) db.buildingAssets[assetIndex] = saved.asset;
-            else db.buildingAssets.push(saved.asset);
-            if (saved.listing) upsertLocalListing(saved.listing);
-            return simulateRequest(saved);
-        } catch {
-            // Fall back to in-memory persistence.
-        }
+        const saved = await requestAdminJson<{ asset: BuildingAsset; listing: Listing | null; historyEvent?: BuildingAssetHistoryEvent }>('/api/admin/building-assets/save', {
+            method: 'POST',
+            body: JSON.stringify({ listingId, asset: assetToSave, ...options, mode: options.mode ?? 'manual' }),
+        });
+        const assetIndex = db.buildingAssets.findIndex((item) => item.id === saved.asset.id);
+        if (assetIndex >= 0) db.buildingAssets[assetIndex] = saved.asset;
+        else db.buildingAssets.push(saved.asset);
+        if (saved.listing) upsertLocalListing(saved.listing);
+        return simulateRequest(saved);
     }
 
-    const assetIndex = db.buildingAssets.findIndex((item) => item.id === assetToSave.id || item.listingId === listingId);
-    if (assetIndex >= 0) db.buildingAssets[assetIndex] = assetToSave;
-    else db.buildingAssets.push(assetToSave);
-    const listing = sourceListing;
-    const updatedListing = listing ? { ...listing, buildingAssetId: asset.id } as Listing : null;
-    if (updatedListing) upsertLocalListing(updatedListing);
-    return simulateRequest({ asset: assetToSave, listing: updatedListing });
+    if (!options.expectedSnapshot) {
+        throw new Error('BuildingAsset persistence requires an expected canonical-location snapshot.');
+    }
+    const saved = await saveBuildingAssetToSupabase({
+        listingId,
+        asset: assetToSave,
+        expectedSnapshot: options.expectedSnapshot,
+        expectedExistingAsset: options.expectedExistingAsset,
+        evidence: options.evidence,
+        mode: options.mode ?? 'manual',
+    });
+    const assetIndex = db.buildingAssets.findIndex((item) => item.id === saved.asset.id || item.listingId === listingId);
+    if (assetIndex >= 0) db.buildingAssets[assetIndex] = saved.asset;
+    else db.buildingAssets.push(saved.asset);
+    return simulateRequest({ asset: saved.asset, listing: null });
+};
+
+export const getBuildingAssetHistory = async (listingId: string): Promise<BuildingAssetHistoryEvent[]> => {
+    if (USE_MOCK && isDevPersistenceEnabled()) {
+        return requestAdminJson<BuildingAssetHistoryEvent[]>(`/api/admin/building-assets/history?listingId=${encodeURIComponent(listingId)}`, { cache: 'no-store' });
+    }
+    return getBuildingAssetHistoryFromSupabase(listingId);
+};
+
+export const rollbackBuildingAsset = async (
+    listingId: string,
+    expectedSnapshot: BuildingVerificationInputSnapshot,
+    expectedExistingAsset: BuildingAssetRevision,
+    historyEventId: string,
+): Promise<{ asset: BuildingAsset; listing: Listing | null; historyEvent?: BuildingAssetHistoryEvent }> => {
+    const saved = USE_MOCK && isDevPersistenceEnabled()
+        ? await requestAdminJson<{ asset: BuildingAsset; listing: Listing | null; historyEvent: BuildingAssetHistoryEvent }>('/api/admin/building-assets/rollback', {
+            method: 'POST',
+            body: JSON.stringify({ listingId, expectedSnapshot, expectedExistingAsset, historyEventId }),
+        })
+        : await rollbackBuildingAssetInSupabase({ listingId, expectedSnapshot, expectedExistingAsset, historyEventId });
+    const assetIndex = db.buildingAssets.findIndex((item) => item.id === saved.asset.id || item.listingId === listingId);
+    if (assetIndex >= 0) db.buildingAssets[assetIndex] = saved.asset;
+    else db.buildingAssets.push(saved.asset);
+    if (saved.listing) upsertLocalListing(saved.listing);
+    return simulateRequest(saved);
 };
 
 

@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-09-06T22:02:27.634Z",
+  "source": "https://tiles.openfreemap.org/planet/20260830_080001_pt/{z}/{x}/{y}.pbf",
+  "groundTruthLimit": "Saved assets are provisional labels; exact fingerprint equality is conservative across provider versions. Unlabelled cases are not true negatives.",
+  "results": [
+    {
+      "listingId": "club-fun4two-moordrecht",
+      "name": "Fun4Two",
+      "status": "completed",
+      "outcome": "verified",
+      "autoAccept": true,
+      "verdict": "unvalidated_acceptance",
+      "exactRediscovery": false,
+      "geometryEquivalentRediscovery": false,
+      "rediscoveredGroundTruth": false,
+      "candidateToAssetCenterMeters": null,
+      "assetDistance": null,
+      "candidateCount": 30,
+      "best": {
+        "fingerprint": "footprint-v2-1wqxoln-1-13",
+        "address": "Fun4Two, 47, Middelweg, Cortelande, Moordrecht, Zuidplas, Zuid-Holland, Nederland, 2765 ZA, Nederland",
+        "distance": 0,
+        "score": 39
+      },
+      "reasons": [
+        "authoritative venue coordinate falls inside exactly one individual footprint",
+        "reverse-address context does not contradict the venue street/country",
+        "no second footprint intersects the trusted coordinate"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowRight, Bookmark, Building2, CalendarClock, CheckCircle2, ChevronRight, Crosshair, HelpCircle, Info, Mail, MapPin, Navigation, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEntityIndex } from '../../../hooks/useEntityIndex';
 import type { EntityIndex } from '../../../lib/entityIndex';
@@ -10,23 +11,31 @@ import ProductionGlobePage from '../../ProductionGlobePage';
 import ProtectedRoute from '../../ProtectedRoute';
 import ListingEditor from '../../listing-editor/ListingEditor';
 import SavedLivingLowPolyBackground from '../../SavedLivingLowPolyBackground';
+import { DeviceExperienceProvider, useDeviceExperience, type DeviceExperienceKind } from '../../device/DeviceExperienceContext';
 import { ExplorerProvider } from '../../explorer/ExplorerProvider';
 import { DevMobileScreen, MobileHeader } from './DevMobileShell';
-import { DEV_MOBILE_BASE, getDevMobileListingPath } from './devMobileRouting';
+import { DEV_MOBILE_BASE } from './devMobileRouting';
 import { MobileClubPage, MobileEventPage } from './MobileDetailPages';
 import { MobileListingCard } from './MobileListingCard';
 import { useDevMobileSaved } from './useDevMobileSaved';
+import TabletNearbyPreviewPanel from '../tablet/TabletNearbyPreviewPanel';
 
-const MobileExplorerPage: React.FC = () => (
-  <div className="h-[100dvh] w-full overflow-hidden bg-[#030407]">
-    <ExplorerProvider>
-      <ProductionGlobePage mobilePrototype />
-    </ExplorerProvider>
-  </div>
-);
+const StreetViewPresentationPage = React.lazy(() => import('../StreetViewToolPage').then((module) => ({ default: module.StreetViewPresentationPage })));
+
+const MobileExplorerPage: React.FC = () => {
+  const { basePath } = useDeviceExperience();
+  return (
+    <div className="h-[100dvh] w-full overflow-hidden bg-[#030407]">
+      <ExplorerProvider>
+        <ProductionGlobePage mobilePrototype mobileExperienceBasePath={basePath} />
+      </ExplorerProvider>
+    </div>
+  );
+};
 
 const MobileHomeScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { basePath } = useDeviceExperience();
 
   const openSitePage = (path: string) => {
     if (window.top && window.top !== window) {
@@ -51,7 +60,7 @@ const MobileHomeScreen: React.FC = () => {
             </div>
             <h1 className="mt-6 max-w-[330px] text-[38px] font-semibold leading-[0.98] tracking-[-0.045em] text-white">Explore the lifestyle. Around the corner or around the world.</h1>
             <p className="mt-4 max-w-[330px] text-[14px] leading-6 text-gray-300/85">Discover clubs, events, and destinations through an interactive world built for exploration.</p>
-            <button type="button" onClick={() => navigate(DEV_MOBILE_BASE)} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-red-500 px-4 text-sm font-bold text-white shadow-[0_14px_36px_rgba(239,68,68,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-200">
+            <button type="button" onClick={() => navigate(basePath)} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-red-500 px-4 text-sm font-bold text-white shadow-[0_14px_36px_rgba(239,68,68,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-200">
               Explore the world <ArrowRight className="h-4 w-4" />
             </button>
             <p className="mt-3 text-center text-[11px] text-gray-500">Browse freely. Share only what you choose.</p>
@@ -100,8 +109,11 @@ const ListingCollectionScreen: React.FC<{
   emptyBody: string;
   searchable?: boolean;
   index?: EntityIndex;
-}> = ({ title, eyebrow, icon, listings, isLoading, error, emptyTitle, emptyBody, searchable = false, index }) => {
+  immersiveBackground?: boolean;
+  cardVisualMode?: 'default' | 'logo-over-hero';
+}> = ({ title, eyebrow, icon, listings, isLoading, error, emptyTitle, emptyBody, searchable = false, index, immersiveBackground = false, cardVisualMode = 'default' }) => {
   const navigate = useNavigate();
+  const { getListingPath } = useDeviceExperience();
   const [query, setQuery] = useState('');
   const mobileSafeListings = useMemo(() => applyDevMobileListingSafetyToAll(listings), [listings]);
   const visibleListings = useMemo(() => {
@@ -111,12 +123,20 @@ const ListingCollectionScreen: React.FC<{
 
   return (
     <DevMobileScreen>
-      <div className="flex h-full min-h-0 flex-col">
-        <MobileHeader title={title} eyebrow={eyebrow} />
-        {searchable ? <label className="mx-3 mt-3 flex min-h-12 shrink-0 items-center gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.04] px-3"><Search className="h-4 w-4 text-gray-500" /><span className="sr-only">Search {title}</span><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500" placeholder={`Search ${title.toLowerCase()}`} /></label> : null}
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5 pt-3">
-          {isLoading ? <div className="space-y-3" aria-label={`Loading ${title}`}><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /></div> : error ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center" role="alert"><Info className="h-7 w-7 text-red-200" /><h1 className="mt-4 text-lg font-semibold text-white">Unable to load {title.toLowerCase()}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{error}</p></div> : visibleListings.length ? <div className="space-y-2.5">{visibleListings.map((listing) => <MobileListingCard key={listing.id} listing={listing} onClick={() => navigate(getDevMobileListingPath(listing, index ?? undefined))} />)}</div> : <div className="flex min-h-[50vh] flex-col items-center justify-center px-7 text-center"><span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/[0.075] bg-white/[0.035] text-red-200">{icon}</span><h1 className="mt-5 text-lg font-semibold text-white">{query ? 'No matches found' : emptyTitle}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{query ? 'Try a different club, event, or location.' : emptyBody}</p></div>}
-        </main>
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#05070a]">
+        {immersiveBackground ? (
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-75">
+            <SavedLivingLowPolyBackground className="absolute inset-0" interactive={false} />
+            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,5,8,0.30)_0%,rgba(3,5,8,0.52)_38%,rgba(3,5,8,0.76)_78%,rgba(3,5,8,0.90)_100%)]" />
+          </div>
+        ) : null}
+        <div className="relative z-10 flex h-full min-h-0 flex-col">
+          <MobileHeader title={title} eyebrow={eyebrow} />
+          {searchable ? <label className="mx-3 mt-3 flex min-h-12 shrink-0 items-center gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.04] px-3"><Search className="h-4 w-4 text-gray-500" /><span className="sr-only">Search {title}</span><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500" placeholder={`Search ${title.toLowerCase()}`} /></label> : null}
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5 pt-3">
+            {isLoading ? <div className="space-y-3" aria-label={`Loading ${title}`}><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /></div> : error ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center" role="alert"><Info className="h-7 w-7 text-red-200" /><h1 className="mt-4 text-lg font-semibold text-white">Unable to load {title.toLowerCase()}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{error}</p></div> : visibleListings.length ? <div className="space-y-2.5">{visibleListings.map((listing) => <MobileListingCard key={listing.id} listing={listing} visualMode={cardVisualMode} onClick={() => navigate(getListingPath(listing, index ?? undefined))} />)}</div> : <div className="flex min-h-[50vh] flex-col items-center justify-center px-7 text-center"><span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/[0.075] bg-white/[0.035] text-red-200">{icon}</span><h1 className="mt-5 text-lg font-semibold text-white">{query ? 'No matches found' : emptyTitle}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{query ? 'Try a different club, event, or location.' : emptyBody}</p></div>}
+          </main>
+        </div>
       </div>
     </DevMobileScreen>
   );
@@ -158,9 +178,13 @@ const formatDistance = (miles: number) => miles < 0.1 ? 'Nearby' : `${miles < 10
 
 const MobileNearbyScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { getListingPath, kind } = useDeviceExperience();
   const { listings, index, isLoading, error } = useEntityIndex();
   const [origin, setOrigin] = useState<NearbyOrigin | null>(null);
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'denied' | 'unavailable'>('idle');
+  const [tabletSelectedListingId, setTabletSelectedListingId] = useState<string | null>(null);
+  const { isSaved, toggleSaved } = useDevMobileSaved();
+  const isTablet = kind === 'tablet';
 
   const safeListings = useMemo(() => applyDevMobileListingSafetyToAll(listings), [listings]);
   const cityOptions = useMemo(() => {
@@ -234,7 +258,17 @@ const MobileNearbyScreen: React.FC = () => {
     );
   };
 
-  const openListing = (listing: Listing) => navigate(getDevMobileListingPath(listing, index ?? undefined));
+  const openListing = (listing: Listing) => navigate(getListingPath(listing, index ?? undefined));
+  const selectNearbyListing = (listing: Listing) => {
+    if (isTablet) {
+      setTabletSelectedListingId(listing.id);
+      return;
+    }
+    openListing(listing);
+  };
+  const selectedNearbyItem = tabletSelectedListingId
+    ? ranked.find(({ listing }) => listing.id === tabletSelectedListingId) ?? null
+    : null;
 
   const Section: React.FC<{ title: string; eyebrow: string; icon: React.ReactNode; items: NearbyListing[]; empty: string; cardVisualMode?: 'default' | 'logo-over-hero' }> = ({ title, eyebrow, icon, items, empty, cardVisualMode = 'default' }) => (
     <section className="mt-4">
@@ -245,7 +279,7 @@ const MobileNearbyScreen: React.FC = () => {
           <h2 className="text-[16px] font-semibold text-white">{title}</h2>
         </div>
       </div>
-      {items.length ? <div className="space-y-2.5">{items.map(({ listing, distanceMiles: miles }) => <MobileListingCard key={listing.id} listing={listing} metaLabel={formatDistance(miles)} visualMode={cardVisualMode} onClick={() => openListing(listing)} />)}</div> : <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.025] px-4 py-4 text-[12px] leading-5 text-gray-500">{empty}</div>}
+      {items.length ? <div className="space-y-2.5">{items.map(({ listing, distanceMiles: miles }) => <MobileListingCard key={listing.id} listing={listing} metaLabel={formatDistance(miles)} visualMode={cardVisualMode} selected={isTablet && tabletSelectedListingId === listing.id} onClick={() => selectNearbyListing(listing)} />)}</div> : <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.025] px-4 py-4 text-[12px] leading-5 text-gray-500">{empty}</div>}
     </section>
   );
 
@@ -258,7 +292,7 @@ const MobileNearbyScreen: React.FC = () => {
         </div>
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           <MobileHeader title="Nearby" eyebrow="Around the corner" />
-          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6 pt-3">
+          <main className={`min-h-0 flex-1 px-3 pb-6 pt-3 ${isTablet && origin ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain'}`}>
           {isLoading ? <div className="space-y-3"><div className="h-36 animate-pulse rounded-[24px] bg-white/[0.045]" /><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /></div> : error ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center" role="alert"><Info className="h-7 w-7 text-red-200" /><h1 className="mt-4 text-lg font-semibold text-white">Unable to load nearby places</h1><p className="mt-2 text-sm leading-6 text-gray-400">{error}</p></div> : !origin ? (
             <section className="relative overflow-hidden rounded-[26px] border border-white/[0.10] bg-[rgba(10,13,18,0.72)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.26)] backdrop-blur-xl">
               <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -287,6 +321,44 @@ const MobileNearbyScreen: React.FC = () => {
               <p className="mt-4 text-[10px] leading-4 text-gray-600">SwingSphere only asks for your device location when you choose to use Nearby.</p>
               </div>
             </section>
+          ) : isTablet ? (
+            <div className={`grid h-full min-h-0 transition-[grid-template-columns,column-gap] duration-300 ease-out ${selectedNearbyItem ? 'grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)] gap-3' : 'grid-cols-[minmax(0,1fr)_0fr] gap-0'}`}>
+              <div className="min-h-0 overflow-y-auto overscroll-contain pr-0.5">
+                <section className="rounded-[22px] border border-white/[0.07] bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-[15px] bg-red-500/[0.08] text-red-200">{origin.source === 'device' ? <Navigation className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}</span>
+                    <div className="min-w-0 flex-1"><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">Showing nearby</div><div className="truncate text-sm font-semibold text-white">{origin.label}</div></div>
+                    <button type="button" onClick={() => { setTabletSelectedListingId(null); setOrigin(null); }} className="min-h-10 rounded-[14px] border border-white/[0.07] bg-white/[0.035] px-3 text-[11px] font-semibold text-gray-300">Change</button>
+                  </div>
+                </section>
+                <Section title="Tonight" eyebrow="Happening soon" icon={<CalendarClock className="h-4 w-4" />} items={tonight} empty={`No events are showing within ${NEARBY_RADIUS_MILES} miles tonight.`} cardVisualMode="logo-over-hero" />
+                <Section title="Closest clubs" eyebrow="Near you" icon={<Building2 className="h-4 w-4" />} items={closestClubs} empty="No clubs with usable location data are listed yet." cardVisualMode="logo-over-hero" />
+                <Section title="Coming up nearby" eyebrow={`Within ${NEARBY_RADIUS_MILES} miles`} icon={<CalendarClock className="h-4 w-4" />} items={upcoming} empty="No additional upcoming events are listed nearby yet." cardVisualMode="logo-over-hero" />
+              </div>
+              <div className="min-h-0 min-w-0 overflow-hidden">
+                <AnimatePresence initial={false}>
+                  {selectedNearbyItem ? (
+                    <motion.div
+                      key={selectedNearbyItem.listing.id}
+                      initial={{ opacity: 0, x: 72 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 72 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="h-full min-h-0"
+                    >
+                      <TabletNearbyPreviewPanel
+                        listing={selectedNearbyItem.listing}
+                        distanceLabel={formatDistance(selectedNearbyItem.distanceMiles)}
+                        saved={isSaved(selectedNearbyItem.listing.id)}
+                        onToggleSaved={() => void toggleSaved(selectedNearbyItem.listing.id, selectedNearbyItem.listing.type)}
+                        onOpenDetails={() => openListing(selectedNearbyItem.listing)}
+                        onClose={() => setTabletSelectedListingId(null)}
+                      />
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            </div>
           ) : (
             <>
               <section className="rounded-[22px] border border-white/[0.07] bg-white/[0.03] p-4">
@@ -296,9 +368,9 @@ const MobileNearbyScreen: React.FC = () => {
                   <button type="button" onClick={() => setOrigin(null)} className="min-h-10 rounded-[14px] border border-white/[0.07] bg-white/[0.035] px-3 text-[11px] font-semibold text-gray-300">Change</button>
                 </div>
               </section>
-              <Section title="Tonight" eyebrow="Happening soon" icon={<CalendarClock className="h-4 w-4" />} items={tonight} empty={`No events are showing within ${NEARBY_RADIUS_MILES} miles tonight.`} />
+              <Section title="Tonight" eyebrow="Happening soon" icon={<CalendarClock className="h-4 w-4" />} items={tonight} empty={`No events are showing within ${NEARBY_RADIUS_MILES} miles tonight.`} cardVisualMode="logo-over-hero" />
               <Section title="Closest clubs" eyebrow="Near you" icon={<Building2 className="h-4 w-4" />} items={closestClubs} empty="No clubs with usable location data are listed yet." cardVisualMode="logo-over-hero" />
-              <Section title="Coming up nearby" eyebrow={`Within ${NEARBY_RADIUS_MILES} miles`} icon={<CalendarClock className="h-4 w-4" />} items={upcoming} empty="No additional upcoming events are listed nearby yet." />
+              <Section title="Coming up nearby" eyebrow={`Within ${NEARBY_RADIUS_MILES} miles`} icon={<CalendarClock className="h-4 w-4" />} items={upcoming} empty="No additional upcoming events are listed nearby yet." cardVisualMode="logo-over-hero" />
             </>
           )}
           </main>
@@ -309,14 +381,44 @@ const MobileNearbyScreen: React.FC = () => {
 };
 
 const MobileSavedScreen: React.FC = () => {
-  const { listings, index, isLoading, error } = useEntityIndex();
-  const { savedIds } = useDevMobileSaved();
+  const navigate = useNavigate();
+  const { toPath } = useDeviceExperience();
+  const { currentUser } = useAppStore();
+  const { listings, index, isLoading: isEntityLoading, error: entityError } = useEntityIndex();
+  const { savedIds, isLoading: isSavedLoading, error: savedError } = useDevMobileSaved();
   const saved = useMemo(() => savedIds.flatMap((id) => listings.find((listing) => listing.id === id) ?? []), [listings, savedIds]);
-  return <ListingCollectionScreen title="Saved" eyebrow="Your places" icon={<Bookmark className="h-6 w-6" />} listings={saved} index={index ?? undefined} isLoading={isLoading} error={error} emptyTitle="Nothing saved yet" emptyBody="Save clubs and events from their detail pages to keep them close at hand." />;
+
+  if (!currentUser) {
+    return (
+      <DevMobileScreen>
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#05070a]">
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70">
+            <SavedLivingLowPolyBackground className="absolute inset-0" interactive={false} />
+            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,5,8,0.34)_0%,rgba(3,5,8,0.70)_60%,rgba(3,5,8,0.92)_100%)]" />
+          </div>
+          <div className="relative z-10 flex h-full min-h-0 flex-col">
+            <MobileHeader title="Saved" eyebrow="Your places" />
+            <main className="flex min-h-0 flex-1 items-center px-5 pb-8 text-center">
+              <section className="w-full rounded-[28px] border border-white/[0.085] bg-black/30 p-6 backdrop-blur-xl">
+                <span className="mx-auto grid h-16 w-16 place-items-center rounded-[22px] border border-red-300/15 bg-red-500/[0.07] text-red-200"><Bookmark className="h-7 w-7" /></span>
+                <h1 className="mt-5 text-xl font-semibold text-white">Keep your discoveries with you</h1>
+                <p className="mt-2 text-[13px] leading-6 text-gray-400">Sign in to save clubs and events privately to your SwingSphere account and access them across devices.</p>
+                <button type="button" onClick={() => navigate('/login', { state: { from: toPath('/saved') } })} className="mt-6 min-h-12 w-full rounded-[18px] bg-red-500 px-4 text-sm font-bold text-white">Sign in</button>
+                <button type="button" onClick={() => navigate('/signup', { state: { from: toPath('/saved') } })} className="mt-2 min-h-12 w-full rounded-[18px] border border-white/[0.09] bg-white/[0.04] px-4 text-sm font-semibold text-gray-200">Create an account</button>
+              </section>
+            </main>
+          </div>
+        </div>
+      </DevMobileScreen>
+    );
+  }
+
+  return <ListingCollectionScreen title="Saved" eyebrow="Your places" icon={<Bookmark className="h-6 w-6" />} listings={saved} index={index ?? undefined} isLoading={isEntityLoading || isSavedLoading} error={entityError || savedError} emptyTitle="Nothing saved yet" emptyBody="Save clubs and events from their detail pages to keep them close at hand. Your saved library follows your SwingSphere account across devices." immersiveBackground cardVisualMode="logo-over-hero" />;
 };
 
 const MobileAddScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { basePath } = useDeviceExperience();
   const [submittedListing, setSubmittedListing] = useState<Listing | null>(null);
 
   return (
@@ -327,7 +429,7 @@ const MobileAddScreen: React.FC = () => {
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,5,8,0.10)_0%,rgba(3,5,8,0.34)_44%,rgba(3,5,8,0.70)_76%,rgba(3,5,8,0.92)_100%)]" />
         </div>
         <div className="relative z-10 flex h-full min-h-0 flex-col">
-          <MobileHeader title="Add a listing" eyebrow="Community submission" onBack={() => navigate('/mobile')} />
+          <MobileHeader title="Add a listing" eyebrow="Community submission" onBack={() => navigate(basePath)} />
           <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-3">
           {submittedListing ? (
             <section className="flex min-h-[62vh] flex-col items-center justify-center rounded-[26px] border border-emerald-300/15 bg-emerald-300/[0.045] px-6 text-center">
@@ -336,7 +438,7 @@ const MobileAddScreen: React.FC = () => {
               <p className="mt-2 text-[13px] leading-6 text-gray-400"><span className="font-semibold text-gray-200">{submittedListing.name}</span> is saved for review and will not appear publicly until it is approved.</p>
               <div className="mt-6 grid w-full grid-cols-2 gap-2">
                 <button type="button" onClick={() => setSubmittedListing(null)} className="min-h-12 rounded-2xl border border-white/[0.08] bg-white/[0.045] px-3 text-sm font-semibold text-white">Add another</button>
-                <button type="button" onClick={() => navigate('/mobile')} className="min-h-12 rounded-2xl bg-red-500 px-3 text-sm font-bold text-white">Explore</button>
+                <button type="button" onClick={() => navigate(basePath)} className="min-h-12 rounded-2xl bg-red-500 px-3 text-sm font-bold text-white">Explore</button>
               </div>
             </section>
           ) : (
@@ -344,7 +446,7 @@ const MobileAddScreen: React.FC = () => {
               mode="public"
               presentation="mobile"
               onSaved={setSubmittedListing}
-              onCancel={() => navigate('/mobile')}
+              onCancel={() => navigate(basePath)}
             />
           )}
           </main>
@@ -355,33 +457,69 @@ const MobileAddScreen: React.FC = () => {
 };
 
 const MobileAccountScreen: React.FC = () => {
-  const { currentUser } = useAppStore();
+  const { currentUser, isAuthLoading } = useAppStore();
   const navigate = useNavigate();
+  const { toPath } = useDeviceExperience();
   return (
     <DevMobileScreen>
-      <div className="flex h-full min-h-0 flex-col">
-        <MobileHeader title="Account" eyebrow="SwingSphere" />
-        <main className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-4">
-          <section className="rounded-[26px] border border-white/[0.075] bg-white/[0.035] p-5 text-center">
-            <span className="mx-auto grid h-20 w-20 place-items-center overflow-hidden rounded-[26px] border border-white/[0.1] bg-black/30">{currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-7 w-7 text-gray-400" />}</span>
-            <h1 className="mt-4 text-xl font-semibold text-white">{currentUser?.displayName || 'SwingSphere member'}</h1>
-            <p className="mt-1 text-sm text-gray-500">{currentUser?.email || 'Signed in for Dev Mobile evaluation'}</p>
-          </section>
-          <section className="mt-3 overflow-hidden rounded-[24px] border border-white/[0.075] bg-white/[0.03]">
-            <button type="button" onClick={() => navigate('/mobile/saved')} className="flex min-h-14 w-full items-center gap-3 border-b border-white/[0.055] px-4 text-left"><Bookmark className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Saved places</span><ChevronRight className="h-4 w-4 text-gray-600" /></button>
-            <div className="flex min-h-14 items-center gap-3 border-b border-white/[0.055] px-4"><ShieldCheck className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Privacy & safety</span><span className="text-[10px] text-gray-500">Protected</span></div>
-            <div className="flex min-h-14 items-center gap-3 px-4"><CheckCircle2 className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Mobile preferences</span><span className="text-[10px] text-gray-500">Coming later</span></div>
-          </section>
-          <div className="mt-3 rounded-[20px] border border-amber-300/10 bg-amber-300/[0.04] p-4 text-[11px] leading-5 text-gray-400">Account settings are read-only in Dev Mobile. Authentication and production account data are not modified by this experiment.</div>
-        </main>
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#05070a]">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-60">
+          <SavedLivingLowPolyBackground className="absolute inset-0" interactive={false} />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,5,8,0.32)_0%,rgba(3,5,8,0.62)_44%,rgba(3,5,8,0.86)_100%)]" />
+        </div>
+        <div className="relative z-10 flex h-full min-h-0 flex-col">
+          <MobileHeader title="Account" eyebrow="SwingSphere" />
+          <main className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-4">
+            {isAuthLoading ? (
+              <section className="flex min-h-[45vh] items-center justify-center text-sm text-gray-400">Loading account…</section>
+            ) : !currentUser ? (
+              <section className="relative overflow-hidden rounded-[28px] border border-white/[0.085] bg-black/30 p-6 text-center backdrop-blur-xl">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(239,68,68,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
+                <div className="relative z-10">
+                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-[26px] border border-red-300/15 bg-black/45 text-gray-300"><UserRound className="h-8 w-8" /></span>
+                  <h1 className="mt-5 text-xl font-semibold text-white">Your SwingSphere account</h1>
+                  <p className="mt-2 text-[13px] leading-6 text-gray-400">Sign in to sync saved places across devices, submit listings, and access your member settings.</p>
+                  <button type="button" onClick={() => navigate('/login', { state: { from: toPath('/account') } })} className="mt-6 min-h-12 w-full rounded-[18px] bg-red-500 px-4 text-sm font-bold text-white">Sign in</button>
+                  <button type="button" onClick={() => navigate('/signup', { state: { from: toPath('/account') } })} className="mt-2 min-h-12 w-full rounded-[18px] border border-white/[0.09] bg-white/[0.04] px-4 text-sm font-semibold text-gray-200">Create an account</button>
+                </div>
+              </section>
+            ) : (
+              <>
+                <section className="relative overflow-hidden rounded-[28px] border border-white/[0.085] bg-black/30 p-5 text-center backdrop-blur-xl">
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(239,68,68,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
+                  <div className="pointer-events-none absolute left-1/2 top-5 h-28 w-28 -translate-x-1/2 rounded-full bg-red-500/10 blur-3xl" />
+                  <div className="relative z-10">
+                    <span className="mx-auto grid h-20 w-20 place-items-center overflow-hidden rounded-[26px] border border-red-300/15 bg-black/45 shadow-[0_14px_34px_rgba(0,0,0,0.35)]">{currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-7 w-7 text-gray-400" />}</span>
+                    <h1 className="mt-4 text-xl font-semibold text-white">{currentUser.displayName}</h1>
+                    <p className="mt-1 text-sm text-gray-400">{currentUser.email}</p>
+                  </div>
+                </section>
+
+                <div className="mt-4 px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">Your activity</div>
+                <section className="mt-2 overflow-hidden rounded-[24px] border border-white/[0.075] bg-black/25 backdrop-blur-lg">
+                  <button type="button" onClick={() => navigate(toPath('/saved'))} className="flex min-h-14 w-full items-center gap-3 px-4 text-left"><Bookmark className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Saved places</span><ChevronRight className="h-4 w-4 text-gray-600" /></button>
+                </section>
+
+                <div className="mt-4 px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">Settings & safety</div>
+                <section className="mt-2 overflow-hidden rounded-[24px] border border-white/[0.075] bg-black/25 backdrop-blur-lg">
+                  <div className="flex min-h-14 items-center gap-3 border-b border-white/[0.055] px-4"><ShieldCheck className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Privacy & safety</span><span className="text-[10px] text-gray-500">Protected</span></div>
+                  <div className="flex min-h-14 items-center gap-3 px-4"><CheckCircle2 className="h-4 w-4 text-red-200" /><span className="flex-1 text-[13px] text-gray-200">Mobile preferences</span><span className="text-[10px] text-gray-500">Coming later</span></div>
+                </section>
+
+                <div className="mt-4 rounded-[20px] border border-red-300/10 bg-black/25 p-4 text-[11px] leading-5 text-gray-400 backdrop-blur-lg">Saved places are stored privately with your SwingSphere account and are available anywhere you sign in.</div>
+              </>
+            )}
+          </main>
+        </div>
       </div>
     </DevMobileScreen>
   );
 };
 
 type MobileErrorBoundaryState = { error: Error | null };
+type MobileErrorBoundaryProps = React.PropsWithChildren<{ basePath: string }>;
 
-class MobileErrorBoundary extends React.Component<React.PropsWithChildren, MobileErrorBoundaryState> {
+class MobileErrorBoundary extends React.Component<MobileErrorBoundaryProps, MobileErrorBoundaryState> {
   state: MobileErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): MobileErrorBoundaryState {
@@ -406,7 +544,7 @@ class MobileErrorBoundary extends React.Component<React.PropsWithChildren, Mobil
           <p className="mt-2 max-w-[320px] text-sm leading-6 text-gray-400">Your mobile session is still safe. Retry this screen, or return to Explore.</p>
           <div className="mt-6 grid w-full max-w-[320px] grid-cols-2 gap-2">
             <button type="button" onClick={() => window.location.reload()} className="min-h-12 rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 text-sm font-semibold text-white">Retry</button>
-            <button type="button" onClick={() => window.location.assign(DEV_MOBILE_BASE)} className="min-h-12 rounded-2xl bg-red-500 px-4 text-sm font-bold text-white">Explore</button>
+            <button type="button" onClick={() => window.location.assign(this.props.basePath)} className="min-h-12 rounded-2xl bg-red-500 px-4 text-sm font-bold text-white">Explore</button>
           </div>
           <p className="mt-4 max-w-[320px] break-words text-[10px] leading-4 text-gray-600">{this.state.error.message || 'Unknown mobile runtime error'}</p>
         </div>
@@ -415,23 +553,47 @@ class MobileErrorBoundary extends React.Component<React.PropsWithChildren, Mobil
   }
 }
 
-const DevMobileApp: React.FC = () => (
-  <MobileErrorBoundary>
-    <div className="min-h-screen overflow-hidden bg-[#030407]">
-      <Routes>
-        <Route index element={<MobileExplorerPage />} />
-        <Route path="home" element={<MobileHomeScreen />} />
-        <Route path="clubs/:slug" element={<MobileClubPage />} />
-        <Route path="nearby" element={<MobileNearbyScreen />} />
-        <Route path="events" element={<Navigate to="/mobile/nearby" replace />} />
-        <Route path="events/:slug" element={<MobileEventPage />} />
-        <Route path="saved" element={<MobileSavedScreen />} />
-        <Route path="add" element={<ProtectedRoute><MobileAddScreen /></ProtectedRoute>} />
-        <Route path="account" element={<MobileAccountScreen />} />
-        <Route path="*" element={<Navigate to="/mobile" replace />} />
-      </Routes>
-    </div>
-  </MobileErrorBoundary>
+const DeviceStreetViewPage: React.FC = () => {
+  const { kind } = useDeviceExperience();
+  return (
+    <React.Suspense fallback={<div className="grid h-[100dvh] w-full place-items-center bg-[#050608] text-xs font-semibold uppercase tracking-[0.18em] text-red-200">Loading Street View…</div>}>
+      <StreetViewPresentationPage kind={kind} />
+    </React.Suspense>
+  );
+};
+
+const DeviceExperienceRoutes: React.FC = () => {
+  const { basePath } = useDeviceExperience();
+  return (
+    <Routes>
+      <Route index element={<MobileExplorerPage />} />
+      <Route path="home" element={<MobileHomeScreen />} />
+      <Route path="clubs/:slug" element={<MobileClubPage />} />
+      <Route path="nearby" element={<MobileNearbyScreen />} />
+      <Route path="events" element={<Navigate to={`${basePath}/nearby`} replace />} />
+      <Route path="events/:slug" element={<MobileEventPage />} />
+      <Route path="saved" element={<MobileSavedScreen />} />
+      <Route path="street-view" element={<DeviceStreetViewPage />} />
+      <Route path="add" element={<ProtectedRoute><MobileAddScreen /></ProtectedRoute>} />
+      <Route path="account" element={<MobileAccountScreen />} />
+      <Route path="*" element={<Navigate to={basePath} replace />} />
+    </Routes>
+  );
+};
+
+type DevMobileAppProps = {
+  basePath?: string;
+  experienceKind?: DeviceExperienceKind;
+};
+
+const DevMobileApp: React.FC<DevMobileAppProps> = ({ basePath = DEV_MOBILE_BASE, experienceKind = 'mobile' }) => (
+  <DeviceExperienceProvider kind={experienceKind} basePath={basePath}>
+    <MobileErrorBoundary basePath={basePath}>
+      <div className="min-h-screen overflow-hidden bg-[#030407]">
+        <DeviceExperienceRoutes />
+      </div>
+    </MobileErrorBoundary>
+  </DeviceExperienceProvider>
 );
 
 export default DevMobileApp;
