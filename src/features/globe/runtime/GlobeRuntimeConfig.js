@@ -100,7 +100,10 @@ export const DEFAULT_GLOBE_RUNTIME_CONFIG = {
       proximityThresholdDeg: 0.4
     },
     showPinAnchors: false,
-    showOnlySelectedEvent: false
+    showOnlySelectedEvent: false,
+    // Use each listing's hero image as the shared venue-label background across
+    // production globe surfaces, including the homepage display globe.
+    labelHeroBackground: true
   },
   cameraFocus: {
     durationMs: 2875,

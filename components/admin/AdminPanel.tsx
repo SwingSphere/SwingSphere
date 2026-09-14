@@ -22,6 +22,7 @@ import AdminSubmissionsQueue from './AdminSubmissionsQueue';
 import AdminModerationQueue from './AdminModerationQueue';
 import AdminListingClaims from './AdminListingClaims';
 import AdminOutboundAnalytics from './AdminOutboundAnalytics';
+import AdminInboundAnalytics from './AdminInboundAnalytics';
 import AdminBuildingInspector from './AdminBuildingInspector';
 import { AdminListingDetailEditor } from './editor/AdminDetailPage';
 import { useAppStore } from '../../store/appStore';
@@ -55,6 +56,7 @@ export type AdminView =
     | 'moderation'
     | 'listing-claims'
     | 'outbound-analytics'
+    | 'inbound-analytics'
     | 'add-club' 
     | 'add-event' 
     | 'add-event-series'
@@ -74,6 +76,7 @@ export type AdminView =
     | 'settings' 
     | 'audit-log'
     | 'building-inspector'
+    | { view: 'review-submission', listingId: string }
     | { view: 'edit-club', clubId: string }
     | { view: 'edit-event', eventId: string }
     | { view: 'edit-event-series', eventSeriesId: string }
@@ -324,7 +327,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
         
         const canAccessBuildingInspector = isAdmin || import.meta.env.DEV;
         if (
-            (!isAdmin && ['users', 'tags', 'settings', 'audit-log', 'listing-claims', 'outbound-analytics'].includes(currentView)) ||
+            (!isAdmin && ['users', 'tags', 'settings', 'audit-log', 'listing-claims', 'outbound-analytics', 'inbound-analytics'].includes(currentView)) ||
             (currentView === 'building-inspector' && !canAccessBuildingInspector)
         ) {
             return <div>Access Denied.</div>;
@@ -335,13 +338,38 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 // FIX: Pass fetched tags to AdminDashboard
                 return <AdminDashboard setView={setView} allTags={tags} />;
             case 'submissions':
-                return <AdminSubmissionsQueue onDataChange={fetchData} />;
+                return <AdminSubmissionsQueue users={users} onReview={(listing) => setView({ view: 'review-submission', listingId: listing.id })} />;
+            case 'review-submission': {
+                if (typeof view !== 'object' || view.view !== 'review-submission') return null;
+                const submissionToReview = listings.find((listing) => listing.id === view.listingId);
+                if (!submissionToReview) return <div>Submission not found.</div>;
+                return (
+                    <AdminListingDetailEditor
+                        listing={submissionToReview}
+                        users={users}
+                        venues={venues}
+                        organizations={organizations}
+                        clubBrands={clubBrands}
+                        relationships={organizationVenueRelationships}
+                        listings={listings}
+                        buildingAssets={buildingAssets}
+                        entityIndex={entityIndex}
+                        onVenueSaved={handleVenueSaved}
+                        onRelationshipSaved={handleRelationshipSaved}
+                        onSaved={handleListingSaved}
+                        onBack={() => setView('submissions')}
+                        backLabel="Back to submissions"
+                    />
+                );
+            }
             case 'moderation':
                 return <AdminModerationQueue onDataChange={fetchData} setView={setView} />;
             case 'listing-claims':
-                return <AdminListingClaims />;
+                return <AdminListingClaims listings={listings} organizations={organizations} />;
             case 'outbound-analytics':
                 return <AdminOutboundAnalytics />;
+            case 'inbound-analytics':
+                return <AdminInboundAnalytics />;
             case 'manage-clubs':
                 const clubs = listings.filter(l => l.type === 'club') as ClubData[];
                 return <AdminManageClubs clubs={clubs} clubBrands={clubBrands} organizations={organizations} mediaCatalog={brandMediaCatalog} setView={setView} onDataChange={fetchData} />;
@@ -381,6 +409,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onRelationshipSaved={handleRelationshipSaved}
                         onSaved={handleListingSaved}
                         onBack={() => setView('manage-clubs')}
+                        backLabel="Back to clubs"
                     />
                  );
             case 'users':
@@ -509,6 +538,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onRelationshipSaved={handleRelationshipSaved}
                         onSaved={handleListingSaved}
                         onBack={() => setView('manage-events')}
+                        backLabel="Back to events"
                     />
                  );
             case 'audit-log':

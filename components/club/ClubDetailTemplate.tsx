@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ExternalLink, Facebook, Globe, Instagram, Link2, Mail } from 'lucide-react';
+import { ExternalLink, Globe, Link2, Mail, Pencil } from 'lucide-react';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
 import type { ClubData } from '../../types';
 import ClubPageLayout from './ClubPageLayout';
@@ -18,12 +18,15 @@ import type { ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import type { OutboundTrackingMetadata } from '../../lib/analytics/outboundTracking';
 import ListingClaimCard from '../claims/ListingClaimCard';
+import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
+import { getClubSocialLinks, getSocialNetworkLabel, socialValueToUrl } from '../../lib/socialLinks';
 
 type ClubDetailTemplateProps = {
   club: ClubData;
   clubKey: string;
   upcomingEvents: ClubEventPreviewItem[];
   onQuickEdit?: (field: ClubQuickEditField) => void;
+  onEditLocation?: () => void;
 };
 
 const getScheduleSummary = (club: ClubData): string => {
@@ -64,14 +67,13 @@ const ExternalLinkRow: React.FC<{
   </TrackedExternalLink>
 );
 
-const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, upcomingEvents, onQuickEdit }) => {
+const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, upcomingEvents, onQuickEdit, onEditLocation }) => {
+  const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
+  const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
   const extended = club as ClubData & {
     logoImageUrl?: string;
     houseRules?: string;
     isPrivateLocation?: boolean;
-    instagram?: string;
-    facebook?: string;
-    fetlife?: string;
   };
 
   const locationLine = useMemo(() => {
@@ -97,9 +99,9 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
     return /^https?:\/\//i.test(value) ? value : `https://${value}`;
   };
   const website = normalizeExternalUrl(club.website);
-  const instagram = normalizeExternalUrl(extended.instagram);
-  const facebook = normalizeExternalUrl(extended.facebook);
-  const fetlife = normalizeExternalUrl(extended.fetlife);
+  const socialLinks = getClubSocialLinks(club)
+    .map((link) => ({ ...link, href: socialValueToUrl(link) }))
+    .filter((link) => Boolean(link.href));
   const emailHref = club.contactEmail ? `mailto:${club.contactEmail}` : '';
   const clubAddress = getListingPhysicalAddress(club);
   const clubAddressText = formatListingPhysicalAddress(club);
@@ -124,6 +126,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           mediaPresentation={club.mediaPresentation}
           thumbnails={thumbnails}
           onQuickEdit={onQuickEdit}
+          onEditLocation={onEditLocation}
         />
       }
       main={
@@ -134,12 +137,16 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             <p className="mt-2 text-sm leading-6 text-gray-400">The essential visitor information in one place: who can attend, what entry requires, when the club is typically open, and any club-specific guidance to know before arriving.</p>
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <ListingAccessSummary listing={club} variant="detail" />
-              <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} />
+              <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} onQuickEdit={() => onQuickEdit?.('schedule')} />
               <ClubHouseRulesSection content={extended.houseRules} />
             </div>
           </section>
           <WhatHappensHere description={club.description_short} onQuickEdit={() => onQuickEdit?.('description')} />
-          <ClubEventsPreview events={upcomingEvents} viewAllHref="/explore" />
+          <ClubEventsPreview
+            events={upcomingEvents}
+            viewAllHref={`/events?clubId=${encodeURIComponent(club.id)}`}
+            addEventHref={`/submission?type=event${club.ownerOrganizationId ? `&organizationId=${encodeURIComponent(club.ownerOrganizationId)}` : ''}&clubId=${encodeURIComponent(club.id)}`}
+          />
           <ClubReviewsSection listingId={club.id} listingName={club.name} />
         </>
       }
@@ -155,32 +162,31 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             lng={clubCoords.lng}
             isPrivateLocation={Boolean(extended.isPrivateLocation) || isApproximateVenue}
             showDirections={!isApproximateVenue}
+            onEditLocation={onEditLocation}
           />
-          <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Transparency</p>
-            <h2 className="mt-1 text-sm font-semibold text-gray-100">About This Listing</h2>
-            <div className="mt-3 space-y-2 text-xs text-gray-400">
-              <p>{club.status === 'approved' ? 'This listing is approved for public display.' : 'This listing is awaiting review.'}</p>
-              <p>{upcomingEvents.length} upcoming event{upcomingEvents.length === 1 ? '' : 's'} currently connected to this club.</p>
-              <p>Listing information is descriptive and should not be interpreted as a safety certification or endorsement.</p>
-            </div>
-          </section>
           <ListingClaimCard
             entityType="club"
             entityId={club.id}
             entityName={club.name}
+            organizationId={club.ownerOrganizationId}
             defaultRole="manager"
           />
-          {(website || emailHref || instagram || facebook || fetlife) ? (
-            <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
-              <h2 className="text-sm font-semibold text-gray-200">External Links</h2>
+          {(website || emailHref || socialLinks.length > 0 || showQuickControls) ? (
+            <section className="ss-glass ss-glass--ambient relative rounded-2xl p-4">
+              {showQuickControls ? <button type="button" onClick={() => onQuickEdit?.('links')} className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={13} /> Edit links</button> : null}
+              <h2 className="pr-24 text-sm font-semibold text-gray-200">External Links</h2>
               <p className="mt-1 text-xs text-gray-500">Official website, contact, and social profiles.</p>
               <div className="mt-3 space-y-2">
                 {website ? <ExternalLinkRow href={website} icon={<Globe size={15} />} tracking={{ entityType: 'club', entityId: club.id, destinationType: 'website', placement: 'club_page_external_website', surface: 'entity_page' }} /> : null}
                 {emailHref ? <ExternalLinkRow href={emailHref} icon={<Mail size={15} />} tracking={{ entityType: 'club', entityId: club.id, destinationType: 'email', placement: 'club_page_external_email', surface: 'entity_page' }} /> : null}
-                {instagram ? <ExternalLinkRow href={instagram} icon={<Instagram size={15} />} tracking={{ entityType: 'club', entityId: club.id, destinationType: 'social', placement: 'club_page_external_instagram', surface: 'entity_page' }} /> : null}
-                {facebook ? <ExternalLinkRow href={facebook} icon={<Facebook size={15} />} tracking={{ entityType: 'club', entityId: club.id, destinationType: 'social', placement: 'club_page_external_facebook', surface: 'entity_page' }} /> : null}
-                {fetlife ? <ExternalLinkRow href={fetlife} icon={<Link2 size={15} />} tracking={{ entityType: 'club', entityId: club.id, destinationType: 'social', placement: 'club_page_external_fetlife', surface: 'entity_page' }} /> : null}
+                {socialLinks.map((link, index) => (
+                  <ExternalLinkRow
+                    key={`${link.network}-${link.value}-${index}`}
+                    href={link.href}
+                    icon={<Link2 size={15} aria-label={getSocialNetworkLabel(link.network)} />}
+                    tracking={{ entityType: 'club', entityId: club.id, destinationType: 'social', placement: `club_page_external_${link.network}`, surface: 'entity_page' }}
+                  />
+                ))}
               </div>
             </section>
           ) : null}

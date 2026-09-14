@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getMediaRule, isMediaOwnerType, isMediaRole } from './mediaRules';
+import { getMediaOwnerId } from './getMediaOwnerId';
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -42,6 +43,25 @@ const validateUploadOwnership = (ownerType: string, ownerId: string, userId: str
   }
 };
 
+const verifyManagedMediaAccess = async (
+  supabase: any,
+  ownerType: string,
+  ownerId: string,
+  managedEntityId?: string | null,
+) => {
+  const entityId = String(managedEntityId ?? '').trim();
+  if (!entityId) return false;
+  if (!['club', 'event', 'organization'].includes(ownerType)) throw new Error('Managed media approval is only supported for club, event, and organization entities.');
+  if (getMediaOwnerId(ownerType, entityId) !== ownerId) throw new Error('Managed media target does not match this entity.');
+  const { data, error } = await supabase.rpc('can_publish_managed_media', {
+    p_entity_type: ownerType,
+    p_entity_id: entityId,
+  });
+  if (error) throw new Error(error.message);
+  if (data !== true) throw new Error('This account is not authorized to publish media for this listing.');
+  return true;
+};
+
 const deleteCloudflareImage = async (externalId: string) => {
   const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
   const apiToken = requireEnv('CLOUDFLARE_IMAGES_API_TOKEN');
@@ -67,8 +87,9 @@ export const createCloudflareDirectUpload = async (body: any, authorization?: st
   if (!ownerId) throw new Error('Missing ownerId.');
   if (!isUuid(ownerId)) throw new Error('Media ownerId must be a UUID before upload.');
 
-  const { user } = await getAuthenticatedSupabase(authorization);
+  const { supabase, user } = await getAuthenticatedSupabase(authorization);
   validateUploadOwnership(ownerType, ownerId, user.id);
+  await verifyManagedMediaAccess(supabase, ownerType, ownerId, body?.managedEntityId ?? body?.managed_entity_id);
 
   const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
   const apiToken = requireEnv('CLOUDFLARE_IMAGES_API_TOKEN');
@@ -111,6 +132,12 @@ export const completeMediaUpload = async (body: any, authorization?: string | nu
 
   const { supabase, user } = await getAuthenticatedSupabase(authorization);
   validateUploadOwnership(ownerType, ownerId, user.id);
+  const managedUpload = await verifyManagedMediaAccess(
+    supabase,
+    ownerType,
+    ownerId,
+    body?.managedEntityId ?? body?.managed_entity_id,
+  );
 
   const rule = getMediaRule(role);
   const row = {
@@ -119,7 +146,7 @@ export const completeMediaUpload = async (body: any, authorization?: string | nu
     role,
     storage_provider: 'cloudflare_images',
     external_id: externalId,
-    status: 'pending_review',
+    status: managedUpload ? 'approved' : 'pending_review',
     aspect_mode: rule.aspectMode,
     target_ratio: rule.targetRatio,
     alt_text: altText,

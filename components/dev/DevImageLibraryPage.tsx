@@ -445,25 +445,30 @@ const attentionToneClass: Record<AttentionTone, string> = {
   violet: 'border-violet-400/20 bg-violet-400/[0.07] text-violet-300',
 };
 
-const replaceOwnerLogo = async (image: ImageRecord, asset: MediaAsset) => {
-  const logoImageUrl = getCloudflareImageUrl({ externalId: asset.external_id, variant: 'logosquare' });
-  if (!logoImageUrl) throw new Error('The replacement uploaded, but SwingSphere could not build its Cloudflare delivery URL.');
+type ReplaceableMediaRole = 'logo' | 'hero';
+
+const replaceOwnerMedia = async (image: ImageRecord, asset: MediaAsset, role: ReplaceableMediaRole) => {
+  const rule = getMediaRule(role);
+  const deliveryUrl = getCloudflareImageUrl({ externalId: asset.external_id, variant: rule.defaultVariant });
+  const roleLabel = roleLabels[role].toLowerCase();
+  if (!deliveryUrl) throw new Error(`The replacement uploaded, but SwingSphere could not build its Cloudflare ${roleLabel} delivery URL.`);
 
   if (image.ownerType === 'club' || image.ownerType === 'event') {
     const listings = await api.getListings();
     const owner = listings.find((item) => item.id === image.ownerId);
-    if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement logo.`);
-    const mediaAssets = [...(owner.mediaAssets ?? []).filter((item) => item.role !== 'logo'), asset];
+    if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement ${roleLabel}.`);
+    const mediaAssets = [...(owner.mediaAssets ?? []).filter((item) => item.role !== role), asset];
+    const mediaFields = role === 'logo' ? { logoImageUrl: deliveryUrl } : { headerImageUrl: deliveryUrl };
     if (owner.type === 'club') {
-      await api.saveClub({ ...owner, logoImageUrl, mediaAssets }, { requirePersistence: true });
+      await api.saveClub({ ...owner, ...mediaFields, mediaAssets }, { requirePersistence: true });
     } else {
-      await api.saveEvent({ ...owner, logoImageUrl, mediaAssets });
+      await api.saveEvent({ ...owner, ...mediaFields, mediaAssets });
     }
     return;
   }
 
-  if (image.ownerType === 'user' || image.ownerType === 'cruise_sailing') {
-    throw new Error(`Logo replacement is not supported for ${ownerLabels[image.ownerType].toLowerCase()} records.`);
+  if (image.ownerType === 'user' || (role === 'logo' && image.ownerType === 'cruise_sailing')) {
+    throw new Error(`${roleLabels[role]} replacement is not supported for ${ownerLabels[image.ownerType].toLowerCase()} records.`);
   }
 
   const loaders = {
@@ -473,6 +478,7 @@ const replaceOwnerLogo = async (image: ImageRecord, asset: MediaAsset) => {
     club_brand: api.getClubBrands,
     resort: api.getResorts,
     cruise_series: api.getCruiseSeries,
+    cruise_sailing: api.getCruiseSailings,
   } as const;
   const savers = {
     venue: api.saveVenue,
@@ -481,13 +487,15 @@ const replaceOwnerLogo = async (image: ImageRecord, asset: MediaAsset) => {
     club_brand: api.saveClubBrand,
     resort: api.saveResort,
     cruise_series: api.saveCruiseSeries,
+    cruise_sailing: api.saveCruiseSailing,
   } as const;
 
   const ownerType = image.ownerType as keyof typeof loaders;
   const owners = await loaders[ownerType]();
   const owner = owners.find((item: { id: string }) => item.id === image.ownerId);
-  if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement logo.`);
-  await (savers[ownerType] as (value: any) => Promise<unknown>)({ ...owner, logoImageUrl });
+  if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement ${roleLabel}.`);
+  const mediaFields = role === 'logo' ? { logoImageUrl: deliveryUrl } : { headerImageUrl: deliveryUrl };
+  await (savers[ownerType] as (value: any) => Promise<unknown>)({ ...owner, ...mediaFields });
 };
 
 const clearPlaceholderReference = async (image: ImageRecord) => {
@@ -676,12 +684,13 @@ const DevImageLibraryPage: React.FC = () => {
     };
   }, [visibleMediaAuditKey]);
 
-  const handleLogoUploaded = async (image: ImageRecord, asset: MediaAsset) => {
+  const handleMediaUploaded = async (image: ImageRecord, asset: MediaAsset, role: ReplaceableMediaRole) => {
     setReplacementBusyId(image.id);
     setReplacementError('');
+    const label = roleLabels[role].toLowerCase();
     try {
-      await replaceOwnerLogo(image, asset);
-      setCleanupNotice(`Updated the current logo for ${image.ownerName}. The previous logo is still preserved as an extra upload until you choose to remove it.`);
+      await replaceOwnerMedia(image, asset, role);
+      setCleanupNotice(`Updated the current ${label} for ${image.ownerName}. The previous ${label} is still preserved as an extra upload until you choose to remove it.`);
       setDimensionsById((current) => {
         const next = { ...current };
         delete next[image.id];
@@ -689,7 +698,7 @@ const DevImageLibraryPage: React.FC = () => {
       });
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      setReplacementError(error instanceof Error ? error.message : 'The replacement logo uploaded but could not be attached to the entity.');
+      setReplacementError(error instanceof Error ? error.message : `The replacement ${label} uploaded but could not be attached to the entity.`);
       setRefreshKey((value) => value + 1);
     } finally {
       setReplacementBusyId(null);
@@ -991,8 +1000,15 @@ const DevImageLibraryPage: React.FC = () => {
               const dimensions = dimensionsById[image.id];
               const mediaQa = getMediaQa(image.role, dimensions);
               const attentionReasons = getAttentionReasons(image, broken, dimensions);
-              const canReplaceLogo = image.role === 'logo' && image.isCurrent && image.ownerResolved && image.ownerType !== 'user' && image.ownerType !== 'cruise_sailing';
-              const replaceInputId = `replace-logo-${image.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+              const replaceableRole: ReplaceableMediaRole | null = image.role === 'logo' || image.role === 'hero' ? image.role : null;
+              const canReplaceMedia = Boolean(
+                replaceableRole
+                && image.isCurrent
+                && image.ownerResolved
+                && image.ownerType !== 'user'
+                && !(replaceableRole === 'logo' && image.ownerType === 'cruise_sailing'),
+              );
+              const replaceInputId = `replace-${replaceableRole ?? 'media'}-${image.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
               return (
                 <article key={image.id} className={`group overflow-hidden rounded-2xl border ${placeholder ? 'border-amber-300/45 bg-amber-300/[0.045] shadow-[0_0_0_1px_rgba(252,211,77,0.05)]' : image.isCurrent ? 'border-emerald-400/45 bg-emerald-400/[0.045] shadow-[0_0_0_1px_rgba(52,211,153,0.05)]' : image.usage === 'extra' ? 'border-amber-400/15 bg-white/[0.03]' : 'border-white/10 bg-white/[0.025]'}`}>
                   <div className="relative aspect-[4/3] bg-black/30">
@@ -1103,15 +1119,15 @@ const DevImageLibraryPage: React.FC = () => {
                     ) : image.source === 'media_asset' && image.mediaAssetId && image.status === 'rejected' ? (
                       <button type="button" disabled={moderationBusyId === image.id} onClick={() => void handleModeration(image, 'approved')} className="w-full rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-300 transition hover:bg-emerald-400/[0.12] disabled:opacity-50">Approve rejected asset</button>
                     ) : null}
-                    {canReplaceLogo ? (
+                    {canReplaceMedia && replaceableRole ? (
                       <div className="pt-1">
                         <MediaUploader
                           ownerType={image.ownerType}
                           ownerId={getMediaOwnerId(image.ownerType, image.ownerId)}
-                          role="logo"
+                          role={replaceableRole}
                           inputId={replaceInputId}
                           triggerOnly
-                          onUploaded={(asset) => { void handleLogoUploaded(image, asset); }}
+                          onUploaded={(asset) => { void handleMediaUploaded(image, asset, replaceableRole); }}
                           onError={(message) => setReplacementError(message)}
                         />
                         <label
@@ -1119,7 +1135,9 @@ const DevImageLibraryPage: React.FC = () => {
                           className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/[0.06] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.1] ${replacementBusyId === image.id ? 'pointer-events-none opacity-50' : ''}`}
                         >
                           <Upload className="h-3.5 w-3.5" />
-                          {replacementBusyId === image.id ? 'Attaching new logo…' : 'Replace logo'}
+                          {replacementBusyId === image.id
+                            ? `Attaching new ${roleLabels[replaceableRole].toLowerCase()}…`
+                            : `Replace ${roleLabels[replaceableRole].toLowerCase()}`}
                         </label>
                       </div>
                     ) : null}

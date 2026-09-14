@@ -67,7 +67,7 @@ export const findPotentialListingDuplicates = (
   const draftHost = normalizeHostName(eventDraft?.hostName ?? '');
 
   return input.listings
-    .filter((listing) => listing.id !== input.excludeId)
+    .filter((listing) => listing.id !== input.excludeId && listing.type === input.draft.type)
     .map((listing) => {
       const reasons: string[] = [];
       let score = 0;

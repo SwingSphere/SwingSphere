@@ -58,7 +58,9 @@ export function resolveRenderedGlobeLandSurfaceAnchor({
   raycaster,
   origin = new THREE.Vector3(),
   direction = new THREE.Vector3(),
-  candidate = new THREE.Vector3()
+  candidate = new THREE.Vector3(),
+  preferTopSurface = false,
+  centerOnLandGeometry = false
 }) {
   const localDirection = wgs84ToRenderedGlobeLocal(lng, lat, globeRadius, config).normalize();
   return resolveLandSurfaceAnchorFromDirection({
@@ -68,7 +70,9 @@ export function resolveRenderedGlobeLandSurfaceAnchor({
     raycaster,
     origin,
     direction,
-    candidate
+    candidate,
+    preferTopSurface,
+    centerOnLandGeometry
   });
 }
 
@@ -79,7 +83,9 @@ export function resolveLandSurfaceAnchorFromDirection({
   raycaster,
   origin = new THREE.Vector3(),
   direction = new THREE.Vector3(),
-  candidate = new THREE.Vector3()
+  candidate = new THREE.Vector3(),
+  preferTopSurface = false,
+  centerOnLandGeometry = false
 }) {
   const normalizedLocalDirection = localDirection.clone().normalize();
   const landRadius = landHitMesh.geometry.boundingSphere?.radius ?? globeRadius;
@@ -92,32 +98,62 @@ export function resolveLandSurfaceAnchorFromDirection({
   const rayDistance = Math.max(landRadius * meshScale * 3 + landHitMesh.position.length(), 8);
   const landParent = landHitMesh.parent;
   landHitMesh.updateWorldMatrix(true, false);
+  // Vector borders and other geographic overlays are calibrated against the
+  // renderer's parent origin, so keep that as the default. Venue pins can opt
+  // into land.glb's slightly offset geometric center without shifting the
+  // GeoJSON/vector layers that share this anchoring helper.
+  const landCenter = centerOnLandGeometry
+    ? resolveLandParentLocalCenter(landHitMesh)
+    : new THREE.Vector3();
 
-  // Raycaster rays are world-space. Callers supply directions in the local
-  // coordinate system shared by the globe's land, pins, and overlay layers.
-  origin.copy(normalizedLocalDirection).multiplyScalar(rayDistance);
+  origin.copy(landCenter).addScaledVector(normalizedLocalDirection, rayDistance);
   landParent?.localToWorld(origin);
-  const worldCenter = new THREE.Vector3();
+  const worldCenter = landCenter.clone();
   landParent?.localToWorld(worldCenter);
   direction.copy(worldCenter).sub(origin).normalize();
   raycaster.set(origin, direction);
   raycaster.near = 0;
   raycaster.far = origin.distanceTo(worldCenter) * 2;
-  const hit = raycaster.intersectObject(landHitMesh, false)[0];
-  if (hit) {
+  const hits = raycaster.intersectObject(landHitMesh, false);
+  let bestSurfaceHit = null;
+  let bestSurfaceProjection = -Infinity;
+  for (const hit of hits) {
     const anchorPosition = toLandParentLocalPoint(landHitMesh, hit.point);
-    if (anchorPosition.dot(normalizedLocalDirection) > 0) {
-      const radialDirection = anchorPosition.clone().normalize();
-      const surfaceNormal = resolveLandParentLocalSurfaceNormal({
-        landHitMesh,
-        hit,
-        anchorPosition,
-        radialDirection
-      });
-      return { anchorPosition, radialDirection, surfaceNormal, hit: true };
+    const centerRelativeAnchor = anchorPosition.clone().sub(landCenter);
+    if (centerRelativeAnchor.dot(normalizedLocalDirection) <= 0) continue;
+    const radialDirection = centerRelativeAnchor.normalize();
+    const surfaceNormal = resolveLandParentLocalSurfaceNormal({
+      landHitMesh,
+      hit,
+      anchorPosition,
+      radialDirection
+    });
+    // land.glb includes near-vertical coastline walls. Those are part of the
+    // sculpted model, but a venue pin should sit on the terrain cap rather than
+    // attach to a cliff face. Pin callers can ask us to ignore those wall hits.
+    if (preferTopSurface && surfaceNormal.dot(radialDirection) < 0.12) continue;
+    if (!preferTopSurface) return { anchorPosition, radialDirection, surfaceNormal, hit: true };
+    const projection = anchorPosition.clone().sub(landCenter).dot(normalizedLocalDirection);
+    if (projection > bestSurfaceProjection) {
+      bestSurfaceProjection = projection;
+      bestSurfaceHit = { anchorPosition, radialDirection, surfaceNormal, hit: true };
     }
   }
-  return resolveNearestLandVertexAnchor(landHitMesh, normalizedLocalDirection, candidate);
+  if (bestSurfaceHit) return bestSurfaceHit;
+  return resolveNearestLandVertexAnchor(
+    landHitMesh,
+    normalizedLocalDirection,
+    candidate,
+    centerOnLandGeometry
+  );
+}
+
+function resolveLandParentLocalCenter(landHitMesh) {
+  if (!landHitMesh.geometry.boundingSphere) landHitMesh.geometry.computeBoundingSphere();
+  const center = landHitMesh.geometry.boundingSphere?.center?.clone() ?? new THREE.Vector3();
+  landHitMesh.localToWorld(center);
+  landHitMesh.parent?.worldToLocal(center);
+  return center;
 }
 
 function toLandParentLocalPoint(landHitMesh, worldPoint) {
@@ -137,31 +173,36 @@ function resolveLandParentLocalSurfaceNormal({ landHitMesh, hit, anchorPosition,
   return surfaceNormal;
 }
 
-function resolveNearestLandVertexAnchor(landHitMesh, localDirection, candidate) {
-  const candidates = resolveNearbyLandVertices(landHitMesh, localDirection, candidate);
+function resolveNearestLandVertexAnchor(landHitMesh, localDirection, candidate, centerOnLandGeometry = false) {
+  const cache = getFallbackVertexCache(landHitMesh, candidate, centerOnLandGeometry);
+  const candidates = resolveNearbyLandVertices(cache, localDirection);
+  const landCenter = cache.center;
   let bestProjectionScale = null;
   let bestDistanceSq = Infinity;
   for (const vertex of candidates) {
-    const projectionScale = vertex.dot(localDirection);
+    const relativeVertex = vertex.clone().sub(landCenter);
+    const projectionScale = relativeVertex.dot(localDirection);
     if (projectionScale <= 0) continue;
     const projectedX = localDirection.x * projectionScale;
     const projectedY = localDirection.y * projectionScale;
     const projectedZ = localDirection.z * projectionScale;
-    const dx = vertex.x - projectedX;
-    const dy = vertex.y - projectedY;
-    const dz = vertex.z - projectedZ;
+    const dx = relativeVertex.x - projectedX;
+    const dy = relativeVertex.y - projectedY;
+    const dz = relativeVertex.z - projectedZ;
     const distanceSq = dx * dx + dy * dy + dz * dz;
-    if (distanceSq >= bestDistanceSq) continue;
+    const isCloser = distanceSq < bestDistanceSq - 1e-10;
+    const isSameDirectionButHigher = Math.abs(distanceSq - bestDistanceSq) <= 1e-10
+      && (bestProjectionScale == null || projectionScale > bestProjectionScale);
+    if (!isCloser && !isSameDirectionButHigher) continue;
     bestDistanceSq = distanceSq;
     bestProjectionScale = projectionScale;
   }
   const radialDirection = localDirection.clone().normalize();
-  const anchorPosition = radialDirection.clone().multiplyScalar(bestProjectionScale ?? 1);
+  const anchorPosition = landCenter.clone().addScaledVector(radialDirection, bestProjectionScale ?? 1);
   return { anchorPosition, radialDirection, surfaceNormal: radialDirection.clone(), hit: false };
 }
 
-function resolveNearbyLandVertices(landHitMesh, localDirection, candidate) {
-  const cache = getFallbackVertexCache(landHitMesh, candidate);
+function resolveNearbyLandVertices(cache, localDirection) {
   if (Math.abs(localDirection.y) > 0.985) return cache.vertices;
   const [longitudeBin, latitudeBin] = directionBin(localDirection, cache.longitudeBinCount, cache.latitudeBinCount);
   const nearby = [];
@@ -183,7 +224,7 @@ function resolveNearbyLandVertices(landHitMesh, localDirection, candidate) {
   return nearby.length ? nearby : cache.vertices;
 }
 
-function getFallbackVertexCache(landHitMesh, candidate) {
+function getFallbackVertexCache(landHitMesh, candidate, centerOnLandGeometry = false) {
   const transformKey = [
     landHitMesh.position.x,
     landHitMesh.position.y,
@@ -194,7 +235,8 @@ function getFallbackVertexCache(landHitMesh, candidate) {
     landHitMesh.quaternion.w,
     landHitMesh.scale.x,
     landHitMesh.scale.y,
-    landHitMesh.scale.z
+    landHitMesh.scale.z,
+    centerOnLandGeometry ? "mesh-center" : "parent-origin"
   ].join(":");
   const cached = fallbackVertexCaches.get(landHitMesh);
   if (cached?.transformKey === transformKey && cached.geometry === landHitMesh.geometry) return cached;
@@ -203,6 +245,9 @@ function getFallbackVertexCache(landHitMesh, candidate) {
   const latitudeBinCount = Math.ceil(Math.PI / FALLBACK_DIRECTION_BIN_RADIANS);
   const vertices = [];
   const buckets = new Map();
+  const center = centerOnLandGeometry
+    ? resolveLandParentLocalCenter(landHitMesh)
+    : new THREE.Vector3();
   const position = landHitMesh.geometry.getAttribute("position");
   for (let index = 0; index < position.count; index += 1) {
     candidate.fromBufferAttribute(position, index);
@@ -210,12 +255,12 @@ function getFallbackVertexCache(landHitMesh, candidate) {
     landHitMesh.parent?.worldToLocal(candidate);
     const vertex = candidate.clone();
     vertices.push(vertex);
-    const [longitudeBin, latitudeBin] = directionBin(vertex, longitudeBinCount, latitudeBinCount);
+    const [longitudeBin, latitudeBin] = directionBin(vertex.clone().sub(center), longitudeBinCount, latitudeBinCount);
     const key = `${longitudeBin}:${latitudeBin}`;
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(vertex);
   }
-  const next = { geometry: landHitMesh.geometry, transformKey, vertices, buckets, longitudeBinCount, latitudeBinCount };
+  const next = { geometry: landHitMesh.geometry, transformKey, center, vertices, buckets, longitudeBinCount, latitudeBinCount };
   fallbackVertexCaches.set(landHitMesh, next);
   return next;
 }

@@ -125,9 +125,16 @@ const EventPage: React.FC = () => {
   const venue = (venueKey ? index?.clubsByKey.get(venueKey) ?? null : null) ?? mockLinkedVenue;
   const venuePath = venue ? getClubCanonicalPath(venue, index) : undefined;
   const hostName = event?.hostName ?? '';
+  const organizerOrganization = event?.organizerOrganizationId
+    ? index?.organizationsById.get(event.organizerOrganizationId) ?? null
+    : null;
   const hostSlugValue = hostName ? hostSlug(normalizeHostName(hostName)) : '';
-  const hostPath = hostSlugValue ? getHostCanonicalPath(hostSlugValue) : undefined;
-  const hostEventsCount = hostSlugValue ? (index?.eventsByHostSlug.get(hostSlugValue)?.length ?? 0) : 0;
+  const hostPath = organizerOrganization
+    ? getHostCanonicalPath(organizerOrganization.slug)
+    : hostSlugValue ? getHostCanonicalPath(hostSlugValue) : undefined;
+  const hostEventsCount = organizerOrganization
+    ? Array.from(index?.eventsByKey.values() ?? []).filter((listing) => listing.organizerOrganizationId === organizerOrganization.id).length
+    : hostSlugValue ? (index?.eventsByHostSlug.get(hostSlugValue)?.length ?? 0) : 0;
   const eventSeries = event?.eventSeriesId ? index?.eventSeriesById.get(event.eventSeriesId) ?? null : null;
   const seriesOccurrences = event?.eventSeriesId
     ? (index?.eventsBySeriesId.get(event.eventSeriesId) ?? [])
@@ -141,6 +148,11 @@ const EventPage: React.FC = () => {
       (user) => normalizeHostName(user.displayName) === normalized,
     ) ?? null;
   }, [hostName, index]);
+  const presenterName = organizerOrganization?.name || hostName || 'Host TBD';
+  const presenterLogoUrl = organizerOrganization?.logoImageUrl || hostUser?.avatarUrl;
+  const presenterHeroUrl = organizerOrganization?.headerImageUrl
+    || (organizerOrganization && venue?.ownerOrganizationId === organizerOrganization.id ? getListingImageUrl(venue) : undefined);
+  const presenterBio = organizerOrganization?.descriptionShort || organizerOrganization?.descriptionFull || hostUser?.bio;
 
   const locationLine = useMemo(() => {
     if (!event) return '';
@@ -242,8 +254,8 @@ const EventPage: React.FC = () => {
             backgroundImageUrl={eventCoverImage}
             eventLogoUrl={eventLogoImage}
             clubLogoUrl={venueLogoImage}
-            hostLogoUrl={hostUser?.avatarUrl}
-            hostName={hostName}
+            hostLogoUrl={presenterLogoUrl}
+            hostName={presenterName}
             hostPath={hostPath}
             venueName={venue?.name}
             venuePath={venuePath}
@@ -347,11 +359,13 @@ const EventPage: React.FC = () => {
             />
           </div>
           <EventHostCard
-            hostName={hostName || 'Host TBD'}
+            hostName={presenterName}
             hostPath={hostPath}
             hostEventsCount={hostEventsCount}
             hostAvatarUrl={hostUser?.avatarUrl}
-            hostBio={hostUser?.bio}
+            hostLogoUrl={organizerOrganization?.logoImageUrl}
+            hostHeroUrl={presenterHeroUrl}
+            hostBio={presenterBio}
           />
           <EventFeedbackSection event={event} />
         </>

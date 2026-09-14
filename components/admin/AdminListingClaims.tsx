@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BadgeCheck, CircleAlert, FileCheck2, LoaderCircle, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import {
   listListingClaimsForAdmin,
@@ -8,6 +9,7 @@ import {
   type ListingClaimVerificationMethod,
 } from '../../lib/claims/listingClaims';
 import { useAppStore } from '../../store/appStore';
+import type { Listing, OrganizationData } from '../../types';
 
 const OPEN_STATUSES = new Set<ListingClaimStatus>(['pending', 'information_requested', 'under_review']);
 
@@ -53,7 +55,12 @@ const initialDraft = (claim: AdminListingClaim): ReviewDraft => ({
   evidenceDeleted: Boolean(claim.evidenceDeletedAt),
 });
 
-const AdminListingClaims: React.FC = () => {
+type AdminListingClaimsProps = {
+  listings: Listing[];
+  organizations: OrganizationData[];
+};
+
+const AdminListingClaims: React.FC<AdminListingClaimsProps> = ({ listings, organizations }) => {
   const { addToast } = useAppStore();
   const [claims, setClaims] = useState<AdminListingClaim[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,7 +144,7 @@ const AdminListingClaims: React.FC = () => {
       setDrafts((current) => ({ ...current, [claim.id]: initialDraft(reviewed) }));
       addToast({
         message: status === 'verified'
-          ? 'Claim verified. Assign the organization role after confirming the canonical organization relationship.'
+          ? 'Claim verified. The approved organization role is now active.'
           : `Claim marked ${statusLabel(status)}.`,
         type: 'success',
       });
@@ -186,24 +193,48 @@ const AdminListingClaims: React.FC = () => {
             const draft = drafts[claim.id] ?? initialDraft(claim);
             const expanded = expandedId === claim.id;
             const saving = savingId === claim.id;
+            const listing = (claim.entityType === 'club' || claim.entityType === 'event')
+              ? listings.find((item) => item.id === claim.entityId)
+              : undefined;
+            const organization = claim.entityType === 'organization'
+              ? organizations.find((item) => item.id === claim.entityId)
+              : undefined;
+            const entityName = listing?.name ?? organization?.name ?? claim.entityName ?? claim.entityId;
+            const entityPath = listing
+              ? `/listing/${encodeURIComponent(listing.id)}`
+              : organization?.slug
+                ? `/hosts/${organization.slug}`
+                : claim.entityPath;
             return (
               <article key={claim.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <button type="button" onClick={() => setExpandedId(expanded ? null : claim.id)} className="grid w-full gap-3 p-5 text-left md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
+                <div className="grid w-full gap-3 p-5 text-left md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-600">{claim.entityType.replaceAll('_', ' ')}</span>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${claim.status === 'verified' ? 'bg-emerald-100 text-emerald-800' : OPEN_STATUSES.has(claim.status) ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>{statusLabel(claim.status)}</span>
                     </div>
-                    <div className="mt-2 truncate text-base font-bold text-gray-900">{claim.entityId}</div>
+                    {entityPath ? (
+                      <Link to={entityPath} className="mt-2 block truncate text-base font-bold text-gray-900 hover:text-blue-600 hover:underline">
+                        {entityName}
+                      </Link>
+                    ) : (
+                      <div className="mt-2 truncate text-base font-bold text-gray-900">{entityName}</div>
+                    )}
                     <div className="mt-1 text-xs text-gray-500">Requested role: <span className="font-semibold capitalize text-gray-700">{claim.requestedRole}</span></div>
                   </div>
                   <div className="min-w-0 text-sm text-gray-600">
-                    <div className="truncate font-semibold text-gray-800">{claim.claimantDisplayName || claim.claimantUserId}</div>
-                    {claim.claimantHandle ? <div className="truncate text-xs text-gray-500">@{claim.claimantHandle}</div> : null}
+                    {claim.claimantHandle ? (
+                      <Link to={`/users/${claim.claimantHandle}`} className="block truncate font-semibold text-gray-800 hover:text-blue-600 hover:underline">
+                        {claim.claimantDisplayName || `@${claim.claimantHandle}`}
+                      </Link>
+                    ) : (
+                      <div className="truncate font-semibold text-gray-800">{claim.claimantDisplayName || claim.claimantUserId}</div>
+                    )}
+                    {claim.claimantHandle ? <Link to={`/users/${claim.claimantHandle}`} className="block truncate text-xs text-gray-500 hover:text-blue-600 hover:underline">@{claim.claimantHandle}</Link> : null}
                     <div className="mt-1 text-xs text-gray-500">Submitted {formatDate(claim.submittedAt)}</div>
                   </div>
-                  <span className="text-sm font-semibold text-blue-600">{expanded ? 'Close' : 'Review'}</span>
-                </button>
+                  <button type="button" onClick={() => setExpandedId(expanded ? null : claim.id)} className="text-sm font-semibold text-blue-600 hover:text-blue-700">{expanded ? 'Close' : 'Review'}</button>
+                </div>
 
                 {expanded ? (
                   <div className="border-t border-gray-200 bg-gray-50 p-5">
@@ -259,7 +290,7 @@ const AdminListingClaims: React.FC = () => {
                       ) : null}
                       {saving ? <span className="inline-flex items-center gap-2 px-2 text-sm text-gray-500"><LoaderCircle size={15} className="animate-spin" /> Saving…</span> : null}
                     </div>
-                    {claim.status === 'verified' ? <p className="mt-3 text-xs leading-5 text-emerald-800">Verification records authority. It does not automatically create organization membership; assign the appropriate owner, manager, or editor role after confirming the canonical organization relationship.</p> : null}
+                    {claim.status === 'verified' ? <p className="mt-3 text-xs leading-5 text-emerald-800">Verification grants the approved owner, manager, or editor role automatically. If this listing did not already have a canonical organization, SwingSphere creates and links one during approval.</p> : null}
                   </div>
                 ) : null}
               </article>

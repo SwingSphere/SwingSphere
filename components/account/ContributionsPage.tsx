@@ -43,6 +43,8 @@ type ContributionItem = {
   updatedAt: string;
   editedAt?: string;
   href?: string;
+  listingId?: string;
+  canManagePendingListing?: boolean;
   detail: string;
   body?: string;
   isDemo?: boolean;
@@ -69,6 +71,7 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -101,6 +104,25 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
   }, [currentUser.id]);
 
   const listingById = useMemo(() => new Map(listings.map((listing) => [listing.id, listing])), [listings]);
+
+  const ownedListings = useMemo(() => {
+    const normalizeName = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+    const grouped = new Map<string, Listing[]>();
+
+    listings
+      .filter((listing) => listing.postedByUserId === currentUser.id)
+      .forEach((listing) => {
+        const key = `${listing.type}:${normalizeName(listing.name)}`;
+        const group = grouped.get(key) ?? [];
+        group.push(listing);
+        grouped.set(key, group);
+      });
+
+    return Array.from(grouped.values()).map((group) => {
+      const score = (listing: Listing) => listing.status === 'approved' ? 3 : listing.status === 'flagged' ? 2 : 1;
+      return [...group].sort((left, right) => score(right) - score(left))[0];
+    });
+  }, [currentUser.id, listings]);
 
   const items = useMemo<ContributionItem[]>(() => {
     const demoItems: ContributionItem[] = demo.contributions.map((contribution) => ({
@@ -164,8 +186,7 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
       };
     });
 
-    const listingItems = listings
-      .filter((listing) => listing.postedByUserId === currentUser.id)
+    const listingItems = ownedListings
       .map((listing): ContributionItem => ({
         id: `listing-${listing.id}`,
         kind: 'listing',
@@ -175,7 +196,9 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
         tone: listing.status === 'approved' ? 'success' : listing.status === 'flagged' ? 'warning' : 'neutral',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        href: `/listing/${listing.id}`,
+        href: listing.status === 'approved' ? `/listing/${listing.id}` : undefined,
+        listingId: listing.id,
+        canManagePendingListing: listing.status === 'pending_approval',
         detail: listing.status === 'approved'
           ? 'This contribution is live in discovery.'
           : 'Submission persistence and detailed moderation history are still being connected to the production listing backend.',
@@ -183,7 +206,7 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
 
     return [...demoItems, ...reviewItems, ...listingItems]
       .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
-  }, [currentUser.id, demo.contributions, feedbackRows, listingById, listings]);
+  }, [demo.contributions, feedbackRows, listingById, ownedListings]);
 
   const attentionCount = items.filter((item) => item.tone === 'warning').length;
   const publishedCount = items.filter((item) => item.tone === 'success').length;
@@ -192,6 +215,20 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
     if (!item.isDemo || item.kind !== 'review') return;
     if (!window.confirm(`Delete your demo review of ${item.title}? This cannot be undone.`)) return;
     demo.deleteContribution(item.id);
+  };
+
+  const withdrawPendingListing = async (item: ContributionItem) => {
+    if (!item.listingId || !item.canManagePendingListing || withdrawingId) return;
+    if (!window.confirm(`Withdraw your submission for ${item.title}? It will leave the moderation queue and will no longer be reviewed.`)) return;
+    setWithdrawingId(item.listingId);
+    try {
+      await api.withdrawMyPendingListing(item.listingId);
+      await load();
+    } catch (withdrawError) {
+      setError(withdrawError instanceof Error ? withdrawError.message : 'Unable to withdraw this submission.');
+    } finally {
+      setWithdrawingId(null);
+    }
   };
 
   return (
@@ -252,6 +289,8 @@ const ContributionsPage: React.FC<{ currentUser: User }> = ({ currentUser }) => 
                 item={item}
                 onEditReview={demo.editReview}
                 onDeleteReview={() => deleteDemoReview(item)}
+                onWithdrawListing={() => void withdrawPendingListing(item)}
+                isWithdrawing={Boolean(item.listingId && withdrawingId === item.listingId)}
               />
             ))}
           </div>
@@ -284,7 +323,9 @@ const ContributionRow: React.FC<{
   item: ContributionItem;
   onEditReview: (id: string, body: string) => void;
   onDeleteReview: () => void;
-}> = ({ item, onEditReview, onDeleteReview }) => {
+  onWithdrawListing: () => void;
+  isWithdrawing: boolean;
+}> = ({ item, onEditReview, onDeleteReview, onWithdrawListing, isWithdrawing }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(item.body ?? '');
 
@@ -339,6 +380,12 @@ const ContributionRow: React.FC<{
             <>
               <button type="button" onClick={() => setIsEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-gray-500 transition hover:bg-white/[0.04] hover:text-white"><Pencil size={12} /> Edit</button>
               <button type="button" onClick={onDeleteReview} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-gray-600 transition hover:bg-red-500/10 hover:text-red-200"><Trash2 size={12} /> Delete</button>
+            </>
+          ) : null}
+          {item.kind === 'listing' && item.canManagePendingListing && item.listingId ? (
+            <>
+              <Link to={`/submission/${encodeURIComponent(item.listingId)}`} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-gray-400 transition hover:bg-white/[0.04] hover:text-white"><Pencil size={12} /> Edit submission</Link>
+              <button type="button" onClick={onWithdrawListing} disabled={isWithdrawing} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-gray-500 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-wait disabled:opacity-50"><Trash2 size={12} /> {isWithdrawing ? 'Withdrawing…' : 'Withdraw'}</button>
             </>
           ) : null}
           {item.href ? <Link to={item.href} className="inline-flex min-h-8 items-center rounded-lg px-2.5 text-xs font-bold text-red-300 transition hover:bg-red-500/[0.07] hover:text-red-200">View listing</Link> : null}

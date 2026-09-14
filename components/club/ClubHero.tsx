@@ -21,6 +21,7 @@ type ClubHeroProps = {
   mediaPresentation?: 'default' | 'monochrome';
   thumbnails?: string[];
   onQuickEdit?: (field: ClubQuickEditField) => void;
+  onEditLocation?: () => void;
 };
 
 const initials = (value: string): string => {
@@ -41,6 +42,7 @@ const ClubHero: React.FC<ClubHeroProps> = ({
   mediaPresentation = 'default',
   thumbnails = [],
   onQuickEdit,
+  onEditLocation,
 }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
@@ -93,7 +95,14 @@ const ClubHero: React.FC<ClubHeroProps> = ({
             <h1 className="min-w-0 flex-1 text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{clubName}</h1>
             {showQuickControls ? <button type="button" onClick={() => onQuickEdit?.('title')} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Title</button> : null}
           </div>
-          <p className="mt-2 text-sm text-gray-200">{locationLine}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm text-gray-200">{locationLine}</p>
+            {showQuickControls && onEditLocation ? (
+              <button type="button" onClick={onEditLocation} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-300/35 bg-black/60 px-2.5 py-1 text-[11px] font-black text-white">
+                <Pencil size={12} /> Location
+              </button>
+            ) : null}
+          </div>
           <p className="mt-1 text-sm text-gray-300">{availabilityLine}</p>
           <HeroThumbnailStack images={uniqueThumbs} title={clubName} showDesktop={false} showMobile />
           {tags.length ? (

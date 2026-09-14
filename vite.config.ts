@@ -136,6 +136,15 @@ const loadPublicStreetViewBuildingAssets = () => {
   return source.filter((asset: any) => precisePublicListingIds.has(String(asset?.listingId ?? '').trim()));
 };
 
+const resolvePublicListingLogoUrl = (listing: any) => {
+  // Match the actual club entity source used by the destination experience.
+  // The mediaAssets array can retain older historical logo records, so it
+  // should not override the club's current logoImageUrl pointer here.
+  return typeof listing?.logoImageUrl === 'string' && listing.logoImageUrl.trim()
+    ? listing.logoImageUrl.trim()
+    : undefined;
+};
+
 const loadPublicGlobeShowcaseEvents = () => {
   const events = loadPublicListings().flatMap((listing: any) => {
     const latitude = Number(listing?.geopoint?.latitude);
@@ -162,8 +171,9 @@ const loadPublicGlobeShowcaseEvents = () => {
     const isApproximate = listing.locationVisibility === 'approximate_public';
     const publicLatitude = isApproximate ? Math.round(latitude * 100) / 100 : latitude;
     const publicLongitude = isApproximate ? Math.round(longitude * 100) / 100 : longitude;
-    const logoImageUrl = typeof listing.logoImageUrl === 'string' && listing.logoImageUrl.trim()
-      ? listing.logoImageUrl.trim()
+    const logoImageUrl = resolvePublicListingLogoUrl(listing);
+    const heroImageUrl = typeof listing?.headerImageUrl === 'string' && listing.headerImageUrl.trim()
+      ? listing.headerImageUrl.trim()
       : undefined;
 
     const id = String(listing.id);
@@ -184,6 +194,7 @@ const loadPublicGlobeShowcaseEvents = () => {
       schedule: [],
       generalAmenities: [],
       ...(logoImageUrl ? { logoImageUrl } : {}),
+      ...(heroImageUrl ? { headerImageUrl: heroImageUrl } : {}),
       status: 'approved',
       postedByUserId: 'public-showcase',
     };

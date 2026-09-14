@@ -372,6 +372,26 @@ export interface ClubBrandData {
   updatedAt?: string;
 }
 
+export type SocialNetworkKey =
+  | 'instagram'
+  | 'facebook'
+  | 'fetlife'
+  | 'bluesky'
+  | 'x'
+  | 'threads'
+  | 'tiktok'
+  | 'youtube'
+  | 'reddit'
+  | 'mastodon'
+  | 'discord'
+  | 'other';
+
+export interface SocialLink {
+  network: SocialNetworkKey;
+  value: string;
+  label?: string;
+}
+
 export interface ClubData {
   id: string;
   type: 'club';
@@ -381,6 +401,10 @@ export interface ClubData {
   description_short: string;
   location: string;
   website?: string;
+  instagram?: string;
+  facebook?: string;
+  fetlife?: string;
+  socialLinks?: SocialLink[];
   contactEmail: string;
   // Future public map rendering:
   // exact_public -> exact pin/address

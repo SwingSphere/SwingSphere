@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Award,
   Bookmark,
@@ -7,13 +7,15 @@ import {
   FileText,
   LayoutDashboard,
   LockKeyhole,
+  LogOut,
   Pencil,
   Settings,
   Bell,
 } from 'lucide-react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import type { User } from '../../data/mockUsers';
 import type { ProfilePrivacySettings } from '../../lib/profile/profileTypes';
+import { useAppStore } from '../../store/appStore';
 
 const initialsFor = (displayName: string) => displayName
   .split(/\s+/)
@@ -44,7 +46,22 @@ const MemberHubLayout: React.FC<{
   isPrivacyLoading: boolean;
   children: React.ReactNode;
 }> = ({ currentUser, privacy, isPrivacyLoading, children }) => {
+  const navigate = useNavigate();
+  const { logout, addToast } = useAppStore();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const visibility = privacy?.profileVisibility ?? 'private';
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/', { replace: true });
+    } catch (error) {
+      addToast({ message: error instanceof Error ? error.message : 'Unable to log out.', type: 'error' });
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6 lg:px-8 lg:py-8">
@@ -102,6 +119,16 @@ const MemberHubLayout: React.FC<{
               <Building2 size={17} aria-hidden="true" /> Organizer workspace
             </NavLink>
           ) : null}
+
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={isLoggingOut}
+            className="mt-4 hidden min-h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3.5 py-2.5 text-left text-sm font-semibold text-gray-400 transition hover:border-red-400/30 hover:bg-red-500/[0.06] hover:text-white disabled:cursor-wait disabled:opacity-60 lg:flex"
+          >
+            <LogOut size={17} aria-hidden="true" />
+            {isLoggingOut ? 'Signing out…' : 'Sign out'}
+          </button>
         </div>
       </aside>
 
@@ -119,6 +146,14 @@ const MemberHubLayout: React.FC<{
               <Icon size={16} aria-hidden="true" /> {label}
             </NavLink>
           ))}
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={isLoggingOut}
+            className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-gray-500 transition hover:bg-red-500/[0.06] hover:text-white disabled:cursor-wait disabled:opacity-60"
+          >
+            <LogOut size={16} aria-hidden="true" /> {isLoggingOut ? 'Signing out…' : 'Sign out'}
+          </button>
         </nav>
         {children}
       </div>

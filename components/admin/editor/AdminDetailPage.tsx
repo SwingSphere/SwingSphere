@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl, { type Map as MapLibreMap, type Marker } from 'maplibre-gl';
+import { Pencil, Plus } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type {
   BuildingAsset,
   AttendancePolicy,
   ClubBrandData,
   ClubData,
+  DaySchedule,
   EntryRequirement,
   EventData,
   Geopoint,
@@ -118,18 +120,28 @@ const EmptySection = ({ text }: { text: string }) => (
 export const EditorSection = ({
   title,
   defaultOpen = false,
+  isOpen: controlledOpen,
+  onOpenChange,
   children,
   saveLabel,
   onSave,
 }: {
   title: string;
   defaultOpen?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
   children: React.ReactNode;
   saveLabel?: string;
   onSave?: () => Promise<void>;
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [localOpen, setLocalOpen] = useState(defaultOpen);
+  const isOpen = controlledOpen ?? localOpen;
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const setOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setLocalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   const handleSave = async () => {
     if (!onSave) return;
@@ -148,7 +160,7 @@ export const EditorSection = ({
       <button
         type="button"
         className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-gray-50"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => setOpen(!isOpen)}
       >
         <span className="text-base font-semibold text-gray-900">{isOpen ? '▼' : '▶'} {title}</span>
         {saveStatus !== 'idle' && (
@@ -192,6 +204,9 @@ export const AdminEditorPage = ({
   onPublish,
   onArchive,
   onDelete,
+  backLabel = 'Back to list',
+  archiveLabel = 'Archive',
+  isDirty = true,
 }: {
   title: string;
   entityType: string;
@@ -202,17 +217,69 @@ export const AdminEditorPage = ({
   updated?: string;
   sections: SectionConfig[];
   onBack: () => void;
-  onSave: () => Promise<void>;
-  onPublish?: () => Promise<void>;
-  onArchive?: () => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onSave: () => Promise<void | boolean>;
+  onPublish?: () => Promise<void | boolean>;
+  onArchive?: () => Promise<void | boolean>;
+  onDelete?: () => Promise<void | boolean>;
+  backLabel?: string;
+  archiveLabel?: string;
+  isDirty?: boolean;
 }) => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(
+    () => new Set(sections.filter((section) => section.defaultOpen).map((section) => section.id)),
+  );
 
-  const runAction = async (action: () => Promise<void>, successStatus: SaveStatus = 'saved') => {
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const updateHeaderHeight = () => setHeaderHeight(header.getBoundingClientRect().height);
+    updateHeaderHeight();
+
+    const observer = new ResizeObserver(updateHeaderHeight);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setOpenSectionIds((current) => {
+      const validIds = new Set(sections.map((section) => section.id));
+      const next = new Set([...current].filter((id) => validIds.has(id)));
+      sections.forEach((section) => {
+        if (section.defaultOpen && !current.has(section.id)) next.add(section.id);
+      });
+      return next;
+    });
+  }, [sections]);
+
+  const sectionDomId = (section: SectionConfig) => section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  const openAndScrollToSection = (section: SectionConfig) => {
+    // Sidebar navigation acts like a focused navigator: selecting a section
+    // closes the previously open section(s) and opens only the target. Manual
+    // accordion toggles below still allow multiple sections to remain open.
+    setOpenSectionIds(new Set([section.id]));
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const element = document.getElementById(sectionDomId(section));
+        if (!element) return;
+        const top = element.getBoundingClientRect().top + window.scrollY - headerHeight - 36;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      });
+    });
+  };
+
+  const runAction = async (action: () => Promise<void | boolean>, successStatus: SaveStatus = 'saved') => {
     setSaveStatus('saving');
     try {
-      await action();
+      const result = await action();
+      if (result === false) {
+        setSaveStatus('idle');
+        return;
+      }
       setSaveStatus(successStatus);
       window.setTimeout(() => setSaveStatus('idle'), 1800);
     } catch {
@@ -221,27 +288,30 @@ export const AdminEditorPage = ({
   };
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <button type="button" onClick={onBack} className="mb-4 text-sm font-semibold text-gray-600 hover:text-gray-900">
-        ← Back to list
+    <div className="mx-auto max-w-7xl pb-10">
+      <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+        <span aria-hidden="true">←</span> {backLabel}
       </button>
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div ref={headerRef} className="sticky top-3 z-20 rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-lg shadow-slate-200/40 backdrop-blur">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{entityType} Detail Editor</p>
-            <h1 className="mt-1 text-3xl font-bold text-gray-900">{title}</h1>
-            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{entityType} editor</p>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${status === 'approved' ? 'bg-emerald-50 text-emerald-700' : status === 'flagged' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{status.replace('_', ' ')}</span>
+              {isDirty ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">Unsaved changes</span> : null}
+            </div>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-4">
               <div><dt className={labelClass}>ID</dt><dd className="font-mono text-xs text-gray-800">{entityId}</dd></div>
               <div><dt className={labelClass}>Created</dt><dd>{formatDate(created)}</dd></div>
               <div><dt className={labelClass}>Updated</dt><dd>{formatDate(updated)}</dd></div>
-              <div><dt className={labelClass}>Owner</dt><dd>{owner ?? 'Unassigned'}</dd></div>
-              <div><dt className={labelClass}>Status</dt><dd className="capitalize">{status.replace('_', ' ')}</dd></div>
+              <div><dt className={labelClass}>Submitted / owned by</dt><dd>{owner ?? 'Unassigned'}</dd></div>
             </dl>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => runAction(onSave)} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button>
-            {onPublish && <button type="button" onClick={() => runAction(onPublish)} className="rounded-md border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-800 hover:bg-green-100">Publish</button>}
-            {onArchive && <button type="button" onClick={() => runAction(onArchive)} className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-800 hover:bg-yellow-100">Archive</button>}
+            <button type="button" onClick={() => runAction(onSave)} disabled={!isDirty || saveStatus === 'saving'} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">{saveStatus === 'saving' ? 'Saving…' : isDirty ? 'Save changes' : 'Saved'}</button>
+            {onPublish && status !== 'approved' && <button type="button" onClick={() => runAction(onPublish)} className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-800 hover:bg-green-100">Publish</button>}
+            {onArchive && <button type="button" onClick={() => runAction(onArchive)} className="rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-800 hover:bg-yellow-100">{archiveLabel}</button>}
             {onDelete && <button type="button" onClick={() => runAction(onDelete)} className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">Delete</button>}
           </div>
         </div>
@@ -253,11 +323,19 @@ export const AdminEditorPage = ({
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <nav className="hidden self-start rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:block lg:sticky lg:top-6">
+        <nav
+          className="hidden self-start rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:block lg:sticky"
+          style={{ top: headerHeight ? headerHeight + 24 : 24 }}
+        >
           {sections.map((section) => (
-            <a key={section.id} href={`#${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="block rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => openAndScrollToSection(section)}
+              className={`block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${openSectionIds.has(section.id) ? 'bg-gray-50 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
+            >
               {section.title}
-            </a>
+            </button>
           ))}
         </nav>
         <div className="space-y-4">
@@ -266,6 +344,13 @@ export const AdminEditorPage = ({
               key={section.id}
               title={section.title}
               defaultOpen={section.defaultOpen}
+              isOpen={openSectionIds.has(section.id)}
+              onOpenChange={(isOpen) => setOpenSectionIds((current) => {
+                const next = new Set(current);
+                if (isOpen) next.add(section.id);
+                else next.delete(section.id);
+                return next;
+              })}
               saveLabel={section.saveLabel}
               onSave={section.onSave}
             >
@@ -459,105 +544,107 @@ const ImagesSection = ({
   onGalleryChange: (value: string[]) => void;
 }) => {
   const mediaOwnerId = getMediaOwnerId(ownerType, ownerId);
+  const [uploadError, setUploadError] = useState('');
   const getAsset = (role: MediaRole) => mediaAssets?.find((asset) => asset.role === role) ?? null;
+  const getAssets = (role: MediaRole) => mediaAssets?.filter((asset) => asset.role === role) ?? [];
+  const assetUrl = (asset: MediaAsset) => getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
+  const logoAsset = getAsset('logo');
+  const heroAsset = getAsset('hero');
+  const flyerAsset = getAsset('flyer');
+  const logoUrl = logoImageUrl || (logoAsset ? assetUrl(logoAsset) : undefined);
+  const heroUrl = headerImageUrl || (heroAsset ? assetUrl(heroAsset) : undefined);
+  const flyerUrl = flyerAsset ? assetUrl(flyerAsset) : undefined;
+  const galleryUrls = Array.from(new Set([
+    ...(galleryImageUrls ?? []),
+    ...getAssets('gallery').map(assetUrl),
+  ]));
+  const inputId = (role: MediaRole) => `admin-${ownerType}-${ownerId}-${role}-upload`;
+
   const handleUploaded = (asset: MediaAsset) => {
+    setUploadError('');
     const variant = getMediaRule(asset.role).defaultVariant;
     const url = getCloudflareImageUrl({ externalId: asset.external_id, variant });
     onAssetUploaded(asset);
     if (asset.role === 'logo') onLogoChange(url);
     if (asset.role === 'hero') onHeaderChange(url);
-    if (asset.role === 'gallery') onGalleryChange([...(galleryImageUrls ?? []), url]);
+    if (asset.role === 'gallery') onGalleryChange(Array.from(new Set([...(galleryImageUrls ?? []), url])));
   };
 
-  const moveGalleryImage = (index: number, direction: -1 | 1) => {
-    const next = [...(galleryImageUrls ?? [])];
-    const target = index + direction;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    onGalleryChange(next);
-  };
-
-  const ImageSlot = ({
-    title,
-    description,
-    value,
-    onChange,
-    shape,
-  }: {
-    title: string;
-    description: string;
-    value?: string;
-    onChange: (value: string | undefined) => void;
-    shape: 'square' | 'hero';
-  }) => (
+  const MediaCard = ({ title, value, role, shape }: { title: string; value?: string; role: 'logo' | 'hero'; shape: 'square' | 'hero' }) => (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex min-h-10 items-start justify-between gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-          <p className="mt-1 text-xs leading-5 text-gray-500">{description}</p>
+          <p className="mt-0.5 text-xs text-gray-500">{role === 'logo' ? 'Square identity image' : 'Wide destination header image'}</p>
         </div>
-        {value && (
-          <button type="button" onClick={() => onChange(undefined)} className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100">
-            Remove
-          </button>
-        )}
+        <label htmlFor={inputId(role)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50">
+          <Pencil size={13} /> {value ? 'Replace' : 'Add'}
+        </label>
       </div>
-      <div className={shape === 'square' ? 'mx-auto aspect-square w-full max-w-[220px]' : 'aspect-[16/7] w-full'}>
+      <div className={shape === 'square' ? 'mx-auto aspect-square w-full max-w-[180px]' : 'aspect-[16/7] w-full'}>
         {value ? (
           <img src={value} alt="" className={`h-full w-full rounded-lg border border-gray-200 bg-gray-50 ${shape === 'square' ? 'object-contain p-2' : 'object-cover'}`} />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm text-gray-400">
-            No image set
-          </div>
+          <label htmlFor={inputId(role)} className="flex h-full w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm text-gray-400 hover:bg-gray-100">
+            Add {role === 'logo' ? 'logo' : 'hero image'}
+          </label>
         )}
       </div>
-      {value && <div className="mt-3 truncate rounded-md bg-gray-50 px-2.5 py-2 text-[11px] text-gray-500" title={value}>{value}</div>}
     </div>
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <MediaUploader tone="light" ownerType={ownerType} ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} label={ownerType === 'event' ? 'Optional occurrence logo override' : 'Upload or replace logo'} onUploaded={handleUploaded} />
-      <MediaUploader tone="light" ownerType={ownerType} ownerId={mediaOwnerId} role="hero" existingAsset={getAsset('hero')} label={ownerType === 'event' ? 'Upload or replace occurrence banner' : 'Upload or replace hero image'} helperText={ownerType === 'event' ? 'Wide image used as the background banner for this specific date. Leave empty to inherit the event-series banner.' : undefined} onUploaded={handleUploaded} />
-      {ownerType === 'event' && (
-        <div className="md:col-span-2">
-          <MediaUploader tone="light" ownerType={ownerType} ownerId={mediaOwnerId} role="flyer" existingAsset={getAsset('flyer')} label="Upload or replace occurrence flyer" helperText="Date-specific vertical flyer. The complete artwork is preserved without cropping." onUploaded={handleUploaded} />
-        </div>
-      )}
-      <div className="md:col-span-2"><MediaUploader tone="light" ownerType={ownerType} ownerId={mediaOwnerId} role="gallery" label="Add gallery image" onUploaded={handleUploaded} /></div>
-      <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Current media</h3>
-          <p className="mt-1 text-xs text-gray-500">Preview the images currently saved to this listing.</p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,2fr)]">
-          <ImageSlot title="Logo" description="Displayed in a square frame throughout SwingSphere." value={logoImageUrl} onChange={onLogoChange} shape="square" />
-          <ImageSlot title="Hero / background" description="Wide image used for the listing header and large visual surfaces." value={headerImageUrl} onChange={(value) => onHeaderChange(value ?? '')} shape="hero" />
-        </div>
+    <div className="space-y-4">
+      <MediaUploader triggerOnly tone="light" inputId={inputId('logo')} ownerType={ownerType} ownerId={mediaOwnerId} role="logo" existingAsset={logoAsset} onUploaded={handleUploaded} onError={setUploadError} />
+      <MediaUploader triggerOnly tone="light" inputId={inputId('hero')} ownerType={ownerType} ownerId={mediaOwnerId} role="hero" existingAsset={heroAsset} onUploaded={handleUploaded} onError={setUploadError} />
+      <MediaUploader triggerOnly tone="light" inputId={inputId('gallery')} ownerType={ownerType} ownerId={mediaOwnerId} role="gallery" existingAsset={getAssets('gallery').at(-1) ?? null} onUploaded={handleUploaded} onError={setUploadError} />
+      {ownerType === 'event' ? (
+        <MediaUploader triggerOnly tone="light" inputId={inputId('flyer')} ownerType={ownerType} ownerId={mediaOwnerId} role="flyer" existingAsset={flyerAsset} onUploaded={handleUploaded} onError={setUploadError} />
+      ) : null}
+
+      {uploadError ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{uploadError}</div> : null}
+
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <MediaCard title={ownerType === 'event' ? 'Occurrence logo' : 'Logo'} value={logoUrl} role="logo" shape="square" />
+        <MediaCard title={ownerType === 'event' ? 'Occurrence hero' : 'Hero image'} value={heroUrl} role="hero" shape="hero" />
       </div>
-      <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-gray-900">Gallery</h3>
+
+      {ownerType === 'event' ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Event flyer</h3>
+              <p className="mt-0.5 text-xs text-gray-500">Date-specific vertical artwork.</p>
+            </div>
+            <label htmlFor={inputId('flyer')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"><Pencil size={13} /> {flyerUrl ? 'Replace' : 'Add'}</label>
+          </div>
+          {flyerUrl ? <img src={flyerUrl} alt="" className="mx-auto max-h-72 rounded-lg border border-gray-200 object-contain" /> : <label htmlFor={inputId('flyer')} className="flex min-h-32 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-400 hover:bg-gray-100">Add event flyer</label>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {(galleryImageUrls ?? []).map((url, index) => (
-            <div key={`${url}-${index}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <img src={url} alt="" className="h-32 w-full rounded-md object-cover" />
-              <div className="mt-2 truncate text-xs text-gray-500">{url}</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => onHeaderChange(url)} className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100">Set as Hero</button>
-                <button type="button" onClick={() => moveGalleryImage(index, -1)} className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100">Move Up</button>
-                <button type="button" onClick={() => moveGalleryImage(index, 1)} className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100">Move Down</button>
-                <button type="button" onClick={() => onGalleryChange((galleryImageUrls ?? []).filter((_, itemIndex) => itemIndex !== index))} className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100">Delete</button>
+      ) : null}
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Gallery</h3>
+            <p className="mt-0.5 text-xs text-gray-500">Listing gallery images, shown in display order.</p>
+          </div>
+          <label htmlFor={inputId('gallery')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"><Plus size={13} /> Add image</label>
+        </div>
+        {galleryUrls.length ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {galleryUrls.map((url, index) => (
+              <div key={`${url}-${index}`} className="group relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                <img src={url} alt="" className="aspect-[4/3] w-full object-cover" />
+                <div className="flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-3 py-2">
+                  <span className="text-xs font-semibold text-gray-500">Image {index + 1}</span>
+                  <button type="button" onClick={() => onHeaderChange(url)} className="text-xs font-semibold text-gray-700 hover:text-gray-950">Set as hero</button>
+                </div>
               </div>
-            </div>
-          ))}
-          {!(galleryImageUrls ?? []).length && (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center text-sm text-gray-500">
-              No gallery images.
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <label htmlFor={inputId('gallery')} className="flex min-h-28 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-400 transition hover:bg-gray-100">No gallery images — add one</label>
+        )}
       </div>
     </div>
   );
@@ -706,22 +793,51 @@ const AccessSection = ({
   );
 };
 
-const ModerationSection = ({
-  status,
+const ClubScheduleEditor = ({
+  schedule,
   onChange,
 }: {
-  status: Listing['status'];
-  onChange: (status: Listing['status']) => void;
-}) => (
+  schedule: DaySchedule[];
+  onChange: (schedule: DaySchedule[]) => void;
+}) => {
+  const updateDay = (index: number, patch: Partial<DaySchedule>) => {
+    const next = schedule.map((day, dayIndex) => dayIndex === index ? { ...day, ...patch } : day);
+    onChange(next);
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
+      <div className="grid grid-cols-[120px_88px_1fr_1fr] gap-3 border-b border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+        <span>Day</span><span>Status</span><span>Opens</span><span>Closes</span>
+      </div>
+      <div className="divide-y divide-gray-200">
+        {schedule.map((day, index) => (
+          <div key={day.day} className="grid grid-cols-[120px_88px_1fr_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-sm font-semibold text-gray-800">{day.day}</span>
+            <button
+              type="button"
+              onClick={() => updateDay(index, { isClosed: !day.isClosed })}
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${day.isClosed ? 'bg-gray-200 text-gray-600' : 'bg-emerald-50 text-emerald-700'}`}
+            >
+              {day.isClosed ? 'Closed' : 'Open'}
+            </button>
+            <input className={inputClass} type="time" disabled={day.isClosed} value={day.open ?? ''} onChange={(event) => updateDay(index, { open: event.target.value })} />
+            <input className={inputClass} type="time" disabled={day.isClosed} value={day.close ?? ''} onChange={(event) => updateDay(index, { close: event.target.value })} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ModerationSection = ({ status }: { status: Listing['status'] }) => (
   <div className="grid gap-4 md:grid-cols-2">
-    <Field label="Status">
-      <select className={inputClass} value={status} onChange={(event) => onChange(event.target.value as Listing['status'])}>
-        <option value="pending_approval">Pending approval</option>
-        <option value="approved">Approved</option>
-        <option value="flagged">Flagged</option>
-      </select>
-    </Field>
-    <EmptySection text="Moderation notes and review history can be attached here when backend support lands." />
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+      <p className={labelClass}>Current publishing state</p>
+      <p className="mt-2 text-sm font-bold capitalize text-gray-900">{status.replace('_', ' ')}</p>
+      <p className="mt-2 text-xs leading-5 text-gray-500">Use the Publish or Flag action in the editor header to change the listing's moderation state.</p>
+    </div>
+    <EmptySection text="Moderation notes and review history are not yet stored by the backend." />
   </div>
 );
 
@@ -847,6 +963,7 @@ export const AdminListingDetailEditor = ({
   onRelationshipSaved,
   onBack,
   onSaved,
+  backLabel = 'Back to listings',
 }: {
   listing: ClubData | EventData;
   users: User[];
@@ -861,10 +978,23 @@ export const AdminListingDetailEditor = ({
   onRelationshipSaved: (relationship: OrganizationVenueRelationship) => void;
   onBack: () => void;
   onSaved: (listing: ClubData | EventData) => void;
+  backLabel?: string;
 }) => {
   const [draft, setDraft] = useState<ClubData | EventData>(listing);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(listing));
   const { addToast } = useAppStore();
   const owner = users.find((user) => user.id === draft.postedByUserId);
+  const isDirty = JSON.stringify(draft) !== savedSnapshot;
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
   const semv2Collections = useMemo(() => ({
     listings,
     venues,
@@ -875,14 +1005,32 @@ export const AdminListingDetailEditor = ({
   const saveDraft = async (nextDraft = draft) => {
     const saved = nextDraft.type === 'club' ? await api.saveClub(nextDraft) : await api.saveEvent(nextDraft);
     setDraft(saved);
+    setSavedSnapshot(JSON.stringify(saved));
     addToast({ message: `${saved.name} saved.`, type: 'success' });
     onSaved(saved);
+  };
+
+  const guardedBack = () => {
+    if (isDirty && !window.confirm('Discard your unsaved changes and leave this editor?')) return;
+    onBack();
   };
 
   const saveStatus = async (status: Listing['status']) => {
     const nextDraft = { ...draft, status } as ClubData | EventData;
     setDraft(nextDraft);
     await saveDraft(nextDraft);
+  };
+
+  const publishListing = async () => {
+    if (!window.confirm(`Publish "${draft.name}" to SwingSphere? Review the listing details and media before continuing.`)) return false;
+    await saveStatus('approved');
+    return true;
+  };
+
+  const flagListing = async () => {
+    if (!window.confirm(`Flag "${draft.name}" for attention? It will not be treated as an approved public listing.`)) return false;
+    await saveStatus('flagged');
+    return true;
   };
 
   const deleteListing = async () => {
@@ -926,8 +1074,6 @@ export const AdminListingDetailEditor = ({
         id: 'basic',
         title: 'Basic Information',
         defaultOpen: true,
-        saveLabel: 'Save Basic',
-        onSave: () => saveDraft(),
         render: () => (
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Name"><input className={inputClass} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value } as ClubData | EventData)} /></Field>
@@ -949,8 +1095,6 @@ export const AdminListingDetailEditor = ({
       {
         id: 'address',
         title: 'Address & Map',
-        saveLabel: 'Save Address',
-        onSave: () => saveDraft(),
         render: () => (
           <AddressSection
             geopoint={draft.geopoint}
@@ -964,8 +1108,6 @@ export const AdminListingDetailEditor = ({
       {
         id: 'images',
         title: 'Images',
-        saveLabel: 'Save Images',
-        onSave: () => saveDraft(),
         render: () => (
           <ImagesSection
             ownerType={draft.type}
@@ -993,8 +1135,6 @@ export const AdminListingDetailEditor = ({
         {
           id: 'access',
           title: 'Access',
-          saveLabel: 'Save Access',
-          onSave: () => saveDraft(),
           render: () => (
             <AccessSection
               attendancePolicy={draft.attendancePolicy}
@@ -1006,27 +1146,23 @@ export const AdminListingDetailEditor = ({
         },
         {
           id: 'tags',
-          title: 'Tags',
-          saveLabel: 'Save Tags',
-          onSave: () => saveDraft(),
+          title: 'Tags & Amenities',
           render: () => <TagSelector kind="club" selected={draft.generalAmenities} onChange={(generalAmenities) => setDraft({ ...draft, generalAmenities })} />,
         },
         {
           id: 'schedule',
-          title: 'Schedule',
-          saveLabel: 'Save Schedule',
-          onSave: () => saveDraft(),
+          title: 'Hours & Schedule',
           render: () => (
-            <div className="grid gap-4">
+            <div className="grid gap-5">
+              <ClubScheduleEditor schedule={draft.schedule} onChange={(schedule) => setDraft({ ...draft, schedule })} />
               <Field label="Special schedule notes"><textarea className={`${inputClass} min-h-24`} value={draft.specialScheduleNotes ?? ''} onChange={(event) => setDraft({ ...draft, specialScheduleNotes: event.target.value })} /></Field>
-              <DebugSection value={draft.schedule} />
             </div>
           ),
         },
         {
           id: 'relationships',
           title: 'Relationships',
-          saveLabel: 'Save Relationships',
+          saveLabel: 'Apply relationship changes',
           onSave: async () => {
             if (draft.type === 'club' && draft.primaryVenueId && draft.ownerOrganizationId) {
               const savedRelationship = await api.saveOrganizationVenueRelationship({
@@ -1087,8 +1223,6 @@ export const AdminListingDetailEditor = ({
         {
           id: 'access',
           title: 'Access',
-          saveLabel: 'Save Access',
-          onSave: () => saveDraft(),
           render: () => (
             <AccessSection
               attendancePolicy={draft.attendancePolicy}
@@ -1102,8 +1236,6 @@ export const AdminListingDetailEditor = ({
         {
           id: 'dates',
           title: 'Schedule',
-          saveLabel: 'Save Dates',
-          onSave: () => saveDraft(),
           render: () => (
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Start"><input className={inputClass} type="datetime-local" value={draft.time.start.slice(0, 16)} onChange={(event) => setDraft({ ...draft, time: { ...draft.time, start: new Date(event.target.value).toISOString() } })} /></Field>
@@ -1114,22 +1246,16 @@ export const AdminListingDetailEditor = ({
         {
           id: 'tickets',
           title: 'Tickets',
-          saveLabel: 'Save Tickets',
-          onSave: () => saveDraft(),
           render: () => <Field label="Ticket / RSVP URL"><input className={inputClass} value={draft.website ?? ''} onChange={(event) => setDraft({ ...draft, website: event.target.value })} /></Field>,
         },
         {
           id: 'tags',
           title: 'Tags',
-          saveLabel: 'Save Tags',
-          onSave: () => saveDraft(),
           render: () => <TagSelector kind="event" selected={draft.tags} onChange={(tags) => setDraft({ ...draft, tags })} />,
         },
         {
           id: 'relationships',
           title: 'Relationships',
-          saveLabel: 'Save Relationships',
-          onSave: () => saveDraft(),
           render: () => (
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
@@ -1166,16 +1292,12 @@ export const AdminListingDetailEditor = ({
     shared.push(
       {
         id: 'moderation',
-        title: 'Moderation',
-        saveLabel: 'Save Moderation',
-        onSave: () => saveDraft(),
-        render: () => <ModerationSection status={draft.status} onChange={(status) => setDraft({ ...draft, status } as ClubData | EventData)} />,
+        title: 'Publishing & Moderation',
+        render: () => <ModerationSection status={draft.status} />,
       },
       {
         id: 'metadata',
-        title: 'Metadata',
-        saveLabel: 'Save Metadata',
-        onSave: () => saveDraft(),
+        title: 'System Metadata',
         render: () => (
           <MetadataSection rows={[
             ['Posted by', draft.postedByUserId],
@@ -1187,7 +1309,7 @@ export const AdminListingDetailEditor = ({
       },
       {
         id: 'debug',
-        title: 'Debug',
+        title: 'Developer / Raw Data',
         render: () => <DebugSection value={draft} />,
       },
     );
@@ -1203,10 +1325,13 @@ export const AdminListingDetailEditor = ({
       owner={owner?.displayName}
       status={draft.status}
       sections={sections}
-      onBack={onBack}
+      onBack={guardedBack}
+      backLabel={backLabel}
+      isDirty={isDirty}
+      archiveLabel="Flag for attention"
       onSave={() => saveDraft()}
-      onPublish={() => saveStatus('approved')}
-      onArchive={() => saveStatus('flagged')}
+      onPublish={publishListing}
+      onArchive={flagListing}
       onDelete={deleteListing}
     />
   );

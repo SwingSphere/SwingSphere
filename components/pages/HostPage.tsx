@@ -23,6 +23,7 @@ import ShowMoreList from '../host/ShowMoreList';
 import HostExternalLinks from '../host/HostExternalLinks';
 import PromoterFeedbackPlaceholder from '../feedback/PromoterFeedbackPlaceholder';
 import HostPageAdminEditor from '../admin-edit/HostPageAdminEditor';
+import HostQuickEditPanel, { type HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import ListingClaimCard from '../claims/ListingClaimCard';
@@ -200,7 +201,7 @@ const HostPage: React.FC = () => {
   const { registerPublicPage, clearPublicPage } = useAdminEditMode();
   const { canEdit } = usePublicEditAccess({
     postedByUserId: hostProfile?.organization?.postedByUserId,
-    organizationIds: [hostProfile?.organization?.id],
+    organizationIds: [hostProfile?.organization?.id, operatorOrganization?.id],
   });
 
   useEffect(() => {
@@ -235,7 +236,7 @@ const HostPage: React.FC = () => {
       entityType: 'organization',
       label: organization.name,
       canEdit,
-      supportsInlineQuickEdit: false,
+      supportsInlineQuickEdit: true,
     });
     return () => clearPublicPage(organization.id);
   }, [canEdit, clearPublicPage, hostProfile?.organization, registerPublicPage]);
@@ -337,6 +338,7 @@ const HostPage: React.FC = () => {
   }, [hostEvents]);
 
   const [pastExpanded, setPastExpanded] = useState(false);
+  const [quickEditField, setQuickEditField] = useState<HostQuickEditField | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -375,6 +377,14 @@ const HostPage: React.FC = () => {
 
   return (
     <>
+    {hostProfile.organization ? (
+      <HostQuickEditPanel
+        key={`${hostProfile.organization.id}-${quickEditField ?? 'closed'}`}
+        organization={hostProfile.organization}
+        field={quickEditField}
+        onClose={() => setQuickEditField(null)}
+      />
+    ) : null}
     <HostPageAdminEditor
       organization={hostProfile.organization ?? null}
       listings={listings}
@@ -395,12 +405,13 @@ const HostPage: React.FC = () => {
           headerImageUrl={hostProfile.organization?.headerImageUrl}
           description={hostProfile.organization?.descriptionShort}
           operatorName={operatorOrganization?.name}
-          displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.[0] ?? 'Host'}
+          displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.includes('producer') ? 'Producer' : hostProfile.organization?.displayTypes?.includes('community') ? 'Community' : 'Host'}
           regions={hostRegions}
           website={hostExternalLinks.website}
           eventsListed={hostEvents.length}
           hostingSince={hostSince}
           badges={hostBadges}
+          onQuickEdit={setQuickEditField}
         />
       }
       main={

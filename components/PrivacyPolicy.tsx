@@ -37,6 +37,7 @@ const PrivacyPolicy: React.FC = () => {
                     <li>Outbound actions such as opening a ticket, RSVP, booking, website, calendar, contact, or directions link.</li>
                     <li>The SwingSphere surface where an action occurred, such as the globe, map, details panel, or listing page.</li>
                     <li>Coarse technical information such as device class, application version, and whether an important feature initialized successfully.</li>
+                    <li>Inbound attribution such as the referring domain, landing-page path, campaign tags, and coarse country/region supplied by our hosting edge. We do not store the full referrer URL, IP address, or precise location in these analytics tables.</li>
                     <li>A rotating browser-session identifier used to estimate unique sessions and reduce duplicate click counts.</li>
                   </ul>
                   <p className="mt-2">We do not use this measurement to determine your legal identity, precise location, sexual orientation, gender identity, relationship status, or private preferences. We do not currently use cross-site behavioral advertising trackers. If our advertising or measurement practices materially change, we will update this policy and provide any choices required by applicable law.</p>
@@ -83,6 +84,7 @@ const PrivacyPolicy: React.FC = () => {
               <ul className="list-inside list-disc space-y-2 text-gray-400">
                 <li>Operate authentication, profiles, favorites, submissions, reviews, uploads, moderation, and organization access.</li>
                 <li>Measure product reliability and improve globe, map, search, mobile, accessibility, and performance behavior.</li>
+                <li>Understand how visitors arrive at SwingSphere, including referral source, landing page, device class, campaign attribution, and coarse country/region.</li>
                 <li>Count outbound traffic that SwingSphere sends to ticketing, RSVP, booking, website, calendar, directions, and contact destinations.</li>
                 <li>Provide promoters, listing owners, sponsors, or advertisers with aggregate performance reports for content or campaigns they control.</li>
                 <li>Prevent duplicate counting, automated abuse, fraud, unauthorized listing claims, and other misuse.</li>
@@ -95,6 +97,7 @@ const PrivacyPolicy: React.FC = () => {
               <h2 className="mb-4 text-2xl font-bold text-red-500">5. Security, Retention, and Deletion</h2>
               <ul className="list-inside list-disc space-y-2 text-gray-400">
                 <li><strong>Raw outbound events:</strong> intended for short-term operational use. Our systems are designed to remove account linkage from older raw events and delete raw records according to our configured retention controls. Retention periods may change as operational, security, and legal requirements evolve.</li>
+                <li><strong>Raw inbound sessions:</strong> retained for a limited operational period; the current first-party retention control removes raw inbound session rows after 90 days while preserving non-identifying daily aggregate counts.</li>
                 <li><strong>Aggregate outbound metrics:</strong> daily counts may be retained longer because they do not contain names, emails, raw destination URLs, or readable user histories.</li>
                 <li><strong>Account information:</strong> retained while an account remains active and as reasonably needed for security, moderation, dispute resolution, and account administration.</li>
                 <li><strong>Saved items, collections, and preferences:</strong> private to the account holder unless a future collection is deliberately published; retained until removed, changed, or deleted with the account, subject to limited operational backups.</li>

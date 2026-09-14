@@ -50,23 +50,27 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
+  const [reactionPrompt, setReactionPrompt] = useState(false);
 
   useEffect(() => {
     setSentiment(recommendationFromSubmission(existingSubmission));
     setReviewText(reviewTextFromSubmission(existingSubmission));
     setError('');
     setSavedMessage('');
+    setReactionPrompt(false);
   }, [existingSubmission?.id, existingSubmission?.overallSentiment, existingSubmission?.updatedAt]);
 
   const currentText = reviewTextFromSubmission(existingSubmission).trim();
   const currentSentiment = recommendationFromSubmission(existingSubmission);
+  const writtenStatus = existingSubmission?.writtenExperience.moderationStatus;
+  const writtenIsPending = writtenStatus === 'pending';
+  const hasApprovedText = Boolean(existingSubmission?.writtenExperience.approvedText?.trim());
   const hasChanges = useMemo(() => (
     reviewText.trim() !== currentText || sentiment !== currentSentiment
   ), [currentSentiment, currentText, reviewText, sentiment]);
 
-  const canSubmit = Boolean(
+  const canAttemptSubmit = Boolean(
     currentUser
-    && sentiment
     && reviewText.trim().length >= FEEDBACK_REVIEW_TEXT_MIN_LENGTH
     && reviewText.length <= FEEDBACK_REVIEW_TEXT_MAX_LENGTH
     && !disabled
@@ -75,7 +79,13 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
   );
 
   const submit = async () => {
-    if (!currentUser || !sentiment || reviewText.trim().length < FEEDBACK_REVIEW_TEXT_MIN_LENGTH || disabled || isSubmitting) return;
+    if (!currentUser || reviewText.trim().length < FEEDBACK_REVIEW_TEXT_MIN_LENGTH || disabled || isSubmitting) return;
+    if (!sentiment) {
+      setReactionPrompt(true);
+      setError('');
+      setSavedMessage('');
+      return;
+    }
     setIsSubmitting(true);
     setError('');
     setSavedMessage('');
@@ -103,7 +113,9 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
 
     try {
       await onSubmit(draft);
-      setSavedMessage(existingSubmission ? 'Review update submitted.' : 'Review submitted.');
+      setSavedMessage(existingSubmission
+        ? 'Review update submitted for moderation.'
+        : 'Review submitted for moderation.');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Your review could not be submitted.');
     } finally {
@@ -144,12 +156,14 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
                 type="button"
                 aria-label="Thumbs up"
                 aria-pressed={sentiment === 'positive'}
-                onClick={() => setSentiment('positive')}
+                onClick={() => { setSentiment('positive'); setReactionPrompt(false); }}
                 disabled={disabled || isSubmitting}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
                   sentiment === 'positive'
                     ? 'border-emerald-300/30 bg-emerald-500/12 text-emerald-100'
-                    : 'border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:border-white/15 hover:text-zinc-200'
+                    : reactionPrompt
+                      ? 'border-rose-300/45 bg-rose-500/10 text-rose-200 ring-2 ring-rose-500/20'
+                      : 'border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:border-white/15 hover:text-zinc-200'
                 } disabled:cursor-not-allowed disabled:opacity-50`}
                 title="Thumbs up"
               >
@@ -159,12 +173,14 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
                 type="button"
                 aria-label="Thumbs down"
                 aria-pressed={sentiment === 'negative'}
-                onClick={() => setSentiment('negative')}
+                onClick={() => { setSentiment('negative'); setReactionPrompt(false); }}
                 disabled={disabled || isSubmitting}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
                   sentiment === 'negative'
                     ? 'border-rose-300/30 bg-rose-500/12 text-rose-100'
-                    : 'border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:border-white/15 hover:text-zinc-200'
+                    : reactionPrompt
+                      ? 'border-rose-300/45 bg-rose-500/10 text-rose-200 ring-2 ring-rose-500/20'
+                      : 'border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:border-white/15 hover:text-zinc-200'
                 } disabled:cursor-not-allowed disabled:opacity-50`}
                 title="Thumbs down"
               >
@@ -192,17 +208,33 @@ const SimpleReviewComposer: React.FC<SimpleReviewComposerProps> = ({
             <div className="min-h-5 text-[11px] leading-5">
               {error ? <span className="text-rose-200" role="alert">{error}</span> : null}
               {!error && savedMessage ? <span className="text-emerald-200">{savedMessage}</span> : null}
-              {!error && !savedMessage && disabledReason ? <span className="text-zinc-500">{disabledReason}</span> : null}
-              {!error && !savedMessage && !disabledReason ? <span className="text-zinc-600">{reviewText.length}/{FEEDBACK_REVIEW_TEXT_MAX_LENGTH}</span> : null}
+              {!error && !savedMessage && reactionPrompt ? <span className="text-rose-200">Choose thumbs up or thumbs down before posting your review.</span> : null}
+              {!error && !savedMessage && !reactionPrompt && disabledReason ? <span className="text-zinc-500">{disabledReason}</span> : null}
+              {!error && !savedMessage && !reactionPrompt && !disabledReason && writtenIsPending ? (
+                <span className="text-amber-200">
+                  {hasApprovedText
+                    ? 'Revision pending moderation. Your previously approved review remains public until this version is approved.'
+                    : 'Pending moderation. Your review will appear publicly after approval.'}
+                </span>
+              ) : null}
+              {!error && !savedMessage && !reactionPrompt && !disabledReason && !writtenIsPending ? <span className="text-zinc-600">{reviewText.length}/{FEEDBACK_REVIEW_TEXT_MAX_LENGTH}</span> : null}
             </div>
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={!canSubmit}
+              disabled={!canAttemptSubmit}
               className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 self-end rounded-xl bg-rose-600 px-4 text-xs font-bold text-white shadow-[0_8px_22px_rgba(159,18,57,.16)] transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSubmitting ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}
-              {isSubmitting ? 'Posting…' : existingSubmission ? 'Update review' : 'Post review'}
+              {isSubmitting
+                ? 'Posting…'
+                : existingSubmission && !hasChanges && writtenIsPending
+                  ? 'Pending moderation'
+                  : existingSubmission && !hasChanges
+                    ? 'Review saved'
+                    : existingSubmission
+                      ? 'Update review'
+                      : 'Post review'}
             </button>
           </div>
         </div>

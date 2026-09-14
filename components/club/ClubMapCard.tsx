@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Copy, MapPinned } from 'lucide-react';
+import { Copy, MapPinned, Pencil } from 'lucide-react';
+import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import MiniMapHybrid from '../maps/MiniMapHybrid';
 import { getStreetViewPath, hasStreetViewForListing } from '../../lib/streetViewAvailability';
 
@@ -13,6 +14,7 @@ type ClubMapCardProps = {
   lng: number;
   isPrivateLocation?: boolean;
   showDirections?: boolean;
+  onEditLocation?: () => void;
 };
 
 const formatCoord = (value: number) => Number(value.toFixed(2));
@@ -27,8 +29,11 @@ const ClubMapCard: React.FC<ClubMapCardProps> = ({
   lng,
   isPrivateLocation = false,
   showDirections = true,
+  onEditLocation,
 }) => {
   const [copied, setCopied] = useState(false);
+  const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
+  const showEditLocation = isEditing && !isAdvancedEditorOpen && Boolean(onEditLocation);
   const mapLat = isPrivateLocation ? formatCoord(lat) : lat;
   const mapLng = isPrivateLocation ? formatCoord(lng) : lng;
   const mapLabel = [city, region].filter(Boolean).join(', ') || 'Location';
@@ -45,8 +50,17 @@ const ClubMapCard: React.FC<ClubMapCardProps> = ({
   };
 
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
-      <h2 className="text-base font-semibold text-gray-100">Location & Directions</h2>
+    <section className="relative rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
+      {showEditLocation ? (
+        <button
+          type="button"
+          onClick={onEditLocation}
+          className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+        >
+          <Pencil size={13} /> Edit location
+        </button>
+      ) : null}
+      <h2 className="pr-28 text-base font-semibold text-gray-100">Location & Directions</h2>
       <p className="mt-1 text-xs text-gray-500">
         {isPrivateLocation ? 'Approximate location shown.' : streetViewAvailable ? 'Explore the venue surroundings, then open directions when you are ready to go.' : 'Venue location and quick map links.'}
       </p>

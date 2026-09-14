@@ -22,7 +22,7 @@ const LogIn: React.FC = () => {
       const user = await login(email, password);
       if (user) {
         const requestedPath = (location.state as { from?: string } | null)?.from;
-        const targetPath = requestedPath || (user.role === 'Admin' || user.role === 'Host' ? '/admin' : '/account');
+        const targetPath = requestedPath || (user.role === 'Admin' || user.role === 'Host' ? '/admin' : '/');
         navigate(targetPath, { replace: true });
       } else {
         setError('Invalid email or password.');

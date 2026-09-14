@@ -109,7 +109,7 @@ const LandingPage: React.FC = () => {
         <SavedLivingLowPolyBackground className="ss-homepage-living-art" />
       {/* Hero Section */}
       <section className="ss-homepage-hero relative min-h-screen overflow-hidden">
-        <div className="pointer-events-none absolute bottom-0 right-[-18vw] top-[-12vh] z-0 hidden w-[88vw] md:block [mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [mask-composite:intersect] [-webkit-mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [-webkit-mask-composite:source-in]">
+        <div className="pointer-events-none absolute bottom-0 right-[-17vw] top-[-14vh] z-0 hidden w-[94vw] md:block [mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [mask-composite:intersect] [-webkit-mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [-webkit-mask-composite:source-in]">
           <LandingHeroGlobe />
         </div>
         <div className="relative z-10 container mx-auto flex min-h-[calc(100vh-11rem)] items-center px-6 pt-28 lg:px-8">

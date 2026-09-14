@@ -129,6 +129,8 @@ export const listOwnListingClaims = async (): Promise<ListingClaim[]> => {
 export type AdminListingClaim = ListingClaim & {
   claimantDisplayName?: string;
   claimantHandle?: string;
+  entityName?: string;
+  entityPath?: string;
 };
 
 export const listListingClaimsForAdmin = async (): Promise<AdminListingClaim[]> => {
@@ -139,14 +141,20 @@ export const listListingClaimsForAdmin = async (): Promise<AdminListingClaim[]> 
   if (claimsError) throw claimsError;
 
   const claims = ((claimRows ?? []) as ListingClaimRow[]).map(mapListingClaim);
-  const claimantIds = Array.from(new Set(claims.map((claim) => claim.claimantUserId)));
+  const claimantIds = Array.from(new Set(claims.map((claim) => claim.claimantUserId).filter(Boolean)));
   if (!claimantIds.length) return claims;
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
     .select('id, display_name, handle')
     .in('id', claimantIds);
-  if (profilesError) throw profilesError;
+
+  // Claim rows are the source of truth for the moderation queue. Profile enrichment
+  // is optional and must never make claims disappear if a secondary lookup fails.
+  if (profilesError) {
+    if (import.meta.env.DEV) console.warn('Unable to enrich listing claims with claimant profiles:', profilesError);
+    return claims;
+  }
 
   const profileById = new Map(
     (profiles ?? []).map((profile) => [profile.id, profile] as const),
@@ -160,6 +168,16 @@ export const listListingClaimsForAdmin = async (): Promise<AdminListingClaim[]> 
       claimantHandle: profile?.handle,
     };
   });
+};
+
+export const getOwnListingClaimById = async (claimId: string): Promise<ListingClaim | null> => {
+  const { data, error } = await supabase
+    .from('listing_claims')
+    .select('*')
+    .eq('id', claimId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapListingClaim(data as ListingClaimRow) : null;
 };
 
 export const getOwnListingClaimForEntity = async (

@@ -320,8 +320,21 @@ export class GlobeRenderer {
     const viewOffsetX = width >= viewOffsetMinWidth
       ? Number(this.config.renderer.viewOffsetX ?? 0)
       : 0;
-    if (Number.isFinite(viewOffsetX) && Math.abs(viewOffsetX) > 0.0001) {
-      this.camera.setViewOffset(width, height, -Math.round(width * viewOffsetX), 0, width, height);
+    const viewOffsetY = width >= viewOffsetMinWidth
+      ? Number(this.config.renderer.viewOffsetY ?? 0)
+      : 0;
+    if (
+      (Number.isFinite(viewOffsetX) && Math.abs(viewOffsetX) > 0.0001)
+      || (Number.isFinite(viewOffsetY) && Math.abs(viewOffsetY) > 0.0001)
+    ) {
+      this.camera.setViewOffset(
+        width,
+        height,
+        -Math.round(width * viewOffsetX),
+        Math.round(height * viewOffsetY),
+        width,
+        height
+      );
     } else {
       this.camera.clearViewOffset();
     }

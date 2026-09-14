@@ -10,6 +10,7 @@ import ExplorerLayout from './components/explorer/ExplorerLayout';
 import { ExplorerProvider } from './components/explorer/ExplorerProvider';
 import { DEV_TOOLS_ENABLED } from './lib/devTools';
 import ComingSoonPage from './components/ComingSoonPage';
+import InboundAnalyticsTracker from './components/analytics/InboundAnalyticsTracker';
 
 const ProductionGlobePage = React.lazy(() => import('./components/ProductionGlobePage'));
 const ListingSubmissionForm = React.lazy(() => import('./components/ListingSubmissionForm'));
@@ -132,6 +133,7 @@ root.render(
       ) : (
       <AppProvider>
         <BrowserRouter basename={APP_BASENAME}>
+          <InboundAnalyticsTracker />
           <React.Suspense fallback={<div className="min-h-[40vh] bg-[#030405]" aria-label="Loading SwingSphere" />}>
           <Routes>
             <Route
@@ -162,6 +164,7 @@ root.render(
             <Route path="/" element={<App />}>
               <Route index element={<RootEntryPage />} />
               <Route path="submission" element={<ProtectedRoute><ListingSubmissionForm /></ProtectedRoute>} />
+              <Route path="submission/:listingId" element={<ProtectedRoute><ListingSubmissionForm /></ProtectedRoute>} />
               <Route element={<ExplorerLayout />}>
                 <Route path="globe" element={<ProductionGlobePage />} />
                 <Route
@@ -195,7 +198,7 @@ root.render(
               <Route path="login" element={<LogIn />} />
               <Route path="signup" element={<SignUp />} />
               <Route path="account/*" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-              <Route path="host-dashboard" element={<ProtectedRoute roles={['Host']}><HostDashboard /></ProtectedRoute>} />
+              <Route path="host-dashboard" element={<ProtectedRoute><HostDashboard /></ProtectedRoute>} />
               <Route path="users/:handle" element={<PublicProfilePage />} />
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password" element={<ResetPassword />} />

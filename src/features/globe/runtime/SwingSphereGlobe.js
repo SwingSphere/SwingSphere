@@ -1704,6 +1704,7 @@ export class SwingSphereGlobe {
   }
 
   #highlightEventCountry(event) {
+    if (this.config.selection?.highlightEventCountry === false) return null;
     const countryKey = resolveEventCountryKey(event);
     if (shouldLogHighlightTrace()) {
       console.debug("[SwingSphere event-highlight] event selection", {

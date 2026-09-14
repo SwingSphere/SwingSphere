@@ -118,6 +118,7 @@ export function createMarkerStyle(config, colorOverrides = {}, globeRadius = 2.5
     selectedLift: globeRadius * (presentation.selectedLiftRadius ?? ((pin.stemHeight * (pin.selectedLift - 1)) / globeRadius)),
     selectedLabelOffsetPx: config.presentation?.labels?.selectedOffsetPx ?? 54,
     hoverLabelOffsetPx: config.presentation?.labels?.hoverOffsetPx ?? 38,
+    labelLogoObjectFit: config.presentation?.labels?.logoObjectFit ?? "cover",
     rippleInnerRadius: globeRadius * (presentation.glowInnerRadiusRadius ?? (RIPPLE_INNER_RADIUS / globeRadius)),
     rippleOuterRadius: globeRadius * (presentation.glowOuterRadiusRadius ?? (RIPPLE_OUTER_RADIUS / globeRadius)),
     labelFootprintGap: pin.labelFootprintGap ?? DEFAULT_MARKER_STYLE.labelFootprintGap,
@@ -133,6 +134,7 @@ export class GlobeMarker {
     labelSubtitle = "",
     labelCountryIso2 = "",
     labelLogoUrl = "",
+    labelHeroUrl = "",
     position,
     radialDirection,
     styleOverrides = {},
@@ -236,7 +238,7 @@ export class GlobeMarker {
     this.hitTarget.userData.regionId = id;
 
     this.label = markerType === "listing"
-      ? createVenueLabelDomSet(id, labelTitle, labelSubtitle, labelCountryIso2, labelLogoUrl, labelOverlayRoot, style)
+      ? createVenueLabelDomSet(id, labelTitle, labelSubtitle, labelCountryIso2, labelLogoUrl, labelHeroUrl, labelOverlayRoot, style)
       : createCanvasLabelSprite(labelTitle, labelSubtitle, style, labelLogoUrl);
 
     this.wrapper.add(this.stem, this.baseGlow, this.tip);
@@ -906,9 +908,9 @@ function createVenueLabelSpriteSet(title, subtitle, logoUrl, styleOverrides = {}
   };
 }
 
-function createVenueLabelDomSet(markerId, title, subtitle, countryIso2, logoUrl, root, style = DEFAULT_MARKER_STYLE) {
-  const selectedElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, true);
-  const hoverElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, false);
+function createVenueLabelDomSet(markerId, title, subtitle, countryIso2, logoUrl, heroUrl, root, style = DEFAULT_MARKER_STYLE) {
+  const selectedElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, true, heroUrl, style.labelLogoObjectFit);
+  const hoverElement = createVenueLabelElement(title, subtitle, countryIso2, logoUrl, false, heroUrl, style.labelLogoObjectFit);
   selectedElement.dataset.markerId = String(markerId);
   selectedElement.setAttribute('role', 'link');
   selectedElement.setAttribute('aria-label', `Open ${title}`);
@@ -958,7 +960,7 @@ function createVenueLabelDomSet(markerId, title, subtitle, countryIso2, logoUrl,
   };
 }
 
-export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, selected) {
+export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, selected, heroUrl = "", logoObjectFit = "cover") {
   const element = document.createElement("div");
   element.className = selected ? "globe-venue-label globe-venue-label--selected" : "globe-venue-label globe-venue-label--hover";
   Object.assign(element.style, {
@@ -977,6 +979,7 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
       : "linear-gradient(145deg, rgba(20, 20, 26, 0.66), rgba(7, 8, 12, 0.62))",
     border: selected ? "1px solid rgba(255, 110, 130, 0.5)" : "1px solid rgba(255, 255, 255, 0.14)",
     borderRadius: selected ? "18px" : "11px",
+    overflow: "hidden",
     boxShadow: selected
       ? "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(60,0,12,0.44), 0 16px 38px rgba(0,0,0,0.42)"
       : "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 10px 26px rgba(0,0,0,0.34)",
@@ -995,6 +998,35 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
     transition: "opacity 140ms ease"
   });
 
+  if (heroUrl) {
+    const heroImage = document.createElement("img");
+    heroImage.src = heroUrl;
+    heroImage.alt = "";
+    heroImage.setAttribute("aria-hidden", "true");
+    Object.assign(heroImage.style, {
+      position: "absolute",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      opacity: selected ? "0.55" : "0.42",
+      filter: "saturate(0.88) contrast(1.06)",
+      pointerEvents: "none",
+      zIndex: "0"
+    });
+    const heroShade = document.createElement("div");
+    Object.assign(heroShade.style, {
+      position: "absolute",
+      inset: "0",
+      background: selected
+        ? "linear-gradient(90deg, rgba(10,8,12,0.58), rgba(10,8,12,0.34))"
+        : "linear-gradient(90deg, rgba(10,8,12,0.66), rgba(10,8,12,0.42))",
+      pointerEvents: "none",
+      zIndex: "1"
+    });
+    element.append(heroImage, heroShade);
+  }
+
   const logo = document.createElement("div");
   Object.assign(logo.style, {
     flex: "0 0 auto",
@@ -1010,7 +1042,9 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
     font: `700 ${selected ? 22 : 12}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
     filter: "none",
     mixBlendMode: "normal",
-    textShadow: "none"
+    textShadow: "none",
+    position: "relative",
+    zIndex: "2"
   });
 
   const image = document.createElement("img");
@@ -1021,7 +1055,7 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
   Object.assign(image.style, {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+    objectFit: logoObjectFit ?? "cover",
     display: "block",
     filter: "none",
     mixBlendMode: "normal"
@@ -1043,7 +1077,9 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
     flex: "1 1 auto",
     filter: "none",
     mixBlendMode: "normal",
-    textShadow: "none"
+    textShadow: "none",
+    position: "relative",
+    zIndex: "2"
   });
 
   const titleElement = document.createElement("div");

@@ -22,6 +22,9 @@ const AdminEditBar: React.FC = () => {
   const isEntityPage = ENTITY_ROUTE_PATTERN.test(location.pathname);
   const canEditPage = Boolean(currentUser && publicPage?.canEdit);
   const supportsInlineQuickEdit = Boolean(publicPage?.supportsInlineQuickEdit);
+  const isAdmin = currentUser?.role === 'Admin';
+  const managementPath = isAdmin ? '/admin' : '/host-dashboard';
+  const managementLabel = isAdmin ? 'Open admin' : 'Open dashboard';
 
   if (!canEditPage || !isEntityPage) return null;
 
@@ -54,7 +57,7 @@ const AdminEditBar: React.FC = () => {
           <ShieldCheck size={17} />
           {hasUnsavedChanges ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-300 ring-2 ring-[#111217]" /> : null}
         </span>
-        <span className="hidden sm:inline">Admin</span>
+        <span className="hidden sm:inline">{isAdmin ? 'Admin' : 'Manage'}</span>
         <span className="text-xs font-medium text-gray-400">{modeLabel}</span>
       </button>
     );
@@ -116,12 +119,12 @@ const AdminEditBar: React.FC = () => {
         <button
           type="button"
           onClick={() => {
-            if (setMode('viewing')) navigate('/admin');
+            if (setMode('viewing')) navigate(managementPath);
           }}
           className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm font-semibold text-gray-100 transition hover:bg-white/[0.1]"
         >
           <ExternalLink size={15} />
-          Open admin
+          {managementLabel}
         </button>
 
         <button

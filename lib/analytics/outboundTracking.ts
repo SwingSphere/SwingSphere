@@ -75,7 +75,7 @@ const createSessionId = (): string => {
   return fallbackUuid();
 };
 
-const getAnonymousSessionId = (): string => {
+export const getAnonymousSessionId = (): string => {
   if (typeof window === 'undefined') return createSessionId();
   try {
     const existing = window.sessionStorage.getItem(SESSION_KEY);
@@ -93,7 +93,7 @@ const normalizeCampaignKey = (value?: string | null): string | null => {
   return normalized || null;
 };
 
-const getCampaignKey = (explicit?: string): string | null => {
+export const getCampaignKey = (explicit?: string): string | null => {
   const explicitKey = normalizeCampaignKey(explicit);
   if (explicitKey) return explicitKey;
   if (typeof window === 'undefined') return null;
@@ -111,7 +111,7 @@ const getCampaignKey = (explicit?: string): string | null => {
   }
 };
 
-const getDeviceClass = (): 'mobile' | 'tablet' | 'desktop' | 'unknown' => {
+export const getDeviceClass = (): 'mobile' | 'tablet' | 'desktop' | 'unknown' => {
   if (typeof window === 'undefined') return 'unknown';
   const width = window.innerWidth;
   if (!Number.isFinite(width)) return 'unknown';

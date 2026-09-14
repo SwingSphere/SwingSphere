@@ -10,6 +10,7 @@ import type { Listing } from '../../../types';
 import ProductionGlobePage from '../../ProductionGlobePage';
 import ProtectedRoute from '../../ProtectedRoute';
 import ListingEditor from '../../listing-editor/ListingEditor';
+import SubmissionConfirmation from '../../listing-editor/SubmissionConfirmation';
 import SavedLivingLowPolyBackground from '../../SavedLivingLowPolyBackground';
 import { DeviceExperienceProvider, useDeviceExperience, type DeviceExperienceKind } from '../../device/DeviceExperienceContext';
 import { ExplorerProvider } from '../../explorer/ExplorerProvider';
@@ -432,15 +433,13 @@ const MobileAddScreen: React.FC = () => {
           <MobileHeader title="Add a listing" eyebrow="Community submission" onBack={() => navigate(basePath)} />
           <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-3">
           {submittedListing ? (
-            <section className="flex min-h-[62vh] flex-col items-center justify-center rounded-[26px] border border-emerald-300/15 bg-emerald-300/[0.045] px-6 text-center">
-              <span className="grid h-16 w-16 place-items-center rounded-[22px] border border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-200"><CheckCircle2 className="h-7 w-7" /></span>
-              <h1 className="mt-5 text-xl font-semibold text-white">Submission received</h1>
-              <p className="mt-2 text-[13px] leading-6 text-gray-400"><span className="font-semibold text-gray-200">{submittedListing.name}</span> is saved for review and will not appear publicly until it is approved.</p>
-              <div className="mt-6 grid w-full grid-cols-2 gap-2">
-                <button type="button" onClick={() => setSubmittedListing(null)} className="min-h-12 rounded-2xl border border-white/[0.08] bg-white/[0.045] px-3 text-sm font-semibold text-white">Add another</button>
-                <button type="button" onClick={() => navigate(basePath)} className="min-h-12 rounded-2xl bg-red-500 px-3 text-sm font-bold text-white">Explore</button>
-              </div>
-            </section>
+            <SubmissionConfirmation
+              listing={submittedListing}
+              presentation="mobile"
+              onViewSubmissions={() => navigate('/account/contributions')}
+              onReturn={() => navigate(basePath)}
+              onAddAnother={() => setSubmittedListing(null)}
+            />
           ) : (
             <ListingEditor
               mode="public"

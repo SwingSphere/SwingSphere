@@ -19,6 +19,7 @@ type MediaUploaderProps = {
   tone?: 'dark' | 'light';
   triggerOnly?: boolean;
   onError?: (message: string) => void;
+  managedEntityId?: string;
 };
 
 type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
@@ -57,6 +58,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   tone = 'dark',
   triggerOnly = false,
   onError,
+  managedEntityId,
 }) => {
   const rule = getMediaRule(role);
   const [asset, setAsset] = useState<MediaAsset | null>(existingAsset ?? null);
@@ -107,7 +109,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       const createResponse = await fetch('/api/media/create-upload-url', {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ ownerType, ownerId, role }),
+        body: JSON.stringify({ ownerType, ownerId, role, managedEntityId }),
       });
       if (!createResponse.ok) throw new Error(await getUploadError(createResponse));
       const createPayload = await createResponse.json();
@@ -136,6 +138,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
           role,
           externalId,
           altText: file.name.replace(/\.[^.]+$/, ''),
+          managedEntityId,
         }),
       });
       if (!completeResponse.ok) throw new Error(await getUploadError(completeResponse));

@@ -283,6 +283,12 @@ export const resolveBrandLogo = (
   return searchGraphForRole(target, catalog, 'header', 3);
 };
 
+export const resolveBrandHeader = (
+  targetType: BrandMediaEntityType,
+  targetId: string,
+  catalog: BrandMediaCatalog,
+): BrandMediaResolution => searchGraphForRole({ type: targetType, id: targetId }, catalog, 'header', 4);
+
 export const brandMediaSourceLabel = (resolution: BrandMediaResolution): string | undefined => {
   if (!resolution.url || !resolution.inherited || !resolution.sourceName) return undefined;
   return `Inherited from ${resolution.sourceName}`;

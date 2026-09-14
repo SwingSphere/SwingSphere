@@ -63,6 +63,10 @@ type ListingDraft = {
   entryRequirements: EntryRequirement[];
   isAddressPrivate: boolean;
   postedByUserId: string;
+  ownerOrganizationId?: string;
+  organizerOrganizationId?: string;
+  primaryVenueId?: string;
+  venueId?: string;
   status: Listing['status'];
   headerImageUrl: string;
   galleryImageUrls: string[];
@@ -71,10 +75,19 @@ type ListingDraft = {
   galleryImageFiles?: File[];
 };
 
+type ListingEditorPrefill = {
+  kind?: ListingKind;
+  organizationId?: string;
+  organizationName?: string;
+  club?: ClubData;
+};
+
 type ListingEditorProps = {
   mode: ListingEditorMode;
   initialKind?: ListingKind;
+  initialStep?: number;
   listingToEdit?: ClubData | EventData;
+  prefill?: ListingEditorPrefill;
   onSaved?: (listing: Listing) => void;
   onCancel: () => void;
   presentation?: 'default' | 'mobile';
@@ -198,11 +211,50 @@ const createDraftFromListing = (listing: ClubData | EventData, currentUser?: Use
   entryRequirements: listing.entryRequirements ?? deriveLegacyEntryRequirements(listing.attendancePolicy),
   isAddressPrivate: listing.type === 'event' ? Boolean(listing.isAddressPrivate) : false,
   postedByUserId: listing.postedByUserId || currentUser?.id || 'user-submission',
+  ownerOrganizationId: listing.type === 'club' ? listing.ownerOrganizationId : undefined,
+  organizerOrganizationId: listing.type === 'event' ? listing.organizerOrganizationId : undefined,
+  primaryVenueId: listing.type === 'club' ? listing.primaryVenueId : undefined,
+  venueId: listing.type === 'event' ? listing.venueId : undefined,
   status: listing.status,
   headerImageUrl: listing.headerImageUrl ?? '',
   galleryImageUrls: listing.galleryImageUrls ?? [],
   mediaAssets: listing.mediaAssets ?? [],
   };
+};
+
+const createDraftFromPrefill = (
+  prefill: ListingEditorPrefill,
+  currentUser?: User | null,
+  blankSchedule = false,
+): ListingDraft => {
+  const draft = createInitialDraft(currentUser, blankSchedule);
+  const kind = prefill.kind ?? (prefill.club ? 'event' : null);
+  draft.type = kind;
+  if (kind === 'club') draft.ownerOrganizationId = prefill.organizationId;
+  if (kind === 'event') draft.organizerOrganizationId = prefill.organizationId;
+  if (prefill.organizationName && kind === 'event') draft.hostName = prefill.organizationName;
+
+  if (prefill.club && kind === 'event') {
+    const addressInput = buildAddressInput(prefill.club.geopoint.address);
+    draft.venueKey = clubKey(prefill.club);
+    draft.venueId = prefill.club.primaryVenueId;
+    draft.addressInput = addressInput;
+    draft.verifiedAddressInput = addressInput;
+    draft.advancedAddress = {
+      addressLine1: prefill.club.geopoint.address.addressLine1 ?? '',
+      addressLine2: prefill.club.geopoint.address.addressLine2 ?? '',
+      city: prefill.club.geopoint.address.city ?? '',
+      region: prefill.club.geopoint.address.region ?? '',
+      postalCode: prefill.club.geopoint.address.postalCode ?? '',
+      country: prefill.club.geopoint.address.country ?? '',
+    };
+    draft.geopoint = prefill.club.geopoint;
+    draft.locationMeta = prefill.club.locationMeta ?? { status: 'validated' };
+    draft.attendancePolicy = normalizeAttendancePolicy(prefill.club.attendancePolicy);
+    draft.entryRequirements = prefill.club.entryRequirements ?? deriveLegacyEntryRequirements(prefill.club.attendancePolicy);
+  }
+
+  return draft;
 };
 
 const createListingId = (type: ListingKind) => {
@@ -373,6 +425,7 @@ const ReviewSection: React.FC<{ title: string; onEdit: () => void; children: Rea
 const submitDraft = async (
   mode: ListingEditorMode,
   draft: ListingDraft,
+  requireExisting = false,
 ): Promise<Listing> => {
   const fallbackAddress = draft.advancedAddress ?? createEmptyAddress();
   const base = draft.geopoint ?? {
@@ -419,8 +472,10 @@ const submitDraft = async (
       generalAmenities: draft.generalAmenities,
       status: draft.status,
       postedByUserId: draft.postedByUserId,
+      ownerOrganizationId: draft.ownerOrganizationId,
+      primaryVenueId: draft.primaryVenueId,
     } as ClubData;
-    return api.saveClub(club);
+    return api.saveClub(club, { requireExisting });
   }
 
   const event: EventData = {
@@ -438,8 +493,10 @@ const submitDraft = async (
     tags: draft.tags,
     status: draft.status,
     postedByUserId: draft.postedByUserId,
+    organizerOrganizationId: draft.organizerOrganizationId,
+    venueId: draft.venueId,
   } as EventData;
-  return api.saveEvent(event);
+  return api.saveEvent(event, { requireExisting });
 };
 
 const storageKeyForDraft = (mode: ListingEditorMode, kind: ListingKind | null, id?: string) =>
@@ -472,13 +529,17 @@ const readResumableDraft = (mode: ListingEditorMode): ResumableDraft | null => {
   return candidates.sort((a, b) => b.savedAt - a.savedAt)[0] ?? null;
 };
 
-const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listingToEdit, onSaved, onCancel, presentation = 'default' }) => {
+const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initialStep = 0, listingToEdit, prefill, onSaved, onCancel, presentation = 'default' }) => {
   const { currentUser, addToast, tags: taxonomyTags, tagCategories, fetchTags } = useAppStore();
   const [draft, setDraft] = useState<ListingDraft>(() =>
-    listingToEdit ? createDraftFromListing(listingToEdit, currentUser) : createInitialDraft(currentUser, mode === 'public'),
+    listingToEdit
+      ? createDraftFromListing(listingToEdit, currentUser)
+      : prefill
+        ? createDraftFromPrefill(prefill, currentUser, mode === 'public')
+        : createInitialDraft(currentUser, mode === 'public'),
   );
-  const [kind, setKind] = useState<ListingKind | null>(listingToEdit?.type ?? initialKind ?? null);
-  const [step, setStep] = useState(0);
+  const [kind, setKind] = useState<ListingKind | null>(listingToEdit?.type ?? prefill?.kind ?? initialKind ?? (prefill?.club ? 'event' : null));
+  const [step, setStep] = useState(initialStep);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
@@ -503,7 +564,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   const draftKey = storageKeyForDraft(mode, kind, listingToEdit?.id);
   const shouldPersistDraft = !isEditing && Boolean(kind);
   const hasInitializedSessionRef = useRef(false);
-  const isPublicSubmission = mode === 'public' && !listingToEdit;
+  const isPublicSubmission = mode === 'public';
   const isMobilePresentation = presentation === 'mobile';
   const activeSteps = isPublicSubmission ? PUBLIC_SUBMISSION_STEPS : EDITOR_STEPS.map((label, index) => ({ id: `admin-${index}`, label }));
   const totalSteps = activeSteps.length;
@@ -683,6 +744,10 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   }, [draft, isSaving, kind]);
 
   useEffect(() => {
+    if (listingToEdit) {
+      setDuplicateMatches([]);
+      return;
+    }
     if (!draft.type) return;
     const matches = findPotentialListingDuplicates({
       draft: {
@@ -690,10 +755,9 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         type: draft.type,
       } as Partial<Listing> & { type: ListingKind },
       listings,
-      excludeId: listingToEdit?.id,
     });
     setDuplicateMatches(matches);
-  }, [draft, listings, listingToEdit?.id]);
+  }, [draft, listings, listingToEdit]);
 
   const clubVenueOptions = useMemo(() => (
     listings
@@ -951,6 +1015,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
   useEffect(() => {
     if (!kind || step !== 1) return;
     if (!draft.addressInput.trim() && !draft.venueKey) return;
+    if (hasCurrentVerifiedLocation(draft)) return;
     const id = window.setTimeout(() => {
       void validateAddress();
     }, 650);
@@ -1051,12 +1116,14 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
         geopoint: draft.geopoint,
         locationMeta: draft.locationMeta,
       };
-      const saved = await submitDraft(mode, nextDraft);
+      const saved = await submitDraft(mode, nextDraft, Boolean(listingToEdit));
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(draftKey);
       }
       resetSubmissionState(initialKind ?? null, true);
-      addToast({ message: `${kind === 'club' ? 'Club' : 'Event'} saved successfully.`, type: 'success' });
+      if (mode !== 'public') {
+        addToast({ message: `${kind === 'club' ? 'Club' : 'Event'} saved successfully.`, type: 'success' });
+      }
       onSaved?.(saved);
     } catch (error) {
       const candidateMessage = error instanceof Error
@@ -1872,6 +1939,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
                 existingAsset={getDraftMediaAsset('flyer')}
                 onUploaded={handleMediaUploaded}
                 label="Event flyer"
+                managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
               />
             </div>
             <MediaUploader
@@ -1881,6 +1949,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
               existingAsset={getDraftMediaAsset('hero')}
               onUploaded={handleMediaUploaded}
               label="Event hero image"
+              managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />
             <MediaUploader
               ownerType="event"
@@ -1889,6 +1958,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
               existingAsset={getDraftMediaAsset('gallery')}
               onUploaded={handleMediaUploaded}
               label="Event gallery image"
+              managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />
           </>
         ) : (
@@ -1900,6 +1970,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
               existingAsset={getDraftMediaAsset('logo')}
               onUploaded={handleMediaUploaded}
               label="Club logo"
+              managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />
             <MediaUploader
               ownerType="club"
@@ -1908,6 +1979,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
               existingAsset={getDraftMediaAsset('hero')}
               onUploaded={handleMediaUploaded}
               label="Club hero image"
+              managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />
             <div className="md:col-span-2">
               <MediaUploader
@@ -1917,6 +1989,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
                 existingAsset={getDraftMediaAsset('gallery')}
                 onUploaded={handleMediaUploaded}
                 label="Club gallery image"
+                managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
               />
             </div>
           </>
@@ -2392,7 +2465,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, listin
                   <>
                     {(listingToEdit || kind) ? (
                       <div className="text-sm text-gray-400">
-                        {listingToEdit ? 'Changes save directly to the dev-local persistence file.' : 'Draft saved automatically.'}
+                        {listingToEdit ? (listingToEdit.status === 'approved' ? 'Changes will update this managed listing while keeping its current publication status.' : 'Changes will update this pending submission and keep it under review.') : 'Draft saved automatically.'}
                       </div>
                     ) : null}
                     <div className={isMobilePresentation ? 'grid grid-cols-2 gap-2' : 'flex flex-wrap gap-3'}>

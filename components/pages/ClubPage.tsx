@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
@@ -13,12 +13,16 @@ import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 
 const ClubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const key = parsePrettyKeyParam(slug ?? '');
   const { index, listings, venues, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
 
   const resolvedClub = index?.clubsByKey.get(key) ?? null;
   const { registerPublicPage, clearPublicPage } = useAdminEditMode();
-  const { canEdit } = usePublicEditAccess({ postedByUserId: resolvedClub?.postedByUserId });
+  const { canEdit } = usePublicEditAccess({
+    postedByUserId: resolvedClub?.postedByUserId,
+    organizationIds: [resolvedClub?.ownerOrganizationId],
+  });
   const [clubOverride, setClubOverride] = useState<typeof resolvedClub>(null);
   const [quickEditField, setQuickEditField] = useState<ClubQuickEditField | null>(null);
   useEffect(() => {
@@ -93,7 +97,13 @@ const ClubPage: React.FC = () => {
         onPreview={setClubOverride}
         onSaved={setClubOverride}
       />
-      <ClubDetailTemplate club={presentationClub ?? club} clubKey={clubKey} upcomingEvents={upcomingEvents} onQuickEdit={setQuickEditField} />
+      <ClubDetailTemplate
+        club={presentationClub ?? club}
+        clubKey={clubKey}
+        upcomingEvents={upcomingEvents}
+        onQuickEdit={setQuickEditField}
+        onEditLocation={() => navigate(`/submission/${encodeURIComponent(club.id)}?section=location&returnTo=${encodeURIComponent(window.location.pathname)}`)}
+      />
       <ClubPageAdminEditor club={club} />
     </>
   );

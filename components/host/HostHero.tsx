@@ -1,9 +1,11 @@
 import React from 'react';
-import { CalendarDays, ExternalLink, MapPin, ShieldCheck } from 'lucide-react';
+import { CalendarDays, ExternalLink, MapPin, Pencil, ShieldCheck } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
 import BadgeShelf from '../badges/BadgeShelf';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
+import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
+import type { HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
 
 type HostHeroProps = {
   hostSlug: string;
@@ -21,6 +23,7 @@ type HostHeroProps = {
   eventsListed?: number;
   hostingSince?: string;
   badges?: BadgeAwardView[];
+  onQuickEdit?: (field: HostQuickEditField) => void;
 };
 
 const toInitials = (name: string): string => {
@@ -46,7 +49,11 @@ const HostHero: React.FC<HostHeroProps> = ({
   eventsListed = 0,
   hostingSince,
   badges = [],
+  onQuickEdit,
 }) => {
+  const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
+  const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
+
   return (
     <section className="relative mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-2xl shadow-black/40">
       <div className="relative min-h-[360px] sm:min-h-[420px]">
@@ -57,13 +64,22 @@ const HostHero: React.FC<HostHeroProps> = ({
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/48 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20" />
+        {showQuickControls ? (
+          <div className="absolute right-4 top-4 z-20 flex flex-wrap gap-2">
+            <button type="button" onClick={() => onQuickEdit?.('hero')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Hero</button>
+            <button type="button" onClick={() => onQuickEdit?.('profile')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Profile</button>
+          </div>
+        ) : null}
 
         <div className="relative flex min-h-[360px] items-end p-4 sm:min-h-[420px] sm:p-7">
           <div className="w-full max-w-3xl">
             <div className="ss-glass ss-glass--liquid rounded-[26px] p-4 sm:p-5">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="ss-glass ss-glass--liquid relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[22px] text-3xl font-black text-white sm:h-28 sm:w-28">
-                  {logoImageUrl ? <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" /> : <><span className="font-serif text-4xl tracking-[-0.12em] text-white sm:text-5xl">{toInitials(hostName)}</span><span className="absolute bottom-3 h-0.5 w-9 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" /></>}
+                <div className="shrink-0">
+                  <div className="ss-glass ss-glass--liquid relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-[22px] text-3xl font-black text-white sm:h-28 sm:w-28">
+                    {logoImageUrl ? <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" /> : <><span className="font-serif text-4xl tracking-[-0.12em] text-white sm:text-5xl">{toInitials(hostName)}</span><span className="absolute bottom-3 h-0.5 w-9 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" /></>}
+                  </div>
+                  {showQuickControls ? <button type="button" onClick={() => onQuickEdit?.('logo')} className="mt-2 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Logo</button> : null}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

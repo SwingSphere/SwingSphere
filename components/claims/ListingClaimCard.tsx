@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { BadgeCheck, Building2, ChevronDown, LoaderCircle, ShieldCheck, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import {
   createListingClaim,
+  getOwnListingClaimById,
   getOwnListingClaimForEntity,
   withdrawListingClaim,
   type ListingClaim,
@@ -41,10 +43,14 @@ const ListingClaimCard: React.FC<ListingClaimCardProps> = ({
   defaultRole = 'manager',
 }) => {
   const { currentUser, addToast } = useAppStore();
+  const { canEdit: hasOrganizationAccess, isChecking: isCheckingAccess } = usePublicEditAccess({
+    organizationIds: [organizationId],
+  });
   const [claim, setClaim] = useState<ListingClaim | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(currentUser));
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmingWithdraw, setIsConfirmingWithdraw] = useState(false);
   const [requestedRole, setRequestedRole] = useState<ListingClaimRole>(defaultRole);
   const [note, setNote] = useState('');
 
@@ -82,10 +88,15 @@ const ListingClaimCard: React.FC<ListingClaimCardProps> = ({
         requestedRole,
         claimantNote: note.trim() || undefined,
       });
-      setClaim(created);
+      const confirmed = await getOwnListingClaimById(created.id);
+      if (!confirmed || confirmed.id !== created.id || !openStatuses.has(confirmed.status)) {
+        throw new Error('SwingSphere could not confirm the new claim in the review queue. Refresh this page before trying again.');
+      }
+      setClaim(confirmed);
       setIsOpen(false);
       setNote('');
-      addToast({ message: 'Listing claim submitted for manual verification.', type: 'success' });
+      setIsConfirmingWithdraw(false);
+      addToast({ message: 'Listing claim submitted and confirmed in the review queue.', type: 'success' });
     } catch (error) {
       addToast({ message: error instanceof Error ? error.message : 'Unable to submit listing claim.', type: 'error' });
     } finally {
@@ -99,13 +110,20 @@ const ListingClaimCard: React.FC<ListingClaimCardProps> = ({
     try {
       const withdrawn = await withdrawListingClaim(claim.id);
       setClaim(withdrawn);
-      addToast({ message: 'Listing claim withdrawn.', type: 'success' });
+      setIsConfirmingWithdraw(false);
+      setIsOpen(false);
+      setRequestedRole(defaultRole);
+      setNote('');
+      addToast({ message: 'Listing claim withdrawn. You can submit a new request at any time.', type: 'success' });
     } catch (error) {
       addToast({ message: error instanceof Error ? error.message : 'Unable to withdraw listing claim.', type: 'error' });
     } finally {
       setIsSaving(false);
     }
   };
+
+  const isManagedListing = Boolean(organizationId) || hasOrganizationAccess || claim?.status === 'verified';
+  if (!isLoading && !isCheckingAccess && isManagedListing) return null;
 
   return (
     <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
@@ -120,8 +138,14 @@ const ListingClaimCard: React.FC<ListingClaimCardProps> = ({
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="mt-4 flex items-center gap-2 text-xs text-gray-500"><LoaderCircle size={14} className="animate-spin" /> Checking claim status…</div>
+      {isLoading || isCheckingAccess ? (
+        <div className="mt-4 flex items-center gap-2 text-xs text-gray-500"><LoaderCircle size={14} className="animate-spin" /> Checking listing access…</div>
+      ) : hasOrganizationAccess ? (
+        <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.06] p-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200"><BadgeCheck size={15} /> Management access active</div>
+          <p className="mt-2 text-xs leading-5 text-gray-500">Your organization role already grants access to manage this listing and its connected content.</p>
+          <Link to="/host-dashboard" className="mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border border-emerald-300/15 bg-emerald-300/[0.08] px-4 text-xs font-bold text-emerald-100 hover:bg-emerald-300/[0.12]">Open management dashboard</Link>
+        </div>
       ) : claim && (openStatuses.has(claim.status) || claim.status === 'verified') ? (
         <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-200">
@@ -132,18 +156,51 @@ const ListingClaimCard: React.FC<ListingClaimCardProps> = ({
             {claim.status === 'information_requested'
               ? claim.decisionReason || 'SwingSphere needs another verification detail before completing this claim.'
               : claim.status === 'verified'
-                ? claim.verificationSummary || 'Authority was verified through the manual claim process.'
+                ? claim.verificationSummary || 'Authority was verified and your approved management role is now active.'
                 : 'Your request is recorded. SwingSphere will verify control through an official contact, social account, website challenge, invitation, or another proportionate method.'}
           </p>
-          {openStatuses.has(claim.status) ? (
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => void withdrawClaim()}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 disabled:opacity-50"
+          {claim.status === 'verified' ? (
+            <Link
+              to="/host-dashboard"
+              className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive mt-3 flex min-h-10 w-full items-center justify-center rounded-xl px-4 text-xs font-bold text-white"
             >
-              <X size={13} /> Withdraw request
-            </button>
+              Open management dashboard
+            </Link>
+          ) : null}
+          {openStatuses.has(claim.status) ? (
+            isConfirmingWithdraw ? (
+              <div className="mt-3 rounded-lg border border-amber-300/15 bg-amber-300/[0.05] p-3">
+                <p className="text-xs font-semibold text-amber-100">Withdraw this claim?</p>
+                <p className="mt-1 text-[11px] leading-5 text-gray-500">This removes the request from the review queue. You can submit a new claim later.</p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => setIsConfirmingWithdraw(false)}
+                    className="min-h-9 flex-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-gray-300 hover:bg-white/[0.05] disabled:opacity-50"
+                  >
+                    Keep request
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => void withdrawClaim()}
+                    className="min-h-9 flex-1 rounded-lg border border-red-300/20 bg-red-400/[0.08] px-3 text-xs font-bold text-red-200 hover:bg-red-400/[0.12] disabled:opacity-50"
+                  >
+                    {isSaving ? 'Withdrawing…' : 'Yes, withdraw'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => setIsConfirmingWithdraw(true)}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 disabled:opacity-50"
+              >
+                <X size={13} /> Withdraw request
+              </button>
+            )
           ) : null}
         </div>
       ) : currentUser ? (

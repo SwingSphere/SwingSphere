@@ -287,9 +287,21 @@ export const getListings = async (): Promise<Listing[]> => {
     }
 };
 
-const persistListingToSupabase = async <T extends Listing>(listing: T): Promise<T> => {
-    const { data, error } = await supabase.rpc('save_listing', { p_payload: listing });
-    if (error) throw error;
+const persistListingToSupabase = async <T extends Listing>(
+    listing: T,
+    options: { requireExisting?: boolean } = {},
+): Promise<T> => {
+    const rpcName = options.requireExisting ? 'save_managed_listing' : 'save_listing';
+    const { data, error } = await supabase.rpc(rpcName, { p_payload: listing });
+    if (error) {
+        const migrationMissing = options.requireExisting
+            && (error.code === 'PGRST202'
+                || /save_managed_listing/i.test(error.message ?? '') && /not find|does not exist/i.test(error.message ?? ''));
+        if (migrationMissing) {
+            throw new Error('Managed listing saves require the latest database migration.');
+        }
+        throw error;
+    }
     const saved = data as T;
     upsertLocalListing(saved);
     return saved;
@@ -403,9 +415,18 @@ export const deleteListing = async (id: string): Promise<{ success: boolean }> =
     return { success: true };
 };
 
+export const withdrawMyPendingListing = async (id: string): Promise<{ success: boolean }> => {
+    const { error } = await supabase.rpc('withdraw_my_pending_listing', {
+        p_listing_id: id,
+    });
+    if (error) throw error;
+    removeLocalListing(id);
+    return { success: true };
+};
+
 export const saveClub = async (
     club: ClubData,
-    options: { requirePersistence?: boolean } = {},
+    options: { requirePersistence?: boolean; requireExisting?: boolean } = {},
 ): Promise<ClubData> => {
     const clubToSave: ClubData = {
         ...club,
@@ -413,7 +434,7 @@ export const saveClub = async (
         id: club.id || `club-${Date.now()}`,
     };
     try {
-        return await persistListingToSupabase(clubToSave);
+        return await persistListingToSupabase(clubToSave, { requireExisting: options.requireExisting });
     } catch (error) {
         if (options.requirePersistence) {
             throw error instanceof Error ? error : new Error('Unable to persist this club update.');
@@ -421,7 +442,10 @@ export const saveClub = async (
         throw error;
     }
 };
-export const saveEvent = async (event: EventData): Promise<EventData> => {
+export const saveEvent = async (
+    event: EventData,
+    options: { requireExisting?: boolean } = {},
+): Promise<EventData> => {
     const normalizedHost = normalizeHostName(event.hostName ?? '');
     const nextEvent: EventData = {
         ...event,
@@ -429,7 +453,7 @@ export const saveEvent = async (event: EventData): Promise<EventData> => {
         hostName: normalizedHost,
         location: buildListingLocation(event),
     };
-    return persistListingToSupabase(nextEvent);
+    return persistListingToSupabase(nextEvent, { requireExisting: options.requireExisting });
 };
 
 export const getBuildingAssets = async (): Promise<BuildingAsset[]> => {

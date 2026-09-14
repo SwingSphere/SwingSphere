@@ -958,24 +958,6 @@
     "buildingAssetId": "building-asset-club-1782957638814",
     "mediaAssets": [
       {
-        "id": "01123e60-8ec1-488d-a8c2-aaffc287ba31",
-        "owner_type": "club",
-        "owner_id": "35f5912f-2b14-49e5-a469-d497ebe3b6cd",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "9d684456-6eca-4ec1-c21a-4e8a2bcb1600",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "topfloorclub",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T11:32:50.869713+00:00",
-        "updated_at": "2026-07-17T11:32:50.869713+00:00"
-      },
-      {
         "id": "c7675205-4855-42ed-be07-a174e5562c2d",
         "owner_type": "club",
         "owner_id": "35f5912f-2b14-49e5-a469-d497ebe3b6cd",
@@ -1012,7 +994,7 @@
         "updated_at": "2026-07-29T10:01:33.111116+00:00"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9d684456-6eca-4ec1-c21a-4e8a2bcb1600/logosquare",
+    "logoImageUrl": "https://www.topfloorclub.com/assets/og-topfloor.png",
     "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/216d753b-3d2c-4735-87b0-680305b58700/heropage"
   },
   {

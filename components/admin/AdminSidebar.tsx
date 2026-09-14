@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarDays,
   Flag,
+  Globe2,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -103,7 +104,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setView, pendi
             <NavLink
               icon={<Inbox {...iconProps} />}
               label="Submissions Queue"
-              isActive={currentView === 'submissions'}
+              isActive={currentView === 'submissions' || currentView === 'review-submission'}
               onClick={() => setView('submissions')}
               badgeCount={pendingSubmissions}
             />
@@ -169,6 +170,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setView, pendi
               label="Tags & Filters"
               isActive={currentView === 'tags'}
               onClick={() => setView('tags')}
+            />
+            <NavLink
+              icon={<Globe2 {...iconProps} />}
+              label="Inbound Analytics"
+              isActive={currentView === 'inbound-analytics'}
+              onClick={() => setView('inbound-analytics')}
             />
             <NavLink
               icon={<MousePointerClick {...iconProps} />}

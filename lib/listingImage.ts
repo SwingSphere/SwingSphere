@@ -36,12 +36,14 @@ const getMediaAssetUrl = (listing: Listing | null | undefined, role: 'logo' | 'h
   });
 };
 
-export const getListingLogoUrl = (listing: Listing | null | undefined): string => {
-  if (!listing) return LISTING_IMAGE_FALLBACK;
+export const getListingPrimaryLogoUrl = (listing: Listing | null | undefined): string | null => {
+  if (!listing) return null;
   return getMediaAssetUrl(listing, 'logo')
-    ?? resolveImageCandidate(listing.logoImageUrl)
-    ?? LISTING_IMAGE_FALLBACK;
+    ?? resolveImageCandidate(listing.logoImageUrl);
 };
+
+export const getListingLogoUrl = (listing: Listing | null | undefined): string =>
+  getListingPrimaryLogoUrl(listing) ?? LISTING_IMAGE_FALLBACK;
 
 export const getListingFlyerUrl = (listing: Listing | null | undefined): string => {
   if (!listing) return LISTING_IMAGE_FALLBACK;
@@ -50,11 +52,16 @@ export const getListingFlyerUrl = (listing: Listing | null | undefined): string 
     ?? getListingLogoUrl(listing);
 };
 
-export const getListingHeroUrl = (listing: Listing | null | undefined): string => {
-  if (!listing) return LISTING_IMAGE_FALLBACK;
+export const getListingPrimaryHeroUrl = (listing: Listing | null | undefined): string | null => {
+  if (!listing) return null;
   return getMediaAssetUrl(listing, 'hero')
     ?? resolveImageCandidate(listing.headerImageUrl)
-    ?? resolveImageCandidate(listing.galleryImageUrls?.[0])
+    ?? resolveImageCandidate(listing.galleryImageUrls?.[0]);
+};
+
+export const getListingHeroUrl = (listing: Listing | null | undefined): string => {
+  if (!listing) return LISTING_IMAGE_FALLBACK;
+  return getListingPrimaryHeroUrl(listing)
     ?? (listing.type === 'event' ? getListingFlyerUrl(listing) : null)
     ?? getListingLogoUrl(listing);
 };

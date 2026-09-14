@@ -3,6 +3,7 @@ import { disposeObject3D } from "./math/objectPools.js";
 import { resolveRenderedGlobeLandSurfaceAnchor } from "./math/surfaceAnchoring.js";
 import { wgs84ToRenderedGlobeLocal } from "./math/geoProjection.js";
 import { createMarkerStyle, DEFAULT_MARKER_STYLE, GlobeMarker, makeSurfaceQuaternion } from "./GlobeMarker.js";
+import { getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from "../../../../lib/listingImage.ts";
 
 
 export class PinManager {
@@ -95,6 +96,9 @@ export class PinManager {
         ? this.#resolveLandSurfaceAnchor(event.lon, event.lat)
         : spreadAnchor;
       if (usesSpreadCoordinate) estimatedSurfaceRaycastCount += 1;
+      const spreadSurfaceNormal = spreadAnchor.surfaceNormal ?? spreadAnchor.radialDirection;
+      const trueSurfaceNormal = trueAnchor.surfaceNormal ?? trueAnchor.radialDirection;
+      const terrainClearance = style.surfaceOffset;
       const marker = {
         id: String(event.id ?? event.name),
         name: event.name ?? String(event.id),
@@ -105,11 +109,13 @@ export class PinManager {
         anchorPosition: spreadAnchor.anchorPosition,
         radialDirection: spreadAnchor.radialDirection,
         spreadAnchorPosition: spreadAnchor.anchorPosition,
+        spreadRenderPosition: spreadAnchor.anchorPosition.clone().addScaledVector(spreadSurfaceNormal, terrainClearance),
         spreadRadialDirection: spreadAnchor.radialDirection,
         trueAnchorPosition: trueAnchor.anchorPosition,
+        trueRenderPosition: trueAnchor.anchorPosition.clone().addScaledVector(trueSurfaceNormal, terrainClearance),
         trueRadialDirection: trueAnchor.radialDirection,
-        surfaceOffset: pin.surfaceOffset,
-        surfacePosition: spreadAnchor.anchorPosition.clone().addScaledVector(spreadAnchor.radialDirection, pin.surfaceOffset)
+        surfaceOffset: terrainClearance,
+        surfacePosition: spreadAnchor.anchorPosition.clone().addScaledVector(spreadSurfaceNormal, terrainClearance)
       };
       this.#buildMarkerView(marker, style, entityType);
       if (pin.showPinAnchors) this.#buildAnchorView(marker);
@@ -462,15 +468,24 @@ export class PinManager {
   }
 
   #buildMarkerView(marker, style, entityType) {
+    const listing = marker.event?.listing ?? null;
+    const labelLogoUrl = getListingPrimaryLogoUrl(listing)
+      ?? marker.event?.organization?.logoImageUrl
+      ?? marker.event?.logoImageUrl
+      ?? "";
+    const labelHeroUrl = this.config.pinPlacement?.labelHeroBackground
+      ? (getListingPrimaryHeroUrl(listing) ?? marker.event?.headerImageUrl ?? "")
+      : "";
     const globeMarker = new GlobeMarker({
       id: marker.id,
       labelTitle: marker.labelTitle,
       labelSubtitle: marker.labelSubtitle,
       labelCountryIso2: marker.labelCountryIso2,
-      labelLogoUrl: marker.event?.organization?.logoImageUrl ?? marker.event?.listing?.logoImageUrl ?? marker.event?.logoImageUrl ?? "",
-      position: marker.spreadAnchorPosition,
+      labelLogoUrl,
+      labelHeroUrl,
+      position: marker.spreadRenderPosition,
       radialDirection: marker.spreadRadialDirection,
-      styleOverrides: style,
+      styleOverrides: { ...style, surfaceOffset: 0 },
       markerType: "listing",
       variant: entityType,
       config: this.config,
@@ -539,8 +554,8 @@ export class PinManager {
       lerpFactor
     );
     view.markerGroup.position.lerpVectors(
-      view.marker.spreadAnchorPosition,
-      view.marker.trueAnchorPosition,
+      view.marker.spreadRenderPosition,
+      view.marker.trueRenderPosition,
       view.currentGeographicMix
     );
     view.markerGroup.quaternion.slerpQuaternions(
@@ -589,7 +604,9 @@ export class PinManager {
       raycaster: this.raycaster,
       origin: this.tmpOrigin,
       direction: this.tmpDirection,
-      candidate: this.tmpCandidate
+      candidate: this.tmpCandidate,
+      preferTopSurface: true,
+      centerOnLandGeometry: true
     });
   }
 

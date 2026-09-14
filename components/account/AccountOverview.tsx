@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Bookmark, Eye, FileText, LockKeyhole, MapPinned, Pencil, Sparkles, Star } from 'lucide-react';
+import { ArrowRight, Bookmark, FileText, LockKeyhole, MapPinned, Pencil, Sparkles, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { User } from '../../data/mockUsers';
 import { useMemberHubDemoContent } from '../../hooks/useMemberHubDemoContent';
@@ -11,9 +11,7 @@ const AccountOverview: React.FC<{
 }> = ({ currentUser, privacy }) => {
   const demo = useMemberHubDemoContent(currentUser);
   const visibility = privacy?.profileVisibility ?? 'private';
-  const visibilityMessage = visibility === 'private'
-    ? 'Your profile, saves, and activity are private. Reviews can show your username, but the username displays a private-profile lock instead of opening a page.'
-    : 'Your member profile can be opened from your username or a direct link.';
+  const profileStatus = visibility === 'private' ? 'Private profile' : 'Visible by link';
 
   return (
     <div className="space-y-4">
@@ -37,15 +35,17 @@ const AccountOverview: React.FC<{
           <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-red-200/80">
             <Sparkles size={14} aria-hidden="true" /> Member hub
           </p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Welcome back, {currentUser.displayName}</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-400 sm:text-base">{visibilityMessage}</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Your SwingSphere</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-400 sm:text-base">
+            Welcome back, {currentUser.displayName}. Pick up where you left off, manage what you've saved, or jump back into discovery.
+          </p>
         </div>
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
           <Link to="/globe" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-950/25 transition hover:bg-red-500">
             <MapPinned size={17} aria-hidden="true" /> Explore SwingSphere
           </Link>
-          <Link to="/account/public-profile" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:border-red-400/35 hover:text-white">
-            <Eye size={17} aria-hidden="true" /> Edit member profile
+          <Link to="/" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:border-red-400/35 hover:text-white">
+            Back to home
           </Link>
         </div>
       </section>
@@ -69,11 +69,11 @@ const AccountOverview: React.FC<{
         />
         <OverviewCard
           icon={<LockKeyhole size={20} />}
-          eyebrow="Privacy"
-          title={visibility === 'private' ? 'Private by default' : 'Visible by link'}
-          copy="Control whether your @username stays private or opens a member profile by direct link."
-          to="/account/privacy"
-          action="Review visibility"
+          eyebrow="Member profile"
+          title={profileStatus}
+          copy="Manage the identity attached to your contributions and choose whether your profile can open from your @username."
+          to="/account/public-profile"
+          action="Manage profile"
         />
       </div>
 
@@ -125,18 +125,18 @@ const AccountOverview: React.FC<{
         </div>
       ) : null}
 
-      <section className="rounded-[24px] border border-white/[0.08] bg-black/25 p-5 sm:p-6">
-        <div className="flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] text-gray-300">
-            <LockKeyhole size={20} aria-hidden="true" />
+      <section className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] text-gray-300">
+            <LockKeyhole size={17} aria-hidden="true" />
           </span>
-          <div>
-            <h3 className="text-base font-bold text-white">What a review reveals</h3>
-            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-gray-400">
-              Approved written reviews may show your display name and @username. A private username displays a lock explanation; a visible username opens your member page. Your saves, attendance, recent views, email, and relationship associations remain private.
-            </p>
-          </div>
+          <p>
+            Your saves, attendance, recent views, email, and relationship associations stay private.
+          </p>
         </div>
+        <Link to="/account/privacy" className="shrink-0 font-bold text-red-300 transition hover:text-red-200">
+          Privacy settings
+        </Link>
       </section>
     </div>
   );
