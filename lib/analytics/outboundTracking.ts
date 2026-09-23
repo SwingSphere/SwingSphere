@@ -1,4 +1,6 @@
 import { supabase } from '../supabase';
+import { getOutboundDestinationDomain, getOutboundDestinationPath } from './outboundDestination';
+export { getOutboundDestinationDomain, getOutboundDestinationPath } from './outboundDestination';
 
 export type OutboundEntityType =
   | 'club'
@@ -131,25 +133,6 @@ const inferSurface = (): OutboundSurface => {
   return 'unknown';
 };
 
-export const getOutboundDestinationDomain = (href: string): string => {
-  const trimmed = href.trim();
-  if (!trimmed) return 'unknown.local';
-  if (trimmed.startsWith('mailto:')) {
-    const email = trimmed.slice('mailto:'.length).split('?')[0];
-    return email.includes('@') ? email.split('@').pop()?.toLowerCase() || 'email.local' : 'email.local';
-  }
-  if (trimmed.startsWith('geo:')) return 'device-maps.local';
-  if (trimmed.startsWith('blob:')) return 'download.local';
-  try {
-    return new URL(trimmed, typeof window === 'undefined' ? 'https://swingsphere.co' : window.location.origin)
-      .host
-      .replace(/^www\./i, '')
-      .toLowerCase();
-  } catch {
-    return 'unknown.local';
-  }
-};
-
 export const trackOutboundClick = async (
   href: string,
   metadata: OutboundTrackingMetadata,
@@ -159,12 +142,13 @@ export const trackOutboundClick = async (
   const placement = metadata.placement.trim();
   if (!entityId || !placement) return;
 
-  const { error } = await supabase.rpc('record_outbound_click', {
+  const payload = {
     p_anonymous_session_id: getAnonymousSessionId(),
     p_entity_type: metadata.entityType,
     p_entity_id: entityId,
     p_destination_type: metadata.destinationType,
     p_destination_domain: metadata.destinationDomain ?? getOutboundDestinationDomain(href),
+    p_destination_path: getOutboundDestinationPath(href),
     p_placement: placement,
     p_surface: metadata.surface ?? inferSurface(),
     p_organization_id: metadata.organizationId?.trim() || null,
@@ -174,7 +158,14 @@ export const trackOutboundClick = async (
     p_device_class: getDeviceClass(),
     p_interaction_type: interactionType,
     p_app_version: import.meta.env.VITE_APP_VERSION || null,
-  });
+  };
+
+  let { error } = await supabase.rpc('record_outbound_click_v2', payload);
+  if (error) {
+    const { p_destination_path: _ignoredDestinationPath, ...legacyPayload } = payload;
+    const fallback = await supabase.rpc('record_outbound_click', legacyPayload);
+    error = fallback.error;
+  }
 
   if (error && import.meta.env.DEV) {
     console.warn('Outbound click attribution failed:', error.message);

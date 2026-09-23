@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck } from 'lucide-react';
-import { getOutboundAnalyticsSummary, type OutboundAnalyticsSummary } from '../../lib/analytics/outboundReports';
+import { BarChart3, ChevronRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import {
+  getOutboundAnalyticsDetail,
+  getOutboundAnalyticsSummary,
+  type OutboundAnalyticsDetail,
+  type OutboundAnalyticsDetailFilter,
+  type OutboundAnalyticsSummary,
+} from '../../lib/analytics/outboundReports';
 import type { OutboundEntityType } from '../../lib/analytics/outboundTracking';
 import { useAppStore } from '../../store/appStore';
+import * as api from '../../lib/api';
 
 const toDateInput = (date: Date): string => date.toISOString().slice(0, 10);
 
@@ -21,6 +28,23 @@ const entityTypes: Array<{ value: '' | OutboundEntityType; label: string }> = [
 
 const formatNumber = (value?: number): string => new Intl.NumberFormat('en-US').format(value ?? 0);
 
+const formatDestination = (domain: string, path?: string | null): string => {
+  if (!path) return domain;
+  return `${domain}${path}`;
+};
+
+const destinationHref = (domain: string, path?: string | null): string | null => {
+  if (!domain || domain.endsWith('.local')) return null;
+  if (!/^[a-z0-9.-]+(?::[0-9]+)?$/i.test(domain)) return null;
+  return `https://${domain}${path || ''}`;
+};
+
+type DetailSelection = {
+  title: string;
+  description: string;
+  filter: Omit<OutboundAnalyticsDetailFilter, 'from' | 'to'>;
+};
+
 const AdminOutboundAnalytics: React.FC = () => {
   const { addToast } = useAppStore();
   const today = useMemo(() => new Date(), []);
@@ -33,6 +57,10 @@ const AdminOutboundAnalytics: React.FC = () => {
   const [campaignKey, setCampaignKey] = useState('');
   const [summary, setSummary] = useState<OutboundAnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [detailSelection, setDetailSelection] = useState<DetailSelection | null>(null);
+  const [detail, setDetail] = useState<OutboundAnalyticsDetail | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [entityNames, setEntityNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     if (!from || !to || from > to) {
@@ -59,7 +87,50 @@ const AdminOutboundAnalytics: React.FC = () => {
 
   useEffect(() => {
     void load();
+    void (async () => {
+      try {
+        const [listings, organizations, eventSeries, venues, resorts, cruiseSeries, cruiseSailings] = await Promise.all([
+          api.getListings(),
+          api.getOrganizations(),
+          api.getEventSeries(),
+          api.getVenues(),
+          api.getResorts(),
+          api.getCruiseSeries(),
+          api.getCruiseSailings(),
+        ]);
+        const next: Record<string, string> = {};
+        listings.forEach((item) => { next[`${item.type}:${item.id}`] = item.name; });
+        organizations.forEach((item) => { next[`organization:${item.id}`] = item.name; });
+        eventSeries.forEach((item) => { next[`event_series:${item.id}`] = item.name; });
+        venues.forEach((item) => { next[`venue:${item.id}`] = item.name; });
+        resorts.forEach((item) => { next[`resort:${item.id}`] = item.name; });
+        cruiseSeries.forEach((item) => { next[`cruise_series:${item.id}`] = item.name; });
+        cruiseSailings.forEach((item) => { next[`cruise_sailing:${item.id}`] = item.name; });
+        setEntityNames(next);
+      } catch {
+        // IDs remain available even if friendly-name lookup fails.
+      }
+    })();
   }, []);
+
+  const openDetail = async (selection: DetailSelection) => {
+    setDetailSelection(selection);
+    setDetail(null);
+    setIsDetailLoading(true);
+    try {
+      setDetail(await getOutboundAnalyticsDetail({
+        from: summary?.from ?? from,
+        to: summary?.to ?? to,
+        ...selection.filter,
+      }));
+    } catch (error) {
+      addToast({ message: error instanceof Error ? error.message : 'Unable to load outbound click detail.', type: 'error' });
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
+  const getEntityName = (type: string, id: string) => entityNames[`${type}:${id}`] || id;
 
   const qualifiedRate = summary?.totalClicks
     ? Math.round((summary.qualifiedClicks / summary.totalClicks) * 1000) / 10
@@ -134,9 +205,14 @@ const AdminOutboundAnalytics: React.FC = () => {
               empty="No outbound destination activity in this range."
               rows={(summary.byDestination ?? []).map((row) => ({
                 primary: row.destinationType?.replaceAll('_', ' ') || 'Unknown',
-                secondary: 'External action type',
+                secondary: 'External action type · tap for detail',
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
+                onClick: () => void openDetail({
+                  title: `${row.destinationType?.replaceAll('_', ' ') || 'Unknown'} clicks`,
+                  description: 'Shows which entities, placements, and exact sanitized destinations produced this outbound action.',
+                  filter: { destinationType: row.destinationType ?? null },
+                }),
               }))}
             />
             <BreakdownTable
@@ -144,12 +220,65 @@ const AdminOutboundAnalytics: React.FC = () => {
               empty="No placement activity in this range."
               rows={(summary.byPlacement ?? []).map((row) => ({
                 primary: row.placement || 'Unknown placement',
-                secondary: row.surface?.replaceAll('_', ' ') || 'Unknown surface',
+                secondary: `${row.surface?.replaceAll('_', ' ') || 'Unknown surface'} · tap for detail`,
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
+                onClick: () => void openDetail({
+                  title: row.placement || 'Unknown placement',
+                  description: 'Shows the outbound destinations and entities clicked from this SwingSphere placement.',
+                  filter: { placement: row.placement ?? null, surface: row.surface ?? null },
+                }),
+              }))}
+            />
+            <BreakdownTable
+              title="Exact outbound links"
+              empty="No exact outbound link detail in this range."
+              rows={(summary.byLink ?? []).map((row) => ({
+                primary: formatDestination(row.destinationDomain, row.destinationPath),
+                secondary: `${row.destinationType.replaceAll('_', ' ')}${row.destinationPath ? '' : ' · domain only / legacy'}`,
+                qualified: row.qualifiedClicks,
+                total: row.totalClicks,
+                href: destinationHref(row.destinationDomain, row.destinationPath),
+                onClick: () => void openDetail({
+                  title: formatDestination(row.destinationDomain, row.destinationPath),
+                  description: 'Shows which SwingSphere entities and placements sent traffic to this destination.',
+                  filter: {
+                    destinationType: row.destinationType,
+                    destinationDomain: row.destinationDomain,
+                    destinationPath: row.destinationPath,
+                  },
+                }),
+              }))}
+            />
+            <BreakdownTable
+              title="By entity"
+              empty="No entity-level outbound traffic in this range."
+              rows={(summary.byEntity ?? []).map((row) => ({
+                primary: getEntityName(row.entityType, row.entityId),
+                secondary: `${row.entityType.replaceAll('_', ' ')} · ${row.entityId}`,
+                qualified: row.qualifiedClicks,
+                total: row.totalClicks,
+                onClick: () => void openDetail({
+                  title: getEntityName(row.entityType, row.entityId),
+                  description: 'Shows the websites, socials, ticketing, booking, and other outbound actions generated by this entity.',
+                  filter: { entityType: row.entityType, entityId: row.entityId },
+                }),
               }))}
             />
           </div>
+
+          {detailSelection ? (
+            <OutboundDetailPanel
+              selection={detailSelection}
+              detail={detail}
+              isLoading={isDetailLoading}
+              entityName={getEntityName}
+              onClose={() => {
+                setDetailSelection(null);
+                setDetail(null);
+              }}
+            />
+          ) : null}
 
           <section className="rounded-xl border border-gray-200 bg-white p-5 text-sm leading-6 text-gray-600 shadow-sm">
             <div className="flex items-center gap-2 font-bold text-gray-900"><ExternalLink size={16} /> Recommended sponsor wording</div>
@@ -170,10 +299,127 @@ const MetricCard: React.FC<{ label: string; value: string; emphasis?: boolean; f
   </div>
 );
 
+const OutboundDetailPanel: React.FC<{
+  selection: DetailSelection;
+  detail: OutboundAnalyticsDetail | null;
+  isLoading: boolean;
+  entityName: (type: string, id: string) => string;
+  onClose: () => void;
+}> = ({ selection, detail, isLoading, entityName, onClose }) => (
+  <section className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+    <div className="flex items-start justify-between gap-4 border-b border-blue-100 bg-blue-50 px-5 py-4">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">Outbound detail</p>
+        <h2 className="mt-1 text-xl font-black text-gray-900">{selection.title}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-6 text-gray-600">{selection.description}</p>
+      </div>
+      <button type="button" onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-white hover:text-gray-900" aria-label="Close outbound detail">
+        <X size={18} />
+      </button>
+    </div>
+
+    {isLoading ? (
+      <div className="flex min-h-40 items-center justify-center text-sm text-gray-500"><LoaderCircle size={17} className="mr-2 animate-spin" /> Loading outbound detail…</div>
+    ) : detail ? (
+      <div className="space-y-6 p-5">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Qualified clicks</div>
+            <div className="mt-1 text-2xl font-black text-blue-700">{formatNumber(detail.qualifiedClicks)}</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Total clicks</div>
+            <div className="mt-1 text-2xl font-black text-gray-900">{formatNumber(detail.totalClicks)}</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Raw-detail retention</div>
+            <div className="mt-1 text-sm leading-5 text-gray-700">Recent click rows are kept for {detail.rawRetentionDays || 90} days.</div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="rounded-xl border border-gray-200">
+            <div className="border-b border-gray-100 px-4 py-3"><h3 className="font-bold text-gray-900">Destinations</h3></div>
+            {!detail.byLink?.length ? <div className="p-4 text-sm text-gray-500">No link-level data.</div> : (
+              <div className="divide-y divide-gray-100">
+                {detail.byLink.map((row, index) => {
+                  const href = destinationHref(row.destinationDomain, row.destinationPath);
+                  return (
+                    <div key={`${row.destinationDomain}-${row.destinationPath}-${index}`} className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div className="min-w-0">
+                        <div className="break-all text-sm font-semibold text-gray-900">{formatDestination(row.destinationDomain, row.destinationPath)}</div>
+                        <div className="mt-0.5 text-xs capitalize text-gray-500">{row.destinationType.replaceAll('_', ' ')}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="text-sm font-bold tabular-nums text-blue-700">{formatNumber(row.qualifiedClicks)} q</span>
+                        {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-700" aria-label="Open outbound destination"><ExternalLink size={15} /></a> : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-gray-200">
+            <div className="border-b border-gray-100 px-4 py-3"><h3 className="font-bold text-gray-900">Entities generating clicks</h3></div>
+            {!detail.byEntity?.length ? <div className="p-4 text-sm text-gray-500">No entity-level data.</div> : (
+              <div className="divide-y divide-gray-100">
+                {detail.byEntity.map((row, index) => (
+                  <div key={`${row.entityType}-${row.entityId}-${index}`} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-gray-900">{entityName(row.entityType, row.entityId)}</div>
+                      <div className="mt-0.5 text-xs text-gray-500">{row.entityType.replaceAll('_', ' ')} · {row.entityId}</div>
+                    </div>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-blue-700">{formatNumber(row.qualifiedClicks)} q</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200">
+          <div className="border-b border-gray-100 px-4 py-3">
+            <h3 className="font-bold text-gray-900">Recent outbound clicks</h3>
+            <p className="mt-1 text-xs text-gray-500">Admin-only operational detail. Sponsor reporting should use aggregate qualified-click counts rather than individual click histories.</p>
+          </div>
+          {!detail.recentClicks?.length ? (
+            <div className="p-4 text-sm text-gray-500">No raw click rows remain for this selection.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px] text-left text-sm">
+                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <tr><th className="px-4 py-3">Clicked</th><th className="px-4 py-3">Entity</th><th className="px-4 py-3">Destination</th><th className="px-4 py-3">Placement</th><th className="px-4 py-3">Device</th><th className="px-4 py-3">Quality</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {detail.recentClicks.map((click, index) => {
+                    const href = destinationHref(click.destinationDomain, click.destinationPath);
+                    return (
+                      <tr key={`${click.occurredAt}-${index}`}>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">{new Date(click.occurredAt).toLocaleString()}</td>
+                        <td className="px-4 py-3"><div className="font-semibold text-gray-900">{entityName(click.entityType, click.entityId)}</div><div className="text-xs text-gray-500">{click.entityType.replaceAll('_', ' ')}</div></td>
+                        <td className="px-4 py-3"><div className="flex items-center gap-1 font-medium text-gray-800"><span className="max-w-[320px] break-all">{formatDestination(click.destinationDomain, click.destinationPath)}</span>{href ? <a href={href} target="_blank" rel="noopener noreferrer" className="shrink-0 text-blue-600" aria-label="Open outbound destination"><ExternalLink size={12} /></a> : null}</div><div className="text-xs capitalize text-gray-500">{click.destinationType.replaceAll('_', ' ')}</div></td>
+                        <td className="px-4 py-3 text-gray-600">{click.placement}<div className="text-xs capitalize text-gray-500">{click.surface.replaceAll('_', ' ')}</div></td>
+                        <td className="px-4 py-3 text-gray-600">{click.deviceClass}</td>
+                        <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${click.qualified ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>{click.qualified ? 'Qualified' : 'Repeat / filtered'}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null}
+  </section>
+);
+
 const BreakdownTable: React.FC<{
   title: string;
   empty: string;
-  rows: Array<{ primary: string; secondary: string; qualified: number; total: number }>;
+  rows: Array<{ primary: string; secondary: string; qualified: number; total: number; href?: string | null; onClick?: () => void }>;
 }> = ({ title, empty, rows }) => (
   <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
     <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">{title}</h2></div>
@@ -182,7 +428,20 @@ const BreakdownTable: React.FC<{
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500"><tr><th className="px-5 py-3">Category</th><th className="px-5 py-3 text-right">Qualified</th><th className="px-5 py-3 text-right">Total</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
-            {rows.map((row) => <tr key={`${row.primary}-${row.secondary}`}><td className="px-5 py-3"><div className="font-semibold capitalize text-gray-900">{row.primary}</div><div className="text-xs capitalize text-gray-500">{row.secondary}</div></td><td className="px-5 py-3 text-right font-bold tabular-nums text-blue-700">{formatNumber(row.qualified)}</td><td className="px-5 py-3 text-right tabular-nums text-gray-600">{formatNumber(row.total)}</td></tr>)}
+            {rows.map((row) => (
+              <tr key={`${row.primary}-${row.secondary}`} className={row.onClick ? 'transition hover:bg-blue-50/60' : ''}>
+                <td className="px-5 py-3">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0"><div className="break-all font-semibold capitalize text-gray-900">{row.primary}</div><div className="text-xs text-gray-500">{row.secondary}</div></div>
+                    {row.href ? <a href={row.href} target="_blank" rel="noopener noreferrer" className="mt-0.5 shrink-0 text-gray-400 hover:text-blue-600" onClick={(event) => event.stopPropagation()} aria-label="Open outbound destination"><ExternalLink size={13} /></a> : null}
+                  </div>
+                </td>
+                <td className="px-5 py-3 text-right font-bold tabular-nums text-blue-700">{formatNumber(row.qualified)}</td>
+                <td className="px-5 py-3 text-right tabular-nums text-gray-600">
+                  <span className="inline-flex items-center gap-2">{formatNumber(row.total)}{row.onClick ? <button type="button" onClick={row.onClick} className="rounded p-1 text-gray-400 hover:bg-white hover:text-blue-600" aria-label="Open click detail"><ChevronRight size={14} /></button> : null}</span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
