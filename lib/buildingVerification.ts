@@ -53,6 +53,11 @@ export const normalizeAddressText = (value: string | undefined): string => {
 
 export const extractHouseNumber = (value: string | undefined): string => extractAddressHouseNumber(value);
 const stripHouseNumber = (value: string | undefined): string => normalizeAddressText(stripAddressHouseNumber(value));
+const normalizeStreetForComparison = (value: string | undefined): string =>
+  normalizeAddressText(value).replace(
+    /\b(road|street|avenue|boulevard|drive|lane|court|parkway|highway)\s+(?:n|s|e|w|ne|nw|se|sw|north|south|east|west|northeast|northwest|southeast|southwest)$/,
+    '$1',
+  ).trim();
 const parseHouseNumberRange = (value: string): { start: number; end: number; suffix: string } | null => {
   const match = value.match(/^(\d+)([a-z]?)(?:[-/](\d+)[a-z]?)?$/);
   if (!match) return null;
@@ -100,7 +105,10 @@ export const scoreBuildingAddressCandidate = (
   let score = 0;
   const listingHouse = extractHouseNumber(listingAddress.addressLine1 ?? '');
   const candidateHouse = extractHouseNumber(candidate.houseNumber);
-  const streetSimilarity = tokenSimilarity(stripHouseNumber(listingAddress.addressLine1), normalizeAddressText(candidate.road));
+  const streetSimilarity = tokenSimilarity(
+    normalizeStreetForComparison(stripHouseNumber(listingAddress.addressLine1)),
+    normalizeStreetForComparison(candidate.road),
+  );
   const houseNumberMatch = houseNumbersMatch(listingHouse, candidateHouse);
   const houseNumberConflict = Boolean(listingHouse && candidateHouse && !houseNumberMatch);
   const cityMatch = sameText(listingAddress.city, candidate.city);

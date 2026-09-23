@@ -4677,5 +4677,107 @@
       "ringCount": 1,
       "vertexCount": 5
     }
+  },
+  {
+    "id": "building-asset-club-lizas-lounge-cape-town",
+    "listingId": "club-lizas-lounge-cape-town",
+    "version": 1,
+    "provider": {
+      "source": "SwingSphere reconstructed estimate",
+      "featureIds": [
+        "swingsphere-generated:club-lizas-lounge-cape-town"
+      ],
+      "origin": "generated",
+      "generationMethod": "nearby-orientation-estimate",
+      "generationConfidence": 0.62,
+      "provenanceNote": "No sourced footprint intersected the verified venue pin. SwingSphere estimated a 26×17m footprint using the orientation and typical size of nearby mapped buildings."
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            18.484509182121,
+            -33.823101988957326
+          ],
+          [
+            18.484240057439543,
+            -33.823038927711345
+          ],
+          [
+            18.484190817879,
+            -33.82318601104267
+          ],
+          [
+            18.484459942560456,
+            -33.823249072288654
+          ],
+          [
+            18.484509182121,
+            -33.823101988957326
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 7.5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-20T02:28:46.878Z",
+      "updatedAt": "2026-09-20T02:28:47.146Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 5
+    }
+  },
+  {
+    "id": "building-asset-club-fun4two-moordrecht",
+    "listingId": "club-fun4two-moordrecht",
+    "version": 1,
+    "provider": {
+      "source": "SwingSphere reconstructed estimate",
+      "featureIds": [
+        "swingsphere-generated:club-fun4two-moordrecht"
+      ],
+      "origin": "generated",
+      "generationMethod": "default-rectangle-estimate",
+      "generationConfidence": 0.45,
+      "provenanceNote": "No sourced footprint intersected the verified venue pin and nearby geometry was insufficient for orientation inference. SwingSphere created a conservative 20×14m rectangular estimate centered on the verified pin."
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            4.649989089319088,
+            52.00016967450697
+          ],
+          [
+            4.6502809106809115,
+            52.00016967450697
+          ],
+          [
+            4.6502809106809115,
+            52.00029632549303
+          ],
+          [
+            4.649989089319088,
+            52.00029632549303
+          ],
+          [
+            4.649989089319088,
+            52.00016967450697
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 7.5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-20T02:30:08.434Z",
+      "updatedAt": "2026-09-20T02:30:08.872Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 5
+    }
   }
 ]

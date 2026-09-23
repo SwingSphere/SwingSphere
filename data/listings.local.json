@@ -327,7 +327,27 @@
       }
     },
     "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/019e66cf-84bd-45ca-45a3-2a9d9d178f00/heropage",
-    "schedule": [],
+    "schedule": [
+      {
+        "day": "Thursday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "01:00"
+      },
+      {
+        "day": "Friday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "01:00"
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "01:00"
+      }
+    ],
+    "specialScheduleNotes": "Thursday, Friday and Saturday events typically run 20:00-01:00. Selected Sunday events use different hours; check the current event listing before visiting.",
     "generalAmenities": [
       "Casual",
       "Newbie Friendly",
@@ -1266,7 +1286,7 @@
     },
     "galleryImageUrls": [],
     "postedByUserId": "admin-import",
-    "status": "approved",
+    "status": "archived",
     "type": "club",
     "name": "Ice Lounge Chicago",
     "description_short": "Ice Lounge Chicago is the Chicago-area branch of Ice Lounge / Infamous Entertainment. The official listing currently publishes only the Chicago 60614 area, so the precise venue address should be confirmed through the event calendar or ticket confirmation.",
@@ -1338,7 +1358,7 @@
     },
     "galleryImageUrls": [],
     "postedByUserId": "admin-import",
-    "status": "approved",
+    "status": "archived",
     "type": "club",
     "name": "Ice Lounge - Milwaukee",
     "description_short": "Ice Lounge Milwaukee is listed as a city calendar under the Ice Lounge / Infamous Entertainment network. Publicly available site information does not currently expose a stable street address, so this record uses an approximate Milwaukee location until the venue is independently verified.",
@@ -4215,63 +4235,69 @@
   },
   {
     "id": "club-lizas-lounge-cape-town",
-    "type": "club",
     "name": "Liza's Lounge",
-    "description_short": "A permanent lifestyle club in Table View, Cape Town, offering weekly themed parties, social spaces, a dance floor, cash bar, jacuzzi, and a variety of private and open play rooms.",
-    "description_full": "Liza's Lounge is a permanent on-premise lifestyle club in Table View, Cape Town. The club describes itself as a relaxed and welcoming space for couples and singles to socialize, dance, have drinks, and explore at their own pace without pressure. Its renovated venue includes private rooms, voyeur and exhibitionism rooms, an orgy room, Kamasutra room, cage room, jacuzzi, dance floor, cash bar, and a 420-friendly social corner. Programming includes regular Friday events, Saturday theme parties, and selected midweek events. Guests should check the current event listing for exact times, attendance categories, dress themes, pricing, and booking requirements.",
-    "location": "47 Blaauwberg Road, Table View, Cape Town, 7441, South Africa",
-    "website": "https://lizaslounge.com/",
-    "contactEmail": "liza@lizaslounge.com",
+    "type": "club",
     "phone": "+27 82 491 1402",
     "status": "approved",
-    "postedByUserId": "user1",
+    "website": "https://lizaslounge.com/",
     "geopoint": {
-      "latitude": -33.8306066,
-      "longitude": 18.5103547,
       "address": {
-        "addressLine1": "47 Blaauwberg Road",
         "city": "Cape Town",
         "region": "Western Cape",
+        "country": "South Africa",
         "postalCode": "7441",
-        "country": "South Africa"
-      }
+        "addressLine1": "47 Blaauwberg Road"
+      },
+      "latitude": -33.823144,
+      "longitude": 18.48435
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.9,
-      "source": "official-site+nominatim-street",
-      "warnings": [
-        "official-address-confirmed",
-        "entrance-listed-as-19-popham-street",
-        "map-coordinate-resolved-near-street-segment"
-      ]
-    },
+    "location": "47 Blaauwberg Road, Table View, Cape Town, 7441, South Africa",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "rules": [
           "Selected Event Dates",
           "Check Event Calendar"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Friday",
-        "isClosed": false,
         "rules": [
           "Weekly Event",
           "Check Event Calendar"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "rules": [
           "Theme Party",
           "Check Event Calendar"
-        ]
+        ],
+        "isClosed": false
       }
     ],
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-20T02:24:44.959167+00:00",
+    "contactEmail": "liza@lizaslounge.com",
+    "locationMeta": {
+      "source": "official-site+google-maps",
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.99,
+      "validatedAt": "2026-09-19T19:11:00-07:00",
+      "geocoderLabel": "Liza's Lounge, Giuliva House, 47 Blaauwberg Road, Table View, Cape Town, 7441, South Africa",
+      "geocoderSource": "official-site+google-maps",
+      "manualAdjustment": true,
+      "normalizedAddress": "47 Blaauwberg Road, Table View, Cape Town, 7441, South Africa",
+      "coordinatePrecision": "poi"
+    },
+    "logoImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/08/Logo-200-png.png",
+    "headerImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/10/BG0.jpeg",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_night",
+    "description_full": "Liza's Lounge is a permanent on-premise lifestyle club in Table View, Cape Town. The club describes itself as a relaxed and welcoming space for couples and singles to socialize, dance, have drinks, and explore at their own pace without pressure. Its renovated venue includes private rooms, voyeur and exhibitionism rooms, an orgy room, Kamasutra room, cage room, jacuzzi, dance floor, cash bar, and a 420-friendly social corner. Programming includes regular Friday events, Saturday theme parties, and selected midweek events. Guests should check the current event listing for exact times, attendance categories, dress themes, pricing, and booking requirements.",
     "generalAmenities": [
       "Swinger Community",
       "On-Premise Club",
@@ -4294,9 +4320,8 @@
       "Privacy-Focused",
       "Consent-Focused"
     ],
-    "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/08/Logo-200-png.png",
-    "headerImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/10/BG0.jpeg"
+    "description_short": "A permanent lifestyle club in Table View, Cape Town, offering weekly themed parties, social spaces, a dance floor, cash bar, jacuzzi, and a variety of private and open play rooms.",
+    "buildingAssetId": "building-asset-club-lizas-lounge-cape-town"
   },
   {
     "id": "club-coliseum-mexico-city",
@@ -5448,6 +5473,12 @@
       "screening_approval_required",
       "members_only"
     ],
+    "schedule": [
+      {
+        "day": "Saturday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "The official rules state that Lussuria hosts events every Saturday night plus selected special events. Exact hours and attendance categories vary by event and require advance registration.",
     "buildingAssetId": "building-asset-club-lussuria-bangkok"
   },
@@ -5634,47 +5665,30 @@
   },
   {
     "id": "club-fun4two-moordrecht",
-    "type": "club",
     "name": "Fun4Two",
-    "description_short": "A large all-inclusive couples-focused lifestyle club near Gouda with a restaurant, dance floor, extensive wellness facilities, pool, themed events and multiple erotic play areas.",
-    "description_full": "Fun4Two is a permanent private lifestyle club in Moordrecht that has operated since 1996. The large all-inclusive venue combines a restaurant and bar, dance floor, garden and outdoor areas, swimming pool, sauna, jacuzzi, massage area and renovated wellness facilities with open erotic spaces, dark-room and fetish areas, and private lockable rooms. Standard Friday, Saturday and Sunday programming welcomes couples and single women. Single men are normally not admitted, except for a small number of ticketed Hardcore Night events and limited event-specific exceptions such as selected trio nights. Registration is required, reservations are strongly recommended and required on Saturdays, and valid identification must be presented. Food, house drinks, parking, lockers, towels, condoms and massage oil are included under the club's standard all-inclusive model.",
-    "location": "Middelweg 18, 2841 LA Moordrecht, South Holland, Netherlands",
-    "website": "https://www.fun4two.nl/",
-    "contactEmail": "info@fun4two.nl",
+    "type": "club",
     "phone": "+31 182 378 528",
     "status": "approved",
-    "postedByUserId": "user1",
+    "website": "https://www.fun4two.nl/",
     "geopoint": {
-      "latitude": 52.000233,
-      "longitude": 4.650135,
       "address": {
-        "addressLine1": "Middelweg 18",
         "city": "Moordrecht",
         "region": "South Holland",
-        "postalCode": "2841 LA",
         "country": "Netherlands",
-        "countrySlug": "nl",
-        "admin1Slug": "zuid-holland",
         "citySlug": "moordrecht",
-        "isCityState": false
-      }
+        "admin1Slug": "zuid-holland",
+        "postalCode": "2841 LA",
+        "countrySlug": "nl",
+        "isCityState": false,
+        "addressLine1": "Middelweg 18"
+      },
+      "latitude": 52.000233,
+      "longitude": 4.650135
     },
-    "locationMeta": {
-      "status": "validated",
-      "coordinatePrecision": "poi",
-      "confidence": 0.99,
-      "normalizedAddress": "Middelweg 18, 2841 LA Moordrecht, South Holland, Netherlands",
-      "geocoderLabel": "Fun4Two, Middelweg 18, 2841 LA Moordrecht, Netherlands",
-      "geocoderSource": "official-site+official-google-map",
-      "source": "official-site+official-google-map",
-      "warnings": [],
-      "manualAdjustment": true,
-      "validatedAt": "2026-09-06T22:05:00.000Z"
-    },
+    "location": "Middelweg 18, 2841 LA Moordrecht, South Holland, Netherlands",
     "schedule": [
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "21:00",
         "close": "03:00",
         "rules": [
@@ -5683,11 +5697,11 @@
           "No Single Men Under Standard Policy",
           "Selected Event Exceptions",
           "Registration Required"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "21:00",
         "close": "04:00",
         "rules": [
@@ -5696,11 +5710,11 @@
           "No Single Men Under Standard Policy",
           "Reservation Required",
           "Registration Required"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Sunday",
-        "isClosed": false,
         "open": "16:00",
         "close": "23:00",
         "rules": [
@@ -5709,10 +5723,54 @@
           "No Single Men Under Standard Policy",
           "Program May Vary",
           "Registration Required"
-        ]
+        ],
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "The official site currently lists Friday 21:00-03:00, Saturday 21:00-04:00 and Sunday 16:00-23:00. Special theme nights, Ladies Nights, pool parties and holiday events may use different hours and attendance categories. Single men are admitted only for specifically designated events, including limited Hardcore Night tickets.",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-06T22:02:12.672881+00:00",
+    "mediaAssets": [
+      {
+        "id": "d775f86d-0348-4a23-a46e-67d349a23284",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "chrome_6i8HnAqWoo",
+        "owner_id": "dbd06a79-03c5-4f73-ac3f-fc011a0baddb",
+        "created_at": "2026-07-27T19:31:21.94499+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-07-27T19:31:21.94499+00:00",
+        "aspect_mode": "contain",
+        "external_id": "52190cc4-959f-478b-5de5-9b05d3ef2100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@fun4two.nl",
+    "locationMeta": {
+      "source": "official-site+official-google-map",
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.99,
+      "validatedAt": "2026-09-06T22:05:00.000Z",
+      "geocoderLabel": "Fun4Two, Middelweg 18, 2841 LA Moordrecht, Netherlands",
+      "geocoderSource": "official-site+official-google-map",
+      "manualAdjustment": true,
+      "normalizedAddress": "Middelweg 18, 2841 LA Moordrecht, South Holland, Netherlands",
+      "coordinatePrecision": "poi"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/52190cc4-959f-478b-5de5-9b05d3ef2100/logosquare",
+    "headerImageUrl": "https://www.fun4two.nl/data250/images/fun4two-header_01.jpg",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_event",
+    "description_full": "Fun4Two is a permanent private lifestyle club in Moordrecht that has operated since 1996. The large all-inclusive venue combines a restaurant and bar, dance floor, garden and outdoor areas, swimming pool, sauna, jacuzzi, massage area and renovated wellness facilities with open erotic spaces, dark-room and fetish areas, and private lockable rooms. Standard Friday, Saturday and Sunday programming welcomes couples and single women. Single men are normally not admitted, except for a small number of ticketed Hardcore Night events and limited event-specific exceptions such as selected trio nights. Registration is required, reservations are strongly recommended and required on Saturdays, and valid identification must be presented. Food, house drinks, parking, lockers, towels, condoms and massage oil are included under the club's standard all-inclusive model.",
+    "galleryImageUrls": [
+      "https://www.fun4two.nl/data250/images/fun4two-header_02.jpg",
+      "https://www.fun4two.nl/programma/images/fun4two-progr-banners-juli-26-11.jpg"
+    ],
     "generalAmenities": [
       "Private Members Club",
       "On-Premise Club",
@@ -5757,36 +5815,12 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "attendancePolicy": "varies_by_event",
+    "description_short": "A large all-inclusive couples-focused lifestyle club near Gouda with a restaurant, dance floor, extensive wellness facilities, pool, themed events and multiple erotic play areas.",
     "entryRequirements": [
       "members_only"
     ],
-    "headerImageUrl": "https://www.fun4two.nl/data250/images/fun4two-header_01.jpg",
-    "galleryImageUrls": [
-      "https://www.fun4two.nl/data250/images/fun4two-header_02.jpg",
-      "https://www.fun4two.nl/programma/images/fun4two-progr-banners-juli-26-11.jpg"
-    ],
-    "mediaAssets": [
-      {
-        "id": "d775f86d-0348-4a23-a46e-67d349a23284",
-        "owner_type": "club",
-        "owner_id": "dbd06a79-03c5-4f73-ac3f-fc011a0baddb",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "52190cc4-959f-478b-5de5-9b05d3ef2100",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_6i8HnAqWoo",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-27T19:31:21.94499+00:00",
-        "updated_at": "2026-07-27T19:31:21.94499+00:00"
-      }
-    ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/52190cc4-959f-478b-5de5-9b05d3ef2100/logosquare"
+    "specialScheduleNotes": "The official site currently lists Friday 21:00-03:00, Saturday 21:00-04:00 and Sunday 16:00-23:00. Special theme nights, Ladies Nights, pool parties and holiday events may use different hours and attendance categories. Single men are admitted only for specifically designated events, including limited Hardcore Night tickets.",
+    "buildingAssetId": "building-asset-club-fun4two-moordrecht"
   },
   {
     "id": "club-fata-morgana-muiden",
@@ -6081,6 +6115,14 @@
       ],
       "manualAdjustment": true
     },
+    "schedule": [
+      {
+        "day": "Thursday",
+        "isClosed": false,
+        "open": "17:30",
+        "close": "21:00"
+      }
+    ],
     "specialScheduleNotes": "Club MORE operates through an event calendar rather than fixed weekly public hours. Programming includes swingers parties, Easy Evening events, Bondage Playnight, Kink Playnight, Pussy Playnight, shibari instruction, workshops and occasional off-site or cruise events. Guests should confirm the current event page, ticket type, audience policy and door time before attending.",
     "generalAmenities": [
       "Private Lifestyle Club",
@@ -6526,6 +6568,20 @@
         "building-has-multiple-businesses; venue-is-in-basement"
       ]
     },
+    "schedule": [
+      {
+        "day": "Thursday",
+        "isClosed": false
+      },
+      {
+        "day": "Friday",
+        "isClosed": false
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "Sauna Club Tel Aviv operates through a recurring event calendar rather than a fully published weekly schedule. Current Thursday, Friday and Saturday events commonly begin at 8:00 p.m. and run until 6:00 a.m. Visitors should confirm the specific Chillz event before attending.",
     "generalAmenities": [
       "Gay Sauna",
@@ -6702,6 +6758,20 @@
       ],
       "manualAdjustment": true
     },
+    "schedule": [
+      {
+        "day": "Thursday",
+        "isClosed": false
+      },
+      {
+        "day": "Friday",
+        "isClosed": false
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "Typical events run Thursday through Saturday from approximately 8:00 p.m. to 3:00 a.m.; confirm the current calendar and reservation requirements.",
     "generalAmenities": [
       "Swinger Club",
@@ -6873,6 +6943,20 @@
       "normalizedAddress": "Carrera 18 No. 78-50, Bogotá, Colombia",
       "warnings": []
     },
+    "schedule": [
+      {
+        "day": "Thursday",
+        "isClosed": false
+      },
+      {
+        "day": "Friday",
+        "isClosed": false
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "Operates through a recurring event calendar rather than a fully published weekly schedule. Confirm the current event, audience rules and door time.",
     "generalAmenities": [
       "Swinger Bar",
@@ -6923,6 +7007,14 @@
       "normalizedAddress": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
       "warnings": []
     },
+    "schedule": [
+      {
+        "day": "Wednesday",
+        "isClosed": false,
+        "open": "18:00",
+        "close": "01:00"
+      }
+    ],
     "specialScheduleNotes": "Cupid's operates through a dense event calendar rather than one fixed weekly audience policy. Typical events run during daytime or evening hours, often into 1:00 a.m. or later. Wednesday is a recurring couples-and-single-women-only night; other events may welcome couples, single women, transgender guests and single men. Visitors should check the current event page for door time, audience rules, pricing and advance guest-list requirements.",
     "generalAmenities": [
       "Private Members Club",
@@ -7268,6 +7360,12 @@
         "coordinate-resolves-to-published-little-lions-head-road"
       ]
     },
+    "schedule": [
+      {
+        "day": "Saturday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "Epicure operates as a private club and boutique hotel rather than on fixed nightclub hours. Guest membership runs from 14:00 until 11:00 the following day, while event doors commonly open around 20:00 and many parties continue overnight. The club publishes recurring Saturday adult events, with its dedicated luxury swingers party typically held on the first Saturday of the month. Event tickets may be used instead of guest membership for eligible events; audience rules, pricing and closing times vary by event.",
     "generalAmenities": [
       "Private Lifestyle Club",
@@ -7358,7 +7456,32 @@
       "normalizedAddress": "Alt-Tempelhof 17-19, 12099 Berlin, Germany",
       "warnings": []
     },
-    "schedule": [],
+    "schedule": [
+      {
+        "day": "Tuesday",
+        "isClosed": false
+      },
+      {
+        "day": "Wednesday",
+        "isClosed": false
+      },
+      {
+        "day": "Thursday",
+        "isClosed": false
+      },
+      {
+        "day": "Friday",
+        "isClosed": false
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false
+      },
+      {
+        "day": "Sunday",
+        "isClosed": false
+      }
+    ],
     "specialScheduleNotes": "Insomnia's official site states that the club opens Tuesday through Sunday, but exact door and closing times vary by event. Friday and Saturday are generally sex-positive nightlife nights, while weekday programming rotates among swinger, fetish/BDSM, queer, lounge, tango and concept events. Some events require advance registration; weekend registration is usually optional, but door admission is never guaranteed. Visitors should check the current official party calendar for the exact time, price, dress code and attendance rules before arriving.",
     "generalAmenities": [
       "Permanent Lifestyle Club",
@@ -7558,7 +7681,32 @@
       "source": "official-site+nominatim-poi",
       "warnings": []
     },
-    "schedule": [],
+    "schedule": [
+      {
+        "day": "Wednesday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "00:00"
+      },
+      {
+        "day": "Thursday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "00:00"
+      },
+      {
+        "day": "Friday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "01:00"
+      },
+      {
+        "day": "Saturday",
+        "isClosed": false,
+        "open": "20:00",
+        "close": "02:00"
+      }
+    ],
     "specialScheduleNotes": "Swingers Oase is event-driven rather than operating on one fixed weekly timetable. Current 2026 events commonly run Wednesday and Thursday around 20:00-00:00, Friday around 20:00-01:00, Saturday around 20:00-02:00 and selected Sundays around 16:00-22:00. Attendance mix, pricing and reservations vary by event, so guests should check the official calendar before visiting.",
     "generalAmenities": [
       "Permanent Swinger Club",
@@ -7598,7 +7746,7 @@
     "name": "Tokyo Valentino Lifestyle Club",
     "description_short": "A 24-hour Atlanta lifestyle club on Cheshire Bridge Road with open and private play rooms, dark rooms, Amsterdam-style booths, private bedrooms, showers and a strongly consent-focused adult social environment.",
     "description_full": "Tokyo Valentino Lifestyle Club is the adult lifestyle-club component of the long-running Tokyo Valentino business on Cheshire Bridge Road in Atlanta. The club explicitly advertises open and private play rooms, dark rooms, eight Amsterdam-style booths, private bedrooms with leather day beds, a deluxe master suite, showers, lockers and massage rooms. Condoms, lubricant, towels, shower shoes and locks are available on site. The venue is BYOB and operates around the clock except for a weekly Wednesday-morning closure for deep cleaning and repairs. Its published etiquette emphasizes affirmative consent, privacy, communication and respect; phones, cameras and recording devices are prohibited, prostitution and drugs are banned, and visibly intoxicated guests may be refused entry. Admission is open to adults rather than limited to couples, with some pricing differentiated by gender and event period.",
-    "location": "1739 Cheshire Bridge Road, Atlanta, Georgia 30324, United States",
+    "location": "1739 Cheshire Bridge Rd NE, Atlanta, Georgia 30324, United States",
     "website": "https://tokyolifestyleclub.com/",
     "contactEmail": "chris@fegholdings.com",
     "phone": "+1 404-698-5219",
@@ -7609,7 +7757,7 @@
       "latitude": 33.8075108,
       "longitude": -84.3653154,
       "address": {
-        "addressLine1": "1739 Cheshire Bridge Road",
+        "addressLine1": "1739 Cheshire Bridge Rd NE",
         "city": "Atlanta",
         "region": "Georgia",
         "postalCode": "30324",
@@ -7622,7 +7770,11 @@
     },
     "locationMeta": {
       "status": "validated",
+      "coordinatePrecision": "poi",
       "confidence": 0.99,
+      "normalizedAddress": "1739 Cheshire Bridge Rd NE, Atlanta, GA 30324, United States",
+      "geocoderLabel": "Tokyo Valentino Lifestyle Club, 1739 Cheshire Bridge Road, Atlanta, Georgia 30324, United States",
+      "geocoderSource": "official-site+nominatim-poi",
       "source": "official-site+nominatim-poi",
       "warnings": []
     },

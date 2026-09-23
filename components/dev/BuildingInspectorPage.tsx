@@ -43,8 +43,10 @@ import BuildingVerificationAuditPanel from './BuildingVerificationAuditPanel';
 import { buildingAddressBelongsToFootprint, inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
 import { geometryFingerprint, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
 import {
+  fetchOpenFreeMapBuildingFootprints,
   fetchOsOpenMapLocalBuildingAtPoint,
   fetchSupplementalBuildingFootprints,
+  primaryCoverageNeedsSupplement,
   MICROSOFT_BUILDING_ID_PREFIX,
   MICROSOFT_BUILDING_SOURCE,
   OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX,
@@ -4035,6 +4037,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       let scanIterations = 0;
       let neighborhoodFusionAttempted = false;
       let fusedFeatureCache: MapGeoJSONFeature[] | null = null;
+      let directOpenFreeMapAttempted = false;
+      let directOpenFreeMapCache: MapGeoJSONFeature[] | null = null;
       let neighborhoodSourceLabel = 'OSM · OpenFreeMap';
       let usedOsOpenMapLocalFallback = false;
       let usedSupplementalFallback = false;
@@ -4071,12 +4075,59 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           || openFreeMapFeatures.length > 0
           || map.isSourceLoaded(getBuildingsSourceId())
           || scanIterations >= 3;
-        if (canUseNeighborhoodFusion && requestedBuildingSourceMode !== 'openfreemap') {
+        const fusionRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
+        let primaryOpenFreeMapFeatures = openFreeMapFeatures;
+
+        if (canUseNeighborhoodFusion && requestedBuildingSourceMode !== 'microsoft' && sourceReadyForFusion) {
+          if (directOpenFreeMapCache) {
+            primaryOpenFreeMapFeatures = [...openFreeMapFeatures, ...directOpenFreeMapCache];
+          } else if (!directOpenFreeMapAttempted && options.workspaceCenter) {
+            const mapLibreCoverage = primaryCoverageNeedsSupplement(openFreeMapFeatures, options.workspaceCenter, {
+              radiusMeters: fusionRadiusMeters,
+              minimumContextFootprints: 6,
+            });
+            if (mapLibreCoverage.needed) {
+              directOpenFreeMapAttempted = true;
+              setLoadingPhase('Loading direct OpenFreeMap building tiles');
+              try {
+                const direct = await fetchOpenFreeMapBuildingFootprints({
+                  center: options.workspaceCenter,
+                  radiusMeters: fusionRadiusMeters,
+                  signal: options.signal,
+                });
+                if (!isCurrentRun()) return;
+                directOpenFreeMapCache = direct.features.map((providerFeature) => ({
+                  ...providerFeature,
+                  state: {},
+                } as unknown as MapGeoJSONFeature));
+                primaryOpenFreeMapFeatures = [...openFreeMapFeatures, ...directOpenFreeMapCache];
+                neighborhoodFusionWarnings = [
+                  ...neighborhoodFusionWarnings,
+                  `MapLibre source coverage was incomplete; loaded ${direct.features.length} OpenFreeMap building features directly from ${direct.tileCount} tile(s).`,
+                ];
+              } catch (error) {
+                if (options.signal?.aborted) return;
+                neighborhoodFusionWarnings = [
+                  ...neighborhoodFusionWarnings,
+                  `Direct OpenFreeMap fallback unavailable: ${error instanceof Error ? error.message : String(error)}`,
+                ];
+              }
+            } else {
+              directOpenFreeMapAttempted = true;
+            }
+          }
+        }
+
+        if (canUseNeighborhoodFusion && requestedBuildingSourceMode === 'openfreemap') {
+          allFeatures = sourceReadyForFusion ? primaryOpenFreeMapFeatures : [];
+          neighborhoodSourceLabel = directOpenFreeMapCache?.length
+            ? 'OSM · OpenFreeMap (direct tile fallback)'
+            : 'OSM · OpenFreeMap';
+        } else if (canUseNeighborhoodFusion && requestedBuildingSourceMode !== 'openfreemap') {
           if (fusedFeatureCache) {
             allFeatures = fusedFeatureCache;
           } else if (sourceReadyForFusion && !neighborhoodFusionAttempted) {
             neighborhoodFusionAttempted = true;
-            const fusionRadiusMeters = EXPANDED_NEIGHBORHOOD_RADII_METERS[EXPANDED_NEIGHBORHOOD_RADII_METERS.length - 1];
             setLoadingPhase(requestedBuildingSourceMode === 'microsoft'
               ? 'Loading Microsoft building footprints'
               : 'Checking fused building coverage');
@@ -4087,7 +4138,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                 country: getListingPhysicalAddress(options.intelligenceListing, semv2Collections).country,
                 center: options.workspaceCenter,
                 radiusMeters: fusionRadiusMeters,
-                primaryFeatures: openFreeMapFeatures,
+                primaryFeatures: primaryOpenFreeMapFeatures,
                 signal: options.signal,
                 minimumContextFootprints: 6,
                 loadOsAtPoint: (point, signal) => fetchOsOpenMapLocalBuildingAtPoint(point, {
@@ -4120,14 +4171,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               usedSupplementalFallback = fusion.usedSupplemental;
               supplementalAcceptedCount = fusion.supplementalStats?.accepted
                 ?? (requestedBuildingSourceMode === 'microsoft' ? fusion.features.length : 0);
-              neighborhoodFusionWarnings = fusion.warnings;
+              neighborhoodFusionWarnings = [...neighborhoodFusionWarnings, ...fusion.warnings];
             } catch (error) {
               if (options.signal?.aborted) return;
-              neighborhoodFusionWarnings = [error instanceof Error ? error.message : String(error)];
-              allFeatures = requestedBuildingSourceMode === 'microsoft' ? [] : openFreeMapFeatures;
+              neighborhoodFusionWarnings = [...neighborhoodFusionWarnings, error instanceof Error ? error.message : String(error)];
+              allFeatures = requestedBuildingSourceMode === 'microsoft' ? [] : primaryOpenFreeMapFeatures;
               neighborhoodSourceLabel = requestedBuildingSourceMode === 'microsoft'
                 ? 'Microsoft ML · unavailable'
-                : 'OSM · OpenFreeMap';
+                : directOpenFreeMapCache?.length ? 'OSM · OpenFreeMap (direct tile fallback)' : 'OSM · OpenFreeMap';
               logBuildingInspector('buildingNeighborhoodFusion:failed', { featureId, error });
             }
           } else if (!sourceReadyForFusion) {

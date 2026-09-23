@@ -14,9 +14,11 @@ import {
 import ExplorerDetailsPanel from './sidebar/ExplorerDetailsPanel';
 import ExplorerDiscoveryRail from './explorer/ExplorerDiscoveryRail';
 import ExplorerFilterPanel from './explorer/ExplorerFilterPanel';
+import GlobeExploreTour from './explorer/GlobeExploreTour';
 import ExplorerNearbyCarousel from './explorer/ExplorerNearbyCarousel';
 import MobileExplorerPrototype from './explorer/MobileExplorerPrototype';
 import TabletExplorerOverlay from './dev/tablet/TabletExplorerOverlay';
+import DiscoveryRotaryStack, { type DiscoveryRotaryHostItem } from './explorer/DiscoveryRotaryStack';
 import { useExplorerState } from '../hooks/useExplorerState';
 import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
 import { useExplorerContext } from './explorer/ExplorerProvider';
@@ -51,6 +53,7 @@ import { ExplorerTransitionController } from '../lib/explorerTransition';
 import type { BuildingAsset, Listing } from '../types';
 import { getBuildingAssetForListing, getListingPhysicalAddress } from '../lib/entityCompatibility';
 import { getListingCanonicalPath } from '../lib/entityUtils';
+import { getDiscoveryContextBoundaryUrls, getListingCityBoundaryUrl } from '../lib/discoveryMapBoundaries';
 import {
   createGlobePerformanceConfig,
   getGraphicsCapability,
@@ -76,6 +79,14 @@ import {
   buildGlobePerformanceFixtureListings,
   parseGlobePerformanceFixtureCount,
 } from '../data/globePerformanceFixtures';
+import {
+  USA_DISCOVERY_LISTINGS,
+  findUsaMetro,
+  findUsaRegion,
+  getUsaMetroListings,
+  getUsaMetroMarkers,
+  getUsaRegionMarkers,
+} from '../data/usaDiscoveryHierarchy';
 import type { GlobePresentationConfig } from './dev/GlobeScaleCalibrationPanel';
 import { GLOBE_PRESENTATION_PRESETS } from '../src/features/globe/runtime/GlobePresentationConfig.js';
 import {
@@ -100,6 +111,12 @@ const HYBRID_RETURN_GLOBE_INTENT = 0.5;
 const HYBRID_HANDOFF_COOLDOWN_MS = 1100;
 const HYBRID_GLOBE_WHEEL_WINDOW_MS = 520;
 const HYBRID_DEFAULT_DISCOVERY_CLUSTER_RADIUS = 58;
+const USA_REGION_GLOBE_ZOOM_INTENT = 0.45;
+const USA_REGION_GLOBE_DISTANCE = 8.5;
+const USA_METRO_GLOBE_ZOOM_INTENT = 0.72;
+const USA_METRO_GLOBE_DISTANCE = 4.35;
+const USA_COUNTRY_GLOBE_CENTER = { lng: -98.5, lat: 39.5 };
+const USA_COUNTRY_GLOBE_DISTANCE = 9.8;
 const MOBILE_DEFAULT_WORLD_DISTANCE = 17;
 const MOBILE_MAX_WORLD_DISTANCE = 20;
 const MOBILE_WORLD_FIELD_OF_VIEW = 50;
@@ -142,6 +159,9 @@ type GlobeRuntime = {
     pinLatitudeOffsetDeg?: number;
     geoJsonLongitudeOffsetDeg?: number;
     geoJsonLatitudeOffsetDeg?: number;
+    countryFillLongitudeOffsetDeg?: number;
+    countryFillLatitudeOffsetDeg?: number;
+    countryVectorLongitudeOffsetDeg?: number;
     countryAtlasLongitudeOffsetDeg?: number;
     countryAtlasLatitudeOffsetDeg?: number;
     showCountryIdTexture?: boolean;
@@ -164,6 +184,9 @@ type GlobeRuntime = {
   getPerformanceSnapshot: () => GlobePerformanceSnapshot | null;
   selectEvent: (eventId: string) => GlobeV1RuntimeEvent | null;
   selectActivityRegion: (regionId: string) => ActivityRegion | null;
+  restoreActivityRegion: (regionId: string) => ActivityRegion | null;
+  getActivityRegionScreenPosition: (regionId: string) => { x: number; y: number; visible: boolean } | null;
+  setActivityRegionLabelSuppressed: (regionId: string, suppressed: boolean) => void;
   selectCountry: (countryIdOrIso: string | number) => GlobeV1CountrySelection | null;
   clearSelection: () => void;
   clearEventSelection: () => void;
@@ -497,10 +520,25 @@ type AlignmentDebugViewPatch = {
 const ATMOSPHERE_TOOL_STORAGE_KEY = 'swingsphere.globeV1.atmosphereTool';
 const DETAIL_PANEL_SETTLE_MS = 360;
 const SPATIAL_DEBUG_STORAGE_KEY = 'swingsphere.spatialDebug';
-const GEOSPATIAL_CALIBRATION_STORAGE_KEY = 'swingsphere.deepGlobe.geospatialCalibration.v1';
-const GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG = 1.5;
+const GEOSPATIAL_CALIBRATION_STORAGE_KEY = 'swingsphere.deepGlobe.geospatialCalibration.v4';
+const GEOSPATIAL_SELECTED_FILL_STORAGE_KEY = 'swingsphere.deepGlobe.selectedCountryFillAlignment.v1';
+// Known-good production calibration. Vector borders and listing pins are WGS84-aligned;
+// the country atlas/highlight mask retains its independent +1.5° calibration.
+// See docs/GLOBE_BORDER_BASELINE.md before changing these values.
+const PIN_LONGITUDE_OFFSET_DEG = 0;
+const GEOJSON_LONGITUDE_OFFSET_DEG = 0;
+const COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG = 1.5;
 const GLOBE_TRAVEL_ARRIVAL_PAUSE_MS = 420;
 const COUNTRY_PIN_REVEAL_DELAY_MS = 1050;
+const DEV_GEOSPATIAL_REFERENCE_ANCHORS = [
+  { id: 'san-francisco', name: 'San Francisco', lng: -122.4194, lat: 37.7749 },
+  { id: 'new-york', name: 'New York', lng: -74.006, lat: 40.7128 },
+  { id: 'miami', name: 'Miami', lng: -80.1918, lat: 25.7617 },
+  { id: 'paris', name: 'Paris, France', lng: 2.3522, lat: 48.8566 },
+  { id: 'tokyo', name: 'Tokyo', lng: 139.6503, lat: 35.6762 },
+  { id: 'sydney', name: 'Sydney, Australia', lng: 151.2093, lat: -33.8688 },
+  { id: 'cape-town', name: 'Cape Town', lng: 18.4241, lat: -33.9249 },
+];
 
 const isSpatialDebugEnabled = () =>
   typeof window !== 'undefined' && window.localStorage.getItem(SPATIAL_DEBUG_STORAGE_KEY) === 'true';
@@ -534,11 +572,25 @@ const createGeospatialLayerCalibration = (
 });
 
 const defaultGeospatialCalibrationState: GeospatialCalibrationState = {
-  // Verified against the physical land GLB: pins and the country atlas require
-  // the +1.5° correction, while authoritative GeoJSON remains at WGS84 zero.
-  pins: { longitudeOffsetDeg: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 },
-  countryGeoJson: { longitudeOffsetDeg: 0, latitudeOffsetDeg: 0 },
-  countryAtlas: { longitudeOffsetDeg: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 },
+  // Verified production baseline: listing pins and authoritative GeoJSON remain
+  // at WGS84 zero; only the country atlas/highlight mask keeps the +1.5° correction.
+  pins: { longitudeOffsetDeg: PIN_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 },
+  countryGeoJson: { longitudeOffsetDeg: GEOJSON_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 },
+  countryAtlas: { longitudeOffsetDeg: COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 },
+};
+
+const readSelectedCountryFillAlignment = (): GeospatialLayerCalibration => {
+  if (typeof window === 'undefined') return defaultGeospatialCalibrationState.countryGeoJson;
+  try {
+    const raw = window.localStorage.getItem(GEOSPATIAL_SELECTED_FILL_STORAGE_KEY);
+    if (!raw) return readGeospatialCalibrationState().countryGeoJson;
+    return createGeospatialLayerCalibration(
+      JSON.parse(raw) as Partial<GeospatialLayerCalibration>,
+      readGeospatialCalibrationState().countryGeoJson,
+    );
+  } catch {
+    return readGeospatialCalibrationState().countryGeoJson;
+  }
 };
 
 const readGeospatialCalibrationState = (): GeospatialCalibrationState => {
@@ -550,7 +602,7 @@ const readGeospatialCalibrationState = (): GeospatialCalibrationState => {
     const legacy = {
       longitudeOffsetDeg: Number.isFinite(parsed.longitudeOffsetDeg)
         ? Number(parsed.longitudeOffsetDeg)
-        : GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG,
+        : PIN_LONGITUDE_OFFSET_DEG,
       latitudeOffsetDeg: Number.isFinite(parsed.latitudeOffsetDeg) ? Number(parsed.latitudeOffsetDeg) : 0,
     };
     return {
@@ -880,6 +932,7 @@ type ProductionGlobePageProps = {
   variant?: 'page' | 'hero' | 'surface';
   showDevTools?: boolean;
   hybridPrototype?: boolean;
+  denseUsPinPrototype?: boolean;
   mobilePrototype?: boolean;
   mobileExperienceBasePath?: string;
 };
@@ -935,9 +988,13 @@ const getHeroArrivalPresets = (customPreset: HeroArrivalPreset | null): HeroArri
   },
 ];
 
-const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false, mobilePrototype = false, mobileExperienceBasePath = '/mobile' }) => {
+const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false, denseUsPinPrototype = false, mobilePrototype = false, mobileExperienceBasePath = '/mobile' }) => {
+  const isHero = variant === 'hero';
   const isTabletPrototype = mobilePrototype && mobileExperienceBasePath === '/tablet';
   const devToolsEnabled = shouldShowDevTools(showDevTools);
+  // Production must always use the committed globe calibration. Alignment
+  // experiments belong to the explicit hybrid/dev tooling only.
+  const productionGeoAlignEnabled = false;
   const captureParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
   const captureFixtureId = captureParams?.get('scaleFixture');
   const capturePresetId = captureParams?.get('scalePreset') as keyof typeof GLOBE_PRESENTATION_PRESETS | null;
@@ -950,8 +1007,6 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const performanceToolsEnabled = import.meta.env.DEV
     && (devToolsEnabled || new URLSearchParams(window.location.search).get('perf') === '1');
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const countryHoverLabelRef = useRef<HTMLDivElement | null>(null);
-  const countryPointerRef = useRef({ x: 0, y: 0 });
   const globeRef = useRef<GlobeRuntime | null>(null);
   const [graphicsCapability] = useState<GraphicsCapability>(() => getGraphicsCapability());
   const qualityControllerRef = useRef<GlobeQualityController | null>(null);
@@ -961,10 +1016,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
-  const [hoveredCountry, setHoveredCountry] = useState<GlobeV1CountrySelection | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<GlobeV1CountrySelection | null>(null);
   const [countryDiscoveryScope, setCountryDiscoveryScope] = useState<{ iso3: string; name: string } | null>(null);
   const [revealedCountryIso3, setRevealedCountryIso3] = useState<string | null>(null);
+  const [usaDiscoveryRegionId, setUsaDiscoveryRegionId] = useState<string | null>(() => captureParams?.get('region') ?? null);
+  const [usaDiscoveryMetroId, setUsaDiscoveryMetroId] = useState<string | null>(() => captureParams?.get('metro') ?? null);
+  const [discoveryStackAnchor, setDiscoveryStackAnchor] = useState<{ x: number; y: number } | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [activeActivityRegionId, setActiveActivityRegionId] = useState<string | null>(null);
   const [runtimeState, setRuntimeState] = useState<'loading' | 'ready' | 'recovering' | 'error'>('loading');
@@ -981,6 +1038,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const [alignmentDebug, setAlignmentDebug] = useState<AlignmentDebugState>(defaultAlignmentDebugState);
   const [isAtmospherePanelOpen, setIsAtmospherePanelOpen] = useState(true);
   const [isScaleCalibrationPanelOpen, setIsScaleCalibrationPanelOpen] = useState(true);
+  const [devToolboxOpen, setDevToolboxOpen] = useState(true);
+  const [activeDevGlobeTool, setActiveDevGlobeTool] = useState<'alignment' | 'scale' | 'hero' | 'performance' | 'atmosphere'>(denseUsPinPrototype ? 'scale' : 'alignment');
+  const [devReferenceAnchorsVisible, setDevReferenceAnchorsVisible] = useState(true);
+  const [devVisualAtlasVisible, setDevVisualAtlasVisible] = useState(true);
   const [hybridAutoHandoffEnabled, setHybridAutoHandoffEnabled] = useState(false);
   const [hybridGlobeToMapIntent, setHybridGlobeToMapIntent] = useState(HYBRID_DEFAULT_GLOBE_TO_MAP_INTENT);
   const [hybridMapEntryZoom, setHybridMapEntryZoom] = useState(HYBRID_DEFAULT_MAP_ENTRY_ZOOM);
@@ -988,23 +1049,46 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const [hybridDiscoveryClusterZoom, setHybridDiscoveryClusterZoom] = useState(2);
   const [hybridDiscoveryClusterRadius, setHybridDiscoveryClusterRadius] = useState(HYBRID_DEFAULT_DISCOVERY_CLUSTER_RADIUS);
   const [hybridGeospatialAuditEnabled, setHybridGeospatialAuditEnabled] = useState(false);
-  const [hybridGeospatialCalibration, setHybridGeospatialCalibration] = useState<GeospatialCalibrationState>(() => readGeospatialCalibrationState());
+  const [hybridGeospatialCalibration, setHybridGeospatialCalibration] = useState<GeospatialCalibrationState>(() =>
+    hybridPrototype ? readGeospatialCalibrationState() : defaultGeospatialCalibrationState,
+  );
+  const [devSelectedFillAlignment, setDevSelectedFillAlignment] = useState<GeospatialLayerCalibration>(() => ({
+    ...(hybridPrototype ? readSelectedCountryFillAlignment() : defaultGeospatialCalibrationState.countryGeoJson),
+  }));
   const [hybridAtlasAuditLayers, setHybridAtlasAuditLayers] = useState({
     showCountryIdTexture: false,
     showVisualCountryAtlas: false,
     showCountryHighlightMask: false,
   });
   const [hybridGeospatialSaveNotice, setHybridGeospatialSaveNotice] = useState('');
+  const [productionGeoAlignLayers, setProductionGeoAlignLayers] = useState<Record<keyof GeospatialCalibrationState, boolean>>({
+    pins: true,
+    countryGeoJson: true,
+    countryAtlas: false,
+  });
   const initialHybridGeospatialCalibrationRef = useRef(hybridGeospatialCalibration);
   const hybridHandoffCooldownUntilRef = useRef(0);
   const hybridLastGlobeZoomInWheelAtRef = useRef(0);
   const hybridInitializedRef = useRef(false);
-  const [scaleFixtureId, setScaleFixtureId] = useState(captureFixtureId ?? 'bay-area');
+  const [scaleFixtureId, setScaleFixtureId] = useState(captureFixtureId ?? (denseUsPinPrototype ? 'sf-dense-10' : 'bay-area'));
   const [globePresentation, setGlobePresentation] = useState<GlobePresentationConfig>(() => {
     const preset = capturePresetId && GLOBE_PRESENTATION_PRESETS[capturePresetId]
       ? GLOBE_PRESENTATION_PRESETS[capturePresetId]
       : GLOBE_PRESENTATION_PRESETS.recommended;
-    return JSON.parse(JSON.stringify(preset));
+    const next = JSON.parse(JSON.stringify(preset)) as GlobePresentationConfig;
+    if (denseUsPinPrototype) {
+      next.camera = {
+        ...next.camera,
+        // Stay outside the rendered sphere and use a narrower lens for
+        // city-scale inspection instead of physically driving through land.
+        fieldOfView: 26,
+        minDistanceWorld: 3.0,
+        clusterArrivalDistanceWorld: 3.18,
+        listingArrivalDistanceWorld: 3.08,
+        listingArrivalFieldOfView: 22,
+      };
+    }
+    return next;
   });
   const initialGlobePresentationRef = useRef(globePresentation);
   const [buildingAssets, setBuildingAssets] = useState<BuildingAsset[]>([]);
@@ -1107,7 +1191,6 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const entityIndexRef = useRef(entityIndex);
   listingsRef.current = mobileSafeListings;
   entityIndexRef.current = entityIndex;
-  const isHero = variant === 'hero';
   const isSurface = variant === 'surface';
   const shouldMountMap =
     graphicsCapability !== 'unsupported' &&
@@ -1132,7 +1215,21 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ...productionCountryPresentationConfig.selection,
         ...((performanceConfig.selection as Record<string, unknown> | undefined) ?? {}),
       },
-      presentation: hybridPrototype
+      presentation: denseUsPinPrototype
+        ? {
+            ...initialGlobePresentationRef.current,
+            camera: {
+              ...initialGlobePresentationRef.current.camera,
+              // Dense-US lab: keep the camera outside the sphere and get the
+              // extra city detail from a tighter lens rather than penetration.
+              fieldOfView: 26,
+              minDistanceWorld: 3.0,
+              clusterArrivalDistanceWorld: 3.18,
+              listingArrivalDistanceWorld: 3.08,
+              listingArrivalFieldOfView: 22,
+            },
+          }
+        : hybridPrototype
         ? {
             ...initialGlobePresentationRef.current,
             camera: {
@@ -1180,22 +1277,58 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           worldViewportFill: isTabletPrototype ? 0.94 : 0.82,
         } : {}),
       },
+      orbitControls: {
+        ...((performanceConfig.orbitControls as Record<string, unknown> | undefined) ?? {}),
+        ...(denseUsPinPrototype ? {
+          panSpeed: 0.72,
+          zoomSpeed: 0.42,
+          zoomAwarePanning: {
+            enabled: true,
+            citySpeedMultiplier: 0.08,
+            worldSpeedMultiplier: 1,
+            curvePower: 1.5,
+          },
+          zoomAwareZoom: {
+            enabled: true,
+            citySpeedMultiplier: 0.12,
+            worldSpeedMultiplier: 1,
+            curvePower: 1.65,
+          },
+          zoomAwareRotation: {
+            enabled: true,
+            citySpeedMultiplier: 0.12,
+            worldSpeedMultiplier: 1,
+            curvePower: 1.5,
+          },
+        } : {}),
+      },
       progressiveDisclosure: {
         ...((performanceConfig.progressiveDisclosure as Record<string, unknown> | undefined) ?? {}),
+        rotaryStackEnabled: !isHero,
         // Country overview clustering is a screen-space UX decision on every
         // device. Multiple listings in the same geographic region should only
         // collapse into a discovery marker when their rendered pins would be
         // too close to distinguish at the current arrived camera framing.
         adaptiveCountryClustering: {
           enabled: true,
-          enterDistancePx: 48,
-          exitDistancePx: 64,
+          enterDistancePx: denseUsPinPrototype ? 28 : 48,
+          exitDistancePx: denseUsPinPrototype ? 40 : 64,
           distanceRecheckThreshold: 0.35,
           orientationRecheckDegrees: 3,
         },
       },
       pinPlacement: {
         ...((performanceConfig.pinPlacement as Record<string, unknown> | undefined) ?? {}),
+        // Keep venue geography truthful. Nearby listings may overlap visually,
+        // but they must not be moved tens of kilometers just to declutter pins.
+        // Screen-space/cluster presentation should handle density instead.
+        regionalSpread: {
+          enabled: false,
+        },
+        ...(!isHero ? {
+          constantScreenSize: true,
+          constantScreenSizePx: 20,
+        } : {}),
         flatIdleMarkerExperiment: {
           // Production country discovery uses compact vector markers at rest.
           // Hover/click reveals the existing stemmed pin and label.
@@ -1208,13 +1341,13 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         // Atlas/pins use +1.5°; the authoritative GeoJSON raster remains at 0°.
         longitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.countryAtlas.longitudeOffsetDeg
-          : GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG,
+          : COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG,
         latitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.countryAtlas.latitudeOffsetDeg
           : 0,
         pinLongitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.pins.longitudeOffsetDeg
-          : GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG,
+          : PIN_LONGITUDE_OFFSET_DEG,
         pinLatitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.pins.latitudeOffsetDeg
           : 0,
@@ -1224,7 +1357,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ...(hybridPrototype ? { baseColor: '#67e8f9' } : {}),
         longitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.countryGeoJson.longitudeOffsetDeg
-          : 0,
+          : GEOJSON_LONGITUDE_OFFSET_DEG,
         latitudeOffsetDeg: hybridPrototype
           ? initialHybridGeospatialCalibrationRef.current.countryGeoJson.latitudeOffsetDeg
           : 0,
@@ -1294,17 +1427,17 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           }
         : { enabled: false },
     };
-  }, [graphicsCapability, hybridPrototype, isHero, isTabletPrototype, mobilePrototype, prefersReducedMotion]);
+  }, [denseUsPinPrototype, devToolsEnabled, graphicsCapability, hybridPrototype, isHero, isTabletPrototype, mobilePrototype, prefersReducedMotion]);
 
   const performanceFixtureListings = useMemo(
     () => performanceFixtureCount ? buildGlobePerformanceFixtureListings(performanceFixtureCount) : null,
     [performanceFixtureCount],
   );
   const globeListings = useMemo(
-    () => (performanceFixtureListings ?? mobileSafeListings).filter((listing) =>
+    () => (denseUsPinPrototype ? USA_DISCOVERY_LISTINGS : performanceFixtureListings ?? mobileSafeListings).filter((listing) =>
       isGlobeEligibleListing(listing)
       && (!activeListingTypes.length || activeListingTypes.includes(listing.type))),
-    [activeListingTypes, mobileSafeListings, performanceFixtureListings],
+    [activeListingTypes, denseUsPinPrototype, mobileSafeListings, performanceFixtureListings],
   );
   const spatialEventAggregation = useMemo(
     () => aggregateEventsForSpatialDisplay(globeListings),
@@ -1350,12 +1483,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     }];
   }), [hostRuntimeEvents]);
   const globeRuntimeEvents = useMemo(
-    () => performanceFixtureEnabled
+    () => denseUsPinPrototype
+      ? adaptListingsToGlobeEvents(spatialGlobeListings)
+      : performanceFixtureEnabled
       ? adaptListingsToGlobeEvents(spatialGlobeListings)
       : fixtureModeEnabled
         ? buildGlobeScaleFixtureEvents(scaleFixtureId)
         : [...adaptListingsToGlobeEvents(spatialGlobeListings), ...hostRuntimeEvents],
-    [fixtureModeEnabled, hostRuntimeEvents, performanceFixtureEnabled, scaleFixtureId, spatialGlobeListings],
+    [denseUsPinPrototype, fixtureModeEnabled, hostRuntimeEvents, performanceFixtureEnabled, scaleFixtureId, spatialGlobeListings],
   );
   const activeCountryIso3s = useMemo(
     () => [...new Set(globeRuntimeEvents
@@ -1369,12 +1504,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     return globeRuntimeEvents.filter((event) => String(event.countryIso3 ?? '').trim().toUpperCase() === countryIso3);
   }, [countryDiscoveryScope?.iso3, globeRuntimeEvents]);
   const discoveryPoints = useMemo(
-    () => performanceFixtureEnabled
+    () => denseUsPinPrototype
+      ? adaptListingsToDiscoveryPoints(globeListings)
+      : performanceFixtureEnabled
       ? adaptListingsToDiscoveryPoints(globeListings)
       : fixtureModeEnabled
         ? buildGlobeScaleFixtureDiscoveryPoints(scaleFixtureId)
         : [...adaptListingsToDiscoveryPoints(globeListings), ...hostDiscoveryPoints],
-    [fixtureModeEnabled, globeListings, hostDiscoveryPoints, performanceFixtureEnabled, scaleFixtureId],
+    [denseUsPinPrototype, fixtureModeEnabled, globeListings, hostDiscoveryPoints, performanceFixtureEnabled, scaleFixtureId],
   );
   const activityRegionOptions = hybridPrototype
     ? { worldZoom: hybridDiscoveryClusterZoom, radius: hybridDiscoveryClusterRadius }
@@ -1392,6 +1529,21 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     () => createActivityRegions(visibleCountryDiscoveryPoints, activityRegionOptions),
     [activityRegionOptions?.radius, activityRegionOptions?.worldZoom, visibleCountryDiscoveryPoints],
   );
+  const usaSelectedRegion = useMemo(
+    () => findUsaRegion(usaDiscoveryRegionId),
+    [usaDiscoveryRegionId],
+  );
+  const usaSelectedMetro = useMemo(
+    () => findUsaMetro(usaDiscoveryMetroId)?.metro ?? null,
+    [usaDiscoveryMetroId],
+  );
+  const usaPrototypeActivityRegions = useMemo(() => {
+    if (!denseUsPinPrototype || countryDiscoveryScope?.iso3 !== 'USA') return [];
+    return usaDiscoveryRegionId
+      ? getUsaMetroMarkers(usaDiscoveryRegionId)
+      : getUsaRegionMarkers();
+  }, [countryDiscoveryScope?.iso3, denseUsPinPrototype, usaDiscoveryRegionId]);
+
   const globeStats = useMemo(() => {
     const cityKeys = new Set(discoveryPoints.flatMap((point) => {
       const city = String(point.city ?? '').trim();
@@ -1407,17 +1559,58 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     };
   }, [activeCountryIso3s.length, discoveryPoints, globeListings]);
   const activeActivityRegion = useMemo(
-    () => visibleCountryActivityRegions.find((region) => region.id === activeActivityRegionId)
+    () => usaPrototypeActivityRegions.find((region) => region.id === activeActivityRegionId)
+      ?? visibleCountryActivityRegions.find((region) => region.id === activeActivityRegionId)
       ?? activityRegions.find((region) => region.id === activeActivityRegionId)
       ?? null,
-    [activityRegions, activeActivityRegionId, visibleCountryActivityRegions],
+    [activityRegions, activeActivityRegionId, usaPrototypeActivityRegions, visibleCountryActivityRegions],
   );
+  useEffect(() => {
+    if (!activeActivityRegion || surfaceMode !== 'globe' || runtimeState !== 'ready') {
+      setDiscoveryStackAnchor(null);
+      return;
+    }
+
+    let frameId = 0;
+    const markerId = activeActivityRegion.id;
+    globeRef.current?.setActivityRegionLabelSuppressed(markerId, true);
+
+    const updateAnchor = () => {
+      const projected = globeRef.current?.getActivityRegionScreenPosition(markerId) ?? null;
+      const next = projected?.visible ? { x: projected.x, y: projected.y } : null;
+      setDiscoveryStackAnchor((current) => {
+        if (!current && !next) return current;
+        if (
+          current
+          && next
+          && Math.abs(current.x - next.x) < 0.5
+          && Math.abs(current.y - next.y) < 0.5
+        ) return current;
+        return next;
+      });
+      frameId = window.requestAnimationFrame(updateAnchor);
+    };
+
+    updateAnchor();
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      globeRef.current?.setActivityRegionLabelSuppressed(markerId, false);
+    };
+  }, [activeActivityRegion, runtimeState, surfaceMode]);
   const heroArrivalPresets = useMemo(
     () => devToolsEnabled ? getHeroArrivalPresets(customHeroArrivalPreset) : builtInHeroArrivalPresets,
     [customHeroArrivalPreset, devToolsEnabled],
   );
   const countryDiscoveryScopeIso3 = countryDiscoveryScope?.iso3 ?? '';
   const regionDiscoveryRailListings = useMemo(() => {
+    if (denseUsPinPrototype) {
+      const scope = usaSelectedMetro
+        ? getUsaMetroListings(usaSelectedMetro.id)
+        : usaSelectedRegion?.metros.flatMap((metro) => getUsaMetroListings(metro.id))
+        ?? [];
+      const ids = new Set(scope.map((listing) => listing.id));
+      return globeListings.filter((listing) => ids.has(listing.id));
+    }
     if (activeActivityRegion) {
       const memberIds = new Set(activeActivityRegion.listingIds);
       return globeListings.filter((listing) => memberIds.has(listing.id));
@@ -1427,7 +1620,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         resolveCountryIsoCodes(getListingPhysicalAddress(listing).country).iso3 === countryDiscoveryScopeIso3);
     }
     return [];
-  }, [activeActivityRegion, countryDiscoveryScopeIso3, globeListings]);
+  }, [activeActivityRegion, countryDiscoveryScopeIso3, denseUsPinPrototype, globeListings, usaSelectedMetro, usaSelectedRegion]);
   const {
     selectedListingId,
     setSelectedListingId,
@@ -1445,6 +1638,38 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     if (!mobilePrototype || activeListingTypes.length) return;
     setListingTypes(['club', 'event']);
   }, [activeListingTypes.length, mobilePrototype, setListingTypes]);
+  const activeRegionHostItems = useMemo<DiscoveryRotaryHostItem[]>(() => {
+    if (!activeActivityRegion) return [];
+    const memberIds = new Set(activeActivityRegion.listingIds);
+    const query = searchText.trim().toLowerCase();
+    return hostRuntimeEvents.flatMap((event) => {
+      if (!memberIds.has(event.id) || !event.organization || !event.organizationId) return [];
+      const hostRegion = event.organization.globePresence?.regions.find((candidate) =>
+        candidate.status !== 'inactive'
+        && candidate.latitude === event.lat
+        && candidate.longitude === event.lon,
+      );
+      const searchable = [
+        event.organization.name,
+        event.organization.descriptionShort,
+        hostRegion?.city,
+        hostRegion?.region,
+        hostRegion?.country,
+      ];
+      if (query && !searchable.some((value) => value?.toLowerCase().includes(query))) return [];
+      return [{
+        id: event.id,
+        organizationId: event.organizationId,
+        name: event.organization.name,
+        city: hostRegion?.city ?? '',
+        country: hostRegion?.country ?? '',
+        locationLabel: event.hostRegionLabel,
+        logoUrl: event.organization.logoImageUrl,
+        heroUrl: event.organization.headerImageUrl ?? event.organization.logoImageUrl,
+      }];
+    });
+  }, [activeActivityRegion, hostRuntimeEvents, searchText]);
+  const discoveryStackItemCount = filteredDiscoveryRailListings.length + activeRegionHostItems.length;
   const { filteredListings: filteredMapListings } = useExplorerState(globeListings);
   const spatialMapListings = useMemo(
     () => aggregateEventsForSpatialDisplay(filteredMapListings).listings,
@@ -1456,7 +1681,29 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       : spatialMapListings,
     [mobilePrototype, spatialMapListings],
   );
-  const mapViewportListings = useViewportDiscovery(filteredMapListings, mapViewportDiscovery, {
+  const activeRegionListingIds = useMemo(
+    () => activeActivityRegion ? new Set(activeActivityRegion.listingIds) : null,
+    [activeActivityRegion],
+  );
+  const scopedFilteredMapListings = useMemo(
+    () => activeRegionListingIds
+      ? filteredMapListings.filter((listing) => activeRegionListingIds.has(listing.id))
+      : filteredMapListings,
+    [activeRegionListingIds, filteredMapListings],
+  );
+  const scopedRenderedSpatialMapListings = useMemo(
+    () => activeRegionListingIds
+      ? renderedSpatialMapListings.filter((listing) => activeRegionListingIds.has(listing.id))
+      : renderedSpatialMapListings,
+    [activeRegionListingIds, renderedSpatialMapListings],
+  );
+  const scopedHostMapPins = useMemo(
+    () => activeRegionListingIds
+      ? hostMapPins.filter((pin) => activeRegionListingIds.has(pin.id))
+      : hostMapPins,
+    [activeRegionListingIds, hostMapPins],
+  );
+  const mapViewportListings = useViewportDiscovery(scopedFilteredMapListings, mapViewportDiscovery, {
     paddingRatio: 0.18,
   });
   const globeHeroSelectedListingId =
@@ -1469,24 +1716,43 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       : selectedListingId;
   const displaySelectedListingId = detailListingId ?? globeHeroSelectedListingId;
   const discoveryRailSelectedListingId = displaySelectedListingId;
+  const selectedMapListing = useMemo(
+    () => displaySelectedListingId
+      ? scopedFilteredMapListings.find((listing) => listing.id === displaySelectedListingId) ?? null
+      : null,
+    [displaySelectedListingId, scopedFilteredMapListings],
+  );
+  const discoveryMapScopeName = usaSelectedMetro?.name
+    ?? activeActivityRegion?.name
+    ?? usaSelectedRegion?.name
+    ?? countryDiscoveryScope?.name
+    ?? selectedCountry?.name
+    ?? null;
+  const discoveryContextBoundaryUrls = useMemo(
+    () => getDiscoveryContextBoundaryUrls(discoveryMapScopeName, regionDiscoveryRailListings),
+    [discoveryMapScopeName, regionDiscoveryRailListings],
+  );
+  const selectedCityBoundaryUrl = surfaceMode === 'map'
+    ? getListingCityBoundaryUrl(selectedMapListing)
+    : null;
   const selectedPrivateMapListing = useMemo(
     () => surfaceMode === 'map' && displaySelectedListingId
-      ? filteredMapListings.find((listing) =>
+      ? scopedFilteredMapListings.find((listing) =>
           listing.id === displaySelectedListingId && isApproximateLocation(listing),
         ) ?? null
       : null,
-    [displaySelectedListingId, filteredMapListings, surfaceMode],
+    [displaySelectedListingId, scopedFilteredMapListings, surfaceMode],
   );
   const mapNearbyRail = useMemo(() => {
     const selectedListing = displaySelectedListingId
-      ? filteredMapListings.find((listing) => listing.id === displaySelectedListingId) ?? null
+      ? scopedFilteredMapListings.find((listing) => listing.id === displaySelectedListingId) ?? null
       : null;
     const selectedCoords = selectedListing ? getListingDisplayCoords(selectedListing) : null;
     const center = selectedCoords ?? mapViewportDiscovery?.center ?? {
       lng: camera.lng,
       lat: camera.lat,
     };
-    const ranked = filteredMapListings
+    const ranked = scopedFilteredMapListings
       .map((listing, index) => {
         const coords = getListingDisplayCoords(listing);
         const distanceMeters = coords ? distanceMetersBetween(center, coords) : null;
@@ -1512,20 +1778,59 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ]),
       ) as Record<string, string>,
     };
-  }, [camera.lat, camera.lng, displaySelectedListingId, filteredMapListings, mapViewportDiscovery?.center]);
+  }, [camera.lat, camera.lng, displaySelectedListingId, mapViewportDiscovery?.center, scopedFilteredMapListings]);
   const discoveryRailListings = surfaceMode === 'map'
     ? mapNearbyRail.listings
     : filteredDiscoveryRailListings;
   const discoveryRailDistanceLabels = surfaceMode === 'map' ? mapNearbyRail.distanceLabels : {};
+  const selectedMapCity = selectedMapListing
+    ? String(getListingPhysicalAddress(selectedMapListing).city ?? '').trim() || null
+    : null;
   const discoveryRailRegionName = surfaceMode === 'map'
-    ? null
-    : activeActivityRegion?.name ?? countryDiscoveryScope?.name ?? null;
-  const discoveryRailTitle = surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
-    ? 'Choose a country'
-    : undefined;
-  const discoveryRailEmptyMessage = surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
-    ? 'Select a highlighted country to reveal its activity.'
-    : 'No nearby listings match the current filters.';
+    ? selectedMapCity ?? discoveryMapScopeName
+    : denseUsPinPrototype
+      ? usaSelectedMetro?.name ?? usaSelectedRegion?.name ?? countryDiscoveryScope?.name ?? null
+      : activeActivityRegion?.name ?? countryDiscoveryScope?.name ?? null;
+  const discoveryRailTitle = surfaceMode === 'globe' && denseUsPinPrototype && countryDiscoveryScope && !usaSelectedRegion
+    ? 'Choose a region'
+    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+      ? 'Choose a country'
+      : undefined;
+  const discoveryRailEmptyMessage = surfaceMode === 'globe' && denseUsPinPrototype && countryDiscoveryScope && !usaSelectedRegion
+    ? 'Select a regional discovery marker to reveal its metro areas.'
+    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+      ? 'Select a highlighted country to reveal its activity.'
+      : activeRegionHostItems.length && !filteredDiscoveryRailListings.length
+        ? 'Hosts in this area are available in the discovery stack.'
+        : 'No nearby listings match the current filters.';
+  const geoContextTitle = (surfaceMode === 'map' ? selectedMapCity : null)
+    ?? usaSelectedMetro?.name
+    ?? activeActivityRegion?.name
+    ?? usaSelectedRegion?.name
+    ?? countryDiscoveryScope?.name
+    ?? selectedCountry?.name
+    ?? null;
+  const geoContextKind = surfaceMode === 'map' && selectedMapCity
+    ? 'City'
+    : usaSelectedMetro
+      ? 'Metro'
+      : activeActivityRegion
+      ? 'Area'
+      : usaSelectedRegion
+        ? 'Region'
+        : geoContextTitle
+          ? 'Country'
+          : null;
+  const geoContextCount = discoveryStackItemCount;
+  const geoContextCountLabel = activeListingTypes.length === 1
+    ? activeListingTypes[0] === 'club'
+      ? `${geoContextCount} club${geoContextCount === 1 ? '' : 's'}`
+      : activeListingTypes[0] === 'event'
+        ? `${geoContextCount} event${geoContextCount === 1 ? '' : 's'}`
+        : activeListingTypes[0] === 'promoter'
+          ? `${geoContextCount} host${geoContextCount === 1 ? '' : 's'}`
+          : `${geoContextCount} nearby`
+    : `${geoContextCount} nearby`;
   const discoveryRailIsUpdating = surfaceMode === 'map' && isMapViewportDiscoveryPending;
   const hasExplorerDetails = Boolean(detailListingId || selectedOrganizationId);
   const selectedListingIsGlobeEligible = useMemo(
@@ -1572,7 +1877,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   }, []);
 
   useEffect(() => {
-    if (hybridPrototype || mobilePrototype) {
+    if (hybridPrototype || mobilePrototype || denseUsPinPrototype) {
       if (hybridInitializedRef.current) return;
       hybridInitializedRef.current = true;
       setSurfaceMode('globe');
@@ -1586,11 +1891,141 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ? DEFAULT_MAP_CAMERA
         : { surface: nextSurface },
     );
-  }, [camera.surface, hybridPrototype, location.pathname, mobilePrototype, setCamera, setSurfaceMode]);
+  }, [camera.surface, denseUsPinPrototype, hybridPrototype, location.pathname, mobilePrototype, setCamera, setSurfaceMode]);
+
+  useEffect(() => {
+    if (denseUsPinPrototype) return;
+    const params = new URLSearchParams(location.search);
+    const activityRegionId = params.get('activityRegion');
+    const scopeCountryIso3 = String(params.get('scopeCountry') ?? '').trim().toUpperCase();
+    if (!activityRegionId || !scopeCountryIso3) return;
+    const countryPoint = discoveryPoints.find((point) =>
+      resolveCountryIsoCodes(point.country).iso3 === scopeCountryIso3,
+    );
+    if (!countryPoint) return;
+    const scopeName = params.get('scopeCountryName')?.trim() || countryPoint.country || scopeCountryIso3;
+    setCountryDiscoveryScope((current) =>
+      current?.iso3 === scopeCountryIso3 && current.name === scopeName
+        ? current
+        : { iso3: scopeCountryIso3, name: scopeName },
+    );
+    setRevealedCountryIso3((current) => current === scopeCountryIso3 ? current : scopeCountryIso3);
+    setActiveActivityRegionId((current) => current === activityRegionId ? current : activityRegionId);
+  }, [denseUsPinPrototype, discoveryPoints, location.search]);
+
+  useEffect(() => {
+    if (!denseUsPinPrototype) return;
+    // The URL encodes the selected country/region/metro, not the active
+    // rendering surface. Once the user explicitly opens MapLibre, do not let
+    // a subsequent runtime/listing update replay this route restoration and
+    // force the prototype back onto the globe.
+    if (surfaceModeRef.current === 'map') return;
+    const params = new URLSearchParams(location.search);
+    const regionId = params.get('region');
+    const metroId = params.get('metro');
+    const hasUsaCountryRoute = params.get('country') === 'usa';
+    const region = findUsaRegion(regionId);
+    const metroMatch = findUsaMetro(metroId);
+
+    if (region && metroMatch?.region.id === region.id) {
+      setCountryDiscoveryScope({ iso3: 'USA', name: 'United States' });
+      setRevealedCountryIso3('USA');
+      setSelectedCountry({ iso2: 'US', iso3: 'USA', name: 'United States' });
+      setUsaDiscoveryRegionId(region.id);
+      setUsaDiscoveryMetroId(metroMatch.metro.id);
+      setActiveActivityRegionId(`dev-usa-metro:${metroMatch.metro.id}`);
+      setTravelPhase('idle');
+      setCamera({
+        surface: 'globe',
+        lng: metroMatch.metro.longitude,
+        lat: metroMatch.metro.latitude,
+        zoom: zoomIntentToMapZoom(USA_METRO_GLOBE_ZOOM_INTENT),
+        pitch: WORLD_PITCH,
+        bearing: WORLD_BEARING,
+      });
+      surfaceModeRef.current = 'globe';
+      setSurfaceMode('globe');
+      globeRef.current?.updateVisibleEvents(globeRuntimeEvents);
+      globeRef.current?.updateActivityRegions(getUsaMetroMarkers(region.id));
+      globeRef.current?.setDirectPinsVisible(false);
+      globeRef.current?.setNavigationPose({
+        lng: metroMatch.metro.longitude,
+        lat: metroMatch.metro.latitude,
+        zoomIntent: USA_METRO_GLOBE_ZOOM_INTENT,
+        distance: USA_METRO_GLOBE_DISTANCE,
+      });
+      return;
+    }
+
+    if (region) {
+      setCountryDiscoveryScope({ iso3: 'USA', name: 'United States' });
+      setRevealedCountryIso3('USA');
+      setSelectedCountry({ iso2: 'US', iso3: 'USA', name: 'United States' });
+      setUsaDiscoveryRegionId(region.id);
+      setUsaDiscoveryMetroId(null);
+      setActiveActivityRegionId(null);
+      setTravelPhase('idle');
+      setCamera({
+        surface: 'globe',
+        lng: region.longitude,
+        lat: region.latitude,
+        zoom: zoomIntentToMapZoom(USA_REGION_GLOBE_ZOOM_INTENT),
+        pitch: WORLD_PITCH,
+        bearing: WORLD_BEARING,
+      });
+      surfaceModeRef.current = 'globe';
+      setSurfaceMode('globe');
+      globeRef.current?.setNavigationPose({
+        lng: region.longitude,
+        lat: region.latitude,
+        zoomIntent: USA_REGION_GLOBE_ZOOM_INTENT,
+        distance: USA_REGION_GLOBE_DISTANCE,
+      });
+      globeRef.current?.updateVisibleEvents(globeRuntimeEvents);
+      globeRef.current?.updateActivityRegions([]);
+      globeRef.current?.updateActivityRegions(getUsaMetroMarkers(region.id));
+      globeRef.current?.setDirectPinsVisible(false);
+      return;
+    }
+
+    setUsaDiscoveryMetroId(null);
+    setUsaDiscoveryRegionId(null);
+    if (hasUsaCountryRoute) {
+      setCountryDiscoveryScope({ iso3: 'USA', name: 'United States' });
+      setRevealedCountryIso3('USA');
+      setSelectedCountry({ iso2: 'US', iso3: 'USA', name: 'United States' });
+      setActiveActivityRegionId(null);
+      setTravelPhase('idle');
+      setCamera({
+        surface: 'globe',
+        lng: USA_COUNTRY_GLOBE_CENTER.lng,
+        lat: USA_COUNTRY_GLOBE_CENTER.lat,
+        zoom: zoomIntentToMapZoom(0.3),
+        pitch: WORLD_PITCH,
+        bearing: WORLD_BEARING,
+      });
+      surfaceModeRef.current = 'globe';
+      setSurfaceMode('globe');
+      globeRef.current?.setNavigationPose({
+        lng: USA_COUNTRY_GLOBE_CENTER.lng,
+        lat: USA_COUNTRY_GLOBE_CENTER.lat,
+        zoomIntent: 0.3,
+        distance: USA_COUNTRY_GLOBE_DISTANCE,
+      });
+      globeRef.current?.updateVisibleEvents(globeRuntimeEvents);
+      globeRef.current?.updateActivityRegions([]);
+      globeRef.current?.updateActivityRegions(getUsaRegionMarkers());
+      globeRef.current?.setDirectPinsVisible(false);
+      return;
+    }
+    setCountryDiscoveryScope(null);
+    setRevealedCountryIso3(null);
+    setSelectedCountry(null);
+    setActiveActivityRegionId(null);
+  }, [countryDiscoveryScope?.iso3, denseUsPinPrototype, globeRuntimeEvents, location.search, runtimeState, setCamera, setSurfaceMode]);
 
   useEffect(() => {
     surfaceModeRef.current = surfaceMode;
-    if (surfaceMode !== 'globe') setHoveredCountry(null);
     if (spatialDebugEnabled) {
       setSpatialDebug((current) => ({
         ...current,
@@ -1694,6 +2129,11 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   ]);
 
   useEffect(() => {
+    if (!devToolsEnabled) return;
+    setHeroComposerEnabled(activeDevGlobeTool === 'hero');
+  }, [activeDevGlobeTool, devToolsEnabled]);
+
+  useEffect(() => {
     if (!devToolsEnabled || typeof window === 'undefined') return;
     window.localStorage.setItem(HERO_COMPOSER_ENABLED_STORAGE_KEY, String(heroComposerEnabled));
   }, [devToolsEnabled, heroComposerEnabled]);
@@ -1731,7 +2171,15 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
 
   useEffect(() => {
     if (runtimeState !== 'ready') return;
-    if (fixtureModeEnabled || performanceFixtureEnabled) {
+    if (denseUsPinPrototype) {
+      if (countryDiscoveryScope?.iso3 === 'USA') {
+        globeRef.current?.updateVisibleEvents(globeRuntimeEvents);
+      } else {
+        globeRef.current?.updateEvents(globeRuntimeEvents);
+      }
+      globeRef.current?.updateActivityRegions(usaPrototypeActivityRegions);
+      globeRef.current?.setDirectPinsVisible(false);
+    } else if (fixtureModeEnabled || performanceFixtureEnabled) {
       globeRef.current?.updateEvents(globeRuntimeEvents);
       globeRef.current?.updateActivityRegions(activityRegions);
     } else {
@@ -1746,13 +2194,23 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   }, [
     activeCountryIso3s,
     activityRegions,
+    countryDiscoveryScope?.iso3,
+    denseUsPinPrototype,
     fixtureModeEnabled,
     globeRuntimeEvents,
     performanceFixtureEnabled,
     runtimeState,
+    usaPrototypeActivityRegions,
     visibleCountryActivityRegions,
     visibleCountryRuntimeEvents,
   ]);
+
+  useEffect(() => {
+    if (denseUsPinPrototype || runtimeState !== 'ready' || surfaceMode !== 'globe' || !activeActivityRegion) return;
+    const persistedRegionId = new URLSearchParams(location.search).get('activityRegion');
+    if (persistedRegionId !== activeActivityRegion.id) return;
+    globeRef.current?.restoreActivityRegion(activeActivityRegion.id);
+  }, [activeActivityRegion, denseUsPinPrototype, location.search, runtimeState, surfaceMode]);
 
   useEffect(() => {
     if (runtimeState !== 'ready') return;
@@ -1793,6 +2251,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     if (
       runtimeState !== 'ready' ||
       isHero ||
+      denseUsPinPrototype ||
       globeIntroStartedRef.current ||
       prefersReducedMotion ||
       surfaceModeRef.current !== 'globe' ||
@@ -1903,10 +2362,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       container.removeEventListener('pointerdown', settleAtCurrentPose);
       container.removeEventListener('touchstart', settleAtCurrentPose);
     };
-  }, [isHero, location.search, mobilePrototype, prefersReducedMotion, runtimeState]);
+  }, [denseUsPinPrototype, isHero, location.search, mobilePrototype, prefersReducedMotion, runtimeState]);
 
   useEffect(() => {
-    if (runtimeState !== 'ready' || !fixtureModeEnabled || !captureFixtureId || !activityRegions[0]) return;
+    if (runtimeState !== 'ready' || !fixtureModeEnabled || denseUsPinPrototype || !captureFixtureId || !activityRegions[0]) return;
     const timer = window.setTimeout(() => {
       globeRef.current?.selectActivityRegion(activityRegions[0].id);
       if (Number.isFinite(captureDistance)) {
@@ -1920,7 +2379,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       }
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [activityRegions, captureDistance, captureFixtureId, fixtureModeEnabled, globePresentation, runtimeState, scaleFixtureId]);
+  }, [activityRegions, captureDistance, captureFixtureId, denseUsPinPrototype, fixtureModeEnabled, globePresentation, runtimeState, scaleFixtureId]);
 
   useEffect(() => {
     if (runtimeState !== 'ready') return;
@@ -1975,6 +2434,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     ) {
       return;
     }
+    if (activeActivityRegion?.listingIds.includes(selectedListingId)) {
+      // A rotary-stack card selection is a content selection, not a request
+      // to replace the stack with an oversized venue marker/label. Keep the
+      // region beacon + deck as the spatial presentation while details update.
+      return;
+    }
     const destination = navigationStateRef.current.travelDestination;
     if (
       destination?.type === 'listing' &&
@@ -1985,7 +2450,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     }
     suppressNextGlobeSelectTravelRef.current = 'prevent-focus';
     globeRef.current?.selectEvent(resolveSpatialListingId(selectedListingId) ?? selectedListingId);
-  }, [isHero, runtimeState, selectedListingId, selectedListingIsGlobeEligible]);
+  }, [activeActivityRegion, isHero, runtimeState, selectedListingId, selectedListingIsGlobeEligible, surfaceMode]);
 
   const clearPlannedTravelTimers = () => {
     if (plannedTravelTimerRef.current !== null) {
@@ -2381,6 +2846,84 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       ));
   };
 
+  const setUsaPrototypeLocation = (regionId: string, metroId?: string) => {
+    const params = new URLSearchParams(location.search);
+    params.delete('scaleFixture');
+    params.delete('scalePreset');
+    params.delete('scaleDistance');
+    params.set('country', 'usa');
+    params.set('region', regionId);
+    if (metroId) params.set('metro', metroId);
+    else params.delete('metro');
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` });
+  };
+
+  const selectUsaDiscoveryRegion = (marker: ActivityRegion) => {
+    const region = findUsaRegion(marker.id.replace('dev-usa-region:', ''));
+    if (!region) return false;
+    if (region.metros.length === 1) {
+      const onlyMetroMarker = getUsaMetroMarkers(region.id)[0];
+      return onlyMetroMarker ? focusUsaMetroOnGlobe(onlyMetroMarker) : false;
+    }
+    clearPlannedTravelTimers();
+    setUsaDiscoveryRegionId(region.id);
+    setUsaDiscoveryMetroId(null);
+    setActiveActivityRegionId(null);
+    setTravelDestination(null);
+    setTravelPhase('idle');
+    setCamera({
+      surface: 'globe',
+      lng: region.longitude,
+      lat: region.latitude,
+      zoom: zoomIntentToMapZoom(USA_REGION_GLOBE_ZOOM_INTENT),
+      pitch: WORLD_PITCH,
+      bearing: WORLD_BEARING,
+    });
+    globeRef.current?.updateActivityRegions(getUsaMetroMarkers(region.id));
+    globeRef.current?.setDirectPinsVisible(false);
+    globeRef.current?.setNavigationPose({
+      lng: region.longitude,
+      lat: region.latitude,
+      zoomIntent: USA_REGION_GLOBE_ZOOM_INTENT,
+      distance: USA_REGION_GLOBE_DISTANCE,
+    });
+    setUsaPrototypeLocation(region.id);
+    return true;
+  };
+
+  function focusUsaMetroOnGlobe(marker: ActivityRegion) {
+    const metroMatch = findUsaMetro(marker.id.replace('dev-usa-metro:', ''));
+    if (!metroMatch) return false;
+    clearPlannedTravelTimers();
+    setUsaDiscoveryRegionId(metroMatch.region.id);
+    setUsaDiscoveryMetroId(metroMatch.metro.id);
+    setActiveActivityRegionId(marker.id);
+    setSelectedListingId(null);
+    setSelectedOrganizationId(null);
+    setTravelDestination(null);
+    setTravelPhase('idle');
+    setCamera({
+      surface: 'globe',
+      lng: metroMatch.metro.longitude,
+      lat: metroMatch.metro.latitude,
+      zoom: zoomIntentToMapZoom(USA_METRO_GLOBE_ZOOM_INTENT),
+      pitch: WORLD_PITCH,
+      bearing: WORLD_BEARING,
+    });
+    surfaceModeRef.current = 'globe';
+    setSurfaceMode('globe');
+    globeRef.current?.updateActivityRegions(getUsaMetroMarkers(metroMatch.region.id));
+    globeRef.current?.setDirectPinsVisible(false);
+    globeRef.current?.setNavigationPose({
+      lng: metroMatch.metro.longitude,
+      lat: metroMatch.metro.latitude,
+      zoomIntent: USA_METRO_GLOBE_ZOOM_INTENT,
+      distance: USA_METRO_GLOBE_DISTANCE,
+    });
+    setUsaPrototypeLocation(metroMatch.region.id, metroMatch.metro.id);
+    return true;
+  }
+
   const explorerNavigationController = {
     selectVenue: beginListingTravel,
     selectRegion: beginAreaTravel,
@@ -2594,7 +3137,37 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           activityRegions: [],
           config: globeRuntimeConfig,
           onReady: () => {
-            if (!cancelled) setRuntimeState('ready');
+            if (cancelled) return;
+            setRuntimeState('ready');
+            if (denseUsPinPrototype) {
+              const params = new URLSearchParams(location.search);
+              const routeRegion = findUsaRegion(params.get('region'));
+              const hasUsaCountryRoute = params.get('country') === 'usa';
+              if (routeRegion || hasUsaCountryRoute) globe.updateVisibleEvents(globeRuntimeEvents);
+              else globe.updateEvents(globeRuntimeEvents);
+              globe.updateActivityRegions(
+                routeRegion
+                  ? getUsaMetroMarkers(routeRegion.id)
+                  : hasUsaCountryRoute ? getUsaRegionMarkers() : [],
+              );
+              globe.setCountryActivityCountries(['USA']);
+              globe.setDirectPinsVisible(false);
+              if (routeRegion) {
+                globe.setNavigationPose({
+                  lng: routeRegion.longitude,
+                  lat: routeRegion.latitude,
+                  zoomIntent: USA_REGION_GLOBE_ZOOM_INTENT,
+                  distance: USA_REGION_GLOBE_DISTANCE,
+                });
+              } else if (hasUsaCountryRoute) {
+                globe.setNavigationPose({
+                  lng: USA_COUNTRY_GLOBE_CENTER.lng,
+                  lat: USA_COUNTRY_GLOBE_CENTER.lat,
+                  zoomIntent: 0.3,
+                  distance: USA_COUNTRY_GLOBE_DISTANCE,
+                });
+              }
+            }
           },
           onError: (error) => {
             if (!cancelled) {
@@ -2624,6 +3197,22 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               setCountryDiscoveryScope(null);
               return;
             }
+            if (denseUsPinPrototype) {
+              setUsaDiscoveryRegionId(null);
+              setUsaDiscoveryMetroId(null);
+              if (countryIso3 !== 'USA') {
+                setCountryDiscoveryScope(null);
+                return;
+              }
+              setCountryDiscoveryScope({ iso3: 'USA', name: 'United States' });
+              setRevealedCountryIso3('USA');
+              const params = new URLSearchParams(location.search);
+              params.set('country', 'usa');
+              params.delete('region');
+              params.delete('metro');
+              navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' });
+              return;
+            }
             setCountryDiscoveryScope({
               iso3: countryIso3,
               name: String(country?.name ?? countryIso3),
@@ -2633,10 +3222,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               countryPinRevealTimerRef.current = null;
             }, prefersReducedMotion ? 0 : COUNTRY_PIN_REVEAL_DELAY_MS);
           },
-          onCountryHover: (country) => {
-            if (isHero) return;
-            setHoveredCountry(country);
-          },
+          onCountryHover: () => undefined,
           onEventHover: () => undefined,
           onEventSelect: (event) => {
             if (isHero) return;
@@ -2690,6 +3276,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           },
           onActivityRegionSelect: (region) => {
             if (isHero) return;
+            if (denseUsPinPrototype) {
+              if (selectUsaDiscoveryRegion(region)) return;
+              if (focusUsaMetroOnGlobe(region)) return;
+            }
             globeRef.current?.setAdministrativeBoundaryIds(
               getHybridAdministrativeBoundaryIdsForRegion(region),
             );
@@ -2697,6 +3287,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           },
           onDiscoveryModeChange: (region) => {
             if (isHero) return;
+            if (denseUsPinPrototype) return;
             setActiveActivityRegionId(region?.id ?? null);
             if (hybridPrototype && !navigationStateRef.current.selectedListingId) {
               globeRef.current?.setAdministrativeBoundaryIds(
@@ -2723,8 +3314,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             setSelectedListingId(null);
             setSelectedOrganizationId(null);
             setSelectedCountry(null);
-            setHoveredCountry(null);
             setActiveActivityRegionId(null);
+            if (denseUsPinPrototype) {
+              setCountryDiscoveryScope(null);
+              setRevealedCountryIso3(null);
+              setUsaDiscoveryRegionId(null);
+              setUsaDiscoveryMetroId(null);
+              navigate({ pathname: location.pathname, search: '' });
+            }
             globeRef.current?.setAdministrativeBoundaryIds([]);
           },
           onContextLost: () => {
@@ -2877,6 +3474,66 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     if (mode === 'map') clearCountryPinReveal();
     setTravelDestination(null);
     setTravelPhase(mode === 'map' ? 'local-explore' : 'idle');
+
+    if (denseUsPinPrototype) {
+      const region = usaSelectedRegion ?? findUsaMetro(usaDiscoveryMetroId)?.region ?? null;
+      if (mode === 'map' && usaSelectedMetro) {
+        setCamera({
+          surface: 'map',
+          lng: usaSelectedMetro.longitude,
+          lat: usaSelectedMetro.latitude,
+          zoom: usaSelectedMetro.mapZoom,
+          pitch: 0,
+          bearing: 0,
+        });
+      } else if (region) {
+        setUsaDiscoveryMetroId(null);
+        setCamera({
+          surface: 'globe',
+          lng: region.longitude,
+          lat: region.latitude,
+          zoom: zoomIntentToMapZoom(USA_REGION_GLOBE_ZOOM_INTENT),
+          pitch: WORLD_PITCH,
+          bearing: WORLD_BEARING,
+        });
+        globeRef.current?.setNavigationPose({
+          lng: region.longitude,
+          lat: region.latitude,
+          zoomIntent: USA_REGION_GLOBE_ZOOM_INTENT,
+          distance: USA_REGION_GLOBE_DISTANCE,
+        });
+        globeRef.current?.setDirectPinsVisible(false);
+        setUsaPrototypeLocation(region.id);
+      }
+      surfaceModeRef.current = mode;
+      setSurfaceMode(mode);
+      return;
+    }
+
+    if (mode === 'map' && activeActivityRegion && !hybridPrototype && !mobilePrototype) {
+      const framing = buildListingDistributionFraming({
+        profile: 'region',
+        listingIds: activeActivityRegion.listingIds,
+        listings: globeListingsRef.current,
+        fallbackCenter: { lng: activeActivityRegion.longitude, lat: activeActivityRegion.latitude },
+      });
+      setCamera({
+        surface: 'map',
+        lng: framing.center.lng,
+        lat: framing.center.lat,
+        zoom: framing.kind === 'camera' ? framing.zoom : GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+        pitch: 0,
+        bearing: 0,
+      });
+      surfaceModeRef.current = 'map';
+      setSurfaceMode('map');
+      const params = new URLSearchParams(location.search);
+      params.set('activityRegion', activeActivityRegion.id);
+      if (countryDiscoveryScope?.iso3) params.set('scopeCountry', countryDiscoveryScope.iso3);
+      if (countryDiscoveryScope?.name) params.set('scopeCountryName', countryDiscoveryScope.name);
+      navigate({ pathname: '/map', search: params.toString() ? `?${params.toString()}` : '' });
+      return;
+    }
 
     if (hybridPrototype) {
       hybridHandoffCooldownUntilRef.current = performance.now() + HYBRID_HANDOFF_COOLDOWN_MS;
@@ -3107,23 +3764,68 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const saveHybridGeospatialCalibration = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(GEOSPATIAL_CALIBRATION_STORAGE_KEY, JSON.stringify(hybridGeospatialCalibration));
+    window.localStorage.setItem(GEOSPATIAL_SELECTED_FILL_STORAGE_KEY, JSON.stringify(devSelectedFillAlignment));
     setHybridGeospatialSaveNotice(
-      `Saved pins ${hybridGeospatialCalibration.pins.longitudeOffsetDeg.toFixed(2)}° · GeoJSON ${hybridGeospatialCalibration.countryGeoJson.longitudeOffsetDeg.toFixed(2)}° · atlas ${hybridGeospatialCalibration.countryAtlas.longitudeOffsetDeg.toFixed(2)}°`,
+      `Saved pins ${hybridGeospatialCalibration.pins.longitudeOffsetDeg.toFixed(2)}° · border ${hybridGeospatialCalibration.countryGeoJson.longitudeOffsetDeg.toFixed(2)}° · fill ${devSelectedFillAlignment.longitudeOffsetDeg.toFixed(2)}°/${devSelectedFillAlignment.latitudeOffsetDeg.toFixed(2)}° · atlas ${hybridGeospatialCalibration.countryAtlas.longitudeOffsetDeg.toFixed(2)}°`,
     );
   };
 
+  const selectedProductionGeoLayers = (Object.keys(productionGeoAlignLayers) as Array<keyof GeospatialCalibrationState>)
+    .filter((layer) => productionGeoAlignLayers[layer]);
+
+  const setProductionGeoLongitude = (longitudeOffsetDeg: number) => {
+    if (!selectedProductionGeoLayers.length) return;
+    const clamped = Math.max(-5, Math.min(5, longitudeOffsetDeg));
+    setHybridGeospatialCalibration((current) => {
+      const next = { ...current };
+      selectedProductionGeoLayers.forEach((layer) => {
+        next[layer] = { ...current[layer], longitudeOffsetDeg: clamped };
+      });
+      return next;
+    });
+    setHybridGeospatialSaveNotice('Unsaved preview');
+  };
+
+  const nudgeProductionGeoLongitude = (delta: number) => {
+    if (!selectedProductionGeoLayers.length) return;
+    setHybridGeospatialCalibration((current) => {
+      const next = { ...current };
+      selectedProductionGeoLayers.forEach((layer) => {
+        next[layer] = {
+          ...current[layer],
+          longitudeOffsetDeg: Math.max(-5, Math.min(5, current[layer].longitudeOffsetDeg + delta)),
+        };
+      });
+      return next;
+    });
+    setHybridGeospatialSaveNotice('Unsaved preview');
+  };
+
+  const toggleProductionGeoLayer = (layer: keyof GeospatialCalibrationState) => {
+    setProductionGeoAlignLayers((current) => ({ ...current, [layer]: !current[layer] }));
+  };
+
+  const productionGeoSelectedValues = selectedProductionGeoLayers.map(
+    (layer) => hybridGeospatialCalibration[layer].longitudeOffsetDeg,
+  );
+  const productionGeoControlValue = productionGeoSelectedValues[0] ?? 0;
+  const productionGeoHasMixedValues = productionGeoSelectedValues.some(
+    (value) => Math.abs(value - productionGeoControlValue) > 0.0001,
+  );
+
   const resetHybridGeospatialCalibration = () => {
     setHybridGeospatialCalibration(defaultGeospatialCalibrationState);
+    setDevSelectedFillAlignment({ ...defaultGeospatialCalibrationState.countryGeoJson });
     setHybridAtlasAuditLayers({
       showCountryIdTexture: false,
       showVisualCountryAtlas: false,
       showCountryHighlightMask: false,
     });
-    setHybridGeospatialSaveNotice('Reset: pins +1.50° · GeoJSON 0.00° · atlas +1.50°');
+    setHybridGeospatialSaveNotice('Reset: pins -1.50° · GeoJSON -1.50° · atlas +1.50°');
   };
 
   const alignAllHybridLayers = () => {
-    const shared = { longitudeOffsetDeg: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 };
+    const shared = { longitudeOffsetDeg: COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 };
     setHybridGeospatialCalibration({
       pins: { ...shared },
       countryGeoJson: { ...shared },
@@ -3146,21 +3848,6 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     });
   };
 
-  const labelCountry = hoveredCountry ?? selectedCountry;
-  const labelCountryName = labelCountry?.name ?? null;
-  const handleGlobePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const nextPointer = {
-      x: event.clientX - bounds.left,
-      y: event.clientY - bounds.top,
-    };
-    countryPointerRef.current = nextPointer;
-    if (countryHoverLabelRef.current) {
-      countryHoverLabelRef.current.style.left = `${nextPointer.x}px`;
-      countryHoverLabelRef.current.style.top = `${nextPointer.y}px`;
-    }
-  };
-
   const handleGlobeWheelCapture = (event: React.WheelEvent<HTMLDivElement>) => {
     if (!hybridPrototype || surfaceModeRef.current !== 'globe') return;
     if (event.deltaY < 0) hybridLastGlobeZoomInWheelAtRef.current = performance.now();
@@ -3175,7 +3862,6 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             style={{ opacity: 0.35 + transitionFrame.veilOpacity }}
           />
           <div
-            onPointerMove={mobilePrototype ? undefined : handleGlobePointerMove}
             onWheelCapture={handleGlobeWheelCapture}
             className={[
               'absolute inset-0 z-[2]',
@@ -3190,16 +3876,26 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             }}
           >
             <div ref={containerRef} className="absolute inset-0" aria-label="SwingSphere Globe V1" />
-            {!mobilePrototype && labelCountryName ? (
-              <div
-                ref={countryHoverLabelRef}
-                className="pointer-events-none absolute z-40 -translate-x-1/2 -translate-y-[calc(100%+18px)] whitespace-nowrap rounded-full border border-white/20 bg-black/72 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white shadow-xl backdrop-blur-xl"
-                style={{ left: countryPointerRef.current.x, top: countryPointerRef.current.y }}
-              >
-                {labelCountryName}
-              </div>
-            ) : null}
           </div>
+
+          {surfaceMode === 'globe' && activeActivityRegion && discoveryStackItemCount > 0 ? (
+            <DiscoveryRotaryStack
+              scopeName={discoveryMapScopeName ?? activeActivityRegion.name}
+              listings={filteredDiscoveryRailListings}
+              hosts={activeRegionHostItems}
+              selectedListingId={selectedListingId}
+              anchor={discoveryStackAnchor}
+              onSelectListing={(listingId) => {
+                setSelectedOrganizationId(null);
+                setSelectedListingId(listingId);
+              }}
+              onSelectHost={(host) => {
+                setSelectedListingId(null);
+                setSelectedOrganizationId(host.organizationId);
+              }}
+              onOpenMap={() => setManualSurfaceMode('map')}
+            />
+          ) : null}
 
           {graphicsCapability === 'unsupported' ? (
             <GraphicsFallback
@@ -3226,11 +3922,17 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             {shouldMountMap ? (
               <React.Suspense fallback={<div className="h-full w-full bg-[#05070a]" aria-hidden="true" />}>
                 <FlatWorldMap
-                  listings={performanceFixtureListings ?? renderedSpatialMapListings}
-                  resolutionListings={performanceFixtureListings ?? listings}
-                  hostPins={performanceFixtureEnabled ? [] : hostMapPins}
+                  listings={performanceFixtureListings ?? scopedRenderedSpatialMapListings}
+                  resolutionListings={denseUsPinPrototype ? USA_DISCOVERY_LISTINGS : performanceFixtureListings ?? listings}
+                  hostPins={performanceFixtureEnabled || denseUsPinPrototype ? [] : scopedHostMapPins}
                   buildingAssets={buildingAssets}
                   activityRegions={activityRegions}
+                  selectedActivityRegionId={activeActivityRegionId}
+                  onActivityRegionSelect={(regionId) => {
+                    setActiveActivityRegionId(regionId);
+                    setSelectedListingId(null);
+                    setSelectedOrganizationId(null);
+                  }}
                   selectedId={resolveSpatialListingId(displaySelectedListingId)}
                   onSelect={selectMapListing}
                   onReset={resetMapToWorld}
@@ -3240,6 +3942,8 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                   onViewportChange={setMapViewportDiscovery}
                   onViewportChangeState={({ isPending }) => setIsMapViewportDiscoveryPending(isPending)}
                   onVenueArrivalComplete={handleVenueArrivalComplete}
+                  contextBoundaryUrls={discoveryContextBoundaryUrls}
+                  selectedCityBoundaryUrl={selectedCityBoundaryUrl}
                   onReady={mobilePrototype ? handleMobilePreparedMapReady : undefined}
                   className="h-full w-full"
                 />
@@ -3291,6 +3995,20 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           ) : null}
         </main>
 
+        {!mobilePrototype && !isTabletPrototype && geoContextTitle ? (
+          <div
+            className="pointer-events-none absolute left-1/2 top-[78px] z-30 -translate-x-1/2 text-center"
+            aria-live="polite"
+          >
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/48 px-3 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-red-200/75">{geoContextKind}</span>
+              <span className="h-3 w-px bg-white/12" />
+              <span className="text-[11px] font-black uppercase tracking-[0.12em] text-white">{geoContextTitle}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">{geoContextCountLabel}</span>
+            </div>
+          </div>
+        ) : null}
+
         {isTabletPrototype ? (
           <TabletExplorerOverlay
             surfaceMode={surfaceMode}
@@ -3336,6 +4054,8 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               onListingTypesChange={setListingTypes}
               selectedTags={selectedTags}
               onSelectedTagsChange={setSelectedTags}
+              searchResults={searchText.trim() ? filteredMapListings.slice(0, 6) : []}
+              onSelectSearchResult={selectListingFromRail}
               onOpenTutorial={() => window.dispatchEvent(new CustomEvent('swingsphere:open-globe-tour'))}
             />
           </div>
@@ -3367,7 +4087,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             </div>
           ) : null}
 
-          <div className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
+          <div data-globe-tour="nearby" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
             <ExplorerNearbyCarousel
               listings={discoveryRailListings}
               selectedListingId={discoveryRailSelectedListingId}
@@ -3380,6 +4100,72 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             />
           </div>
         </div>
+
+        {!mobilePrototype && !isTabletPrototype ? <GlobeExploreTour /> : null}
+
+        {productionGeoAlignEnabled && !hybridPrototype && !devToolsEnabled ? (
+          <section className="pointer-events-auto absolute right-5 top-[84px] z-[95] w-[330px] rounded-2xl border border-cyan-300/20 bg-[rgba(7,9,13,0.92)] p-3 text-gray-100 shadow-2xl shadow-black/55 backdrop-blur-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">Horizontal globe alignment</p>
+                <p className="mt-1 text-[10px] leading-4 text-gray-500">Check the layers you want to move. Left/right is longitude.</p>
+              </div>
+              <strong className="font-mono text-sm text-white">
+                {!selectedProductionGeoLayers.length ? 'none' : productionGeoHasMixedValues ? 'mixed' : `${productionGeoControlValue.toFixed(2)}°`}
+              </strong>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {([
+                ['pins', 'Pins', 'Listing / venue markers'],
+                ['countryGeoJson', 'GeoJSON borders', 'WGS84 country boundaries'],
+                ['countryAtlas', 'Country atlas', 'Country ID / highlight mask'],
+              ] as const).map(([layer, title, description]) => (
+                <label key={layer} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-black/20 px-2.5 py-2">
+                  <span className="min-w-0">
+                    <strong className="block text-[10px] text-gray-200">{title}</strong>
+                    <span className="block truncate text-[9px] text-gray-500">{description}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-mono text-[10px] text-cyan-100">{hybridGeospatialCalibration[layer].longitudeOffsetDeg.toFixed(2)}°</span>
+                    <input
+                      type="checkbox"
+                      checked={productionGeoAlignLayers[layer]}
+                      onChange={() => toggleProductionGeoLayer(layer)}
+                      className="accent-cyan-400"
+                    />
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <input
+              aria-label="Selected layer longitude offset"
+              className="mt-3 w-full accent-cyan-400 disabled:opacity-35"
+              type="range"
+              min="-5"
+              max="5"
+              step="0.01"
+              value={productionGeoControlValue}
+              disabled={!selectedProductionGeoLayers.length}
+              onChange={(event) => setProductionGeoLongitude(Number(event.target.value))}
+            />
+
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(-0.1)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">−0.1°</button>
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(-0.01)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">−0.01°</button>
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(0.01)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">+0.01°</button>
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(0.1)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">+0.1°</button>
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => setProductionGeoLongitude(-1.5)} className="rounded-lg border border-red-300/20 bg-red-400/[0.08] px-2 py-2 text-[10px] font-bold text-red-100 hover:bg-red-400/[0.13] disabled:opacity-35">−1.5°</button>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => setProductionGeoLongitude(0)} className="flex-1 rounded-lg border border-white/10 bg-white/[0.035] px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-300 hover:bg-white/[0.07] disabled:opacity-35">Zero selected</button>
+              <button type="button" onClick={saveHybridGeospatialCalibration} className="flex-1 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-100 hover:bg-cyan-400/15">Save state</button>
+            </div>
+            {hybridGeospatialSaveNotice ? <div className="mt-2 text-[10px] text-gray-500">{hybridGeospatialSaveNotice}</div> : null}
+          </section>
+        ) : null}
 
         {hybridPrototype ? (
           <section className="pointer-events-auto absolute right-5 top-[84px] z-[90] max-h-[calc(100vh-110px)] w-[min(340px,calc(100vw-2.5rem))] overflow-y-auto rounded-2xl border border-white/12 bg-[rgba(7,9,13,0.9)] p-4 text-gray-100 shadow-2xl shadow-black/55 backdrop-blur-2xl">
@@ -3489,7 +4275,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           </section>
         ) : null}
         {devToolsEnabled && spatialDebugEnabled ? <SpatialDebugOverlay snapshot={spatialDebug} /> : null}
-        {performanceToolsEnabled && GlobePerformancePanel ? (
+        {performanceToolsEnabled && !devToolsEnabled && GlobePerformancePanel ? (
           <React.Suspense fallback={null}>
             <GlobePerformancePanel
               snapshot={devPerformanceSnapshot}
@@ -3499,67 +4285,229 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ) : null}
         {devToolsEnabled ? (
           <>
-            <button
-              type="button"
-              data-testid="globe-scale-calibration-toggle"
-              onClick={() => setIsScaleCalibrationPanelOpen((current) => !current)}
-              className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive pointer-events-auto absolute right-6 top-[68px] z-[61] rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-red-100"
-            >
-              Scale Calibration
-            </button>
-            {isScaleCalibrationPanelOpen && GlobeScaleCalibrationPanel ? (
-              <React.Suspense fallback={null}>
-                <div className="pointer-events-auto absolute right-6 top-[132px] z-[60] w-[min(360px,calc(100vw-48px))]">
-                  <GlobeScaleCalibrationPanel
-                    value={globePresentation}
-                    fixtureId={scaleFixtureId}
-                    presets={GLOBE_PRESENTATION_PRESETS as Record<'current' | 'radiusOnly' | 'cameraOnly' | 'recommended', GlobePresentationConfig>}
-                    onChange={setGlobePresentation}
-                    onFixtureChange={setScaleFixtureId}
-                    onFocusFixture={focusScaleCalibrationFixture}
-                  />
+            {activeDevGlobeTool === 'hero' && showHeroGuides ? <HeroCompositionGuides /> : null}
+            {devToolboxOpen ? (
+              <section className="pointer-events-auto absolute bottom-5 right-5 top-[74px] z-[98] flex w-[min(430px,calc(100vw-40px))] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[rgba(7,9,13,0.94)] text-gray-100 shadow-[0_30px_90px_rgba(0,0,0,0.58)] backdrop-blur-2xl">
+                <div className="shrink-0 border-b border-white/[0.08] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-300">Dev Globe Tools</p>
+                      <p className="mt-1 text-[10px] text-gray-500">One workspace, one active tool. No overlapping panels.</p>
+                    </div>
+                    <button type="button" onClick={() => setDevToolboxOpen(false)} className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-300 hover:bg-white/[0.08]">Hide</button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-5 gap-1.5">
+                    {([
+                      ['alignment', 'Align'],
+                      ['scale', 'Scale'],
+                      ['hero', 'Hero'],
+                      ['performance', 'Perf'],
+                      ['atmosphere', 'Atmos'],
+                    ] as const).map(([tool, label]) => (
+                      <button
+                        key={tool}
+                        type="button"
+                        onClick={() => setActiveDevGlobeTool(tool)}
+                        className={[
+                          'rounded-md border px-2 py-2 text-[9px] font-bold uppercase tracking-[0.08em] transition',
+                          activeDevGlobeTool === tool
+                            ? 'border-red-300/45 bg-red-500/14 text-red-100'
+                            : 'border-white/[0.08] bg-black/25 text-gray-400 hover:bg-white/[0.05] hover:text-gray-200',
+                        ].join(' ')}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </React.Suspense>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setHeroComposerEnabled((current) => !current)}
-              className={[
-                'ss-glass ss-glass--liquid pointer-events-auto absolute bottom-6 right-[5.5rem] z-50 rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em]',
-                heroComposerEnabled
-                  ? 'border-red-400/60 bg-red-500/15 text-red-100'
-                  : 'border-white/[0.08] bg-[rgba(8,10,14,0.68)] text-gray-300 hover:border-white/20',
-              ].join(' ')}
-            >
-              Hero Camera Composer
-            </button>
-            {heroComposerEnabled ? (
-              <>
-                {showHeroGuides ? <HeroCompositionGuides /> : null}
-                <div className="pointer-events-auto absolute bottom-24 right-6 z-50 w-[min(390px,calc(100vw-48px))]">
-                  <HeroArrivalComposerPanel
-                    profile={heroArrivalProfile}
-                    presets={heroArrivalPresets}
-                    selectedPresetId={selectedHeroPresetId}
-                    snapshot={heroComposerSnapshot}
-                    message={heroComposerMessage}
-                    showGuides={showHeroGuides}
-                    onShowGuidesChange={setShowHeroGuides}
-                    onChange={setHeroArrivalProfile}
-                    onManualEdit={() => setSelectedHeroPresetId('custom')}
-                    onPreviewPreset={previewHeroArrivalPreset}
-                    onApplyPreset={applySelectedHeroArrivalPreset}
-                    onRevert={revertHeroArrivalPreset}
-                    onSaveAsCustom={saveHeroArrivalAsCustom}
-                    onReset={resetHeroArrivalConfig}
-                    onSave={saveHeroArrivalConfig}
-                    onCopy={copyHeroArrivalConfig}
-                    onExport={exportHeroArrivalConfig}
-                    onCapture={captureCurrentHeroCamera}
-                  />
+
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                  {activeDevGlobeTool === 'alignment' ? (
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">Geospatial layer alignment</h2>
+                          <p className="mt-1 text-[10px] leading-4 text-gray-500">Move only the checked layers. Left/right is longitude.</p>
+                        </div>
+                        <strong className="font-mono text-sm text-white">
+                          {!selectedProductionGeoLayers.length ? 'none' : productionGeoHasMixedValues ? 'mixed' : `${productionGeoControlValue.toFixed(2)}°`}
+                        </strong>
+                      </div>
+                      <div className="mt-3 rounded-lg border border-cyan-300/15 bg-cyan-400/[0.035] p-2.5">
+                        <label className="flex cursor-pointer items-center justify-between gap-3">
+                          <span>
+                            <strong className="block text-[10px] uppercase tracking-[0.1em] text-cyan-100">Reference city pins</strong>
+                            <span className="mt-0.5 block text-[9px] leading-4 text-gray-500">Known WGS84 points anchored to land.glb. Move them with the Pins layer to find the shared longitude truth.</span>
+                          </span>
+                          <input type="checkbox" checked={devReferenceAnchorsVisible} onChange={(event) => setDevReferenceAnchorsVisible(event.target.checked)} className="h-4 w-4 shrink-0 accent-cyan-400" />
+                        </label>
+                        {devReferenceAnchorsVisible ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {DEV_GEOSPATIAL_REFERENCE_ANCHORS.map((anchor) => (
+                              <span key={anchor.id} className="rounded-full border border-white/[0.08] bg-black/25 px-2 py-1 text-[8px] font-semibold text-gray-400">{anchor.name}</span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {([
+                          ['pins', 'Pins', 'Listing / venue markers'],
+                          ['countryGeoJson', 'Vector borders', 'WGS84 country outlines; separate from the red selected fill below'],
+                          ['countryAtlas', 'Country atlas', 'Country ID / highlight mask'],
+                        ] as const).map(([layer, title, description]) => (
+                          <label key={layer} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-black/20 px-2.5 py-2.5">
+                            <span className="min-w-0">
+                              <strong className="block text-[10px] text-gray-200">{title}</strong>
+                              <span className="block truncate text-[9px] text-gray-500">{description}</span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <span className="font-mono text-[10px] text-cyan-100">{hybridGeospatialCalibration[layer].longitudeOffsetDeg.toFixed(2)}°</span>
+                              <input type="checkbox" checked={productionGeoAlignLayers[layer]} onChange={() => toggleProductionGeoLayer(layer)} className="accent-cyan-400" />
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <section className="mt-3 rounded-lg border border-red-300/20 bg-red-500/[0.045] p-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <strong className="block text-[10px] uppercase tracking-[0.1em] text-red-100">Selected country fill</strong>
+                            <span className="mt-0.5 block text-[9px] leading-4 text-gray-500">This is the red interior mask you are looking at. It is generated by CountryGeoJsonBorderLayer, and now moves independently of the white/vector border.</span>
+                          </div>
+                          <span className="shrink-0 font-mono text-[10px] font-semibold text-red-100">{devSelectedFillAlignment.longitudeOffsetDeg.toFixed(2)}° / {devSelectedFillAlignment.latitudeOffsetDeg.toFixed(2)}°</span>
+                        </div>
+                        <label className="mt-3 block">
+                          <span className="flex justify-between text-[9px] text-gray-400"><span>Longitude · left / right</span><strong className="text-gray-200">{devSelectedFillAlignment.longitudeOffsetDeg.toFixed(2)}°</strong></span>
+                          <input aria-label="Selected country fill longitude" className="mt-1 w-full accent-red-400" type="range" min="-5" max="5" step="0.01" value={devSelectedFillAlignment.longitudeOffsetDeg} onChange={(event) => setDevSelectedFillAlignment((current) => ({ ...current, longitudeOffsetDeg: Number(event.target.value) }))} />
+                        </label>
+                        <label className="mt-2 block">
+                          <span className="flex justify-between text-[9px] text-gray-400"><span>Latitude · down / up</span><strong className="text-gray-200">{devSelectedFillAlignment.latitudeOffsetDeg.toFixed(2)}°</strong></span>
+                          <input aria-label="Selected country fill latitude" className="mt-1 w-full accent-red-400" type="range" min="-5" max="5" step="0.01" value={devSelectedFillAlignment.latitudeOffsetDeg} onChange={(event) => setDevSelectedFillAlignment((current) => ({ ...current, latitudeOffsetDeg: Number(event.target.value) }))} />
+                        </label>
+                        <div className="mt-2 grid grid-cols-5 gap-1.5">
+                          <button type="button" onClick={() => setDevSelectedFillAlignment((current) => ({ ...current, longitudeOffsetDeg: Math.max(-5, current.longitudeOffsetDeg - 0.1) }))} className="rounded-md border border-white/10 bg-white/[0.04] px-1 py-2 text-[9px] font-bold text-gray-200">← 0.1°</button>
+                          <button type="button" onClick={() => setDevSelectedFillAlignment((current) => ({ ...current, longitudeOffsetDeg: Math.min(5, current.longitudeOffsetDeg + 0.1) }))} className="rounded-md border border-white/10 bg-white/[0.04] px-1 py-2 text-[9px] font-bold text-gray-200">0.1° →</button>
+                          <button type="button" onClick={() => setDevSelectedFillAlignment((current) => ({ ...current, latitudeOffsetDeg: Math.max(-5, current.latitudeOffsetDeg - 0.1) }))} className="rounded-md border border-white/10 bg-white/[0.04] px-1 py-2 text-[9px] font-bold text-gray-200">↓ 0.1°</button>
+                          <button type="button" onClick={() => setDevSelectedFillAlignment((current) => ({ ...current, latitudeOffsetDeg: Math.min(5, current.latitudeOffsetDeg + 0.1) }))} className="rounded-md border border-white/10 bg-white/[0.04] px-1 py-2 text-[9px] font-bold text-gray-200">0.1° ↑</button>
+                          <button type="button" onClick={() => setDevSelectedFillAlignment({ ...hybridGeospatialCalibration.countryGeoJson })} className="rounded-md border border-red-300/20 bg-red-400/[0.08] px-1 py-2 text-[9px] font-bold text-red-100">Match border</button>
+                        </div>
+                      </section>
+
+                      <section className="mt-3 rounded-lg border border-amber-300/15 bg-amber-300/[0.035] p-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <strong className="block text-[10px] uppercase tracking-[0.1em] text-amber-100">Visual atlas alignment</strong>
+                            <span className="mt-0.5 block text-[9px] leading-4 text-gray-500">This now shows the actual visual-atlas debug texture while you align it. Left/right is longitude; up/down is latitude.</span>
+                          </div>
+                          <label className="flex shrink-0 items-center gap-2 text-[9px] font-semibold text-amber-100">
+                            <span>Show</span>
+                            <input type="checkbox" checked={devVisualAtlasVisible} onChange={(event) => setDevVisualAtlasVisible(event.target.checked)} className="h-4 w-4 accent-amber-300" />
+                          </label>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between text-[9px] text-gray-400">
+                            <span>Longitude · left / right</span>
+                            <strong className="font-mono text-amber-100">{hybridGeospatialCalibration.countryAtlas.longitudeOffsetDeg.toFixed(2)}°</strong>
+                          </div>
+                          <input aria-label="Visual atlas longitude offset" className="mt-1 w-full accent-amber-300" type="range" min="-5" max="5" step="0.01" value={hybridGeospatialCalibration.countryAtlas.longitudeOffsetDeg} onChange={(event) => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, longitudeOffsetDeg: Number(event.target.value) })} />
+                          <div className="mt-2 grid grid-cols-5 gap-1.5">
+                            {[-0.1, -0.01, 0.01, 0.1].map((delta) => (
+                              <button key={`atlas-lon-${delta}`} type="button" onClick={() => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, longitudeOffsetDeg: Math.max(-5, Math.min(5, hybridGeospatialCalibration.countryAtlas.longitudeOffsetDeg + delta)) })} className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-2 text-[9px] font-bold text-gray-200 hover:bg-white/[0.08]">{delta > 0 ? '+' : ''}{delta.toFixed(2)}°</button>
+                            ))}
+                            <button type="button" onClick={() => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, longitudeOffsetDeg: 1.5 })} className="rounded-md border border-amber-300/20 bg-amber-300/[0.08] px-1.5 py-2 text-[9px] font-bold text-amber-100 hover:bg-amber-300/[0.13]">+1.50°</button>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 border-t border-white/[0.08] pt-3">
+                          <div className="flex items-center justify-between text-[9px] text-gray-400">
+                            <span>Latitude · down / up</span>
+                            <strong className="font-mono text-amber-100">{hybridGeospatialCalibration.countryAtlas.latitudeOffsetDeg.toFixed(2)}°</strong>
+                          </div>
+                          <input aria-label="Visual atlas latitude offset" className="mt-1 w-full accent-amber-300" type="range" min="-5" max="5" step="0.01" value={hybridGeospatialCalibration.countryAtlas.latitudeOffsetDeg} onChange={(event) => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, latitudeOffsetDeg: Number(event.target.value) })} />
+                          <div className="mt-2 grid grid-cols-5 gap-1.5">
+                            {[-0.1, -0.01, 0.01, 0.1].map((delta) => (
+                              <button key={`atlas-lat-${delta}`} type="button" onClick={() => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, latitudeOffsetDeg: Math.max(-5, Math.min(5, hybridGeospatialCalibration.countryAtlas.latitudeOffsetDeg + delta)) })} className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-2 text-[9px] font-bold text-gray-200 hover:bg-white/[0.08]">{delta > 0 ? '+' : ''}{delta.toFixed(2)}°</button>
+                            ))}
+                            <button type="button" onClick={() => updateHybridGeospatialLayer('countryAtlas', { ...hybridGeospatialCalibration.countryAtlas, latitudeOffsetDeg: 0 })} className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-2 text-[9px] font-bold text-gray-300 hover:bg-white/[0.08]">0.00°</button>
+                          </div>
+                        </div>
+                      </section>
+                      <input aria-label="Selected layer longitude offset" className="mt-4 w-full accent-cyan-400 disabled:opacity-35" type="range" min="-5" max="5" step="0.01" value={productionGeoControlValue} disabled={!selectedProductionGeoLayers.length} onChange={(event) => setProductionGeoLongitude(Number(event.target.value))} />
+                      <div className="mt-3 grid grid-cols-5 gap-2">
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(-0.1)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">−0.1°</button>
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(-0.01)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">−0.01°</button>
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(0.01)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">+0.01°</button>
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => nudgeProductionGeoLongitude(0.1)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/[0.08] disabled:opacity-35">+0.1°</button>
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => setProductionGeoLongitude(-1.5)} className="rounded-lg border border-red-300/20 bg-red-400/[0.08] px-2 py-2 text-[10px] font-bold text-red-100 hover:bg-red-400/[0.13] disabled:opacity-35">−1.5°</button>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button type="button" disabled={!selectedProductionGeoLayers.length} onClick={() => setProductionGeoLongitude(0)} className="rounded-lg border border-white/10 bg-white/[0.035] px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-300 hover:bg-white/[0.07] disabled:opacity-35">Zero selected</button>
+                        <button type="button" onClick={saveHybridGeospatialCalibration} className="rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-100 hover:bg-cyan-400/15">Save state</button>
+                      </div>
+                      {hybridGeospatialSaveNotice ? <div className="mt-2 text-[10px] text-gray-500">{hybridGeospatialSaveNotice}</div> : null}
+                    </div>
+                  ) : null}
+
+                  {activeDevGlobeTool === 'scale' && GlobeScaleCalibrationPanel ? (
+                    <React.Suspense fallback={null}>
+                      <GlobeScaleCalibrationPanel
+                        value={globePresentation}
+                        fixtureId={scaleFixtureId}
+                        presets={GLOBE_PRESENTATION_PRESETS as Record<'current' | 'radiusOnly' | 'cameraOnly' | 'recommended', GlobePresentationConfig>}
+                        onChange={setGlobePresentation}
+                        onFixtureChange={setScaleFixtureId}
+                        onFocusFixture={focusScaleCalibrationFixture}
+                      />
+                    </React.Suspense>
+                  ) : null}
+
+                  {activeDevGlobeTool === 'hero' ? (
+                    <HeroArrivalComposerPanel
+                      profile={heroArrivalProfile}
+                      presets={heroArrivalPresets}
+                      selectedPresetId={selectedHeroPresetId}
+                      snapshot={heroComposerSnapshot}
+                      message={heroComposerMessage}
+                      showGuides={showHeroGuides}
+                      onShowGuidesChange={setShowHeroGuides}
+                      onChange={setHeroArrivalProfile}
+                      onManualEdit={() => setSelectedHeroPresetId('custom')}
+                      onPreviewPreset={previewHeroArrivalPreset}
+                      onApplyPreset={applySelectedHeroArrivalPreset}
+                      onRevert={revertHeroArrivalPreset}
+                      onSaveAsCustom={saveHeroArrivalAsCustom}
+                      onReset={resetHeroArrivalConfig}
+                      onSave={saveHeroArrivalConfig}
+                      onCopy={copyHeroArrivalConfig}
+                      onExport={exportHeroArrivalConfig}
+                      onCapture={captureCurrentHeroCamera}
+                    />
+                  ) : null}
+
+                  {activeDevGlobeTool === 'performance' && GlobePerformancePanel ? (
+                    <React.Suspense fallback={null}>
+                      <GlobePerformancePanel snapshot={devPerformanceSnapshot} onResetQuality={resetAutomaticQuality} embedded />
+                    </React.Suspense>
+                  ) : null}
+
+                  {activeDevGlobeTool === 'atmosphere' ? (
+                    <div className="space-y-4">
+                      <AtmosphereShellControls title="Inner Shell" shell={atmosphereTool.atmosphere.inner} onChange={(key, value) => updateShellValue('inner', key, value)} />
+                      <AtmosphereShellControls title="Outer Shell" shell={atmosphereTool.atmosphere.outer} onChange={(key, value) => updateShellValue('outer', key, value)} />
+                      <NumberControl label="Rim radius" value={atmosphereTool.crimsonRim.radius} min={0.82} max={1.12} step={0.001} onChange={updateRimRadius} />
+                      <pre className="max-h-40 overflow-auto rounded-md border border-gray-800 bg-black/70 p-3 text-[11px] leading-4 text-gray-400">{formatAtmosphereSnippet(atmosphereTool)}</pre>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={copyAtmosphereConfig} className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/20">Copy Config</button>
+                        <button type="button" onClick={() => setAtmosphereTool(defaultAtmosphereToolState)} className="rounded-md border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-gray-800">Reset</button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </>
-            ) : null}
+              </section>
+            ) : (
+              <button type="button" onClick={() => setDevToolboxOpen(true)} className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive pointer-events-auto absolute right-5 top-[74px] z-[98] rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-red-100">Dev Globe Tools</button>
+            )}
           </>
         ) : null}
       </div>

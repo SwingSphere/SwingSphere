@@ -72,5 +72,160 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-lizas-lounge-cape-town-1789871327597",
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "action": "create",
+    "occurredAt": "2026-09-20T02:28:47.146Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-lizas-lounge-cape-town",
+      "venueId": null,
+      "normalizedAddress": "47 blaauwberg road cape town western cape 7441 south africa",
+      "latitude": -33.823144,
+      "longitude": 18.48435,
+      "visibility": "public_exact",
+      "coordinateProvenance": "official-site+google-maps",
+      "coordinateConfidence": 0.99,
+      "validatedAt": "2026-09-19T19:11:00-07:00",
+      "hash": "bvs-899256a7"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-lizas-lounge-cape-town",
+      "listingId": "club-lizas-lounge-cape-town",
+      "version": 1,
+      "provider": {
+        "source": "SwingSphere reconstructed estimate",
+        "featureIds": [
+          "swingsphere-generated:club-lizas-lounge-cape-town"
+        ],
+        "origin": "generated",
+        "generationMethod": "nearby-orientation-estimate",
+        "generationConfidence": 0.62,
+        "provenanceNote": "No sourced footprint intersected the verified venue pin. SwingSphere estimated a 26×17m footprint using the orientation and typical size of nearby mapped buildings."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              18.484509182121,
+              -33.823101988957326
+            ],
+            [
+              18.484240057439543,
+              -33.823038927711345
+            ],
+            [
+              18.484190817879,
+              -33.82318601104267
+            ],
+            [
+              18.484459942560456,
+              -33.823249072288654
+            ],
+            [
+              18.484509182121,
+              -33.823101988957326
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 7.5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-09-20T02:28:46.878Z",
+        "updatedAt": "2026-09-20T02:28:47.146Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-fun4two-moordrecht-1789871409322",
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "action": "create",
+    "occurredAt": "2026-09-20T02:30:08.872Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-fun4two-moordrecht",
+      "venueId": null,
+      "normalizedAddress": "middelweg 18 moordrecht south holland 2841 la netherlands",
+      "latitude": 52.000233,
+      "longitude": 4.650135,
+      "visibility": "public_exact",
+      "coordinateProvenance": "official-site+official-google-map",
+      "coordinateConfidence": 0.99,
+      "validatedAt": "2026-09-06T22:05:00.000Z",
+      "hash": "bvs-3d2ad187"
+    },
+    "evidenceEvaluatedAt": "2026-09-20T02:29:54.981Z",
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-fun4two-moordrecht",
+      "listingId": "club-fun4two-moordrecht",
+      "version": 1,
+      "provider": {
+        "source": "SwingSphere reconstructed estimate",
+        "featureIds": [
+          "swingsphere-generated:club-fun4two-moordrecht"
+        ],
+        "origin": "generated",
+        "generationMethod": "default-rectangle-estimate",
+        "generationConfidence": 0.45,
+        "provenanceNote": "No sourced footprint intersected the verified venue pin and nearby geometry was insufficient for orientation inference. SwingSphere created a conservative 20×14m rectangular estimate centered on the verified pin."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.649989089319088,
+              52.00016967450697
+            ],
+            [
+              4.6502809106809115,
+              52.00016967450697
+            ],
+            [
+              4.6502809106809115,
+              52.00029632549303
+            ],
+            [
+              4.649989089319088,
+              52.00029632549303
+            ],
+            [
+              4.649989089319088,
+              52.00016967450697
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 7.5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-09-20T02:30:08.434Z",
+        "updatedAt": "2026-09-20T02:30:08.872Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

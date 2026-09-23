@@ -41,7 +41,7 @@ const INITIAL_EXPLORER_STATE: ExplorerState = {
   selectedListingId: null,
   searchText: '',
   selectedTags: [],
-  listingTypes: [],
+  listingTypes: ['club'],
   surfaceMode: DEFAULT_EXPLORER_CAMERA.surface,
   camera: DEFAULT_EXPLORER_CAMERA,
 };

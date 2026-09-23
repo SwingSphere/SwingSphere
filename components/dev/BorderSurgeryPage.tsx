@@ -48,6 +48,7 @@ type BorderManifest = {
 type HybridSegment = {
   kind?: string;
   coordinates?: Coord[];
+  sourcePathId?: string | null;
 };
 
 type HybridRing = {
@@ -82,6 +83,7 @@ type GeoCollection = {
 type PhysicalPath = {
   id: string;
   simplifiedCoordinates?: Coord[];
+  closed?: boolean;
 };
 
 type PhysicalCoastlines = {
@@ -135,6 +137,7 @@ type CountryOption = {
   status: string;
   editable: boolean;
   hasAsset: boolean;
+  semanticIssueCount: number;
   neighborIntersectionCount: number;
   neighborIntersectionCountryIds: string[];
 };
@@ -144,6 +147,7 @@ type BorderSurfaceDiagnostics = {
   renderedPointCount?: number;
   anchorRaycastCount?: number;
   fallbackAnchorCount?: number;
+  stabilizedCoastFallbackCount?: number;
   subdivisionCount?: number;
   unsafeSegmentSplitCount?: number;
   acceptedClearanceViolationCount?: number;
@@ -165,11 +169,13 @@ type BorderSurfaceRuntime = {
     ringId: string;
     coordinates: Coord[];
     edgeKinds: EdgeKind[];
+    coastlinePathIds?: Array<string | null>;
   } | null) => void;
   setLandCoastlineAuditLayers: (layers: Record<string, boolean>) => void;
   projectBorderSurgeryControls: (coordinates: Coord[], width: number, height: number) => Array<{ index: number; x?: number; y?: number; depth?: number; visible?: boolean }>;
   borderSurgeryScreenPointToLandGeo: (x: number, y: number, width: number, height: number) => { lng: number; lat: number } | null;
   setBorderSurgeryOrbitEnabled: (enabled: boolean) => void;
+  setBorderSurgeryZoomEnabled: (enabled: boolean) => void;
   setNavigationPose: (pose: {
     lng: number;
     lat: number;
@@ -177,6 +183,7 @@ type BorderSurfaceRuntime = {
     zoomIntent?: number;
     followVisualLandRotation?: boolean;
   }) => unknown;
+  getNavigationSnapshot: () => { lng?: number; lat?: number; distance?: number; minDistance?: number; maxDistance?: number } | null;
   getCountryVectorBorderDiagnostics: () => BorderSurfaceDiagnostics | null;
 };
 
@@ -458,8 +465,14 @@ const nearestCoastMatch = (coord: Coord, coastlines?: PhysicalCoastlines | null,
   return best;
 };
 
-const solveContinuousCoastPath = (start: Coord, end: Coord, coastlines?: PhysicalCoastlines | null): Coord[] | null => {
-  const paths = coastlines?.paths ?? [];
+const solveContinuousCoastPath = (
+  start: Coord,
+  end: Coord,
+  coastlines?: PhysicalCoastlines | null,
+  preferredPathId?: string | null,
+  enforceLocalCorridor = true,
+): Coord[] | null => {
+  const paths = (coastlines?.paths ?? []).filter((path) => !preferredPathId || path.id === preferredPathId);
   let best: { score: number; coordinates: Coord[] } | null = null;
   for (let pathIndex = 0; pathIndex < paths.length; pathIndex += 1) {
     const path = paths[pathIndex];
@@ -492,8 +505,16 @@ const solveContinuousCoastPath = (start: Coord, end: Coord, coastlines?: Physica
       coordinate[1] - deduped[index][1],
     ), 0);
     const directLength = Math.max(0.001, Math.hypot(end[0] - start[0], end[1] - start[1]));
-    const detourPenalty = Math.max(0, pathLength - directLength * 5) * 0.2;
-    const score = endpointPenalty + detourPenalty;
+    const corridorLimit = clamp(directLength * 0.22, 0.12, 0.9);
+    const maxCorridorDeviation = deduped.reduce((maximum, coordinate) => Math.max(
+      maximum,
+      pointSegmentProjection(coordinate, start, end).distance,
+    ), 0);
+    if (enforceLocalCorridor && pathLength > Math.max(directLength * 2.25, directLength + 1.25)) continue;
+    if (enforceLocalCorridor && maxCorridorDeviation > corridorLimit) continue;
+    const detourPenalty = enforceLocalCorridor ? Math.max(0, pathLength - directLength) * 0.35 : 0;
+    const corridorPenalty = enforceLocalCorridor ? maxCorridorDeviation * 1.5 : 0;
+    const score = endpointPenalty + detourPenalty + corridorPenalty;
     if (!best || score < best.score) best = { score, coordinates: deduped };
   }
   if (!best || best.coordinates.length < 2) return null;
@@ -537,7 +558,17 @@ const autoFixBoundary = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: Phy
         const routeLength = solved.slice(1).reduce((sum, coordinate, index) => sum + Math.hypot(
           coordinate[0] - solved[index][0], coordinate[1] - solved[index][1],
         ), 0);
-        if (routeLength <= Math.max(directLength * 8, directLength + 2.5)) {
+        const corridorLimit = clamp(directLength * 0.22, 0.12, 0.9);
+        const maxCorridorDeviation = solved.reduce((maximum, coordinate) => Math.max(
+          maximum,
+          pointSegmentProjection(coordinate, start, end).distance,
+        ), 0);
+        const controlGrowthSafe = solved.length <= Math.max(8, Math.ceil(directLength * 4));
+        if (
+          routeLength <= Math.max(directLength * 2.25, directLength + 1.25)
+          && maxCorridorDeviation <= corridorLimit
+          && controlGrowthSafe
+        ) {
           rebuiltNodes[rebuiltNodes.length - 1] = copyCoord(solved[0]);
           for (let index = 1; index < solved.length; index += 1) {
             rebuiltNodes.push(copyCoord(solved[index]));
@@ -549,7 +580,7 @@ const autoFixBoundary = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: Phy
     }
 
     rebuiltNodes.push(copyCoord(end));
-    rebuiltKinds.push('political');
+    rebuiltKinds.push(edgeKinds[edgeIndex] ?? 'political');
   }
 
   if (rebuiltNodes.length > 1 && coordEqual(rebuiltNodes[0], rebuiltNodes[rebuiltNodes.length - 1])) rebuiltNodes.pop();
@@ -586,6 +617,51 @@ const autoFixBoundary = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: Phy
   }
 
   return { nodes: simplifiedNodes, edgeKinds: simplifiedKinds };
+};
+
+const autoFixBoundaryArea = (
+  nodes: Coord[],
+  edgeKinds: EdgeKind[],
+  edgeIndices: number[],
+  coastlines?: PhysicalCoastlines | null,
+): EditorSnapshot => {
+  const selected = new Set(edgeIndices.filter((index) => index >= 0 && index < nodes.length));
+  const nextNodes = nodes.map(copyCoord);
+  const nextKinds = [...edgeKinds];
+  if (!selected.size) return { nodes: nextNodes, edgeKinds: nextKinds };
+
+  for (const edgeIndex of selected) {
+    const startIndex = edgeIndex;
+    const endIndex = (edgeIndex + 1) % nextNodes.length;
+    const start = nextNodes[startIndex];
+    const end = nextNodes[endIndex];
+    const midpoint: Coord = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
+    const startCoast = nearestCoastMatch(start, coastlines);
+    const middleCoast = nearestCoastMatch(midpoint, coastlines);
+    const endCoast = nearestCoastMatch(end, coastlines);
+    const span = Math.max(0.001, Math.hypot(end[0] - start[0], end[1] - start[1]));
+    const tolerance = clamp(span * 0.2, 0.15, 0.8);
+    const inferredCoast = Boolean(
+      startCoast && middleCoast && endCoast
+      && startCoast.pathId === middleCoast.pathId
+      && middleCoast.pathId === endCoast.pathId
+      && Math.max(startCoast.distance, middleCoast.distance, endCoast.distance) <= tolerance
+    );
+    if ((nextKinds[edgeIndex] === 'coastline' || inferredCoast) && startCoast && endCoast && startCoast.pathId === endCoast.pathId) {
+      if (startCoast.distance <= tolerance) nextNodes[startIndex] = copyCoord(startCoast.point);
+      if (endCoast.distance <= tolerance) nextNodes[endIndex] = copyCoord(endCoast.point);
+      nextKinds[edgeIndex] = 'coastline';
+    }
+  }
+
+  for (const edgeIndex of selected) {
+    const previousEdge = (edgeIndex - 1 + nextKinds.length) % nextKinds.length;
+    if (nextKinds[previousEdge] === nextKinds[edgeIndex]) continue;
+    const match = nearestCoastMatch(nextNodes[edgeIndex], coastlines);
+    if (match && match.distance <= 0.8) nextNodes[edgeIndex] = copyCoord(match.point);
+  }
+
+  return { nodes: nextNodes, edgeKinds: nextKinds };
 };
 
 const buildRepairIssues = (nodes: Coord[], edgeKinds: EdgeKind[], coastlines?: PhysicalCoastlines | null): RepairIssue[] => {
@@ -647,6 +723,8 @@ const BorderSurfacePreview: React.FC<{
   edgeKinds: EdgeKind[];
   baselineNodes: Coord[];
   baselineEdgeKinds: EdgeKind[];
+  coastlines?: PhysicalCoastlines | null;
+  coastlinePathIds?: Array<string | null>;
   selectedNode: number | null;
   selectedEdge: number | null;
   onSelectNode: (index: number) => void;
@@ -660,6 +738,8 @@ const BorderSurfacePreview: React.FC<{
   onFixTransition: () => void;
   onAutoRepair: () => void;
   onAutoFixAll: () => void;
+  onAutoFixArea: (edgeIndices: number[]) => void;
+  actionMessage?: string | null;
 }> = ({
   countryId,
   ringId,
@@ -667,6 +747,8 @@ const BorderSurfacePreview: React.FC<{
   edgeKinds,
   baselineNodes,
   baselineEdgeKinds,
+  coastlines,
+  coastlinePathIds,
   selectedNode,
   selectedEdge,
   onSelectNode,
@@ -680,8 +762,11 @@ const BorderSurfacePreview: React.FC<{
   onFixTransition,
   onAutoRepair,
   onAutoFixAll,
+  onAutoFixArea,
+  actionMessage,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const surgeryViewportRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<BorderSurfaceRuntime | null>(null);
   const lastFramedSelectionRef = useRef('');
   const [readyRevision, setReadyRevision] = useState(0);
@@ -691,8 +776,21 @@ const BorderSurfacePreview: React.FC<{
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [controlHandles, setControlHandles] = useState<Array<{ index: number; x: number; y: number; visible: boolean }>>([]);
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
+  const [repairAreaMode, setRepairAreaMode] = useState(false);
+  const [repairArea, setRepairArea] = useState<{ x1: number; y1: number; x2: number; y2: number; edgeIndices: number[] } | null>(null);
+  const repairDragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const previewNodes = showSavedVersion && baselineNodes.length >= 3 ? baselineNodes : nodes;
   const previewEdgeKinds = showSavedVersion && baselineNodes.length >= 3 ? baselineEdgeKinds : edgeKinds;
+  const previewCoastlinePathIds = useMemo(() => previewNodes.map((coordinate, index) => {
+    if (previewEdgeKinds[index] !== 'coastline') return null;
+    if (!showSavedVersion && coastlinePathIds?.[index]) return coastlinePathIds[index];
+    const next = previewNodes[(index + 1) % previewNodes.length];
+    const start = nearestCoastMatch(coordinate, coastlines);
+    const end = nearestCoastMatch(next, coastlines, start?.pathId);
+    if (!start || !end || start.pathId !== end.pathId) return null;
+    if (Math.max(start.distance, end.distance) > 0.45) return null;
+    return start.pathId;
+  }), [coastlinePathIds, coastlines, previewEdgeKinds, previewNodes, showSavedVersion]);
 
   const center = useMemo<Coord>(() => {
     if (!previewNodes.length) return [0, 0];
@@ -701,15 +799,29 @@ const BorderSurfacePreview: React.FC<{
       previewNodes.reduce((sum, coordinate) => sum + coordinate[1], 0) / previewNodes.length,
     ];
   }, [previewNodes]);
+  const baselineCenter = useMemo<Coord>(() => {
+    const source = baselineNodes.length >= 3 ? baselineNodes : previewNodes;
+    if (!source.length) return [0, 0];
+    return [
+      source.reduce((sum, coordinate) => sum + coordinate[0], 0) / source.length,
+      source.reduce((sum, coordinate) => sum + coordinate[1], 0) / source.length,
+    ];
+  }, [baselineNodes, previewNodes]);
+  const baselineFrameKey = useMemo(() => {
+    if (baselineNodes.length < 3) return 'pending';
+    const first = baselineNodes[0];
+    const last = baselineNodes[baselineNodes.length - 1];
+    return `${baselineNodes.length}:${first?.[0]?.toFixed(5)}:${first?.[1]?.toFixed(5)}:${last?.[0]?.toFixed(5)}:${last?.[1]?.toFixed(5)}`;
+  }, [baselineNodes]);
 
   const reframe = useCallback(() => {
     runtimeRef.current?.setNavigationPose({
-      lng: center[0],
-      lat: center[1],
+      lng: baselineCenter[0],
+      lat: baselineCenter[1],
       distance: 3.4,
       followVisualLandRotation: false,
     });
-  }, [center]);
+  }, [baselineCenter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -743,7 +855,7 @@ const BorderSurfacePreview: React.FC<{
             renderer: {
               antialias: true,
               maxPixelRatio: 1.5,
-              controlsMinDistance: 3.4,
+              controlsMinDistance: 1.8,
               controlsMaxDistance: 8.04,
             },
             selection: {
@@ -783,6 +895,7 @@ const BorderSurfacePreview: React.FC<{
               maxSegmentDegrees: 0.55,
               experimentalPhysicalCoastlineSnap: true,
               physicalCoastlineUrl: '/assets/globe/coastlines/physical-coastlines-v1.json',
+              physicalCoastlineClearance: 0.018,
               maxShorelineSnapDegrees: 5,
               shorelineSnapExcludedCountryKeys: ['ISR'],
               preparedCacheSize: 2,
@@ -811,6 +924,8 @@ const BorderSurfacePreview: React.FC<{
         runtimeRef.current = runtime;
         mountedRuntime = runtime;
         await runtime.mount();
+        runtime.setBorderSurgeryZoomEnabled(false);
+        runtime.setBorderSurgeryOrbitEnabled(true);
       } catch (nextError) {
         if (!cancelled) setRuntimeError(nextError instanceof Error ? nextError.message : String(nextError));
       }
@@ -836,8 +951,9 @@ const BorderSurfacePreview: React.FC<{
       ringId,
       coordinates: closeRing(previewNodes),
       edgeKinds: previewEdgeKinds,
+      coastlinePathIds: previewCoastlinePathIds,
     });
-    const frameKey = `${readyRevision}:${countryId}:${ringId}`;
+    const frameKey = `${readyRevision}:${countryId}:${ringId}:${baselineFrameKey}`;
     if (lastFramedSelectionRef.current !== frameKey) {
       lastFramedSelectionRef.current = frameKey;
       runtime.selectCountry(countryId);
@@ -847,7 +963,7 @@ const BorderSurfacePreview: React.FC<{
       setDiagnostics(runtime.getCountryVectorBorderDiagnostics());
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [countryId, previewEdgeKinds, previewNodes, readyRevision, reframe, ringId]);
+  }, [baselineFrameKey, countryId, previewCoastlinePathIds, previewEdgeKinds, previewNodes, readyRevision, reframe, ringId]);
 
   useEffect(() => {
     runtimeRef.current?.setLandCoastlineAuditLayers({ terrainWallRim: showMeshRim });
@@ -893,6 +1009,89 @@ const BorderSurfacePreview: React.FC<{
     onEndNodeDrag(index);
   };
 
+  useEffect(() => {
+    const viewport = surgeryViewportRef.current;
+    if (!viewport || !readyRevision) return undefined;
+    const handleWheel = (event: WheelEvent) => {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const snapshot = runtime.getNavigationSnapshot();
+      if (!snapshot || !Number.isFinite(snapshot.distance)) return;
+      const minDistance = Number.isFinite(snapshot.minDistance) ? Number(snapshot.minDistance) : 1.8;
+      const maxDistance = Number.isFinite(snapshot.maxDistance) ? Number(snapshot.maxDistance) : 8.04;
+      const factor = Math.exp(event.deltaY * 0.0014);
+      const distance = clamp(Number(snapshot.distance) * factor, minDistance, maxDistance);
+      runtime.setNavigationPose({
+        lng: Number.isFinite(snapshot.lng) ? Number(snapshot.lng) : baselineCenter[0],
+        lat: Number.isFinite(snapshot.lat) ? Number(snapshot.lat) : baselineCenter[1],
+        distance,
+        followVisualLandRotation: false,
+      });
+    };
+    viewport.addEventListener('wheel', handleWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', handleWheel);
+  }, [baselineCenter, readyRevision]);
+
+  const repairAreaPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!repairAreaMode || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clamp(event.clientX - rect.left, 0, rect.width);
+    const y = clamp(event.clientY - rect.top, 0, rect.height);
+    repairDragRef.current = { pointerId: event.pointerId, x, y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    runtimeRef.current?.setBorderSurgeryOrbitEnabled(false);
+    setRepairArea({ x1: x, y1: y, x2: x, y2: y, edgeIndices: [] });
+  };
+
+  const repairAreaPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = repairDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clamp(event.clientX - rect.left, 0, rect.width);
+    const y = clamp(event.clientY - rect.top, 0, rect.height);
+    setRepairArea({ x1: drag.x, y1: drag.y, x2: x, y2: y, edgeIndices: [] });
+  };
+
+  const repairAreaPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = repairDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !containerRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    repairDragRef.current = null;
+    runtimeRef.current?.setBorderSurgeryOrbitEnabled(true);
+    const rect = containerRef.current.getBoundingClientRect();
+    const x2 = clamp(event.clientX - rect.left, 0, rect.width);
+    const y2 = clamp(event.clientY - rect.top, 0, rect.height);
+    const left = Math.min(drag.x, x2);
+    const right = Math.max(drag.x, x2);
+    const top = Math.min(drag.y, y2);
+    const bottom = Math.max(drag.y, y2);
+    if (right - left < 8 || bottom - top < 8) {
+      setRepairArea(null);
+      return;
+    }
+    const handles = new Map(controlHandles.map((handle) => [handle.index, handle]));
+    const boxEdges: Array<[Coord, Coord]> = [
+      [[left, top], [right, top]],
+      [[right, top], [right, bottom]],
+      [[right, bottom], [left, bottom]],
+      [[left, bottom], [left, top]],
+    ];
+    const selectedEdges: number[] = [];
+    for (let index = 0; index < nodes.length; index += 1) {
+      const a = handles.get(index);
+      const b = handles.get((index + 1) % nodes.length);
+      if (!a || !b) continue;
+      const aPoint: Coord = [a.x, a.y];
+      const bPoint: Coord = [b.x, b.y];
+      const inside = (point: Coord) => point[0] >= left && point[0] <= right && point[1] >= top && point[1] <= bottom;
+      const crosses = boxEdges.some(([c, d]) => Boolean(segmentIntersection(aPoint, bPoint, c, d)));
+      if (inside(aPoint) || inside(bPoint) || crosses) selectedEdges.push(index);
+    }
+    setRepairArea({ x1: drag.x, y1: drag.y, x2, y2, edgeIndices: selectedEdges });
+  };
+
   const handleByIndex = new Map(controlHandles.map((handle) => [handle.index, handle]));
   const selectedEdgeKind = selectedEdge != null ? edgeKinds[selectedEdge] ?? 'political' : null;
   const previewSourceActive = diagnostics?.borderSource?.startsWith('border-surgery-preview:') ?? false;
@@ -910,7 +1109,7 @@ const BorderSurfacePreview: React.FC<{
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200/70">
             <Box className="h-4 w-4" />
-            Primary surgery view
+            2 · Primary surgery view
           </div>
           <h2 className="mt-1 text-lg font-black text-white">Edit directly on land.glb</h2>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">
@@ -940,13 +1139,26 @@ const BorderSurfacePreview: React.FC<{
         <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onAttachSelectedEdgeToTerrain} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-[10px] font-black text-gray-200 hover:bg-white/[0.07] disabled:opacity-30">Attach to Terrain</button>
         <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onFixTransition} className="rounded-lg border border-amber-300/15 bg-amber-500/[0.05] px-3 py-2 text-[10px] font-black text-amber-100 hover:bg-amber-500/[0.09] disabled:opacity-30">Fix Coast → Land</button>
         <button type="button" disabled={showSavedVersion || selectedEdge == null} onClick={onAutoRepair} className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-300 disabled:opacity-30">Try Automatic Repair</button>
-        <button type="button" disabled={showSavedVersion || nodes.length < 3} onClick={onAutoFixAll} className="rounded-lg border border-cyan-300/20 bg-cyan-500/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-cyan-100 hover:bg-cyan-500/[0.14] disabled:opacity-30">Auto Fix Whole Border</button>
+        <button type="button" disabled={showSavedVersion || nodes.length < 3} onClick={() => { setRepairAreaMode((value) => !value); setRepairArea(null); }} className={`rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] transition ${repairAreaMode ? 'border-amber-300/30 bg-amber-500/12 text-amber-100' : 'border-white/10 bg-white/[0.035] text-gray-300 hover:bg-white/[0.07]'}`}>
+          {repairAreaMode ? 'Cancel Area' : 'Draw Repair Area'}
+        </button>
+        {repairArea?.edgeIndices.length ? (
+          <button type="button" disabled={showSavedVersion} onClick={() => { onAutoFixArea(repairArea.edgeIndices); setRepairArea(null); setRepairAreaMode(false); }} className="rounded-lg border border-emerald-300/20 bg-emerald-500/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-100 hover:bg-emerald-500/[0.13] disabled:opacity-30">
+            Fix Area · {repairArea.edgeIndices.length} edge{repairArea.edgeIndices.length === 1 ? '' : 's'}
+          </button>
+        ) : null}
+        <button type="button" title="Rebuild coastal spans against the physical mesh rim and simplify obvious border spikes or zig-zags." disabled={showSavedVersion || nodes.length < 3} onClick={onAutoFixAll} className="rounded-lg border border-cyan-300/20 bg-cyan-500/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-cyan-100 hover:bg-cyan-500/[0.14] disabled:opacity-30">Auto Fix Whole Border</button>
+        {actionMessage ? (
+          <div className="min-w-[220px] flex-1 rounded-lg border border-cyan-300/10 bg-cyan-500/[0.045] px-3 py-2 text-[10px] leading-4 text-cyan-100/75" role="status" aria-live="polite">
+            {actionMessage}
+          </div>
+        ) : null}
       </div>
 
-      <div className="relative h-[680px] bg-[radial-gradient(circle_at_50%_45%,rgba(85,91,105,0.14),rgba(3,5,8,0.96)_66%)]">
-        <div ref={containerRef} className="absolute inset-0" />
+      <div ref={surgeryViewportRef} className="relative h-[clamp(440px,58vh,620px)] min-h-[440px] touch-none overscroll-contain bg-[radial-gradient(circle_at_50%_45%,rgba(85,91,105,0.14),rgba(3,5,8,0.96)_66%)]">
+        <div ref={containerRef} className="absolute inset-0 touch-none" />
         {!showSavedVersion ? (
-          <svg className="absolute inset-0 z-10 h-full w-full" viewBox={`0 0 ${Math.max(1, containerRef.current?.clientWidth ?? 1)} ${Math.max(1, containerRef.current?.clientHeight ?? 1)}`} preserveAspectRatio="none">
+          <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full" viewBox={`0 0 ${Math.max(1, containerRef.current?.clientWidth ?? 1)} ${Math.max(1, containerRef.current?.clientHeight ?? 1)}`} preserveAspectRatio="none">
             {nodes.map((_, index) => {
               const a = handleByIndex.get(index);
               const b = handleByIndex.get((index + 1) % nodes.length);
@@ -993,6 +1205,28 @@ const BorderSurfacePreview: React.FC<{
             />
           );
         }) : null}
+        {repairAreaMode ? (
+          <div
+            className="absolute inset-0 z-30 cursor-crosshair"
+            onPointerDown={repairAreaPointerDown}
+            onPointerMove={repairAreaPointerMove}
+            onPointerUp={repairAreaPointerUp}
+            onPointerCancel={repairAreaPointerUp}
+          />
+        ) : null}
+        {repairArea ? (
+          <div
+            className="pointer-events-none absolute z-40 border-2 border-amber-300/80 bg-amber-300/[0.08] shadow-[0_0_18px_rgba(252,211,77,0.12)]"
+            style={{
+              left: Math.min(repairArea.x1, repairArea.x2),
+              top: Math.min(repairArea.y1, repairArea.y2),
+              width: Math.abs(repairArea.x2 - repairArea.x1),
+              height: Math.abs(repairArea.y2 - repairArea.y1),
+            }}
+          >
+            {repairArea.edgeIndices.length ? <div className="absolute -top-7 left-0 rounded-md border border-amber-300/20 bg-black/80 px-2 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-amber-100">{repairArea.edgeIndices.length} edge{repairArea.edgeIndices.length === 1 ? '' : 's'} selected</div> : null}
+          </div>
+        ) : null}
         {!readyRevision && !runtimeError ? (
           <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs font-bold uppercase tracking-[0.18em] text-gray-600">Loading production surface…</div>
         ) : null}
@@ -1002,7 +1236,7 @@ const BorderSurfacePreview: React.FC<{
         <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-white/10 bg-black/65 px-3 py-2 text-[10px] leading-5 text-gray-400 backdrop-blur-xl">
           <div><span className="text-red-300">Red</span> · working border</div>
           <div><span className="text-orange-300">Orange</span> · physical bevel rim</div>
-          <div className="text-gray-600">Drag to orbit · wheel to inspect the bevel</div>
+          <div className="text-gray-600">Drag to orbit · wheel to zoom · Repair Area = drag a local box</div>
         </div>
         <div className={`pointer-events-none absolute right-4 top-4 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] backdrop-blur-xl ${hasHardSurfaceIssue ? 'border-red-300/25 bg-red-500/12 text-red-200' : 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200'}`}>
           {diagnostics && !previewSourceActive ? 'Preview not active' : hasHardSurfaceIssue ? 'Surface warning' : diagnostics ? 'Surface resolved' : 'Analyzing'}
@@ -1012,6 +1246,7 @@ const BorderSurfacePreview: React.FC<{
       <div className="grid gap-px border-t border-white/[0.08] bg-white/[0.06] sm:grid-cols-2 xl:grid-cols-4">
         <SurfaceMetric label="Raycast anchors" value={diagnostics?.anchorRaycastCount ?? '—'} />
         <SurfaceMetric label="Fallback misses" value={diagnostics?.fallbackAnchorCount ?? '—'} alert={Boolean(diagnostics?.fallbackAnchorCount)} />
+        <SurfaceMetric label="Coast misses healed" value={diagnostics?.stabilizedCoastFallbackCount ?? '—'} />
         <SurfaceMetric label="Unsafe splits" value={diagnostics?.unsafeSegmentSplitCount ?? '—'} alert={Boolean(diagnostics?.unsafeSegmentSplitCount)} />
         <SurfaceMetric label="Clearance violations" value={diagnostics?.acceptedClearanceViolationCount ?? '—'} alert={Boolean(diagnostics?.acceptedClearanceViolationCount)} />
         <SurfaceMetric label="Rendered points" value={diagnostics?.renderedPointCount ?? '—'} />
@@ -1025,6 +1260,7 @@ const BorderSurfacePreview: React.FC<{
 
 const BorderSurgeryPage: React.FC = () => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const topologyViewportRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<{ index: number; before: EditorSnapshot } | null>(null);
   const surfaceDragRef = useRef<{ index: number; before: EditorSnapshot } | null>(null);
   const panRef = useRef<{ pointerId: number; start: Coord; center: Coord; lonSpan: number; latSpan: number } | null>(null);
@@ -1168,6 +1404,7 @@ const BorderSurgeryPage: React.FC = () => {
           ?? (manifest?.skippedCountries?.[id] ? 'generator-skipped' : 'source-only'),
         editable: true,
         hasAsset: Boolean(manifest?.countries?.[id]?.url),
+        semanticIssueCount: manifest?.countries?.[id]?.semanticIssueCount ?? 0,
         neighborIntersectionCount: crossingSummaries[id]?.count ?? 0,
         neighborIntersectionCountryIds: crossingSummaries[id]?.neighborIds ?? [],
       }))
@@ -1180,10 +1417,20 @@ const BorderSurgeryPage: React.FC = () => {
     return countryOptions.filter((country) => `${country.name} ${country.id}`.toLowerCase().includes(query));
   }, [countryOptions, search]);
 
+  const attentionCountries = useMemo(() => countryOptions
+    .filter((country) => country.neighborIntersectionCount > 0 || country.semanticIssueCount > 0 || country.status === 'generated')
+    .sort((a, b) => {
+      const aScore = a.neighborIntersectionCount * 10 + a.semanticIssueCount + (a.status === 'generated' ? 1 : 0);
+      const bScore = b.neighborIntersectionCount * 10 + b.semanticIssueCount + (b.status === 'generated' ? 1 : 0);
+      return bScore - aScore || a.name.localeCompare(b.name);
+    })
+    .slice(0, 12), [countryOptions]);
+
   const selectedFeature = featuresById.get(countryId) ?? null;
   const selectedCountryOption = countryOptions.find((country) => country.id === countryId) ?? null;
   const selectedManifestEntry = manifest?.countries?.[countryId] ?? null;
   const selectedOverride = overrides.countries?.[countryId]?.rings?.[ringId] ?? null;
+  const selectedAssetRing = asset?.rings?.find((ring) => ring.id === ringId) ?? null;
 
   const loadCountry = useCallback(async (nextCountryId: string) => {
     setError(null);
@@ -1249,6 +1496,39 @@ const BorderSurgeryPage: React.FC = () => {
     setViewCenter(null);
   }, [asset, ringId, selectedFeature, selectedOverride]);
 
+  const assetCoastlinePathIds = useMemo(() => {
+    const segments = selectedAssetRing?.segments ?? [];
+    return segments.map((segment) => segment.kind === 'coastline' ? (segment.sourcePathId ?? null) : null);
+  }, [selectedAssetRing]);
+
+  const workingCoastlinePathIds = useMemo(() => nodes.map((coordinate, index) => {
+    if (edgeKinds[index] !== 'coastline') return null;
+    if (nodes.length === baseline.nodes.length && assetCoastlinePathIds[index]) return assetCoastlinePathIds[index];
+    const next = nodes[(index + 1) % nodes.length];
+    const start = nearestCoastMatch(coordinate, coastlines);
+    const end = nearestCoastMatch(next, coastlines, start?.pathId);
+    if (!start || !end || start.pathId !== end.pathId) return null;
+    return start.pathId;
+  }), [assetCoastlinePathIds, baseline.nodes.length, coastlines, edgeKinds, nodes]);
+
+  const displayEdgePaths = useMemo(() => nodes.map((start, index) => {
+    const end = nodes[(index + 1) % nodes.length];
+    if (edgeKinds[index] !== 'coastline') return [copyCoord(start), copyCoord(end)];
+    return solveContinuousCoastPath(start, end, coastlines, workingCoastlinePathIds[index], false)
+      ?? [copyCoord(start), copyCoord(end)];
+  }), [coastlines, edgeKinds, nodes, workingCoastlinePathIds]);
+
+  const displayBoundaryNodes = useMemo(() => {
+    const result: Coord[] = [];
+    for (const path of displayEdgePaths) {
+      for (let index = 0; index < path.length; index += 1) {
+        if (result.length && index === 0 && coordEqual(result[result.length - 1], path[index])) continue;
+        result.push(copyCoord(path[index]));
+      }
+    }
+    return result;
+  }, [displayEdgePaths]);
+
   const fitProjection = useMemo(() => buildProjection(baseline.nodes.length ? baseline.nodes : nodes), [baseline, nodes]);
   const projection = useMemo(() => {
     const zoom = clamp(viewZoom, 0.25, 40);
@@ -1304,8 +1584,6 @@ const BorderSurgeryPage: React.FC = () => {
     for (const entry of rawNeighborIntersections) counts.set(entry.neighborId, (counts.get(entry.neighborId) ?? 0) + 1);
     return rawNeighborIntersections.filter((entry) => (counts.get(entry.neighborId) ?? 0) >= 2);
   }, [rawNeighborIntersections]);
-  const liveNeighborIds = useMemo(() => [...new Set(neighborIntersections.map((entry) => entry.neighborId))].sort(), [neighborIntersections]);
-
   const visibleCoastSegments = useMemo(() => {
     if (!showCoast) return [] as Array<{ pathId: string; a: Coord; b: Coord }>;
     const bounds: [number, number, number, number] = [
@@ -1442,13 +1720,20 @@ const BorderSurgeryPage: React.FC = () => {
     ]);
   }, [fitProjection.latSpan, fitProjection.lonSpan, projection]);
 
-  const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
-    event.preventDefault();
-    const screen = eventPoint(event);
-    if (!screen) return;
-    const factor = Math.exp(-event.deltaY * 0.0015);
-    zoomAt(screen, viewZoom * factor);
-  };
+  useEffect(() => {
+    const viewport = topologyViewportRef.current;
+    if (!viewport) return undefined;
+    const handleViewportWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const screen = clientPointToSvg(event.clientX, event.clientY);
+      if (!screen) return;
+      const factor = Math.exp(-event.deltaY * 0.0015);
+      zoomAt(screen, viewZoom * factor);
+    };
+    viewport.addEventListener('wheel', handleViewportWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', handleViewportWheel);
+  }, [viewZoom, zoomAt]);
 
   const beginCanvasPointer = (event: React.PointerEvent<SVGSVGElement>) => {
     const shouldPan = toolMode === 'pan' || spacePanning || event.button === 1;
@@ -1544,7 +1829,7 @@ const BorderSurgeryPage: React.FC = () => {
     }
   };
 
-  const addPointOnEdge = (event: React.PointerEvent<SVGLineElement>, edgeIndex: number) => {
+  const addPointOnEdge = (event: React.PointerEvent<SVGPathElement>, edgeIndex: number) => {
     if (toolMode === 'pan' || spacePanning || event.button === 1) return;
     event.stopPropagation();
     if (toolMode !== 'add' || nodes.length < 2) {
@@ -1767,15 +2052,53 @@ const BorderSurgeryPage: React.FC = () => {
   const autoFixWholeBorder = () => {
     if (nodes.length < 3) return;
     const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const beforeIssues = buildRepairIssues(nodes, edgeKinds, coastlines).length;
     const repaired = autoFixBoundary(nodes, edgeKinds, coastlines);
+    const afterIssues = buildRepairIssues(repaired.nodes, repaired.edgeKinds, coastlines).length;
+    const excessiveGrowth = repaired.nodes.length > Math.max(nodes.length * 3, nodes.length + 24);
+    const worsenedConformance = afterIssues > beforeIssues;
     if (snapshotKey(before) === snapshotKey(repaired)) {
-      setMessage('Auto Fix inspected the whole border but did not find a safer shoreline or straightening change to apply.');
+      setMessage(`Auto Fix inspected the whole border. No safe geometry change was needed. Conformance issues: ${beforeIssues}.`);
+      return;
+    }
+    if (excessiveGrowth || worsenedConformance) {
+      const reason = worsenedConformance
+        ? `conformance would worsen (${beforeIssues} → ${afterIssues})`
+        : `control count would grow excessively (${nodes.length} → ${repaired.nodes.length})`;
+      setMessage(`Auto Fix rejected an unsafe repair because ${reason}. No changes were applied.`);
       return;
     }
     pushSnapshot(before, repaired);
     setSelectedNodes([]);
     setSelectedEdge(null);
-    setMessage(`Auto Fix rebuilt shoreline spans against the physical mesh rim and simplified obvious inland zig-zags. Controls: ${nodes.length} → ${repaired.nodes.length}. Review Working B before saving.`);
+    const issueSummary = beforeIssues === afterIssues
+      ? `${afterIssues} conformance issue${afterIssues === 1 ? '' : 's'} remain for review.`
+      : `Conformance issues: ${beforeIssues} → ${afterIssues}.`;
+    setMessage(`Auto Fix applied. Controls: ${nodes.length} → ${repaired.nodes.length}. ${issueSummary} Review Working B before saving.`);
+  };
+
+  const autoFixSelectedArea = (edgeIndices: number[]) => {
+    const uniqueEdges = [...new Set(edgeIndices)].filter((index) => index >= 0 && index < nodes.length).sort((a, b) => a - b);
+    if (!uniqueEdges.length) {
+      setMessage('Repair Area did not intersect any editable border edges.');
+      return;
+    }
+    const before = { nodes: nodes.map(copyCoord), edgeKinds: [...edgeKinds] };
+    const beforeIssues = buildRepairIssues(nodes, edgeKinds, coastlines).length;
+    const repaired = autoFixBoundaryArea(nodes, edgeKinds, uniqueEdges, coastlines);
+    const afterIssues = buildRepairIssues(repaired.nodes, repaired.edgeKinds, coastlines).length;
+    if (snapshotKey(before) === snapshotKey(repaired)) {
+      setMessage(`Repair Area inspected ${uniqueEdges.length} edge${uniqueEdges.length === 1 ? '' : 's'} but found no safe local change to apply.`);
+      return;
+    }
+    if (afterIssues > beforeIssues) {
+      setMessage(`Repair Area rejected the local fix because conformance would worsen (${beforeIssues} → ${afterIssues}). No changes were applied.`);
+      return;
+    }
+    pushSnapshot(before, repaired);
+    setSelectedNodes([]);
+    setSelectedEdge(null);
+    setMessage(`Repair Area updated ${uniqueEdges.length} edge${uniqueEdges.length === 1 ? '' : 's'} and left the rest of the border untouched. Conformance issues: ${beforeIssues} → ${afterIssues}.`);
   };
 
   const focusRepairIssue = (requestedIndex: number) => {
@@ -1874,7 +2197,7 @@ const BorderSurgeryPage: React.FC = () => {
   };
 
   const sourcePath = (ring: Coord[]) => ring.map((coord, index) => `${index ? 'L' : 'M'} ${geoToScreen(coord, projection).join(' ')}`).join(' ');
-  const workingPath = nodes.length ? `${nodes.map((coord, index) => `${index ? 'L' : 'M'} ${geoToScreen(coord, projection).join(' ')}`).join(' ')} Z` : '';
+  const workingPath = displayBoundaryNodes.length ? `${displayBoundaryNodes.map((coord, index) => `${index ? 'L' : 'M'} ${geoToScreen(coord, projection).join(' ')}`).join(' ')} Z` : '';
 
   if (loading) {
     return <div className="min-h-[70vh] bg-[#05070a] p-8 text-sm text-gray-400">Loading Border Surgery…</div>;
@@ -1882,7 +2205,7 @@ const BorderSurgeryPage: React.FC = () => {
 
   return (
     <div className="min-h-full bg-[#05070a] text-gray-100">
-      <div className="mx-auto max-w-[1880px] px-5 py-5 xl:px-7">
+      <div className="mx-auto max-w-[1800px] px-4 py-4 lg:px-5 lg:py-5">
         <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-white/10 bg-[#090c11]/90 px-5 py-4 shadow-2xl shadow-black/30">
           <div>
             <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-red-300">
@@ -1895,14 +2218,82 @@ const BorderSurgeryPage: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a href="/dev/globe" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-bold text-gray-200 hover:bg-white/[0.08]">
-              <ExternalLink className="h-4 w-4" /> Live globe
-            </a>
             <button type="button" onClick={saveOverride} disabled={!dirty || saving || !selectedCountryOption?.editable || intersections.length > 0} className="inline-flex h-10 items-center gap-2 rounded-xl border border-red-300/25 bg-red-500/15 px-4 text-xs font-black text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-35">
               <Save className="h-4 w-4" /> {saving ? 'Regenerating…' : 'Save & regenerate'}
             </button>
           </div>
         </header>
+
+        <section className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-[#090c11]/90 shadow-xl shadow-black/25">
+          <div className="grid gap-px bg-white/[0.06] lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="bg-[#090c11] p-4 lg:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/75"><MapPin className="h-4 w-4" /> 1 · Inspect & select</div>
+                  <h2 className="mt-1 text-lg font-black text-white">Start with the country, not the editor</h2>
+                  <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">Inspect the globe first. If a border looks wrong, choose that country here, then move into surgery only when there is something to fix.</p>
+                </div>
+                <a href="/dev/globe" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-400/[0.05] px-4 text-xs font-bold text-cyan-100/80 hover:bg-cyan-400/[0.09]">
+                  <ExternalLink className="h-4 w-4" /> Inspect globe as-is
+                </a>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-[minmax(220px,0.8fr)_minmax(280px,1.2fr)_minmax(180px,0.55fr)]">
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-600">Filter countries</span>
+                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Type a country or ISO code…" className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-red-300/35" />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-600">Country</span>
+                  <select value={countryId} onChange={(event) => setCountryId(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#0b0e13] px-3 text-sm font-bold text-white outline-none focus:border-red-300/35">
+                    {filteredCountries.map((country) => <option key={country.id} value={country.id}>{country.name} ({country.id}){country.neighborIntersectionCount ? ` · ${country.neighborIntersectionCount} crossings` : country.semanticIssueCount ? ` · ${country.semanticIssueCount} issues` : ''}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-600">Ring</span>
+                  <select value={ringId} onChange={(event) => setRingId(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#0b0e13] px-3 text-sm text-white outline-none">
+                    {ringOptions.map((id) => {
+                      const ring = asset?.rings?.find((candidate) => candidate.id === id);
+                      return <option key={id} value={id}>{id}{ring?.presentation === false ? ' · technical / hidden' : ''}</option>;
+                    })}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px]">
+                <span className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-gray-400">{selectedCountryOption?.name ?? countryId} · {selectedManifestEntry?.status ?? selectedCountryOption?.status ?? 'source'}</span>
+                <span className={`rounded-lg border px-2.5 py-1.5 ${neighborIntersections.length ? 'border-red-300/20 bg-red-500/[0.07] text-red-200' : 'border-emerald-300/15 bg-emerald-500/[0.05] text-emerald-200/80'}`}>{neighborIntersections.length} neighbor crossing{neighborIntersections.length === 1 ? '' : 's'}</span>
+                <span className={`rounded-lg border px-2.5 py-1.5 ${repairIssues.length ? 'border-amber-300/20 bg-amber-500/[0.06] text-amber-200' : 'border-emerald-300/15 bg-emerald-500/[0.05] text-emerald-200/80'}`}>{repairIssues.length} conformance issue{repairIssues.length === 1 ? '' : 's'}</span>
+                <span className={`rounded-lg border px-2.5 py-1.5 ${selectedOverride ? 'border-amber-300/15 bg-amber-500/[0.05] text-amber-100/75' : 'border-white/10 bg-white/[0.03] text-gray-500'}`}>{selectedOverride ? 'Manual override active' : 'No manual override'}</span>
+                {dirty ? <span className="rounded-lg border border-red-300/20 bg-red-500/[0.08] px-2.5 py-1.5 font-bold text-red-100">Unsaved changes</span> : null}
+              </div>
+
+              {attentionCountries.length ? (
+                <div className="mt-4 border-t border-white/[0.07] pt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-600">Needs attention</span>
+                    {attentionCountries.map((country) => (
+                      <button key={country.id} type="button" onClick={() => { setSearch(''); setCountryId(country.id); }} className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition ${country.id === countryId ? 'border-red-300/30 bg-red-500/15 text-red-100' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07] hover:text-white'}`}>
+                        {country.id}{country.neighborIntersectionCount ? ` · ${country.neighborIntersectionCount}×` : country.semanticIssueCount ? ` · ${country.semanticIssueCount}!` : ''}
+                      </button>
+                    ))}
+                    {crossingScanActive ? <span className="text-[10px] text-gray-600">Scanning…</span> : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex min-w-[220px] flex-col justify-center gap-2 bg-[#080b0f] p-4 lg:p-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-600">Workflow</div>
+              <div className="grid grid-cols-4 gap-1.5 lg:grid-cols-1">
+                <WorkflowStep number="1" label="Inspect" active />
+                <WorkflowStep number="2" label="Repair" active={dirty || selectedNodes.length > 0 || selectedEdge != null} />
+                <WorkflowStep number="3" label="Verify" active={dirty && intersections.length === 0} />
+                <WorkflowStep number="4" label="Save" active={dirty && intersections.length === 0 && !saving} />
+              </div>
+            </div>
+          </div>
+        </section>
 
         <BorderSurfacePreview
           countryId={countryId}
@@ -1911,6 +2302,8 @@ const BorderSurgeryPage: React.FC = () => {
           edgeKinds={edgeKinds}
           baselineNodes={baseline.nodes}
           baselineEdgeKinds={baseline.edgeKinds}
+          coastlines={coastlines}
+          coastlinePathIds={workingCoastlinePathIds}
           selectedNode={selectedNodes.length === 1 ? selectedNodes[0] : null}
           selectedEdge={selectedEdge}
           onSelectNode={selectSurfaceNode}
@@ -1924,68 +2317,20 @@ const BorderSurgeryPage: React.FC = () => {
           onFixTransition={repairSelectedTransition}
           onAutoRepair={autoRepairSelectedEdge}
           onAutoFixAll={autoFixWholeBorder}
+          onAutoFixArea={autoFixSelectedArea}
+          actionMessage={message}
         />
 
         <div className="mb-3 mt-5 flex items-center justify-between gap-3 px-1">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Topology reference</div>
-            <div className="mt-1 text-xs text-gray-600">Use the 2D editor for country topology, adding/removing controls, and neighbor-boundary checks. Selections stay synchronized with the 3D surgery view above.</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">3 · Precision editor</div>
+            <div className="mt-1 text-xs text-gray-600">Optional 2D topology work for adding/removing controls, neighbor checks, and exact edge classification. Use this only when the 3D surgery view needs finer control.</div>
           </div>
         </div>
 
-        <div className="grid min-h-[760px] grid-cols-1 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_330px]">
-          <aside className="rounded-2xl border border-white/10 bg-[#090c11]/90 p-4 shadow-xl shadow-black/20">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Country</div>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search countries…" className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-red-300/35" />
-            <div className="mt-3 max-h-[320px] space-y-1 overflow-y-auto pr-1">
-              {filteredCountries.map((country) => {
-                const crossingCount = country.id === countryId && dirty
-                  ? neighborIntersections.length
-                  : country.neighborIntersectionCount;
-                return (
-                  <button key={country.id} type="button" onClick={() => setCountryId(country.id)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition ${country.id === countryId ? 'bg-red-500/14 text-white' : 'text-gray-400 hover:bg-white/[0.045] hover:text-gray-200'}`}>
-                    <span className="min-w-0">
-                      <span className="block truncate text-xs font-bold">{country.name}</span>
-                      <span className="mt-0.5 block text-[9px] uppercase tracking-[0.14em] text-gray-600">{country.id} · {country.status}{crossingCount ? ` · ${crossingCount} neighbor cross${crossingCount === 1 ? '' : 'es'}` : ''}</span>
-                    </span>
-                    <span title={crossingCount ? `Crosses ${country.id === countryId && dirty ? liveNeighborIds.join(', ') : country.neighborIntersectionCountryIds.join(', ')}` : country.hasAsset ? 'Hybrid asset exists' : 'Source/skipped'} className={`h-2 w-2 shrink-0 rounded-full ${crossingCount ? 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.65)]' : country.hasAsset ? 'bg-emerald-400/80' : country.editable ? 'bg-amber-400/80' : 'bg-gray-700'}`} />
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 px-3 py-2 text-[10px] leading-5 text-gray-500">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.65)]" /><span><strong className="font-bold text-gray-300">Red</strong> · border crosses a neighboring country boundary</span></div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400/80" /><span><strong className="font-bold text-gray-300">Green</strong> · hybrid border asset exists</span></div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400/80" /><span><strong className="font-bold text-gray-300">Yellow</strong> · source/skipped; first save creates or repairs it</span></div>
-              {crossingScanActive ? <div className="mt-1 text-red-200/55">Scanning hybrid assets for neighbor crossings…</div> : null}
-            </div>
-
-            <div className="my-4 h-px bg-white/[0.07]" />
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Ring</div>
-            <select value={ringId} onChange={(event) => setRingId(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#0b0e13] px-3 text-sm text-white outline-none">
-              {ringOptions.map((id) => {
-                const ring = asset?.rings?.find((candidate) => candidate.id === id);
-                return <option key={id} value={id}>{id}{ring?.presentation === false ? ' · technical / hidden' : ''}</option>;
-              })}
-            </select>
-            <div className="mt-3 rounded-xl border border-white/[0.08] bg-black/20 p-3 text-[11px] leading-5 text-gray-400">
-              <div className="flex justify-between"><span>Status</span><strong className="text-gray-200">{selectedManifestEntry?.status ?? selectedCountryOption?.status ?? 'source'}</strong></div>
-              <div className="flex justify-between"><span>Nodes</span><strong className="text-gray-200">{nodes.length}</strong></div>
-              <div className="flex justify-between"><span>Self intersections</span><strong className={intersections.length ? 'text-red-300' : 'text-emerald-300'}>{intersections.length}</strong></div>
-              <div className="flex justify-between"><span>Neighbor crossings</span><strong className={neighborIntersections.length ? 'text-red-300' : 'text-emerald-300'}>{neighborIntersections.length}</strong></div>
-              {liveNeighborIds.length ? <div className="mt-1 text-[10px] text-red-200/65">Crosses: {liveNeighborIds.join(', ')}</div> : null}
-              <div className="flex justify-between"><span>Manual override</span><strong className={selectedOverride ? 'text-amber-200' : 'text-gray-500'}>{selectedOverride ? 'yes' : 'no'}</strong></div>
-              <div className="flex justify-between"><span>Presentation</span><strong className={asset?.rings?.find((candidate) => candidate.id === ringId)?.presentation === false ? 'text-amber-200' : 'text-gray-200'}>{asset?.rings?.find((candidate) => candidate.id === ringId)?.presentation === false ? 'technical / hidden' : 'visible'}</strong></div>
-            </div>
-            {selectedCountryOption?.status === 'source-only' ? (
-              <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-400/[0.05] p-3 text-[11px] leading-5 text-cyan-100/75">
-                Source-only country. Your first saved surgery will create a manual hybrid target for this country automatically.
-              </div>
-            ) : null}
-          </aside>
-
-          <main className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#07090d] shadow-2xl shadow-black/35">
-            <div className="absolute left-4 top-4 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/65 p-2 backdrop-blur-xl">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_310px] xl:items-start">
+          <main ref={topologyViewportRef} className="relative h-[clamp(520px,72vh,720px)] min-h-[520px] overscroll-contain overflow-hidden rounded-2xl border border-white/10 bg-[#07090d] shadow-2xl shadow-black/35">
+            <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/65 p-2 backdrop-blur-xl">
               <ToolButton active={toolMode === 'select'} icon={<MousePointer2 className="h-4 w-4" />} label="Select / move (V)" onClick={() => setToolMode('select')} />
               <ToolButton active={toolMode === 'add'} icon={<Plus className="h-4 w-4" />} label="Add point (A)" onClick={() => setToolMode('add')} />
               <ToolButton active={toolMode === 'pan'} icon={<Hand className="h-4 w-4" />} label="Pan (H or Space + drag)" onClick={() => setToolMode('pan')} />
@@ -2005,8 +2350,7 @@ const BorderSurgeryPage: React.FC = () => {
             <svg
               ref={svgRef}
               viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-              className={`h-full min-h-[760px] w-full touch-none select-none ${toolMode === 'add' ? 'cursor-crosshair' : toolMode === 'pan' || spacePanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
-              onWheel={handleWheel}
+              className={`h-full w-full touch-none select-none ${toolMode === 'add' ? 'cursor-crosshair' : toolMode === 'pan' || spacePanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
               onPointerDown={beginCanvasPointer}
               onPointerMove={moveCanvasPointer}
               onPointerUp={endCanvasPointer}
@@ -2040,22 +2384,19 @@ const BorderSurgeryPage: React.FC = () => {
 
               {workingPath ? <path d={workingPath} fill="rgba(255,70,92,0.055)" stroke="rgba(255,70,92,0.14)" strokeWidth="9" filter="url(#border-glow)" /> : null}
 
-              {nodes.map((coord, index) => {
-                const next = nodes[(index + 1) % nodes.length];
-                const a = geoToScreen(coord, projection);
-                const b = geoToScreen(next, projection);
+              {displayEdgePaths.map((path, index) => {
                 const selected = selectedEdge === index;
                 const coast = edgeKinds[index] === 'coastline';
+                const d = path.map((coord, pointIndex) => `${pointIndex ? 'L' : 'M'} ${geoToScreen(coord, projection).join(' ')}`).join(' ');
                 return (
-                  <line
+                  <path
                     key={`edge-${index}`}
-                    x1={a[0]}
-                    y1={a[1]}
-                    x2={b[0]}
-                    y2={b[1]}
+                    d={d}
+                    fill="none"
                     stroke={selected ? '#ffffff' : coast ? '#ff5268' : '#f5dfe3'}
                     strokeWidth={selected ? 6 : 3}
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                     className={toolMode === 'add' ? 'cursor-crosshair' : 'cursor-pointer'}
                     onPointerDown={(event) => addPointOnEdge(event, index)}
                   />
@@ -2121,7 +2462,7 @@ const BorderSurgeryPage: React.FC = () => {
             </div>
           </main>
 
-          <aside className="rounded-2xl border border-white/10 bg-[#090c11]/90 p-4 shadow-xl shadow-black/20">
+          <aside className="overscroll-contain rounded-2xl border border-white/10 bg-[#090c11]/90 p-4 shadow-xl shadow-black/20 xl:max-h-[clamp(520px,72vh,720px)] xl:overflow-y-auto">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Precision actions</div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <ActionButton icon={<Trash2 className="h-4 w-4" />} label="Delete node" disabled={!selectedNodes.length || nodes.length - selectedNodes.length < 3} onClick={deleteSelectedNodes} />
@@ -2206,6 +2547,13 @@ const BorderSurgeryPage: React.FC = () => {
     </div>
   );
 };
+
+const WorkflowStep: React.FC<{ number: string; label: string; active?: boolean }> = ({ number, label, active = false }) => (
+  <div className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${active ? 'border-red-300/20 bg-red-500/[0.08] text-red-100' : 'border-white/[0.07] bg-white/[0.02] text-gray-600'}`}>
+    <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[9px] font-black ${active ? 'bg-red-400/15 text-red-200' : 'bg-white/[0.04] text-gray-600'}`}>{number}</span>
+    <span>{label}</span>
+  </div>
+);
 
 const SurfaceMetric: React.FC<{ label: string; value: React.ReactNode; alert?: boolean }> = ({ label, value, alert = false }) => (
   <div className="bg-[#090c11] px-4 py-3">

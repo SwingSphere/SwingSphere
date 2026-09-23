@@ -12,10 +12,12 @@ import {
   HelpCircle,
   MapPinned,
   Palmtree,
+  Search,
   Ship,
   SlidersHorizontal,
   Users,
 } from 'lucide-react';
+import type { Listing } from '../../types';
 import type { ExplorerListingType } from './ExplorerProvider';
 import { useAppStore } from '../../store/appStore';
 import TimeLensModal from '../time-lens/TimeLensModal';
@@ -62,15 +64,20 @@ type ExplorerFilterPanelProps = {
   onListingTypesChange: (types: ExplorerListingType[]) => void;
   selectedTags: string[];
   onSelectedTagsChange: (tags: string[]) => void;
+  searchResults?: Listing[];
+  onSelectSearchResult?: (listingId: string) => void;
   onOpenTutorial?: () => void;
 };
 
 const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
+  searchText,
   onSearchTextChange,
   listingTypes,
   onListingTypesChange,
   selectedTags,
   onSelectedTagsChange,
+  searchResults = [],
+  onSelectSearchResult,
   onOpenTutorial,
 }) => {
   const { timeLens, setTimeLens, clearTimeLens } = useAppStore();
@@ -146,7 +153,7 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            <section>
+            <section data-globe-tour="filters">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-red-400">Discover</h2>
@@ -162,6 +169,48 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
                   </button>
                 ) : null}
               </div>
+
+              <div data-globe-tour="search" className="mt-3 flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-[rgba(12,16,24,0.55)] px-3 text-sm text-gray-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md focus-within:border-red-500/50">
+                <Search className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={searchText}
+                  onChange={(event) => onSearchTextChange(event.target.value)}
+                  placeholder="Search by name, city, or keyword..."
+                  className="min-w-0 flex-1 bg-transparent text-[12px] text-gray-200 outline-none placeholder:text-gray-500"
+                  aria-label="Search SwingSphere"
+                />
+              </div>
+
+              {searchText.trim() ? (
+                <div className="mt-2 max-h-[240px] overflow-y-auto rounded-xl border border-white/[0.08] bg-black/30">
+                  {searchResults.length ? searchResults.slice(0, 5).map((listing) => {
+                    const isEvent = listing.type === 'event';
+                    const ResultIcon = isEvent ? CalendarDays : Building2;
+                    return (
+                      <button
+                        key={listing.id}
+                        type="button"
+                        onClick={() => onSelectSearchResult?.(listing.id)}
+                        className="flex w-full items-center gap-2.5 border-b border-white/[0.06] px-3 py-2.5 text-left transition last:border-b-0 hover:bg-white/[0.045]"
+                      >
+                        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${isEvent ? 'border-amber-300/20 bg-amber-400/[0.08] text-amber-200' : 'border-red-300/20 bg-red-500/[0.08] text-red-200'}`}>
+                          <ResultIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[11px] font-semibold text-white">{listing.name}</span>
+                          <span className="mt-0.5 block truncate text-[10px] text-gray-500">{listing.location}</span>
+                        </span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] ${isEvent ? 'border-amber-300/20 text-amber-200' : 'border-red-300/20 text-red-200'}`}>
+                          {isEvent ? 'Event' : 'Club'}
+                        </span>
+                      </button>
+                    );
+                  }) : (
+                    <div className="px-3 py-3 text-[11px] text-gray-500">No matching clubs or events.</div>
+                  )}
+                </div>
+              ) : null}
 
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {discoveryModes.map(({ type, label, icon: Icon, activeClass, idleClass }) => {
@@ -307,19 +356,21 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
         )}
 
         <div className="mt-auto pt-3">
-          <button
-            type="button"
-            onClick={onOpenTutorial}
-            className="ss-glass ss-glass--liquid ss-glass--interactive flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-red-300/20 bg-red-500/10 text-red-200">
-              <HelpCircle className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <span>
-              <span className="block text-xs font-semibold text-white">How to Explore</span>
-              <span className="mt-0.5 block text-[11px] text-gray-500">Learn the globe in 45 seconds</span>
-            </span>
-          </button>
+          <div className="ss-explore-led-glow" data-globe-tour="help">
+            <button
+              type="button"
+              onClick={onOpenTutorial}
+              className="ss-glass ss-glass--liquid ss-glass--interactive relative z-[1] flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-red-300/20 bg-red-500/10 text-red-200">
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block text-xs font-semibold text-white">How to Explore</span>
+                <span className="mt-0.5 block text-[11px] text-gray-500">Learn the globe in 45 seconds</span>
+              </span>
+            </button>
+          </div>
         </div>
       </aside>
       <TimeLensModal isOpen={isTimeModalOpen} onClose={() => setIsTimeModalOpen(false)} />

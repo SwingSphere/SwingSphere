@@ -884,6 +884,39 @@ export class SwingSphereGlobe {
     return region;
   }
 
+  restoreActivityRegion(regionId) {
+    if (!this.#canUseRuntime()) return null;
+    const region = this.activityRegions.find((candidate) => String(candidate.id) === String(regionId));
+    if (!region || (region.listingIds?.length ?? 0) <= 1) return null;
+    this.#activateActivityRegion(region, { notify: false });
+    return region;
+  }
+
+  getActivityRegionScreenPosition(regionId) {
+    if (!this.#canUseRuntime()) return null;
+    const worldPosition = this.activityRegionManager?.getRegionWorldPosition(regionId, new THREE.Vector3());
+    const camera = this.renderer?.camera;
+    const canvas = this.renderer?.renderer?.domElement;
+    if (!worldPosition || !camera || !canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+
+    const projected = worldPosition.clone().project(camera);
+    return {
+      x: (projected.x * 0.5 + 0.5) * rect.width,
+      y: (-projected.y * 0.5 + 0.5) * rect.height,
+      visible: projected.z >= -1 && projected.z <= 1
+        && projected.x >= -1.15 && projected.x <= 1.15
+        && projected.y >= -1.15 && projected.y <= 1.15
+    };
+  }
+
+  setActivityRegionLabelSuppressed(regionId, suppressed) {
+    if (!this.#canUseRuntime()) return;
+    this.activityRegionManager?.setRegionLabelSuppressed(regionId, suppressed);
+  }
+
   clearSelection() {
     if (this.disposed) return;
     this.renderer?.noteInteraction?.();
@@ -991,6 +1024,11 @@ export class SwingSphereGlobe {
   setBorderSurgeryOrbitEnabled(enabled) {
     if (!this.renderer?.controls) return;
     this.renderer.controls.enabled = Boolean(enabled);
+  }
+
+  setBorderSurgeryZoomEnabled(enabled) {
+    if (!this.renderer?.controls) return;
+    this.renderer.controls.enableZoom = Boolean(enabled);
   }
 
   getCountryVectorBorderDiagnostics() {
@@ -1182,14 +1220,25 @@ export class SwingSphereGlobe {
     return Boolean(!this.disposed && this.ready && this.renderer);
   }
 
-  #activateActivityRegion(region) {
+  #activateActivityRegion(region, { notify = true } = {}) {
     if (!region) return;
     this.setCountryDiscoveryEmphasis(false);
     this.activeActivityRegion = region;
-    this.directPinsVisible = true;
-    this.pinManager.updateEvents(this.#getActiveRegionEvents());
-    this.pinManager.setVisible(true);
-    this.activityRegionManager.setVisible(false);
+    const useRotaryStack = Boolean(this.config.progressiveDisclosure?.rotaryStackEnabled);
+    this.directPinsVisible = !useRotaryStack;
+    if (useRotaryStack) {
+      // The selected discovery beacon remains the geographic anchor while the
+      // React rotary stack presents the region's listings. Keeping the other
+      // discovery beacons visible also lets users change areas without first
+      // backing out of the current stack.
+      this.pinManager.updateEvents([]);
+      this.pinManager.setVisible(false);
+      this.activityRegionManager.setVisible(true);
+    } else {
+      this.pinManager.updateEvents(this.#getActiveRegionEvents());
+      this.pinManager.setVisible(true);
+      this.activityRegionManager.setVisible(false);
+    }
     this.#clearCountrySelection();
     if (region.countryIso2) {
       // Keep the country visually emphasized while drilling into a discovery
@@ -1201,7 +1250,7 @@ export class SwingSphereGlobe {
       this.countryVectorBorders?.setSelectedCountry(country);
       this.hybridBorderAudit?.setSelectedCountry(country);
     }
-    this.callbacks.onDiscoveryModeChange?.(region);
+    if (notify) this.callbacks.onDiscoveryModeChange?.(region);
   }
 
   #showWorld({ preserveSelection = false } = {}) {
@@ -1375,9 +1424,18 @@ export class SwingSphereGlobe {
   #syncDiscoveryLayerVisibility() {
     if (!this.pinManager || !this.activityRegionManager) return;
     const hasSelection = Boolean(this.pinManager.selectedEvent);
+    const useRotaryStack = Boolean(
+      this.config.progressiveDisclosure?.rotaryStackEnabled
+      && this.activeActivityRegion
+      && !hasSelection
+    );
     const showOverview = this.countryOverviewVisible && !this.activeActivityRegion && !hasSelection;
-    const showPins = this.directPinsVisible || hasSelection || (showOverview && this.#getCountryOverviewEvents().length > 0);
-    const showClusters = showOverview && this.#getClusterRegions().length > 0;
+    const showPins = useRotaryStack
+      ? false
+      : this.directPinsVisible || hasSelection || (showOverview && this.#getCountryOverviewEvents().length > 0);
+    const showClusters = useRotaryStack
+      ? this.#getClusterRegions().length > 0
+      : showOverview && this.#getClusterRegions().length > 0;
     this.pinManager.setVisible(showPins);
     this.activityRegionManager.setVisible(showClusters);
   }

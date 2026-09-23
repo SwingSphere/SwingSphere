@@ -404,6 +404,24 @@ export const approveSubmission = async (id: string): Promise<Listing> => {
     return saved;
 };
 
+export const getArchivedClubs = async (): Promise<ClubData[]> => {
+    const { data, error } = await supabase.rpc('admin_list_archived_clubs');
+    if (error) throw error;
+    return asListings(data).filter((listing): listing is ClubData => listing.type === 'club');
+};
+
+export const restoreListing = async (id: string): Promise<Listing> => {
+    const { data, error } = await supabase.rpc('admin_moderate_listing', {
+        p_listing_id: id,
+        p_action: 'restore',
+        p_reason: 'Restored from the SwingSphere admin interface.',
+    });
+    if (error) throw error;
+    const restored = data as Listing;
+    upsertLocalListing(restored);
+    return restored;
+};
+
 export const deleteListing = async (id: string): Promise<{ success: boolean }> => {
     const { error } = await supabase.rpc('admin_moderate_listing', {
         p_listing_id: id,

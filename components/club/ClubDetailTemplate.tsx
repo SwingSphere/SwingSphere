@@ -30,9 +30,13 @@ type ClubDetailTemplateProps = {
 };
 
 const getScheduleSummary = (club: ClubData): string => {
-  if (!club.schedule?.length) return 'Typical availability: baseline only, hours vary.';
+  if (!club.schedule?.length) {
+    return club.specialScheduleNotes?.trim()
+      ? 'Schedule varies by event or current club programming.'
+      : 'Current recurring hours are not published.';
+  }
   const firstOpen = club.schedule.find((day) => !day.isClosed && day.open && day.close);
-  if (!firstOpen) return 'Typical availability: baseline only, hours vary.';
+  if (!firstOpen) return 'Recurring days are known, but exact hours vary.';
   return `Typical availability: ${firstOpen.day} ${firstOpen.open} - ${firstOpen.close}.`;
 };
 
@@ -137,7 +141,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             <p className="mt-2 text-sm leading-6 text-gray-400">The essential visitor information in one place: who can attend, what entry requires, when the club is typically open, and any club-specific guidance to know before arriving.</p>
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <ListingAccessSummary listing={club} variant="detail" />
-              <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} onQuickEdit={() => onQuickEdit?.('schedule')} />
+              <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} specialScheduleNotes={club.specialScheduleNotes} onQuickEdit={() => onQuickEdit?.('schedule')} />
               <ClubHouseRulesSection content={extended.houseRules} />
             </div>
           </section>

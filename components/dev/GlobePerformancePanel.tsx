@@ -18,6 +18,7 @@ type BenchmarkAccumulator = {
 type GlobePerformancePanelProps = {
   snapshot: ExplorerPerformanceSnapshot | null;
   onResetQuality: () => void;
+  embedded?: boolean;
 };
 
 const average = (values: number[]): number | null =>
@@ -28,7 +29,7 @@ const heapBytes = (): number | null => {
   return Number.isFinite(memory?.usedJSHeapSize) ? memory?.usedJSHeapSize ?? null : null;
 };
 
-const GlobePerformancePanel: React.FC<GlobePerformancePanelProps> = ({ snapshot, onResetQuality }) => {
+const GlobePerformancePanel: React.FC<GlobePerformancePanelProps> = ({ snapshot, onResetQuality, embedded = false }) => {
   const [expanded, setExpanded] = useState(false);
   const [benchmarking, setBenchmarking] = useState(false);
   const [report, setReport] = useState<Record<string, unknown> | null>(null);
@@ -171,7 +172,10 @@ const GlobePerformancePanel: React.FC<GlobePerformancePanelProps> = ({ snapshot,
   if (!snapshot) return null;
 
   return (
-    <div className="pointer-events-auto absolute right-6 top-[90px] z-[70] w-[min(360px,calc(100vw-48px))] rounded-xl border border-cyan-300/20 bg-[rgba(4,8,12,0.92)] text-xs text-slate-200 shadow-2xl">
+    <div className={[
+      'pointer-events-auto rounded-xl border border-cyan-300/20 bg-[rgba(4,8,12,0.92)] text-xs text-slate-200 shadow-2xl',
+      embedded ? 'relative w-full' : 'absolute right-6 top-[90px] z-[70] w-[min(360px,calc(100vw-48px))]',
+    ].join(' ')}>
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}

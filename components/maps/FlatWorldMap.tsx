@@ -17,8 +17,11 @@ import {
 import {
   EXPLORER_CLUSTER_PIN_IMAGE_ID,
   EXPLORER_CLUSTER_SELECTED_IMAGE_ID,
+  EXPLORER_DISCOVERY_MARKER_IMAGE_ID,
+  EXPLORER_DISCOVERY_MARKER_SELECTED_IMAGE_ID,
   EXPLORER_PIN_IMAGE_ID,
   EXPLORER_PIN_SELECTED_IMAGE_ID,
+  createExplorerDiscoveryMarkerImage,
   createExplorerPinImage,
 } from '../../lib/explorerPinStyle';
 import { approximateListingsToGeoJson, listingsToGeoJson, getListingDisplayCoords } from './listingGeoJson';
@@ -64,6 +67,8 @@ type FlatWorldMapProps = {
   hostPins?: MapHostPin[];
   buildingAssets?: BuildingAsset[];
   activityRegions?: ActivityRegion[];
+  selectedActivityRegionId?: string | null;
+  onActivityRegionSelect?: (regionId: string) => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onReset?: () => void;
@@ -80,6 +85,9 @@ type FlatWorldMapProps = {
   onViewportChange?: (viewport: MapViewportDiscoverySnapshot) => void;
   onViewportChangeState?: (state: { isPending: boolean; reason: MapViewportDiscoverySnapshot['reason'] }) => void;
   onVenueArrivalComplete?: (listingId: string) => void;
+  contextBoundaryUrl?: string | null;
+  contextBoundaryUrls?: string[];
+  selectedCityBoundaryUrl?: string | null;
   onReady?: () => void;
   className?: string;
   mode?: 'explore' | 'capture';
@@ -174,7 +182,23 @@ const SELECTED_BUILDING_ASSET_SOURCE_ID = 'venue-selected-building-asset';
 const SELECTED_BUILDING_ASSET_LAYER_ID = 'venue-selected-building-asset-3d';
 const AUTHORED_BUILDINGS_SOURCE_ID = 'venue-authored-buildings';
 const AUTHORED_BUILDINGS_LAYER_ID = 'venue-authored-buildings-3d';
+const CONTEXT_BOUNDARY_SOURCE_ID = 'explorer-context-boundary';
+const CONTEXT_BOUNDARY_LINE_LAYER_ID = 'explorer-context-boundary-line';
+const SELECTED_CITY_BOUNDARY_SOURCE_ID = 'explorer-selected-city-boundary';
+const SELECTED_CITY_BOUNDARY_LINE_LAYER_ID = 'explorer-selected-city-boundary-line';
+const ACTIVITY_REGIONS_SOURCE_ID = 'swingsphere-activity-regions';
+const ACTIVITY_REGION_PULSE_LAYER_ID = 'activity-region-pulse';
+const ACTIVITY_REGION_GLOW_LAYER_ID = 'activity-region-glow';
+const ACTIVITY_REGION_MARKER_LAYER_ID = 'activity-region-marker';
+const ACTIVITY_REGION_HIT_LAYER_ID = 'activity-region-hit';
+const LEGACY_CLUSTER_LAYER_IDS = new Set([
+  'listing-cluster-ripple',
+  'listing-cluster-glow',
+  'listing-clusters',
+  'listing-cluster-count',
+]);
 const EMPTY_BUILDING_ASSETS: BuildingAsset[] = [];
+const EMPTY_BOUNDARY_URLS: string[] = [];
 const AUTHORED_BUILDING_MIN_ZOOM = 9.5;
 const SELECTED_ASSET_MIN_ZOOM = AUTHORED_BUILDING_MIN_ZOOM;
 const AUTHORED_BUILDING_FULL_DETAIL_ZOOM = 14.5;
@@ -188,6 +212,29 @@ type ResolverDebugSnapshot = {
   finalContextBuildingCount: number;
   executionTimeMs: number | null;
 };
+
+const activityRegionsToGeoJson = (
+  regions: ActivityRegion[],
+  selectedRegionId: string | null,
+): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
+  type: 'FeatureCollection',
+  features: regions
+    .filter((region) => region.listingIds.length > 1)
+    .map((region) => ({
+      type: 'Feature' as const,
+      id: region.id,
+      properties: {
+        regionId: region.id,
+        name: region.name,
+        count: region.listingIds.length,
+        selected: region.id === selectedRegionId,
+      },
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [region.longitude, region.latitude],
+      },
+    })),
+});
 
 const emptyResolverDebug: ResolverDebugSnapshot = {
   selectedBuildingId: null,
@@ -233,6 +280,24 @@ const makeCirclePolygon = (
       coordinates: [coordinates],
     },
   };
+};
+
+const getGeoJsonBounds = (geoJson: GeoJSON.GeoJSON): maplibregl.LngLatBounds | null => {
+  const bounds = new maplibregl.LngLatBounds();
+  let hasPoint = false;
+  const visit = (value: unknown): void => {
+    if (!Array.isArray(value)) return;
+    if (value.length >= 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      bounds.extend([value[0], value[1]] as [number, number]);
+      hasPoint = true;
+      return;
+    }
+    value.forEach(visit);
+  };
+  if (geoJson.type === 'FeatureCollection') geoJson.features.forEach((feature) => visit(feature.geometry?.coordinates));
+  else if (geoJson.type === 'Feature') visit(geoJson.geometry?.coordinates);
+  else visit((geoJson as GeoJSON.Geometry).coordinates);
+  return hasPoint ? bounds : null;
 };
 
 const getPolygonCount = (geometry: GeoJSON.Geometry | null | undefined): number => {
@@ -371,6 +436,8 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   hostPins = [],
   buildingAssets = EMPTY_BUILDING_ASSETS,
   activityRegions = [],
+  selectedActivityRegionId = null,
+  onActivityRegionSelect,
   selectedId,
   onSelect,
   onReset,
@@ -380,6 +447,9 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   onViewportChange,
   onViewportChangeState,
   onVenueArrivalComplete,
+  contextBoundaryUrl = null,
+  contextBoundaryUrls = EMPTY_BOUNDARY_URLS,
+  selectedCityBoundaryUrl = null,
   onReady,
   className,
   mode = 'explore',
@@ -389,6 +459,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onActivityRegionSelectRef = useRef(onActivityRegionSelect);
   const onNavigationChangeRef = useRef(onNavigationChange);
   const onViewportChangeRef = useRef(onViewportChange);
   const onViewportChangeStateRef = useRef(onViewportChangeState);
@@ -400,6 +471,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   const buildingAssetsRef = useRef(buildingAssets);
   const activityRegionsRef = useRef(activityRegions);
   activityRegionsRef.current = activityRegions;
+  onActivityRegionSelectRef.current = onActivityRegionSelect;
   const cameraRef = useRef(camera);
   const appliedExplorerCameraKeyRef = useRef('');
   const appliedDestinationFramingKeyRef = useRef('');
@@ -426,6 +498,12 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       },
     };
   }), [listings, buildingAssets]);
+  const activityRegionGeoJson = useMemo(
+    () => activityRegionsToGeoJson(activityRegions, selectedActivityRegionId),
+    [activityRegions, selectedActivityRegionId],
+  );
+  const activityRegionGeoJsonRef = useRef(activityRegionGeoJson);
+  activityRegionGeoJsonRef.current = activityRegionGeoJson;
   const authoredBuildingListingIds = useMemo(
     () => new Set(
       listings
@@ -466,6 +544,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   });
   const [mapDiagnostics, setMapDiagnostics] = useState<MapRuntimeDiagnostics>(emptyMapDiagnostics);
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingInteractionState | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const isCaptureMode = mode === 'capture';
   const usesVenueArrival = mode === 'explore' || isCaptureMode;
 
@@ -525,6 +604,14 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
         id: EXPLORER_CLUSTER_SELECTED_IMAGE_ID,
         image: createExplorerPinImage({ cluster: true, selected: true }),
       },
+      {
+        id: EXPLORER_DISCOVERY_MARKER_IMAGE_ID,
+        image: createExplorerDiscoveryMarkerImage(),
+      },
+      {
+        id: EXPLORER_DISCOVERY_MARKER_SELECTED_IMAGE_ID,
+        image: createExplorerDiscoveryMarkerImage({ selected: true }),
+      },
     ];
 
     images.forEach(({ id, image }) => {
@@ -532,6 +619,116 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
         map.addImage(id, image, { pixelRatio: Math.max(1, Math.min(window.devicePixelRatio || 1, 2)) });
       }
     });
+  };
+
+  const ensureActivityRegionLayers = (map: MapLibreMap) => {
+    if (!map.getSource(ACTIVITY_REGIONS_SOURCE_ID)) {
+      map.addSource(ACTIVITY_REGIONS_SOURCE_ID, {
+        type: 'geojson',
+        data: activityRegionGeoJsonRef.current,
+      });
+    }
+    if (!map.getLayer(ACTIVITY_REGION_PULSE_LAYER_ID)) {
+      map.addLayer({
+        id: ACTIVITY_REGION_PULSE_LAYER_ID,
+        type: 'circle',
+        source: ACTIVITY_REGIONS_SOURCE_ID,
+        maxzoom: 11.5,
+        paint: {
+          'circle-pitch-alignment': 'viewport',
+          'circle-color': [
+            'case',
+            ['boolean', ['get', 'selected'], false],
+            'rgba(255,77,94,0.26)',
+            'rgba(255,255,255,0.18)',
+          ],
+          'circle-radius': [
+            '+',
+            15,
+            ['*', ['coalesce', ['feature-state', 'pulse'], 0.5], 14],
+          ],
+          'circle-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            0.34,
+            ['-', 0.22, ['*', ['coalesce', ['feature-state', 'pulse'], 0.5], 0.14]],
+          ],
+          'circle-blur': 0.58,
+        },
+      });
+    }
+    if (!map.getLayer(ACTIVITY_REGION_GLOW_LAYER_ID)) {
+      map.addLayer({
+        id: ACTIVITY_REGION_GLOW_LAYER_ID,
+        type: 'circle',
+        source: ACTIVITY_REGIONS_SOURCE_ID,
+        maxzoom: 11.5,
+        paint: {
+          'circle-pitch-alignment': 'viewport',
+          'circle-color': [
+            'case',
+            ['boolean', ['get', 'selected'], false],
+            'rgba(255,77,94,0.38)',
+            ['boolean', ['feature-state', 'hover'], false],
+            'rgba(255,77,94,0.32)',
+            'rgba(255,255,255,0.16)',
+          ],
+          'circle-radius': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            18,
+            15,
+          ],
+          'circle-opacity': 0.72,
+          'circle-blur': 0.62,
+        },
+      });
+    }
+    if (!map.getLayer(ACTIVITY_REGION_MARKER_LAYER_ID)) {
+      map.addLayer({
+        id: ACTIVITY_REGION_MARKER_LAYER_ID,
+        type: 'symbol',
+        source: ACTIVITY_REGIONS_SOURCE_ID,
+        maxzoom: 11.5,
+        layout: {
+          'icon-image': [
+            'case',
+            ['boolean', ['get', 'selected'], false],
+            EXPLORER_DISCOVERY_MARKER_SELECTED_IMAGE_ID,
+            EXPLORER_DISCOVERY_MARKER_IMAGE_ID,
+          ],
+          'icon-size': 0.34,
+          'icon-anchor': 'center',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-pitch-alignment': 'viewport',
+          'icon-rotation-alignment': 'viewport',
+        },
+        paint: {
+          'icon-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            1,
+            0.94,
+          ],
+        },
+      });
+    }
+    if (!map.getLayer(ACTIVITY_REGION_HIT_LAYER_ID)) {
+      map.addLayer({
+        id: ACTIVITY_REGION_HIT_LAYER_ID,
+        type: 'circle',
+        source: ACTIVITY_REGIONS_SOURCE_ID,
+        maxzoom: 11.5,
+        paint: {
+          'circle-pitch-alignment': 'viewport',
+          'circle-radius': 24,
+          'circle-color': '#000000',
+          'circle-opacity': 0.001,
+          'circle-stroke-opacity': 0,
+        },
+      });
+    }
   };
 
   const emitCaptureStatus = (status: Partial<VenueBuildingCaptureStatus>) => {
@@ -608,6 +805,114 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+
+    const syncBoundary = async ({
+      urls,
+      sourceId,
+      layerId,
+      color,
+      width,
+      fit,
+    }: {
+      urls: string[];
+      sourceId: string;
+      layerId: string;
+      color: string;
+      width: number;
+      fit: boolean;
+    }) => {
+      const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
+      if (!uniqueUrls.length) {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+        return;
+      }
+      try {
+        const features: GeoJSON.Feature[] = [];
+        for (const url of uniqueUrls) {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) {
+              if (response.status !== 404) console.warn(`SwingSphere boundary overlay returned HTTP ${response.status} for ${url}.`);
+              continue;
+            }
+            const data = await response.json() as GeoJSON.GeoJSON;
+            if (data.type === 'FeatureCollection') features.push(...data.features);
+            else if (data.type === 'Feature') features.push(data);
+            else features.push({ type: 'Feature', properties: {}, geometry: data as GeoJSON.Geometry });
+          } catch (error) {
+            console.warn(`SwingSphere boundary overlay failed for ${url}.`, error);
+          }
+        }
+        if (cancelled) return;
+        if (!features.length) {
+          if (map.getLayer(layerId)) map.removeLayer(layerId);
+          if (map.getSource(sourceId)) map.removeSource(sourceId);
+          return;
+        }
+        const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+        const existing = map.getSource(sourceId) as GeoJSONSource | undefined;
+        if (existing) existing.setData(data);
+        else map.addSource(sourceId, { type: 'geojson', data });
+        if (!map.getLayer(layerId)) {
+          map.addLayer({
+            id: layerId,
+            type: 'line',
+            source: sourceId,
+            paint: {
+              'line-color': color,
+              'line-width': width,
+              'line-opacity': 0.92,
+              'line-blur': 0.15,
+            },
+          });
+        }
+        if (fit) {
+          const bounds = getGeoJsonBounds(data);
+          if (bounds) {
+            markProgrammaticMapMotion(1000);
+            map.fitBounds(bounds, {
+              padding: { top: 120, right: 120, bottom: 190, left: 330 },
+              duration: prefersReducedMotionRef.current ? 0 : 700,
+              maxZoom: 9.2,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('SwingSphere boundary overlay failed.', error);
+      }
+    };
+
+    const resolvedContextBoundaryUrls = contextBoundaryUrls.length
+      ? contextBoundaryUrls
+      : contextBoundaryUrl ? [contextBoundaryUrl] : [];
+    void syncBoundary({
+      urls: resolvedContextBoundaryUrls,
+      sourceId: CONTEXT_BOUNDARY_SOURCE_ID,
+      layerId: CONTEXT_BOUNDARY_LINE_LAYER_ID,
+      color: '#ff4d5e',
+      width: 2.4,
+      fit: Boolean(resolvedContextBoundaryUrls.length && !selectedCityBoundaryUrl),
+    });
+    void syncBoundary({
+      urls: selectedCityBoundaryUrl ? [selectedCityBoundaryUrl] : [],
+      sourceId: SELECTED_CITY_BOUNDARY_SOURCE_ID,
+      layerId: SELECTED_CITY_BOUNDARY_LINE_LAYER_ID,
+      color: '#67e8f9',
+      width: 3,
+      fit: false,
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contextBoundaryUrl, contextBoundaryUrls, mapReady, selectedCityBoundaryUrl]);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -924,28 +1229,40 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   const updatePinPulseState = (phase: number) => {
     const map = mapRef.current;
     if (!map || prefersReducedMotionRef.current) return;
-    const pulseLayers = ['listing-pins', 'selected-listing'].filter((layerId) => map.getLayer(layerId));
-    if (!pulseLayers.length || !map.getSource(LISTINGS_SOURCE_ID)) return;
     const pulse = (Math.sin(phase * Math.PI * 2) + 1) / 2;
-    const listingIds = new Set(
-      map
-        .queryRenderedFeatures(undefined, { layers: pulseLayers })
-        .map((feature) => getFeatureId(feature as MapGeoJSONFeature))
-        .filter((featureId) => Boolean(featureId)),
-    );
-    listingIds.forEach((featureId) => {
-      try {
-        map.setFeatureState(
-          {
-            source: LISTINGS_SOURCE_ID,
-            id: featureId,
-          },
-          { pulse },
-        );
-      } catch {
-        // Ignore transient source reloads.
-      }
-    });
+
+    const listingPulseLayers = ['listing-pins', 'selected-listing'].filter((layerId) => map.getLayer(layerId));
+    if (listingPulseLayers.length && map.getSource(LISTINGS_SOURCE_ID)) {
+      const listingIds = new Set(
+        map
+          .queryRenderedFeatures(undefined, { layers: listingPulseLayers })
+          .map((feature) => getFeatureId(feature as MapGeoJSONFeature))
+          .filter((featureId) => Boolean(featureId)),
+      );
+      listingIds.forEach((featureId) => {
+        try {
+          map.setFeatureState({ source: LISTINGS_SOURCE_ID, id: featureId }, { pulse });
+        } catch {
+          // Ignore transient source reloads.
+        }
+      });
+    }
+
+    if (map.getLayer(ACTIVITY_REGION_MARKER_LAYER_ID) && map.getSource(ACTIVITY_REGIONS_SOURCE_ID)) {
+      const regionIds = new Set(
+        map
+          .queryRenderedFeatures(undefined, { layers: [ACTIVITY_REGION_MARKER_LAYER_ID] })
+          .map((feature) => String(feature.properties?.regionId ?? feature.id ?? ''))
+          .filter(Boolean),
+      );
+      regionIds.forEach((regionId) => {
+        try {
+          map.setFeatureState({ source: ACTIVITY_REGIONS_SOURCE_ID, id: regionId }, { pulse });
+        } catch {
+          // Ignore transient source reloads.
+        }
+      });
+    }
   };
 
   const startPinPulseAnimation = () => {
@@ -1167,7 +1484,16 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       controls.showAllExtrusions && controls.showContextBuildings && venueArrival.enableVenueContextBuildings,
     );
 
-    listingLayers.forEach((layer) => setLayerVisibility(layer.id, mode === 'explore' ? controls.showPins : false));
+    listingLayers.forEach((layer) => setLayerVisibility(
+      layer.id,
+      mode === 'explore' && controls.showPins && !LEGACY_CLUSTER_LAYER_IDS.has(layer.id),
+    ));
+    [
+      ACTIVITY_REGION_PULSE_LAYER_ID,
+      ACTIVITY_REGION_GLOW_LAYER_ID,
+      ACTIVITY_REGION_MARKER_LAYER_ID,
+      ACTIVITY_REGION_HIT_LAYER_ID,
+    ].forEach((layerId) => setLayerVisibility(layerId, mode === 'explore' ? controls.showPins : false));
     setLayerVisibility('dark-basemap', controls.showRoads);
     setLayerVisibility('dark-basemap-labels', controls.showLabels);
     setLayerVisibility(DEBUG_BUILDING_IDS_LAYER_ID, controls.showBuildingIds);
@@ -2234,6 +2560,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       className: 'swingsphere-discovery-popup',
     });
     let hoveredThreePinId: string | null = null;
+    let hoveredActivityRegionId: string | null = null;
     let hoverReleaseTimer: number | null = null;
     const cancelHoverRelease = () => {
       if (hoverReleaseTimer === null) return;
@@ -2369,6 +2696,74 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
         });
       }
       if (popupTip) popupTip.style.display = 'none';
+    };
+
+    const setActivityRegionHoverState = (regionId: string | null, hover: boolean) => {
+      if (!regionId) return;
+      try {
+        map.setFeatureState({ source: ACTIVITY_REGIONS_SOURCE_ID, id: regionId }, { hover });
+      } catch {
+        // Ignore transient source reloads.
+      }
+    };
+
+    const clearActivityRegionHover = () => {
+      setActivityRegionHoverState(hoveredActivityRegionId, false);
+      hoveredActivityRegionId = null;
+      discoveryPopup.remove();
+    };
+
+    const handleActivityRegionHover = (event: maplibregl.MapLayerMouseEvent) => {
+      setPointerCursor();
+      const feature = event.features?.[0];
+      const regionId = String(feature?.properties?.regionId ?? feature?.id ?? '');
+      if (!regionId || hoveredActivityRegionId === regionId) return;
+      clearActivityRegionHover();
+      hoveredActivityRegionId = regionId;
+      setActivityRegionHoverState(regionId, true);
+      const region = activityRegionsRef.current.find((candidate) => candidate.id === regionId);
+      if (region) showDiscoveryPopup([region.longitude, region.latitude], region.listingIds.length);
+    };
+
+    const handleActivityRegionClick = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const regionId = String(feature?.properties?.regionId ?? feature?.id ?? '');
+      const region = activityRegionsRef.current.find((candidate) => candidate.id === regionId);
+      if (!region) return;
+      onActivityRegionSelectRef.current?.(region.id);
+      showDiscoveryPopup([region.longitude, region.latitude], region.listingIds.length);
+
+      const bounds = new maplibregl.LngLatBounds();
+      region.listingIds.forEach((listingId) => {
+        const listing = resolutionListingsRef.current.find((candidate) => candidate.id === listingId);
+        if (!listing) return;
+        const coords = getPublicMapCoords(listing, buildingAssetsRef.current);
+        if (coords) bounds.extend([coords.lng, coords.lat]);
+      });
+      if (bounds.isEmpty()) {
+        bounds.extend([region.longitude, region.latitude]);
+      }
+      const northEast = bounds.getNorthEast();
+      const southWest = bounds.getSouthWest();
+      markProgrammaticMapMotion(900);
+      if (northEast.lng !== southWest.lng || northEast.lat !== southWest.lat) {
+        map.fitBounds(bounds, {
+          padding: {
+            top: 96,
+            bottom: 160,
+            left: map.getContainer().clientWidth >= 768 ? 340 : 56,
+            right: 72,
+          },
+          maxZoom: 11.75,
+          duration: prefersReducedMotionRef.current ? 0 : 700,
+        });
+      } else {
+        map.easeTo({
+          center: [region.longitude, region.latitude],
+          zoom: Math.max(map.getZoom() + 2, 10.5),
+          duration: prefersReducedMotionRef.current ? 0 : 650,
+        });
+      }
     };
 
     const setClusterHoverState = (featureId: string | number | null, hover: boolean) => {
@@ -2509,10 +2904,10 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     };
 
     const handleMapPointerMove = (event: maplibregl.MapMouseEvent) => {
-      // Use a generous screen-space target and hold hover briefly after the
-      // pointer leaves it. That avoids pixel-perfect aiming and prevents the
-      // lift animation from rapidly toggling at the edge of the hit area.
-      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 40) ?? null;
+      // Destination markers use a generous fixed screen-space target. The
+      // marker itself no longer lifts away from the pointer, so the hit target
+      // stays stable while hovering and clicking.
+      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 48) ?? null;
       if (threePinHit) {
         cancelHoverRelease();
         hoveredThreePinId = threePinHit.id;
@@ -2560,7 +2955,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
         return;
       }
 
-      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 40) ?? null;
+      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 48) ?? null;
       if (threePinHit) {
         if (threePinHit.type !== 'promoter') onSelectRef.current(threePinHit.id);
         return;
@@ -2600,7 +2995,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     };
 
     const handleMapDoubleClick = (event: maplibregl.MapMouseEvent) => {
-      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 40) ?? null;
+      const threePinHit = threePinLayerRef.current?.hitTest(event.point, 48) ?? null;
       const mapPinHit = getInteractivePinHit(event.point);
       if (threePinHit || mapPinHit) return;
       event.originalEvent.preventDefault();
@@ -2623,6 +3018,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     };
 
     map.on('load', () => {
+      setMapReady(true);
       updateMapDiagnostics({ loaded: true, styleLoaded: true });
       prefersReducedMotionRef.current = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
       if (mode === 'explore') {
@@ -2636,6 +3032,10 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
           generateId: true,
         });
         listingLayers.forEach((layer) => map.addLayer(layer));
+        LEGACY_CLUSTER_LAYER_IDS.forEach((layerId) => {
+          if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', 'none');
+        });
+        ensureActivityRegionLayers(map);
         try {
           const threePinLayer = new MapLibreThreePinLayer([...mapListings, ...hostPins]);
           map.addLayer(threePinLayer);
@@ -2819,6 +3219,12 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     });
 
     if (mode === 'explore') {
+      map.on('click', ACTIVITY_REGION_HIT_LAYER_ID, handleActivityRegionClick);
+      map.on('mousemove', ACTIVITY_REGION_HIT_LAYER_ID, handleActivityRegionHover);
+      map.on('mouseleave', ACTIVITY_REGION_HIT_LAYER_ID, () => {
+        clearActivityRegionHover();
+        clearPointerCursor();
+      });
       map.on('click', 'listing-clusters', handleClusterClick);
       map.on('click', LISTING_INTERACTION_LAYER_ID, handleListingClick);
       map.on('mousemove', 'listing-clusters', handleClusterHover);
@@ -2904,6 +3310,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       }
       threePinLayerRef.current = null;
       map.remove();
+      setMapReady(false);
       mapRef.current = null;
     };
   }, []);
@@ -2951,14 +3358,16 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
   useEffect(() => {
     const source = mapRef.current?.getSource(LISTINGS_SOURCE_ID) as GeoJSONSource | undefined;
     const approximateSource = mapRef.current?.getSource(APPROXIMATE_LISTINGS_SOURCE_ID) as GeoJSONSource | undefined;
+    const activityRegionSource = mapRef.current?.getSource(ACTIVITY_REGIONS_SOURCE_ID) as GeoJSONSource | undefined;
     if (mode === 'explore') {
       source?.setData(geoJson);
       approximateSource?.setData(approximateGeoJson);
+      activityRegionSource?.setData(activityRegionGeoJson);
       threePinLayerRef.current?.setListings([...mapListings, ...hostPins]);
       threePinLayerRef.current?.setAuthoredBuildingListingIds(authoredBuildingListingIds);
       syncVenueBuildings();
     }
-  }, [geoJson, approximateGeoJson, hostPins, mapListings, authoredBuildingListingIds, mode]);
+  }, [activityRegionGeoJson, geoJson, approximateGeoJson, hostPins, mapListings, authoredBuildingListingIds, mode]);
 
   useEffect(() => {
     const map = mapRef.current;

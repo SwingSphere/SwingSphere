@@ -30,6 +30,13 @@ export const DEV_ROUTE_CATALOG: readonly DevRouteCatalogEntry[] = [
     category: 'Discovery & globe',
   },
   {
+    id: 'dev-usa-pin-lab',
+    label: 'USA Dense Pin Lab',
+    path: '/dev/usa-pin-lab',
+    description: 'Metro-depth globe prototype stress-testing ten activity pins inside a roughly seven-mile San Francisco area.',
+    category: 'Discovery & globe',
+  },
+  {
     id: 'dev-globe-v3-cleanroom',
     label: 'Globe V3 Clean Room',
     path: '/dev/globe-v3-cleanroom',

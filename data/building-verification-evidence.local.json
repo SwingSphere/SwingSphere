@@ -6653,5 +6653,320 @@
     "rejectionReasons": [
       "provider returned no usable individual building footprints"
     ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-3d2ad187",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-fun4two-moordrecht:2026-09-18T01:05:59.051Z",
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 moordrecht south holland 2841 la netherlands",
+    "canonicalCoordinate": {
+      "lat": 52.000233,
+      "lng": 4.650135
+    },
+    "coordinateProvenance": "official-site+official-google-map",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-18T01:05:59.051Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 5,
+      "individualFootprintCount": 1
+    },
+    "outcome": "no_building_data",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": null,
+    "runnerUp": null,
+    "scoreMargin": null,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "provider returned no usable individual building footprints"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-081fefe3",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-lizas-lounge-cape-town:2026-09-20T02:08:00.412Z",
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road cape town western cape 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.8306066,
+      "lng": 18.5103547
+    },
+    "coordinateProvenance": "official-site+nominatim-street",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-09-20T02:08:00.412Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 302,
+      "individualFootprintCount": 298
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1fe90lo-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-1fe90lo-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.4276003942658,
+      "pinToCentroidMeters": 18.90879103076862,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-hdgd0i-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-hdgd0i-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 25.101609338467213,
+      "pinToCentroidMeters": 37.80733539371873,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 5,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-081fefe3",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-lizas-lounge-cape-town:2026-09-20T02:23:31.629Z",
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road cape town western cape 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.8306066,
+      "lng": 18.5103547
+    },
+    "coordinateProvenance": "official-site+nominatim-street",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-09-20T02:23:31.629Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 302,
+      "individualFootprintCount": 298
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1fe90lo-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-1fe90lo-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 13.4276003942658,
+      "pinToCentroidMeters": 18.90879103076862,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-hdgd0i-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-hdgd0i-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "238, Blaauwberg Road, Sunridge, Table View, Cape Town, City of Cape Town, Western Cape, 7441, South Africa",
+      "addressComponents": {
+        "houseNumber": "238",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7441",
+        "country": "South Africa"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 25.101609338467213,
+      "pinToCentroidMeters": 37.80733539371873,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 5,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-lizas-lounge-cape-town",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-899256a7",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-lizas-lounge-cape-town:2026-09-20T02:28:47.977Z",
+    "listingName": "Liza's Lounge",
+    "normalizedAddress": "47 blaauwberg road cape town western cape 7441 south africa",
+    "canonicalCoordinate": {
+      "lat": -33.823144,
+      "lng": 18.48435
+    },
+    "coordinateProvenance": "official-site+google-maps",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-20T02:28:47.977Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 262,
+      "individualFootprintCount": 257
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1n4uu47-1-4",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-1n4uu47-1-4"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "51, Blaauwberg Road, Flamingo Vlei, Cape Town Ward 107, Cape Town, City of Cape Town, Western Cape, 7439, South Africa",
+      "addressComponents": {
+        "houseNumber": "51",
+        "road": "Blaauwberg Road",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7439",
+        "country": "South Africa",
+        "countryCode": "ZA"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 0.2027100650425135,
+      "pinToCentroidMeters": 5.114821373329617,
+      "score": 19,
+      "confidence": 0.19,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-389gyc-1-6",
+      "providerFeatureIds": [
+        "microsoft-ml:footprint-v2-389gyc-1-6"
+      ],
+      "providerSource": "microsoft-global-ml-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Popham Street, Flamingo Vlei, Cape Town Ward 107, Cape Town, City of Cape Town, Western Cape, 7439, South Africa",
+      "addressComponents": {
+        "road": "Popham Street",
+        "city": "Cape Town",
+        "region": "Western Cape",
+        "postalCode": "7439",
+        "country": "South Africa",
+        "countryCode": "ZA"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 0.41028934609830414,
+      "pinToCentroidMeters": 12.84210376254268,
+      "score": 19,
+      "confidence": 0.19,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-fun4two-moordrecht",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-3d2ad187",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-fun4two-moordrecht:2026-09-20T02:29:54.981Z",
+    "listingName": "Fun4Two",
+    "normalizedAddress": "middelweg 18 moordrecht south holland 2841 la netherlands",
+    "canonicalCoordinate": {
+      "lat": 52.000233,
+      "lng": 4.650135
+    },
+    "coordinateProvenance": "official-site+official-google-map",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-20T02:29:54.981Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 5,
+      "individualFootprintCount": 1
+    },
+    "outcome": "no_building_data",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": null,
+    "runnerUp": null,
+    "scoreMargin": null,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "provider returned no usable individual building footprints"
+    ]
   }
 ]

@@ -212,8 +212,8 @@ export const MobileClubPage: React.FC = () => {
               </Section>
 
               <Section title="Hours & schedule" icon={<Clock3 className="h-4 w-4" />}>
-                {schedule.length ? <div className="divide-y divide-white/[0.055]">{schedule.map((day) => <div key={day.day} className="flex items-center justify-between gap-3 py-2.5 text-[12px]"><span className="font-medium text-gray-200">{day.day}</span><span className="text-right text-gray-400">{day.isClosed ? 'Closed' : [day.open ? formatClockTime(day.open) : '', day.close ? formatClockTime(day.close) : ''].filter(Boolean).join(' – ') || 'See current schedule'}</span></div>)}</div> : <p className="text-[13px] leading-6 text-gray-400">Hours vary by event. Check the official schedule before visiting.</p>}
-                {club.specialScheduleNotes ? <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12px] leading-5 text-gray-400">{club.specialScheduleNotes}</p> : null}
+                {schedule.length ? <div className="divide-y divide-white/[0.055]">{schedule.map((day) => <div key={day.day} className="flex items-center justify-between gap-3 py-2.5 text-[12px]"><span className="font-medium text-gray-200">{day.day}</span><span className="text-right text-gray-400">{day.isClosed ? 'Closed' : [day.open ? formatClockTime(day.open) : '', day.close ? formatClockTime(day.close) : ''].filter(Boolean).join(' – ') || 'Hours vary'}</span></div>)}</div> : club.specialScheduleNotes ? null : <p className="text-[13px] leading-6 text-gray-400">Contact the club for current schedule details before visiting.</p>}
+                {club.specialScheduleNotes ? <p className={`${schedule.length ? 'mt-3 border-t border-white/[0.06] pt-3 ' : ''}text-[12px] leading-5 text-gray-400`}>{club.specialScheduleNotes}</p> : null}
               </Section>
             </div>
 

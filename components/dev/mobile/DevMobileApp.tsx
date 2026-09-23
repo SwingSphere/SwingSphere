@@ -109,10 +109,11 @@ const ListingCollectionScreen: React.FC<{
   emptyTitle: string;
   emptyBody: string;
   searchable?: boolean;
+  waitForSearch?: boolean;
   index?: EntityIndex;
   immersiveBackground?: boolean;
   cardVisualMode?: 'default' | 'logo-over-hero';
-}> = ({ title, eyebrow, icon, listings, isLoading, error, emptyTitle, emptyBody, searchable = false, index, immersiveBackground = false, cardVisualMode = 'default' }) => {
+}> = ({ title, eyebrow, icon, listings, isLoading, error, emptyTitle, emptyBody, searchable = false, waitForSearch = false, index, immersiveBackground = false, cardVisualMode = 'default' }) => {
   const navigate = useNavigate();
   const { getListingPath } = useDeviceExperience();
   const [query, setQuery] = useState('');
@@ -133,9 +134,9 @@ const ListingCollectionScreen: React.FC<{
         ) : null}
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           <MobileHeader title={title} eyebrow={eyebrow} />
-          {searchable ? <label className="mx-3 mt-3 flex min-h-12 shrink-0 items-center gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.04] px-3"><Search className="h-4 w-4 text-gray-500" /><span className="sr-only">Search {title}</span><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500" placeholder={`Search ${title.toLowerCase()}`} /></label> : null}
+          {searchable ? <label className="mx-3 mt-3 flex min-h-12 shrink-0 items-center gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.04] px-3"><Search className="h-4 w-4 text-gray-500" /><span className="sr-only">Search {title}</span><input autoFocus={waitForSearch} value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-500" placeholder={`Search ${title.toLowerCase()}`} /></label> : null}
           <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5 pt-3">
-            {isLoading ? <div className="space-y-3" aria-label={`Loading ${title}`}><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /></div> : error ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center" role="alert"><Info className="h-7 w-7 text-red-200" /><h1 className="mt-4 text-lg font-semibold text-white">Unable to load {title.toLowerCase()}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{error}</p></div> : visibleListings.length ? <div className="space-y-2.5">{visibleListings.map((listing) => <MobileListingCard key={listing.id} listing={listing} visualMode={cardVisualMode} onClick={() => navigate(getListingPath(listing, index ?? undefined))} />)}</div> : <div className="flex min-h-[50vh] flex-col items-center justify-center px-7 text-center"><span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/[0.075] bg-white/[0.035] text-red-200">{icon}</span><h1 className="mt-5 text-lg font-semibold text-white">{query ? 'No matches found' : emptyTitle}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{query ? 'Try a different club, event, or location.' : emptyBody}</p></div>}
+            {isLoading ? <div className="space-y-3" aria-label={`Loading ${title}`}><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /><div className="h-28 animate-pulse rounded-[22px] bg-white/[0.045]" /></div> : error ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center" role="alert"><Info className="h-7 w-7 text-red-200" /><h1 className="mt-4 text-lg font-semibold text-white">Unable to load {title.toLowerCase()}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{error}</p></div> : waitForSearch && !query.trim() ? <div className="flex min-h-[50vh] flex-col items-center justify-center px-7 text-center"><span className="grid h-16 w-16 place-items-center rounded-[22px] border border-red-300/15 bg-red-500/[0.07] text-red-200">{icon}</span><h1 className="mt-5 text-lg font-semibold text-white">Search SwingSphere</h1><p className="mt-2 max-w-[300px] text-sm leading-6 text-gray-400">Type a club, event, city, or destination above. Results will appear here as you type.</p></div> : visibleListings.length ? <div className="space-y-2.5">{visibleListings.map((listing) => <MobileListingCard key={listing.id} listing={listing} visualMode={cardVisualMode} onClick={() => navigate(getListingPath(listing, index ?? undefined))} />)}</div> : <div className="flex min-h-[50vh] flex-col items-center justify-center px-7 text-center"><span className="grid h-16 w-16 place-items-center rounded-[22px] border border-white/[0.075] bg-white/[0.035] text-red-200">{icon}</span><h1 className="mt-5 text-lg font-semibold text-white">{query ? 'No matches found' : emptyTitle}</h1><p className="mt-2 text-sm leading-6 text-gray-400">{query ? 'Try a different club, event, or location.' : emptyBody}</p></div>}
           </main>
         </div>
       </div>
@@ -381,6 +382,11 @@ const MobileNearbyScreen: React.FC = () => {
   );
 };
 
+const MobileSearchScreen: React.FC = () => {
+  const { listings, index, isLoading, error } = useEntityIndex();
+  return <ListingCollectionScreen title="Search" eyebrow="Find anything" icon={<Search className="h-6 w-6" />} listings={listings} index={index ?? undefined} isLoading={isLoading} error={error} emptyTitle="Start searching" emptyBody="Search clubs, events, and destinations across SwingSphere." searchable waitForSearch immersiveBackground cardVisualMode="logo-over-hero" />;
+};
+
 const MobileSavedScreen: React.FC = () => {
   const navigate = useNavigate();
   const { toPath } = useDeviceExperience();
@@ -571,6 +577,7 @@ const DeviceExperienceRoutes: React.FC = () => {
       <Route path="nearby" element={<MobileNearbyScreen />} />
       <Route path="events" element={<Navigate to={`${basePath}/nearby`} replace />} />
       <Route path="events/:slug" element={<MobileEventPage />} />
+      <Route path="search" element={<MobileSearchScreen />} />
       <Route path="saved" element={<MobileSavedScreen />} />
       <Route path="street-view" element={<DeviceStreetViewPage />} />
       <Route path="add" element={<ProtectedRoute><MobileAddScreen /></ProtectedRoute>} />

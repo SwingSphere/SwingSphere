@@ -4,6 +4,7 @@ import type { Listing } from '../types';
 
 export type GlobeScaleFixturePoint = {
   id: string;
+  label?: string;
   city: string;
   region: string;
   country: string;
@@ -41,6 +42,23 @@ export const GLOBE_SCALE_FIXTURES: GlobeScaleFixture[] = [
       point('san-jose', 'San Jose', 'CA', 'United States', 'US', 'USA', 37.3013977, -121.8484397),
       point('santa-cruz', 'Santa Cruz', 'CA', 'United States', 'US', 'USA', 36.9733787, -122.0355326),
       point('santa-rosa', 'Santa Rosa', 'CA', 'United States', 'US', 'USA', 38.4457915, -122.7067262),
+    ],
+  },
+  {
+    id: 'sf-dense-10',
+    name: 'San Francisco dense activity stress test',
+    center: { latitude: 37.7749, longitude: -122.4194 },
+    points: [
+      point('sf-01', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.8056, -122.4133, 'Twist-area fixture'),
+      point('sf-02', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7821, -122.4108, 'SoMa fixture'),
+      point('sf-03', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7724, -122.4141, 'Mission North fixture'),
+      point('sf-04', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7597, -122.4148, 'Mission fixture'),
+      point('sf-05', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7692, -122.4464, 'Castro fixture'),
+      point('sf-06', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7868, -122.4330, 'Civic Center fixture'),
+      point('sf-07', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7945, -122.4220, 'Nob Hill fixture'),
+      point('sf-08', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7897, -122.3972, 'Embarcadero fixture'),
+      point('sf-09', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7544, -122.4477, 'Noe / Twin Peaks fixture'),
+      point('sf-10', 'San Francisco', 'CA', 'United States', 'US', 'USA', 37.7783, -122.4724, 'Richmond fixture'),
     ],
   },
   {
@@ -106,7 +124,7 @@ export const buildGlobeScaleFixtureEvents = (fixtureId: string): GlobeV1RuntimeE
       id,
       type: 'club',
       status: 'approved',
-      name: fixturePoint.city,
+      name: fixturePoint.label ?? fixturePoint.city,
       location: `${fixturePoint.city}, ${fixturePoint.region}`,
       description_short: 'Development-only globe scale calibration fixture.',
       geopoint: {
@@ -121,7 +139,7 @@ export const buildGlobeScaleFixtureEvents = (fixtureId: string): GlobeV1RuntimeE
     } as Listing;
     return {
       id,
-      name: fixturePoint.city,
+      name: fixturePoint.label ?? fixturePoint.city,
       entityType: 'club',
       lat: fixturePoint.latitude,
       lon: fixturePoint.longitude,
@@ -145,6 +163,7 @@ export const buildGlobeScaleFixtureDiscoveryPoints = (fixtureId: string): Discov
       city: fixturePoint.city,
       region: fixturePoint.region,
       country: fixturePoint.country,
+      listingName: fixturePoint.label ?? fixturePoint.city,
     };
   });
 
@@ -157,6 +176,7 @@ function point(
   countryIso3: string,
   latitude: number,
   longitude: number,
+  label?: string,
 ): GlobeScaleFixturePoint {
-  return { id, city, region, country, countryIso2, countryIso3, latitude, longitude };
+  return { id, label, city, region, country, countryIso2, countryIso3, latitude, longitude };
 }

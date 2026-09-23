@@ -24,13 +24,14 @@ type MapPinEntity = Listing | MapHostPin;
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import { resolveCountryIsoCodes } from '../../lib/globeEntityAdapter';
 import { createVenueLabelElement } from '../../src/features/globe/runtime/GlobeMarker.js';
+import { getListingHeroUrl, getListingLogoUrl } from '../../lib/listingImage';
 
 export const THREE_PIN_LAYER_ID = 'swingsphere-three-pins';
 
-const APPROXIMATE_PIN_FADE_START_ZOOM = 10.75;
-const APPROXIMATE_PIN_HIDDEN_ZOOM = 12.25;
-const AUTHORED_BUILDING_PIN_FADE_START_ZOOM = 9.5;
-const AUTHORED_BUILDING_PIN_HIDDEN_ZOOM = 11;
+// MapLibre now keeps the same destination-marker language as the globe.
+// Markers stay visible at every zoom level, including venue/building arrival;
+// approximate locations are already privacy-safe because their public coords
+// are generalized before they reach this layer.
 
 const PIN_COLORS = {
   accent: 0xc51d34,
@@ -198,29 +199,30 @@ const createPinView = (listing: MapPinEntity): PinView | null => {
       ? { base: PIN_COLORS.host, active: PIN_COLORS.hostActive, tip: PIN_COLORS.host }
       : { base: PIN_COLORS.accent, active: PIN_COLORS.active, tip: PIN_COLORS.accent };
   const group = new THREE.Group();
+  // Keep a stem group for the existing runtime shape, but deliberately do not
+  // render a pin stem on the flat map. The destination itself is the target.
   const stem = new THREE.Group();
-  const stemMaterials = [createStemMaterial(palette.base, 0.3)];
-  const stemPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 1.12), stemMaterials[0]);
-  stemPlane.rotation.x = Math.PI / 2;
-  stemPlane.position.z = 0.56;
-  stem.add(stemPlane);
+  const stemMaterials: THREE.MeshBasicMaterial[] = [];
 
-  const tip = new THREE.Mesh(createTipGeometry(type), createSolidMaterial(palette.tip, 0.78));
-  tip.position.z = 1.18;
+  const tip = new THREE.Mesh(createTipGeometry(type), createSolidMaterial(palette.tip, 0.92));
+  tip.material.depthTest = false;
+  tip.material.depthWrite = false;
+  tip.renderOrder = 30;
+  tip.position.z = 0.22;
 
   const glow = new THREE.Mesh(
-    new THREE.RingGeometry(0.13, 0.27, 24),
-    createGlowMaterial(palette.base, 0.06),
+    new THREE.RingGeometry(0.15, 0.31, 28),
+    createGlowMaterial(palette.base, 0.12),
   );
-  glow.position.z = 0.035;
+  glow.position.z = 0.03;
 
   const ripple = new THREE.Mesh(
-    new THREE.RingGeometry(0.2, 0.235, 28),
-    createGlowMaterial(PIN_COLORS.white, 0.04),
+    new THREE.RingGeometry(0.22, 0.26, 32),
+    createGlowMaterial(PIN_COLORS.white, 0.05),
   );
-  ripple.position.z = 0.045;
+  ripple.position.z = 0.04;
 
-  group.add(stem, glow, ripple, tip);
+  group.add(glow, ripple, tip);
 
   return {
     listing,
@@ -261,12 +263,16 @@ const buildLabel = (selected: boolean) => {
 const setLabelContent = (element: HTMLDivElement, listing: MapPinEntity, selected: boolean) => {
   const address = listing.geopoint.address;
   const countryIso2 = resolveCountryIsoCodes(address.country).iso2;
+  const fullListing = 'status' in listing ? listing as Listing : null;
+  const logoUrl = fullListing ? getListingLogoUrl(fullListing) : listing.logoImageUrl ?? '';
+  const heroUrl = fullListing ? getListingHeroUrl(fullListing) : listing.logoImageUrl ?? '';
   const template = createVenueLabelElement(
     listing.name,
     address.city,
     countryIso2,
-    listing.logoImageUrl ?? '',
+    logoUrl,
     selected,
+    heroUrl,
   ) as HTMLDivElement;
   element.className = template.className;
   element.style.cssText = template.style.cssText;
@@ -498,62 +504,38 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       if (!view.group.visible) return;
       const hovered = id === this.hoveredId;
       const selected = id === this.selectedId;
-      const zoom = this.map.getZoom();
-      const approximateLocationOpacity = view.approximateLocation
-        ? 1 - THREE.MathUtils.smoothstep(
-            zoom,
-            APPROXIMATE_PIN_FADE_START_ZOOM,
-            APPROXIMATE_PIN_HIDDEN_ZOOM,
-          )
-        : 1;
-      const authoredBuildingOpacity =
-        view.type !== 'promoter' && this.authoredBuildingListingIds.has(id)
-          ? 1 - THREE.MathUtils.smoothstep(
-              zoom,
-              AUTHORED_BUILDING_PIN_FADE_START_ZOOM,
-              AUTHORED_BUILDING_PIN_HIDDEN_ZOOM,
-            )
-          : 1;
-      const privacyOpacity = Math.min(approximateLocationOpacity, authoredBuildingOpacity);
+      const privacyOpacity = 1;
       view.privacyOpacity = privacyOpacity;
-      const targetScale = selected ? 1.25 : hovered ? 1.14 : 0.7;
-      const targetStemScale = selected ? 1.58 : hovered ? 2 : 1;
-      const targetLift = selected ? 0.1 : hovered ? 0.05 : 0;
-      // Keep hover motion deliberate rather than snapping when the pointer only
-      // briefly clips the hit area. The release grace period in FlatWorldMap
-      // lets this easing complete before returning to idle.
-      view.currentScale = THREE.MathUtils.lerp(view.currentScale, targetScale, 0.11);
-      view.currentStemScale = THREE.MathUtils.lerp(view.currentStemScale, targetStemScale, 0.11);
-      view.currentLift = THREE.MathUtils.lerp(view.currentLift, targetLift, 0.11);
+      // Flat-map destination markers are fixed geographic anchors rather than
+      // spring-loaded pins. Hover/selection can breathe slightly, but the
+      // marker never jumps away from the pointer or disappears at street zoom.
+      const targetScale = selected ? 1.08 : hovered ? 0.98 : 0.82;
+      view.currentScale = THREE.MathUtils.lerp(view.currentScale, targetScale, 0.16);
+      view.currentStemScale = 1;
+      view.currentLift = 0;
 
       const scale = baseScale * view.currentScale;
-      view.group.position.set(view.mercator.x, view.mercator.y, view.currentLift * scale);
+      view.group.position.set(view.mercator.x, view.mercator.y, 0);
       view.group.scale.set(scale, -scale, scale);
-      view.stem.scale.z = view.currentStemScale;
-      view.tip.position.z = 1.12 * view.currentStemScale + 0.08;
+      view.tip.position.z = 0.22;
       const palette = view.type === 'event'
         ? { base: PIN_COLORS.event, active: PIN_COLORS.eventActive, idleTip: PIN_COLORS.event }
         : view.type === 'promoter'
           ? { base: PIN_COLORS.host, active: PIN_COLORS.hostActive, idleTip: PIN_COLORS.host }
           : { base: PIN_COLORS.accent, active: PIN_COLORS.active, idleTip: PIN_COLORS.accent };
       view.tip.material.color.setHex(selected || hovered ? palette.active : palette.idleTip);
-      view.tip.material.opacity = (selected ? 1 : hovered ? 0.94 : 0.86) * privacyOpacity;
-      view.stem.rotation.z = THREE.MathUtils.degToRad(this.map.getBearing());
-      view.stemMaterials.forEach((material) => {
-        material.color.setHex(selected || hovered ? palette.active : palette.base);
-        material.opacity = (selected || hovered ? 0.48 : 0.3) * privacyOpacity;
-      });
+      view.tip.material.opacity = selected ? 1 : hovered ? 0.98 : 0.92;
       view.glow.material.color.setHex(selected || hovered ? palette.active : palette.base);
-      view.glow.material.opacity = (selected ? 0.16 : hovered ? 0.1 : 0.035) * privacyOpacity;
-      view.glow.scale.setScalar(selected ? 1.35 : hovered ? 1.15 : 0.85);
+      view.glow.material.opacity = selected ? 0.2 : hovered ? 0.15 : 0.08;
+      view.glow.scale.setScalar(selected ? 1.28 : hovered ? 1.12 : 0.92);
       const ripplePhase = (elapsed * 0.62 + Number.parseInt(id.slice(-2), 36) * 0.03) % 1;
       const rippleScale = 0.35 + ripplePhase * 4;
       view.ripple.scale.setScalar(rippleScale);
-      view.ripple.material.opacity = (selected
-        ? 0.14 * (1 - ripplePhase)
+      view.ripple.material.opacity = selected
+        ? 0.16 * (1 - ripplePhase)
         : hovered
-          ? 0.08 * (1 - ripplePhase)
-          : 0.025 * (1 - ripplePhase)) * privacyOpacity;
+          ? 0.1 * (1 - ripplePhase)
+          : 0.035 * (1 - ripplePhase);
     });
 
     this.scene.updateMatrixWorld(true);

@@ -298,6 +298,7 @@ const TARGETS = [
   ] },
   { iso3: "VNM", iso2: "VN", name: "Vietnam", kind: "regions", regions: [
     { id: "mainland", kind: "hybrid", bounds: [101, 8, 111, 24], sourceRingIndex: 0, coastalProximityDegrees: 5, maxCoastlineMatchDegrees: 5, maxSourceCoastlineDeviationDegrees: 3.25, requirePoliticalSegments: true, minimumRingPointCount: 8 }
+
   ] },
   { iso3: "PRK", iso2: "KP", name: "North Korea", kind: "regions", regions: [
     { id: "mainland", kind: "hybrid", bounds: [123, 36, 132, 44], coastalProximityDegrees: 5, maxCoastlineMatchDegrees: 5 }
@@ -598,6 +599,7 @@ for (const target of targetsToBuild) {
   let built;
   try {
     const ownership = createOwnershipSampler({ target, idAtlas, lookup });
+
     built = buildRegionalCountry({
       target,
       feature,
@@ -898,6 +900,7 @@ function buildHybridRegion({ target, region, sourceRing, physicalPaths, ownershi
     if (region.useSourceCoastline) {
       const coordinates = run.coordinates.map(copyCoordinate);
       segments.push({ kind: "coastline", sourcePathId: null, startIndex: 0, endIndex: coordinates.length - 1, direction: 1, coordinates });
+
       audit.rejectedGeoJsonCoastline.push(run.coordinates);
       audit.denseCoastline.push(coordinates);
       audit.simplifiedCoastline.push(coordinates);
@@ -1198,6 +1201,7 @@ function pathArcs(path, startIndex, endIndex, closed) {
     const indices = [];
     let index = startIndex % unique.length;
     while (coordinates.length <= unique.length) {
+
       coordinates.push(unique[index]);
       indices.push(index);
       if (index === endIndex % unique.length) break;
@@ -1498,6 +1502,7 @@ function readRgbPng(filePath) {
   for (let y = 0, input = 0; y < height; y += 1) {
     const filter = inflated[input++];
     for (let x = 0; x < stride; x += 1) {
+
       const raw = inflated[input++], left = x >= 3 ? data[y * stride + x - 3] : 0, up = y ? data[(y - 1) * stride + x] : 0, upperLeft = y && x >= 3 ? data[(y - 1) * stride + x - 3] : 0;
       data[y * stride + x] = (raw + pngFilterPredictor(filter, left, up, upperLeft)) & 255;
     }
@@ -1798,6 +1803,7 @@ function findUnexpectedCountryContainments(assets, sourceFeatures) {
     return [asset.countryId, ringShapeMetrics(largest).centroid];
   }));
   const result = [];
+
   for (const asset of assets) {
     const sourceRings = geometryRings(sourceById.get(asset.countryId)?.geometry);
     for (const [otherCountryId, centroid] of centroids) {

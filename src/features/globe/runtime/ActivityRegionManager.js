@@ -26,6 +26,7 @@ export class ActivityRegionManager {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2(100, 100);
     this.hoveredRegionId = null;
+    this.suppressedLabelRegionIds = new Set();
     this.attentionEmphasis = false;
     this.dirty = true;
     this.referenceDistance = this.renderer.camera.position.distanceTo(this.renderer.controls.target);
@@ -55,7 +56,11 @@ export class ActivityRegionManager {
         raycaster: this.raycaster,
         origin: this.tmpOrigin,
         direction: this.tmpDirection,
-        candidate: this.tmpCandidate
+        candidate: this.tmpCandidate,
+        // Discovery-region centroids can legitimately average into a bay or
+        // offshore area. Keep the region's data coordinate intact while making
+        // its globe marker visually land-safe on the stylized mesh.
+        snapFallbackToLandGeometry: true
       });
       const marker = new DiscoveryMarker({
         region,
@@ -87,12 +92,17 @@ export class ActivityRegionManager {
     this.#updateHover();
     const cameraDistance = this.renderer.camera.position.distanceTo(this.renderer.controls.target);
     for (const [regionId, marker] of this.markers) {
+      const suppressLabel = this.suppressedLabelRegionIds.has(String(regionId));
       marker.update({
         hovered: regionId === this.hoveredRegionId,
         selected: regionId === selectedRegionId,
         attention: this.attentionEmphasis && regionId !== selectedRegionId,
+        suppressLabel,
         delta,
-        cameraDistance
+        cameraDistance,
+        camera: this.renderer.camera,
+        domElement: this.renderer.renderer.domElement,
+        globe: this.renderer.globe
       });
     }
   }
@@ -106,6 +116,14 @@ export class ActivityRegionManager {
 
   setAttentionEmphasis(enabled) {
     this.attentionEmphasis = Boolean(enabled);
+    this.dirty = true;
+  }
+
+  setRegionLabelSuppressed(regionId, suppressed) {
+    const key = String(regionId ?? '');
+    if (!key) return;
+    if (suppressed) this.suppressedLabelRegionIds.add(key);
+    else this.suppressedLabelRegionIds.delete(key);
     this.dirty = true;
   }
 
@@ -183,7 +201,8 @@ export class ActivityRegionManager {
     this.dirty = false;
     this.raycaster.setFromCamera(this.pointer, this.renderer.camera);
     const hit = this.raycaster.intersectObjects(this.hitTargets, false)[0] ?? null;
-    this.hoveredRegionId = hit?.object?.userData?.regionId ?? null;
+    const nextRegionId = hit?.object?.userData?.regionId ?? null;
+    this.hoveredRegionId = nextRegionId;
   }
 
   #clear() {

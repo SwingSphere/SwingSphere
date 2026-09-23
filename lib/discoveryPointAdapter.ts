@@ -13,6 +13,7 @@ export type DiscoveryPoint = {
   listingIds: string[];
   clubIds: string[];
   eventIds: string[];
+  hostIds?: string[];
   city: string;
   region: string;
   country: string;
@@ -57,6 +58,7 @@ export const adaptListingsToDiscoveryPoints = (
       listingIds: [listing.id],
       clubIds: listing.type === 'club' ? [listing.id] : [],
       eventIds: listing.type === 'event' ? [listing.id] : [],
+      hostIds: [],
       city: physicalGeopoint.address.city,
       region: physicalGeopoint.address.region,
       country: physicalGeopoint.address.country,

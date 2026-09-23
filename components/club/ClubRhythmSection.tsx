@@ -6,13 +6,14 @@ import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 type ClubRhythmSectionProps = {
   schedule: DaySchedule[];
   summary: string;
+  specialScheduleNotes?: string;
   onQuickEdit?: () => void;
 };
 
-const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({ schedule, summary, onQuickEdit }) => {
+const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({ schedule, summary, specialScheduleNotes, onQuickEdit }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControl = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
-  const openDays = schedule.filter((entry) => !entry.isClosed && entry.open && entry.close).slice(0, 6);
+  const activeDays = schedule.filter((entry) => !entry.isClosed).slice(0, 7);
 
   return (
     <section className="relative rounded-2xl border border-gray-800 bg-gray-900/65 p-5 sm:p-6">
@@ -20,25 +21,26 @@ const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({ schedule, summary
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Plan your visit</p>
       <h2 className="mt-1 text-xl font-semibold text-gray-100">When to Go</h2>
       <p className="mt-2 text-sm text-gray-300">{summary}</p>
-      {openDays.length ? (
+      {activeDays.length ? (
         <ul className="mt-4 space-y-2">
-          {openDays.map((entry) => (
+          {activeDays.map((entry) => (
             <li
-              key={`${entry.day}-${entry.open}-${entry.close}`}
+              key={`${entry.day}-${entry.open ?? 'varies'}-${entry.close ?? 'varies'}`}
               className="ss-glass ss-glass--ambient flex items-center justify-between rounded-xl px-3 py-2 text-sm"
             >
               <span className="text-gray-200">{entry.day}</span>
               <span className="text-gray-400">
-                {entry.open} - {entry.close}
+                {entry.open && entry.close ? `${entry.open} - ${entry.close}` : 'Hours vary'}
               </span>
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-3 text-sm text-gray-500">
-          Baseline only. Specific nights and hours are not listed yet.
-        </p>
-      )}
+      ) : null}
+      {specialScheduleNotes ? (
+        <p className="mt-4 text-sm leading-6 text-gray-400">{specialScheduleNotes}</p>
+      ) : activeDays.length === 0 ? (
+        <p className="mt-3 text-sm text-gray-500">Contact the club for current schedule details before visiting.</p>
+      ) : null}
     </section>
   );
 };

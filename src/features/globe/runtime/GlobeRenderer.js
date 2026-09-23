@@ -111,7 +111,11 @@ export class GlobeRenderer {
     this.camera.fov = camera.fieldOfView;
     this.camera.near = this.config.renderer.cameraNear;
     this.camera.far = this.config.renderer.cameraFar;
-    this.controls.minDistance = camera.minDistanceWorld;
+    const safeSurfaceMinDistance = Math.max(
+      this.presentationRadius * 1.035,
+      this.presentationRadius + Math.max(this.config.renderer.cameraNear * 4, 0.04)
+    );
+    this.controls.minDistance = Math.max(camera.minDistanceWorld, safeSurfaceMinDistance);
     const configuredWorldDistance = Number(camera.defaultDistanceWorld) || 8;
     const fittedWorldDistance = this.config.renderer?.fitWorldToViewport
       ? this.#resolveViewportFitDistance(this.config.renderer.worldViewportFill)
@@ -417,7 +421,7 @@ export class GlobeRenderer {
     this.lastRenderedAt = now;
     const delta = this.clock.getDelta();
     const elapsed = this.clock.elapsedTime;
-    this.#updateControlsRotationSpeed();
+    this.#updateControlsInteractionSpeed();
     if (!this.controlsUpdateSuppressed) this.controls.update();
     this.#updateVisualIdleMotion(delta, elapsed);
     this.frameListeners.forEach((listener) => listener({ delta, elapsed }));
@@ -517,6 +521,7 @@ export class GlobeRenderer {
     this.controls.minDistance = this.config.renderer.controlsMinDistance;
     this.controls.maxDistance = this.config.renderer.controlsMaxDistance;
     this.controls.rotateSpeed = this.config.orbitControls.rotateSpeed;
+    this.controls.panSpeed = this.config.orbitControls.panSpeed ?? 1;
     this.boundControlStart = () => {
       this.controlsActive = true;
       if (this.config.renderer?.clearViewOffsetOnInteraction && this.camera.view?.enabled) {
@@ -539,29 +544,33 @@ export class GlobeRenderer {
     this.#listen(this.controls, "change", this.boundInteraction);
   }
 
-  #updateControlsRotationSpeed() {
+  #updateControlsInteractionSpeed() {
     const controlsConfig = this.config.orbitControls;
-    const zoomConfig = controlsConfig.zoomAwareRotation;
-    if (!zoomConfig.enabled) {
-      this.controls.rotateSpeed = controlsConfig.rotateSpeed;
-      return;
-    }
-
     const distance = this.camera.position.distanceTo(this.controls.target);
-    const distanceRange = Math.max(zoomConfig.worldDistance - zoomConfig.cityDistance, 0.001);
-    const normalizedDistance = THREE.MathUtils.clamp(
-      (distance - zoomConfig.cityDistance) / distanceRange,
-      0,
-      1
-    );
-    const smoothDistance = normalizedDistance * normalizedDistance * (3 - 2 * normalizedDistance);
-    const curvedDistance = Math.pow(smoothDistance, Math.max(zoomConfig.curvePower, 0.001));
-    const speedMultiplier = THREE.MathUtils.lerp(
-      zoomConfig.citySpeedMultiplier,
-      zoomConfig.worldSpeedMultiplier,
-      curvedDistance
-    );
-    this.controls.rotateSpeed = controlsConfig.rotateSpeed * speedMultiplier;
+
+    const resolveZoomAwareMultiplier = (zoomConfig, fallback = 1) => {
+      if (!zoomConfig?.enabled) return fallback;
+      const distanceRange = Math.max(zoomConfig.worldDistance - zoomConfig.cityDistance, 0.001);
+      const normalizedDistance = THREE.MathUtils.clamp(
+        (distance - zoomConfig.cityDistance) / distanceRange,
+        0,
+        1
+      );
+      const smoothDistance = normalizedDistance * normalizedDistance * (3 - 2 * normalizedDistance);
+      const curvedDistance = Math.pow(smoothDistance, Math.max(zoomConfig.curvePower, 0.001));
+      return THREE.MathUtils.lerp(
+        zoomConfig.citySpeedMultiplier,
+        zoomConfig.worldSpeedMultiplier,
+        curvedDistance
+      );
+    };
+
+    this.controls.rotateSpeed = controlsConfig.rotateSpeed
+      * resolveZoomAwareMultiplier(controlsConfig.zoomAwareRotation, 1);
+    this.controls.panSpeed = (controlsConfig.panSpeed ?? 1)
+      * resolveZoomAwareMultiplier(controlsConfig.zoomAwarePanning, 1);
+    this.controls.zoomSpeed = (controlsConfig.zoomSpeed ?? 0.58)
+      * resolveZoomAwareMultiplier(controlsConfig.zoomAwareZoom, 1);
   }
 
   #createComposer() {

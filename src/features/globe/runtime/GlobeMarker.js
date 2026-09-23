@@ -164,6 +164,8 @@ export class GlobeMarker {
     this.tmpGlobeCenter = new THREE.Vector3();
     this.tmpSurfaceNormal = new THREE.Vector3();
     this.tmpCameraDirection = new THREE.Vector3();
+    this.tmpMarkerWorldPosition = new THREE.Vector3();
+    this.tmpParentWorldScale = new THREE.Vector3(1, 1, 1);
 
     const style = this.style;
     this.totalStemHeight = style.baseStemHeight + style.buriedStemDepth;
@@ -267,7 +269,8 @@ export class GlobeMarker {
     camera = null,
     domElement = null,
     globe = null,
-    presentationOpacity = 1
+    presentationOpacity = 1,
+    suppressLabel = false
   }) {
     const style = this.style;
     this.heroTargetEmphasis = Boolean(heroTarget);
@@ -304,14 +307,20 @@ export class GlobeMarker {
     const distanceRange = Math.max(worldDistance - closeDistance, 0.001);
     const distanceProgress = THREE.MathUtils.clamp((cameraDistance - closeDistance) / distanceRange, 0, 1);
     const curvedDistance = Math.pow(distanceProgress, presentationPins?.distanceScaleCurvePower ?? 1);
-    const distanceScale = THREE.MathUtils.lerp(
-      presentationPins?.closeDistanceScale ?? 1,
-      presentationPins?.worldDistanceScale ?? 1,
-      curvedDistance
-    );
+    const constantScreenSize = Boolean(this.config?.pinPlacement?.constantScreenSize);
+    const distanceScale = constantScreenSize
+      ? 1
+      : THREE.MathUtils.lerp(
+          presentationPins?.closeDistanceScale ?? 1,
+          presentationPins?.worldDistanceScale ?? 1,
+          curvedDistance
+        );
     const markerTypeScale = this.markerType === "region" ? style.clusterScale : 1;
-    const visualScale = style.baseScale * markerTypeScale * distanceScale;
-    this.currentDistanceScale = distanceScale;
+    const screenSpaceScale = constantScreenSize
+      ? this.#resolveConstantScreenScale({ camera, domElement })
+      : 1;
+    const visualScale = style.baseScale * markerTypeScale * distanceScale * screenSpaceScale;
+    this.currentDistanceScale = distanceScale * screenSpaceScale;
 
     this.currentOpacity = THREE.MathUtils.lerp(this.currentOpacity, targetOpacity, alpha);
     this.currentScale = THREE.MathUtils.lerp(this.currentScale, targetScale, alpha);
@@ -329,22 +338,30 @@ export class GlobeMarker {
     this.stem.position.y = this.stemCenterY * this.currentLengthScale * visualScale * stemReveal;
     this.tip.position.y = style.baseStemHeight * this.currentLengthScale * visualScale * stemReveal;
     this.tip.scale.set(
-      this.currentScale * activeTipScale,
       this.currentScale * visualScale * activeTipScale,
-      this.currentScale * activeTipScale
+      this.currentScale * visualScale * activeTipScale,
+      this.currentScale * visualScale * activeTipScale
     );
-    this.baseGlow.scale.setScalar(this.currentScale * (selected ? (heroTarget ? 1.65 : 1.35) : hovered ? 1.15 : 0.85));
+    this.baseGlow.scale.setScalar(
+      this.currentScale
+      * visualScale
+      * (selected ? (heroTarget ? 1.65 : 1.35) : hovered ? 1.15 : 0.85)
+    );
     this.#updateSavedHalo(saved, presentationOpacity);
 
     if (this.flatIdleMarker) {
       const baseScale = this.flatIdleMarker.userData.baseFlatScale ?? style.tipRadius * 3.6;
       const mobileVisibilityScale = isCoarsePointerDevice() ? MOBILE_LISTING_MARKER_SCALE : 1;
-      const markerScale = (selected ? 1.16 : hovered ? 1.1 : 1) * mobileVisibilityScale;
+      const markerScale = (selected ? 1.16 : hovered ? 1.1 : 1) * mobileVisibilityScale * screenSpaceScale;
       this.flatIdleMarker.scale.set(baseScale * markerScale, baseScale * markerScale, 1);
       this.flatIdleMarker.material.opacity = presentationOpacity * this.currentOpacity * THREE.MathUtils.lerp(1, 0.42, activeReveal);
       this.flatIdleMarker.visible = presentationOpacity > 0.01;
     } else {
-      this.hitTarget.scale.set(style.hitScale, Math.max(1, this.currentLengthScale * visualScale), style.hitScale);
+      this.hitTarget.scale.set(
+        style.hitScale * screenSpaceScale,
+        Math.max(screenSpaceScale, this.currentLengthScale * visualScale),
+        style.hitScale * screenSpaceScale
+      );
       this.hitTarget.position.y = style.surfaceOffset + this.stemCenterY * this.currentLengthScale * visualScale;
       this.hitTarget.visible = presentationOpacity > 0.01;
     }
@@ -371,14 +388,14 @@ export class GlobeMarker {
     }
 
     const forceLabel = Boolean(this.config?.pinPlacement?.showEventLabels);
-    const targetSelectedLabelOpacity = !style.showLabel
+    const targetSelectedLabelOpacity = suppressLabel || !style.showLabel
       ? 0
       : forceLabel
         ? style.selectedLabelOpacity
         : selected
           ? style.selectedLabelOpacity
             : 0;
-    const targetHoverLabelOpacity = !style.showLabel || selected || forceLabel
+    const targetHoverLabelOpacity = suppressLabel || !style.showLabel || selected || forceLabel
       ? 0
       : hovered
         ? style.hoverLabelOpacity
@@ -416,7 +433,7 @@ export class GlobeMarker {
       this.label.material.opacity = THREE.MathUtils.lerp(
         this.label.material.opacity,
         THREE.MathUtils.clamp(
-          targetSelectedLabelOpacity + targetHoverLabelOpacity + arrivalEmphasis * 0.08,
+          targetSelectedLabelOpacity + targetHoverLabelOpacity + (suppressLabel ? 0 : arrivalEmphasis * 0.08),
           0,
           1
         ) * presentationOpacity,
@@ -554,6 +571,34 @@ export class GlobeMarker {
         * presentationOpacity;
       ring.visible = true;
     }
+  }
+
+  #resolveConstantScreenScale({ camera, domElement }) {
+    if (!camera || !domElement) return 1;
+
+    const viewportHeight = Math.max(1, Number(domElement.clientHeight) || 1);
+    const targetPixels = Math.max(4, Number(this.config?.pinPlacement?.constantScreenSizePx) || 15);
+    const baseScale = this.flatIdleMarker?.userData?.baseFlatScale ?? this.style.tipRadius * 3.6;
+
+    this.group.getWorldPosition(this.tmpMarkerWorldPosition);
+    const depth = Math.max(0.001, camera.position.distanceTo(this.tmpMarkerWorldPosition));
+    const fovRadians = THREE.MathUtils.degToRad(camera.fov);
+    const worldHeightAtDepth = 2 * depth * Math.tan(fovRadians * 0.5);
+    const desiredWorldWidth = worldHeightAtDepth * (targetPixels / viewportHeight);
+
+    const parent = this.group.parent;
+    if (parent) {
+      parent.getWorldScale(this.tmpParentWorldScale);
+    } else {
+      this.tmpParentWorldScale.set(1, 1, 1);
+    }
+    const parentScale = Math.max(
+      0.0001,
+      (Math.abs(this.tmpParentWorldScale.x) + Math.abs(this.tmpParentWorldScale.y) + Math.abs(this.tmpParentWorldScale.z)) / 3
+    );
+    const desiredLocalWidth = desiredWorldWidth / parentScale;
+
+    return THREE.MathUtils.clamp(desiredLocalWidth / Math.max(baseScale, 0.0001), 0.01, 100);
   }
 
   #updateListingShapePulse(delta, presentationOpacity = 1, { attention = false, active = false } = {}) {
@@ -970,15 +1015,16 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
     display: "flex",
     alignItems: "center",
     boxSizing: "border-box",
-    gap: selected ? "16px" : "8px",
-    minWidth: selected ? "280px" : "174px",
-    maxWidth: selected ? "340px" : "220px",
-    padding: selected ? "15px 20px" : "8px 10px",
+    gap: selected ? "12px" : "8px",
+    minWidth: selected ? "330px" : "174px",
+    maxWidth: selected ? "330px" : "220px",
+    height: selected ? "104px" : "auto",
+    padding: selected ? "14px 16px" : "8px 10px",
     background: selected
-      ? "linear-gradient(145deg, rgba(24, 18, 23, 0.72), rgba(7, 8, 12, 0.66))"
+      ? "linear-gradient(145deg, rgba(23, 18, 24, 0.94), rgba(7, 9, 13, 0.92))"
       : "linear-gradient(145deg, rgba(20, 20, 26, 0.66), rgba(7, 8, 12, 0.62))",
     border: selected ? "1px solid rgba(255, 110, 130, 0.5)" : "1px solid rgba(255, 255, 255, 0.14)",
-    borderRadius: selected ? "18px" : "11px",
+    borderRadius: selected ? "20px" : "11px",
     overflow: "hidden",
     boxShadow: selected
       ? "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(60,0,12,0.44), 0 16px 38px rgba(0,0,0,0.42)"
@@ -1009,7 +1055,7 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
       width: "100%",
       height: "100%",
       objectFit: "cover",
-      opacity: selected ? "0.55" : "0.42",
+      opacity: selected ? "0.58" : "0.42",
       filter: "saturate(0.88) contrast(1.06)",
       pointerEvents: "none",
       zIndex: "0"
@@ -1019,7 +1065,7 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
       position: "absolute",
       inset: "0",
       background: selected
-        ? "linear-gradient(90deg, rgba(10,8,12,0.58), rgba(10,8,12,0.34))"
+        ? "linear-gradient(90deg, rgba(0,0,0,0.72), rgba(0,0,0,0.48), rgba(0,0,0,0.58))"
         : "linear-gradient(90deg, rgba(10,8,12,0.66), rgba(10,8,12,0.42))",
       pointerEvents: "none",
       zIndex: "1"
@@ -1030,13 +1076,13 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
   const logo = document.createElement("div");
   Object.assign(logo.style, {
     flex: "0 0 auto",
-    width: selected ? "48px" : "26px",
-    height: selected ? "48px" : "26px",
-    borderRadius: selected ? "14px" : "8px",
+    width: selected ? "76px" : "26px",
+    height: selected ? "76px" : "26px",
+    borderRadius: selected ? "16px" : "8px",
     overflow: "hidden",
     display: "grid",
     placeItems: "center",
-    background: "rgba(255, 255, 255, 0.08)",
+    background: selected ? "rgba(0, 0, 0, 0.45)" : "rgba(255, 255, 255, 0.08)",
     border: "1px solid rgba(255, 255, 255, 0.14)",
     color: "rgba(245, 245, 245, 0.78)",
     font: `700 ${selected ? 22 : 12}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
@@ -1086,7 +1132,7 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
   titleElement.textContent = String(title ?? "");
   Object.assign(titleElement.style, {
     color: "#fff",
-    font: `700 ${selected ? 19 : 13}px/1.15 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+    font: `700 ${selected ? 15 : 13}px/1.15 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
     letterSpacing: "0",
     overflow: "hidden",
     display: "-webkit-box",
@@ -1104,9 +1150,10 @@ export function createVenueLabelElement(title, subtitle, countryIso2, logoUrl, s
     alignItems: "center",
     gap: selected ? "7px" : "5px",
     minWidth: "0",
-    color: selected ? "rgba(220, 224, 232, 0.76)" : "rgba(199, 205, 214, 0.64)",
-    font: `600 ${selected ? 14 : 10.5}px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
-    letterSpacing: selected ? "0.02em" : "0.01em",
+    color: selected ? "rgba(220, 224, 232, 0.62)" : "rgba(199, 205, 214, 0.64)",
+    font: `600 ${selected ? 11 : 10.5}px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+    letterSpacing: selected ? "0.08em" : "0.01em",
+    textTransform: selected ? "uppercase" : "none",
     whiteSpace: "nowrap",
     overflow: "hidden",
     filter: "none",

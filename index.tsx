@@ -174,6 +174,10 @@ root.render(
                   element={DEV_TOOLS_ENABLED ? <ProtectedRoute roles={['Admin']}><ProductionGlobePage hybridPrototype /></ProtectedRoute> : <Navigate to="/globe" replace />}
                 />
                 <Route
+                  path="dev/usa-pin-lab"
+                  element={DEV_TOOLS_ENABLED ? <ProtectedRoute roles={['Admin']}><ProductionGlobePage showDevTools denseUsPinPrototype /></ProtectedRoute> : <Navigate to="/globe" replace />}
+                />
+                <Route
                   path="dev/globe-v3-cleanroom"
                   element={DEV_TOOLS_ENABLED && CleanRoomGlobePage ? <ProtectedRoute roles={['Admin']}><CleanRoomGlobePage /></ProtectedRoute> : <Navigate to="/globe" replace />}
                 />

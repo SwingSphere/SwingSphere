@@ -1,13 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { VectorTile } from '@mapbox/vector-tile';
-import Pbf from 'pbf';
 import type { BuildingAsset, Listing } from '../types';
 import { runBuildingVerificationPipeline, type BuildingNeighborhoodSource } from '../lib/buildingVerificationPipeline';
 import { createCachedBuildingAddressResolver, createNominatimBuildingAddressResolver, type BuildingAddressResolution } from '../lib/buildingAddressResolver';
-import { fetchOsOpenMapLocalBuildingAtPoint } from '../lib/buildingFootprintSources';
+import { fetchOpenFreeMapBuildingFootprints, fetchOsOpenMapLocalBuildingAtPoint } from '../lib/buildingFootprintSources';
 import { fuseBuildingNeighborhood } from '../lib/buildingNeighborhoodFusion';
-import { geometryFingerprint, getBuildingGeometryCenter, haversineMeters, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters, type ProviderFootprintFeature } from '../lib/buildingGeometry';
+import { geometryFingerprint, getBuildingGeometryCenter, haversineMeters, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../lib/buildingGeometry';
 import { getBuildingAssetForListing, getListingPhysicalCoords } from '../lib/entityCompatibility';
 import { queryMicrosoftBuildingFootprints } from '../lib/microsoftBuildingFootprintsServer';
 
@@ -34,38 +32,18 @@ const addresses = createCachedBuildingAddressResolver({
     return result;
   },
 });
-const metadataResponse = await fetch('https://tiles.openfreemap.org/planet', { signal: AbortSignal.timeout(20_000) });
-if (!metadataResponse.ok) throw new Error(`Tile metadata: ${metadataResponse.status}`);
-const metadata = await metadataResponse.json() as { tiles: string[]; maxzoom: number };
-const tileCache = new Map<string, ProviderFootprintFeature[]>();
 const source: BuildingNeighborhoodSource = {
   async load(center, radius, signal) {
     const snapshotKey = `v2_${center.lat.toFixed(7)}_${center.lng.toFixed(7)}_${radius}`;
     const snapshotPath = path.join(cacheDirectory, `${snapshotKey}.json`);
     if (fs.existsSync(snapshotPath)) return JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-    const z = metadata.maxzoom;
-    const n = 2 ** z;
-    const tile = (lng: number, lat: number) => ({ x: Math.floor((lng + 180) / 360 * n), y: Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n) });
-    const dx = radius / (111320 * Math.cos(center.lat * Math.PI / 180));
-    const dy = radius / 110540;
-    const northwest = tile(center.lng - dx, center.lat + dy);
-    const southeast = tile(center.lng + dx, center.lat - dy);
-    const features: ProviderFootprintFeature[] = [];
+    const openFreeMap = await fetchOpenFreeMapBuildingFootprints({
+      center,
+      radiusMeters: radius,
+      signal,
+    });
+    const features = openFreeMap.features;
     const warnings: string[] = [];
-    for (let x = northwest.x; x <= southeast.x; x++) for (let y = northwest.y; y <= southeast.y; y++) {
-      signal.throwIfAborted();
-      const url = metadata.tiles[0].replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y));
-      if (!tileCache.has(url)) {
-        const response = await fetch(url, { signal });
-        if (!response.ok) throw new Error(`OpenFreeMap tile ${response.status}`);
-        const decoded = new VectorTile(new Pbf(new Uint8Array(await response.arrayBuffer())));
-        const layer = decoded.layers.building;
-        const items: ProviderFootprintFeature[] = [];
-        for (let i = 0; i < (layer?.length ?? 0); i++) items.push({ ...layer.feature(i).toGeoJSON(x, y, z), source: 'OpenFreeMap', sourceLayer: 'building' });
-        tileCache.set(url, items);
-      }
-      features.push(...tileCache.get(url)!);
-    }
     const listing = currentListing!;
     const fused = await fuseBuildingNeighborhood({
       mode: 'auto',
@@ -90,7 +68,7 @@ const source: BuildingNeighborhoodSource = {
       },
     });
     warnings.push(...fused.warnings);
-    const snapshot = { features: fused.features, source: fused.sourceLabel || metadata.tiles[0], complete: fused.complete, warnings };
+    const snapshot = { features: fused.features, source: fused.sourceLabel || openFreeMap.provider, complete: fused.complete, warnings };
     if (fused.complete) fs.writeFileSync(snapshotPath, JSON.stringify(snapshot));
     return snapshot;
   },
@@ -136,6 +114,6 @@ for (const listing of listings.filter((item) => item.status === 'approved' && (!
     : validControl ? 'false_negative' : 'refused_or_unlabelled';
   const row = { listingId: listing.id, name: listing.name, status: result.status, outcome: result.decision?.outcome, autoAccept: result.decision?.autoAccept ?? false, verdict, exactRediscovery, geometryEquivalentRediscovery, rediscoveredGroundTruth, candidateToAssetCenterMeters, assetDistance, candidateCount: result.candidates.length, best: best ? { fingerprint: best.fingerprint, address: best.addressLabel, distance: best.pinToFootprintMeters, score: best.score } : null, reasons: result.reasons };
   results.push(row);
-  fs.writeFileSync(outputPath, JSON.stringify({ generatedAt: new Date().toISOString(), source: metadata.tiles[0], groundTruthLimit: 'Saved assets are provisional labels; exact fingerprint equality is conservative across provider versions. Unlabelled cases are not true negatives.', results }, null, 2));
+  fs.writeFileSync(outputPath, JSON.stringify({ generatedAt: new Date().toISOString(), source: 'OpenFreeMap / OpenStreetMap direct tile loader', groundTruthLimit: 'Saved assets are provisional labels; exact fingerprint equality is conservative across provider versions. Unlabelled cases are not true negatives.', results }, null, 2));
   if (!quiet) console.log(`${listing.name}: ${row.outcome ?? row.status} | ${verdict} | ${row.candidateCount} footprints | ${row.reasons.join('; ')}`);
 }

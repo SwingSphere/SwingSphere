@@ -60,7 +60,8 @@ export function resolveRenderedGlobeLandSurfaceAnchor({
   direction = new THREE.Vector3(),
   candidate = new THREE.Vector3(),
   preferTopSurface = false,
-  centerOnLandGeometry = false
+  centerOnLandGeometry = false,
+  snapFallbackToLandGeometry = false
 }) {
   const localDirection = wgs84ToRenderedGlobeLocal(lng, lat, globeRadius, config).normalize();
   return resolveLandSurfaceAnchorFromDirection({
@@ -72,7 +73,8 @@ export function resolveRenderedGlobeLandSurfaceAnchor({
     direction,
     candidate,
     preferTopSurface,
-    centerOnLandGeometry
+    centerOnLandGeometry,
+    snapFallbackToLandGeometry
   });
 }
 
@@ -85,7 +87,8 @@ export function resolveLandSurfaceAnchorFromDirection({
   direction = new THREE.Vector3(),
   candidate = new THREE.Vector3(),
   preferTopSurface = false,
-  centerOnLandGeometry = false
+  centerOnLandGeometry = false,
+  snapFallbackToLandGeometry = false
 }) {
   const normalizedLocalDirection = localDirection.clone().normalize();
   const landRadius = landHitMesh.geometry.boundingSphere?.radius ?? globeRadius;
@@ -144,7 +147,8 @@ export function resolveLandSurfaceAnchorFromDirection({
     landHitMesh,
     normalizedLocalDirection,
     candidate,
-    centerOnLandGeometry
+    centerOnLandGeometry,
+    snapFallbackToLandGeometry
   );
 }
 
@@ -173,11 +177,18 @@ function resolveLandParentLocalSurfaceNormal({ landHitMesh, hit, anchorPosition,
   return surfaceNormal;
 }
 
-function resolveNearestLandVertexAnchor(landHitMesh, localDirection, candidate, centerOnLandGeometry = false) {
+function resolveNearestLandVertexAnchor(
+  landHitMesh,
+  localDirection,
+  candidate,
+  centerOnLandGeometry = false,
+  snapFallbackToLandGeometry = false
+) {
   const cache = getFallbackVertexCache(landHitMesh, candidate, centerOnLandGeometry);
   const candidates = resolveNearbyLandVertices(cache, localDirection);
   const landCenter = cache.center;
   let bestProjectionScale = null;
+  let bestVertex = null;
   let bestDistanceSq = Infinity;
   for (const vertex of candidates) {
     const relativeVertex = vertex.clone().sub(landCenter);
@@ -196,7 +207,22 @@ function resolveNearestLandVertexAnchor(landHitMesh, localDirection, candidate, 
     if (!isCloser && !isSameDirectionButHigher) continue;
     bestDistanceSq = distanceSq;
     bestProjectionScale = projectionScale;
+    bestVertex = vertex;
   }
+
+  if (snapFallbackToLandGeometry && bestVertex) {
+    const surfacePoint = resolveNearestLandSurfacePoint(cache, localDirection, bestVertex);
+    const anchorPosition = surfacePoint ?? bestVertex.clone();
+    const radialDirection = anchorPosition.clone().sub(landCenter).normalize();
+    return {
+      anchorPosition,
+      radialDirection,
+      surfaceNormal: radialDirection.clone(),
+      hit: false,
+      snappedToLand: true
+    };
+  }
+
   const radialDirection = localDirection.clone().normalize();
   const anchorPosition = landCenter.clone().addScaledVector(radialDirection, bestProjectionScale ?? 1);
   return { anchorPosition, radialDirection, surfaceNormal: radialDirection.clone(), hit: false };
@@ -245,6 +271,8 @@ function getFallbackVertexCache(landHitMesh, candidate, centerOnLandGeometry = f
   const latitudeBinCount = Math.ceil(Math.PI / FALLBACK_DIRECTION_BIN_RADIANS);
   const vertices = [];
   const buckets = new Map();
+  const triangles = [];
+  const triangleBuckets = new Map();
   const center = centerOnLandGeometry
     ? resolveLandParentLocalCenter(landHitMesh)
     : new THREE.Vector3();
@@ -260,9 +288,85 @@ function getFallbackVertexCache(landHitMesh, candidate, centerOnLandGeometry = f
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(vertex);
   }
-  const next = { geometry: landHitMesh.geometry, transformKey, center, vertices, buckets, longitudeBinCount, latitudeBinCount };
+  const index = landHitMesh.geometry.getIndex();
+  const triangleCount = index ? Math.floor(index.count / 3) : Math.floor(position.count / 3);
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const centroid = new THREE.Vector3();
+  for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex += 1) {
+    const ia = index ? index.getX(triangleIndex * 3) : triangleIndex * 3;
+    const ib = index ? index.getX(triangleIndex * 3 + 1) : triangleIndex * 3 + 1;
+    const ic = index ? index.getX(triangleIndex * 3 + 2) : triangleIndex * 3 + 2;
+    a.fromBufferAttribute(position, ia);
+    b.fromBufferAttribute(position, ib);
+    c.fromBufferAttribute(position, ic);
+    landHitMesh.localToWorld(a);
+    landHitMesh.parent?.worldToLocal(a);
+    landHitMesh.localToWorld(b);
+    landHitMesh.parent?.worldToLocal(b);
+    landHitMesh.localToWorld(c);
+    landHitMesh.parent?.worldToLocal(c);
+    const triangle = new THREE.Triangle(a.clone(), b.clone(), c.clone());
+    triangles.push(triangle);
+    centroid.copy(a).add(b).add(c).multiplyScalar(1 / 3).sub(center).normalize();
+    const [triangleLongitudeBin, triangleLatitudeBin] = directionBin(centroid, longitudeBinCount, latitudeBinCount);
+    const triangleKey = `${triangleLongitudeBin}:${triangleLatitudeBin}`;
+    if (!triangleBuckets.has(triangleKey)) triangleBuckets.set(triangleKey, []);
+    triangleBuckets.get(triangleKey).push(triangle);
+  }
+
+  const next = {
+    geometry: landHitMesh.geometry,
+    transformKey,
+    center,
+    vertices,
+    buckets,
+    triangles,
+    triangleBuckets,
+    longitudeBinCount,
+    latitudeBinCount
+  };
   fallbackVertexCaches.set(landHitMesh, next);
   return next;
+}
+
+function resolveNearestLandSurfacePoint(cache, localDirection, fallbackVertex) {
+  const targetRadius = fallbackVertex.clone().sub(cache.center).length();
+  const targetPoint = cache.center.clone().addScaledVector(localDirection, targetRadius);
+  const nearbyTriangles = resolveNearbyTriangles(cache, localDirection);
+  if (!nearbyTriangles.length) return null;
+
+  const candidate = new THREE.Vector3();
+  let bestPoint = null;
+  let bestDistanceSq = Infinity;
+  for (const triangle of nearbyTriangles) {
+    triangle.closestPointToPoint(targetPoint, candidate);
+    const distanceSq = candidate.distanceToSquared(targetPoint);
+    if (distanceSq >= bestDistanceSq) continue;
+    bestDistanceSq = distanceSq;
+    bestPoint = candidate.clone();
+  }
+  return bestPoint;
+}
+
+function resolveNearbyTriangles(cache, localDirection) {
+  const [longitudeBin, latitudeBin] = directionBin(localDirection, cache.longitudeBinCount, cache.latitudeBinCount);
+  const nearby = [];
+  for (let ring = 0; ring <= FALLBACK_DIRECTION_SEARCH_RINGS + 2; ring += 1) {
+    for (let latitudeOffset = -ring; latitudeOffset <= ring; latitudeOffset += 1) {
+      for (let longitudeOffset = -ring; longitudeOffset <= ring; longitudeOffset += 1) {
+        if (ring > 0 && Math.abs(latitudeOffset) !== ring && Math.abs(longitudeOffset) !== ring) continue;
+        const candidateLatitudeBin = latitudeBin + latitudeOffset;
+        if (candidateLatitudeBin < 0 || candidateLatitudeBin >= cache.latitudeBinCount) continue;
+        const candidateLongitudeBin = (longitudeBin + longitudeOffset + cache.longitudeBinCount) % cache.longitudeBinCount;
+        const bucket = cache.triangleBuckets.get(`${candidateLongitudeBin}:${candidateLatitudeBin}`);
+        if (bucket) nearby.push(...bucket);
+      }
+    }
+    if (nearby.length && ring >= 2) break;
+  }
+  return nearby.length ? nearby : cache.triangles;
 }
 
 function directionBin(direction, longitudeBinCount, latitudeBinCount) {

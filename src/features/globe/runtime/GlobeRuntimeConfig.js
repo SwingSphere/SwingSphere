@@ -60,8 +60,25 @@ export const DEFAULT_GLOBE_RUNTIME_CONFIG = {
   },
   orbitControls: {
     rotateSpeed: 1,
+    panSpeed: 1,
     dampingFactor: 0.065,
     zoomSpeed: 0.58,
+    zoomAwarePanning: {
+      enabled: false,
+      cityDistance: 3.4,
+      worldDistance: 8.04,
+      citySpeedMultiplier: 0.16,
+      worldSpeedMultiplier: 1,
+      curvePower: 1.35
+    },
+    zoomAwareZoom: {
+      enabled: false,
+      cityDistance: 3.4,
+      worldDistance: 8.04,
+      citySpeedMultiplier: 0.18,
+      worldSpeedMultiplier: 1,
+      curvePower: 1.35
+    },
     zoomAwareRotation: {
       enabled: true,
       cityDistance: 3.4,
@@ -277,6 +294,14 @@ export function applyPresentationCompatibility(config) {
   config.progressiveDisclosure.clusterFocusDistance = camera.clusterArrivalDistanceWorld;
   config.orbitControls.zoomAwareRotation.cityDistance = camera.minDistanceWorld;
   config.orbitControls.zoomAwareRotation.worldDistance = camera.defaultDistanceWorld;
+  if (config.orbitControls.zoomAwarePanning) {
+    config.orbitControls.zoomAwarePanning.cityDistance = camera.minDistanceWorld;
+    config.orbitControls.zoomAwarePanning.worldDistance = camera.defaultDistanceWorld;
+  }
+  if (config.orbitControls.zoomAwareZoom) {
+    config.orbitControls.zoomAwareZoom.cityDistance = camera.minDistanceWorld;
+    config.orbitControls.zoomAwareZoom.worldDistance = camera.defaultDistanceWorld;
+  }
   config.cameraFocus.focusDistance = camera.listingArrivalDistanceWorld;
   config.cameraFocus.heroArrival.centerDistance = camera.listingArrivalDistanceWorld;
   config.cameraFocus.heroArrival.fov = camera.listingArrivalFieldOfView;

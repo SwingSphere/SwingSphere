@@ -1,3 +1,5 @@
+import { VectorTile } from '@mapbox/vector-tile';
+import Pbf from 'pbf';
 import { adminFetch } from './adminApi';
 import {
   extractIndividualBuildingFootprints,
@@ -6,6 +8,84 @@ import {
   type LngLat,
   type ProviderFootprintFeature,
 } from './buildingGeometry';
+
+export const OPENFREEMAP_BUILDING_SOURCE = 'OpenFreeMap / OpenStreetMap';
+const OPENFREEMAP_TILEJSON_URL = 'https://tiles.openfreemap.org/planet';
+type OpenFreeMapTileJson = { tiles: string[]; maxzoom: number };
+
+let openFreeMapTileJsonCache: OpenFreeMapTileJson | null = null;
+const openFreeMapTileCache = new Map<string, ProviderFootprintFeature[]>();
+
+const lngLatToTile = (lng: number, lat: number, zoom: number): { x: number; y: number } => {
+  const n = 2 ** zoom;
+  return {
+    x: Math.floor((lng + 180) / 360 * n),
+    y: Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n),
+  };
+};
+
+export const fetchOpenFreeMapBuildingFootprints = async (args: {
+  center: LngLat;
+  radiusMeters: number;
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+}): Promise<{ features: ProviderFootprintFeature[]; provider: string; tileCount: number }> => {
+  const fetchImpl = args.fetchImpl ?? fetch;
+  if (!openFreeMapTileJsonCache) {
+    const response = await fetchImpl(OPENFREEMAP_TILEJSON_URL, { signal: args.signal });
+    if (!response.ok) throw new Error(`${OPENFREEMAP_BUILDING_SOURCE} metadata returned ${response.status}`);
+    const metadata = await response.json() as OpenFreeMapTileJson;
+    if (!metadata.tiles?.length || !Number.isFinite(metadata.maxzoom)) {
+      throw new Error(`${OPENFREEMAP_BUILDING_SOURCE} returned invalid tile metadata`);
+    }
+    openFreeMapTileJsonCache = metadata;
+  }
+
+  const metadata = openFreeMapTileJsonCache;
+  const zoom = metadata.maxzoom;
+  const lngMeters = Math.max(1, 111_320 * Math.cos(args.center.lat * Math.PI / 180));
+  const latMeters = 110_540;
+  const lngDelta = args.radiusMeters / lngMeters;
+  const latDelta = args.radiusMeters / latMeters;
+  const northwest = lngLatToTile(args.center.lng - lngDelta, args.center.lat + latDelta, zoom);
+  const southeast = lngLatToTile(args.center.lng + lngDelta, args.center.lat - latDelta, zoom);
+  const features: ProviderFootprintFeature[] = [];
+  let tileCount = 0;
+
+  for (let x = northwest.x; x <= southeast.x; x += 1) {
+    for (let y = northwest.y; y <= southeast.y; y += 1) {
+      args.signal?.throwIfAborted();
+      const url = metadata.tiles[0]
+        .replace('{z}', String(zoom))
+        .replace('{x}', String(x))
+        .replace('{y}', String(y));
+      let tileFeatures = openFreeMapTileCache.get(url);
+      if (!tileFeatures) {
+        const response = await fetchImpl(url, { signal: args.signal });
+        if (!response.ok) throw new Error(`${OPENFREEMAP_BUILDING_SOURCE} tile returned ${response.status}`);
+        const decoded = new VectorTile(new Pbf(new Uint8Array(await response.arrayBuffer())));
+        const layer = decoded.layers.building;
+        tileFeatures = [];
+        for (let index = 0; index < (layer?.length ?? 0); index += 1) {
+          const vectorFeature = layer.feature(index);
+          const feature = vectorFeature.toGeoJSON(x, y, zoom);
+          tileFeatures.push({
+            id: feature.id ?? vectorFeature.id,
+            geometry: feature.geometry,
+            properties: feature.properties ?? {},
+            source: 'OpenFreeMap',
+            sourceLayer: 'building',
+          });
+        }
+        openFreeMapTileCache.set(url, tileFeatures);
+      }
+      tileCount += 1;
+      features.push(...tileFeatures);
+    }
+  }
+
+  return { features, provider: OPENFREEMAP_BUILDING_SOURCE, tileCount };
+};
 
 export const MICROSOFT_BUILDING_SOURCE = 'Microsoft Global ML Building Footprints';
 export const MICROSOFT_BUILDING_ID_PREFIX = 'microsoft-ml:';

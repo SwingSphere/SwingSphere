@@ -150,6 +150,16 @@ test('address normalization supports accents, abbreviations and number ranges', 
   assert.ok(score.streetSimilarity >= 0.99);
 });
 
+test('US directional suffixes do not break an otherwise exact street match', () => {
+  const score = scoreBuildingAddressCandidate(
+    { addressLine1: '1739 Cheshire Bridge Rd NE', city: 'Atlanta', region: 'Georgia', postalCode: '30324', country: 'United States' },
+    { houseNumber: '1739', road: 'Cheshire Bridge Road', city: 'Atlanta', postalCode: '30324', country: 'United States' },
+    { pinIntersects: true, distanceMeters: 0 },
+  );
+  assert.equal(score.houseNumberMatch, true);
+  assert.ok(score.streetSimilarity >= 0.99);
+});
+
 const candidate = (overrides: Partial<VerificationCandidateInput> = {}): VerificationCandidateInput => ({
   fingerprint: 'footprint-best',
   geometry: square(-95.4492, 30.0124),

@@ -20,6 +20,7 @@ type MediaUploaderProps = {
   triggerOnly?: boolean;
   onError?: (message: string) => void;
   managedEntityId?: string;
+  externalFile?: File | null;
 };
 
 type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
@@ -59,6 +60,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   triggerOnly = false,
   onError,
   managedEntityId,
+  externalFile,
 }) => {
   const rule = getMediaRule(role);
   const [asset, setAsset] = useState<MediaAsset | null>(existingAsset ?? null);
@@ -179,6 +181,13 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
     }
     void uploadFile(file);
   };
+
+  useEffect(() => {
+    if (!externalFile) return;
+    handleFile(externalFile);
+    // A new File object represents an explicit external upload/crop request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalFile]);
 
   const isLight = tone === 'light';
   const cropDialog = cropFile && cropAspectRatio ? (

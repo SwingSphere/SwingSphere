@@ -23,13 +23,14 @@ const App: React.FC = () => {
     navigate('/');
   }
 
-  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
+  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/usa-pin-lab', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
   const explorerSurface = location.pathname === '/map'
     ? 'map' as const
-    : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/language-explorer-globe'
+    : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/usa-pin-lab' || location.pathname === '/dev/language-explorer-globe'
       ? 'globe' as const
       : null;
   const isScrollablePage = !isGlobeExperienceRoute;
+  const explorerScopeSearch = new URLSearchParams(location.search).has('activityRegion') ? location.search : '';
   const showDebugBadge = DEV_TOOLS_ENABLED && location.pathname.startsWith('/dev/');
 
   return (
@@ -50,8 +51,8 @@ const App: React.FC = () => {
           onAdminClick={() => navigate('/admin')}
           onHostDashboardClick={() => navigate('/host-dashboard')}
           onAccountClick={() => navigate('/account')}
-          onMapClick={() => navigate('/map')}
-          onGlobeClick={() => navigate('/globe')}
+          onMapClick={() => navigate(`/map${explorerScopeSearch}`)}
+          onGlobeClick={() => navigate(`/globe${explorerScopeSearch}`)}
           explorerSurface={explorerSurface}
         />
         <main className={isScrollablePage ? 'flex-1 min-h-0' : 'flex-1 min-h-0 overflow-hidden'}>

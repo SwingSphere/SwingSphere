@@ -21,33 +21,36 @@ test('hybrid alignment bench exposes each geospatial layer independently', () =>
   }
 });
 
-test('verified hybrid baseline keeps GeoJSON at zero and shifts pins plus atlas', () => {
+test('verified production baseline keeps pins and GeoJSON at zero while atlas stays plus 1.5', () => {
+  assert.match(pageSource, /const PIN_LONGITUDE_OFFSET_DEG = 0;/);
+  assert.match(pageSource, /const GEOJSON_LONGITUDE_OFFSET_DEG = 0;/);
+  assert.match(pageSource, /const COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG = 1\.5;/);
   assert.match(
     pageSource,
-    /pins:\s*\{ longitudeOffsetDeg: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 \}/,
+    /pins:\s*\{ longitudeOffsetDeg: PIN_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 \}/,
   );
   assert.match(
     pageSource,
-    /countryGeoJson:\s*\{ longitudeOffsetDeg: 0, latitudeOffsetDeg: 0 \}/,
+    /countryGeoJson:\s*\{ longitudeOffsetDeg: GEOJSON_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 \}/,
   );
   assert.match(
     pageSource,
-    /countryAtlas:\s*\{ longitudeOffsetDeg: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 \}/,
+    /countryAtlas:\s*\{ longitudeOffsetDeg: COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG, latitudeOffsetDeg: 0 \}/,
   );
 });
 
-test('production uses the verified offsets without moving the GeoJSON raster', () => {
+test('production uses the verified offsets without moving the WGS84 pin or GeoJSON layers', () => {
   assert.match(
     pageSource,
-    /longitudeOffsetDeg: hybridPrototype[\s\S]*?: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG/,
+    /longitudeOffsetDeg: hybridPrototype[\s\S]*?: COUNTRY_ATLAS_LONGITUDE_OFFSET_DEG/,
   );
   assert.match(
     pageSource,
-    /pinLongitudeOffsetDeg: hybridPrototype[\s\S]*?: GEOSPATIAL_BASELINE_LONGITUDE_OFFSET_DEG/,
+    /pinLongitudeOffsetDeg: hybridPrototype[\s\S]*?: PIN_LONGITUDE_OFFSET_DEG/,
   );
   assert.match(
     pageSource,
-    /countryGeoJson:[\s\S]*?longitudeOffsetDeg: hybridPrototype[\s\S]*?: 0/,
+    /countryGeoJson:[\s\S]*?longitudeOffsetDeg: hybridPrototype[\s\S]*?: GEOJSON_LONGITUDE_OFFSET_DEG/,
   );
   assert.ok(
     geoJsonLayerSource.includes('THREE.MathUtils.degToRad(this.alignment.longitudeOffsetDeg)'),

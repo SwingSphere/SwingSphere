@@ -14,6 +14,7 @@ import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
 import { buildingVerificationNeedsReview } from '../../lib/buildingVerification';
+import { getListingPrimaryLogoUrl } from '../../lib/listingImage';
 
 const Icon: React.FC<{ path: string }> = ({ path }) => (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -127,11 +128,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             .filter((sailing) => Date.parse(sailing.startsAt) > Date.now())
             .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
 
-        const missingLogos = data.listings.filter((item) => !item.logoImageUrl).length
+        const missingLogos = data.listings.filter((item) => !getListingPrimaryLogoUrl(item)).length
             + data.resorts.filter((item) => !item.logoImageUrl).length
             + data.cruiseSeries.filter((item) => !item.logoImageUrl).length;
         const missingFlyers = upcomingEvents.filter((event) => !event.mediaAssets?.some((asset) => asset.role === 'flyer')).length;
-        const clubsMissingSchedules = clubs.filter((club) => !club.schedule?.length).length;
+        const clubsMissingSchedules = clubs.filter((club) => !club.schedule?.length && !club.specialScheduleNotes?.trim()).length;
         const venuesMissingBuildings = data.venues.filter((venue) => !venue.buildingAssetId).length;
         const organizationsMissingContact = data.organizations.filter((organization) => !organization.contactEmail && !organization.website).length;
         const pending = data.listings.filter((item) => item.status === 'pending_approval').length;
@@ -201,7 +202,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             label: 'Listings missing logos',
             value: computed.missingLogos,
             items: [
-                ...data.listings.filter((item) => !item.logoImageUrl).map((item) => ({
+                ...data.listings.filter((item) => !getListingPrimaryLogoUrl(item)).map((item) => ({
                     id: item.id,
                     name: item.name,
                     detail: item.type === 'club' ? 'Club location' : 'Event occurrence',
@@ -226,7 +227,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             key: 'missing-schedules',
             label: 'Club locations missing schedules',
             value: computed.clubsMissingSchedules,
-            items: computed.clubs.filter((club) => !club.schedule?.length).map((club) => ({
+            items: computed.clubs.filter((club) => !club.schedule?.length && !club.specialScheduleNotes?.trim()).map((club) => ({
                 id: club.id,
                 name: club.name,
                 detail: club.location,

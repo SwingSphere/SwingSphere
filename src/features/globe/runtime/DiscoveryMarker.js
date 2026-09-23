@@ -3,6 +3,7 @@ import { createMarkerStyle, GlobeMarker } from "./GlobeMarker.js";
 
 const DISCOVERY_BASE_COLOR = "#F8FAFC";
 const DISCOVERY_ACTIVE_COLOR = "#FFFFFF";
+const DISCOVERY_SELECTED_COLOR = "#FF4D5E";
 const HEX_TEXTURE_SIZE = 128;
 const HEX_RADIUS = 44;
 const HEX_PULSE_COUNT = 2;
@@ -12,6 +13,7 @@ const HEX_PULSE_END_SCALE = 2.3;
 export class DiscoveryMarker {
   constructor({ region, position, radialDirection, config, referenceDistance, globeRadius }) {
     this.region = region;
+    this.config = config;
     this.isSingleListing = (region.listingIds || []).length === 1;
     this.elapsed = hashPhase(region.id);
 
@@ -114,8 +116,16 @@ export class DiscoveryMarker {
     const presentationOpacity = Number.isFinite(state?.presentationOpacity) ? state.presentationOpacity : 1;
     const baseScale = this.beacon.userData.baseScale ?? this.marker.style.tipRadius * 4.9;
     const activeScale = selected ? 1.18 : hovered ? 1.12 : attention ? 1.04 : 1;
+    const constantScreenScale = this.config?.pinPlacement?.constantScreenSize
+      ? this.marker.currentDistanceScale * (3.6 / 4.9)
+      : 1;
 
-    this.beacon.scale.set(baseScale * activeScale, baseScale * activeScale, 1);
+    this.beacon.scale.set(
+      baseScale * activeScale * constantScreenScale,
+      baseScale * activeScale * constantScreenScale,
+      1
+    );
+    this.beacon.material.color.set(selected ? DISCOVERY_SELECTED_COLOR : DISCOVERY_ACTIVE_COLOR);
     this.beacon.material.opacity = presentationOpacity * (selected || hovered ? 1 : 0.92);
 
     const pulseStrength = selected || hovered ? 0.42 : attention ? 0.34 : 0.12;
@@ -128,8 +138,9 @@ export class DiscoveryMarker {
       }
       const phase = (this.elapsed * HEX_PULSE_SPEED + pulse.userData.phaseOffset) % 1;
       const eased = smootherstep(phase);
-      const scale = baseScale * THREE.MathUtils.lerp(1.05, HEX_PULSE_END_SCALE, eased);
+      const scale = baseScale * THREE.MathUtils.lerp(1.05, HEX_PULSE_END_SCALE, eased) * constantScreenScale;
       pulse.scale.set(scale, scale, 1);
+      pulse.material.color.set(selected ? DISCOVERY_SELECTED_COLOR : DISCOVERY_ACTIVE_COLOR);
       pulse.material.opacity = presentationOpacity * pulseStrength * Math.pow(1 - phase, 1.65);
       pulse.visible = pulse.material.opacity > 0.006;
     });
@@ -213,6 +224,7 @@ function formatCount(region) {
   const parts = [];
   if (region.clubCount) parts.push(`${region.clubCount} club${region.clubCount === 1 ? "" : "s"}`);
   if (region.eventCount) parts.push(`${region.eventCount} event${region.eventCount === 1 ? "" : "s"}`);
+  if (region.hostCount) parts.push(`${region.hostCount} host${region.hostCount === 1 ? "" : "s"}`);
   const listingCount = Array.isArray(region?.listingIds) ? region.listingIds.length : 0;
   return parts.join(" / ") || `${listingCount} listing${listingCount === 1 ? "" : "s"}`;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Bookmark, Globe2, MapPin, Plus, Share2, UserRound } from 'lucide-react';
+import { ArrowLeft, Bookmark, Globe2, MapPin, Plus, Search, Share2, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../store/appStore';
 import { useDeviceExperience } from '../../device/DeviceExperienceContext';
@@ -68,6 +68,14 @@ export const mobileNavItems: Array<{ label: string; path: string; icon: typeof G
   { label: 'Explore', path: '', icon: Globe2 },
   { label: 'Nearby', path: '/nearby', icon: MapPin },
   { label: 'Add', path: '/add', icon: Plus, emphasized: true },
+  { label: 'Search', path: '/search', icon: Search },
+  { label: 'Account', path: '/account', icon: UserRound },
+];
+
+const tabletNavItems: Array<{ label: string; path: string; icon: typeof Globe2; emphasized?: boolean }> = [
+  { label: 'Explore', path: '', icon: Globe2 },
+  { label: 'Nearby', path: '/nearby', icon: MapPin },
+  { label: 'Add', path: '/add', icon: Plus, emphasized: true },
   { label: 'Saved', path: '/saved', icon: Bookmark },
   { label: 'Account', path: '/account', icon: UserRound },
 ];
@@ -77,10 +85,11 @@ export const getMobileNavTarget = (path: string, basePath = '/mobile') => `${bas
 export const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { basePath } = useDeviceExperience();
+  const { basePath, kind } = useDeviceExperience();
+  const navItems = kind === 'tablet' ? tabletNavItems : mobileNavItems;
   return (
     <nav className="grid min-h-[68px] shrink-0 grid-cols-5 border-t border-white/[0.07] bg-[rgba(6,8,11,0.96)] px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-2xl" aria-label="Mobile navigation">
-      {mobileNavItems.map(({ label, path, icon: Icon, emphasized }) => {
+      {navItems.map(({ label, path, icon: Icon, emphasized }) => {
         const target = getMobileNavTarget(path, basePath);
         const active = path ? location.pathname === target || location.pathname.startsWith(`${target}/`) : location.pathname === basePath || location.pathname === `${basePath}/`;
         return (

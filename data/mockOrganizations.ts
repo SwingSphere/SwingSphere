@@ -194,6 +194,8 @@ const standaloneOrganizations: OrganizationData[] = [
     slug: 'modern-lifestyle-events',
     displayTypes: ['producer'],
     descriptionShort: 'Production organization behind multiple lifestyle event brands, including Bronze Party and Her Fantasy Party.',
+    website: 'https://modernlifestyle.co/',
+    contactEmail: 'modernlifestyle@worldmodern.com',
     status: 'approved',
     postedByUserId: 'user1',
   },
@@ -204,6 +206,8 @@ const standaloneOrganizations: OrganizationData[] = [
     slug: 'her-fantasy-party',
     displayTypes: ['event_brand', 'promoter', 'host'],
     descriptionShort: 'A recurring lifestyle event brand at Twist SF with its own themed editions and audience format.',
+    website: 'https://www.herfantasyparty.com/',
+    contactEmail: 'support@worldmodern.com',
     operatingRegions: ['San Francisco Bay Area'],
     globePresence: {
       visibility: 'visible',

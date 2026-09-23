@@ -606,7 +606,15 @@ export class PinManager {
       direction: this.tmpDirection,
       candidate: this.tmpCandidate,
       preferTopSurface: true,
-      centerOnLandGeometry: true
+      // Geographic rays must stay centered on the globe origin. Using the
+      // slightly offset land.glb bounding-sphere center translates WGS84
+      // directions and can move coastal cities substantially inland.
+      centerOnLandGeometry: false,
+      // The source coordinate stays canonical, but our stylized low-poly land
+      // may omit a coastal sliver (Manhattan/Miami are common examples). If the
+      // exact ray misses land, visually attach the pin to the nearest land
+      // vertex instead of leaving it floating over water.
+      snapFallbackToLandGeometry: true
     });
   }
 

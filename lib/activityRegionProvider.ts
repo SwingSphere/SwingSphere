@@ -17,6 +17,7 @@ export type ActivityRegion = {
   listingIds: string[];
   clubCount: number;
   eventCount: number;
+  hostCount?: number;
   singleEntityType?: 'club' | 'event';
   singleListingName?: string;
   singleListingLogoUrl?: string;
@@ -26,9 +27,11 @@ export type ActivityRegionOptions = {
   radius?: number;
   extent?: number;
   worldZoom?: number;
+  maxDiameterKm?: number;
 };
 
 const WORLD_BOUNDS: [number, number, number, number] = [-180, -85, 180, 85];
+const DEFAULT_MAX_ACTIVITY_REGION_DIAMETER_KM = 140;
 const REGION_NAMES: Record<string, string> = {
   CA: 'California',
   NY: 'New York',
@@ -57,7 +60,7 @@ export const createActivityRegions = (
     },
   })));
 
-  return index.getClusters(WORLD_BOUNDS, options.worldZoom ?? 3).map((feature) => {
+  return index.getClusters(WORLD_BOUNDS, options.worldZoom ?? 3).flatMap((feature) => {
     const properties = feature.properties;
     const pointIds = 'cluster' in properties && properties.cluster
       ? index.getLeaves(properties.cluster_id, Infinity).map((leaf) => leaf.properties.discoveryPointId)
@@ -65,36 +68,138 @@ export const createActivityRegions = (
     const members = pointIds
       .map((pointId) => pointById.get(pointId))
       .filter((point): point is DiscoveryPoint => Boolean(point));
-    const [longitude, latitude] = feature.geometry.coordinates;
-    const listingIds = unique(members.flatMap((point) => point.listingIds));
-    const memberSignature = [...pointIds].sort().join('|');
-    const countryIso2 = dominantValue(members.map((point) => normalizeCountry(point.country)).filter(Boolean))?.value ?? '';
 
-    const clubCount = unique(members.flatMap((point) => point.clubIds)).length;
-    const eventCount = unique(members.flatMap((point) => point.eventIds)).length;
-
-    return {
-      id: `cluster:v1:world:${stableHash(memberSignature)}`,
-      scopeKey: `h3:r2:${latLngToCell(latitude, longitude, 2)}`,
-      name: resolveActivityRegionName(members),
-      latitude,
-      longitude,
-      countryIso2: countryIso2 || undefined,
-      discoveryPointIds: pointIds,
-      listingIds,
-      clubCount,
-      eventCount,
-      singleEntityType: listingIds.length === 1
-        ? clubCount === 1
-          ? 'club'
-          : eventCount === 1
-            ? 'event'
-            : undefined
-        : undefined,
-      singleListingName: listingIds.length === 1 ? members[0]?.listingName : undefined,
-      singleListingLogoUrl: listingIds.length === 1 ? members[0]?.logoImageUrl : undefined,
-    };
+    return splitOversizedActivityMembers(
+      members,
+      options.maxDiameterKm ?? DEFAULT_MAX_ACTIVITY_REGION_DIAMETER_KM,
+    ).map(buildActivityRegion);
   });
+};
+
+const buildActivityRegion = (members: DiscoveryPoint[]): ActivityRegion => {
+  const pointIds = members.map((point) => point.id);
+  const { longitude, latitude } = resolveRepresentativeCoordinate(members);
+  const listingIds = unique(members.flatMap((point) => point.listingIds));
+  const memberSignature = [...pointIds].sort().join('|');
+  const countryIso2 = dominantValue(members.map((point) => normalizeCountry(point.country)).filter(Boolean))?.value ?? '';
+
+  const clubCount = unique(members.flatMap((point) => point.clubIds)).length;
+  const eventCount = unique(members.flatMap((point) => point.eventIds)).length;
+  const hostCount = unique(members.flatMap((point) => point.hostIds ?? [])).length;
+  const singleMember = listingIds.length === 1
+    ? members.find((point) => point.listingIds.includes(listingIds[0])) ?? members[0]
+    : undefined;
+
+  return {
+    id: `cluster:v1:world:${stableHash(memberSignature)}`,
+    scopeKey: `h3:r2:${latLngToCell(latitude, longitude, 2)}`,
+    name: resolveActivityRegionName(members),
+    latitude,
+    longitude,
+    countryIso2: countryIso2 || undefined,
+    discoveryPointIds: pointIds,
+    listingIds,
+    clubCount,
+    eventCount,
+    hostCount,
+    singleEntityType: listingIds.length === 1
+      ? clubCount === 1
+        ? 'club'
+        : eventCount === 1
+          ? 'event'
+          : undefined
+      : undefined,
+    singleListingName: listingIds.length === 1 ? singleMember?.listingName : undefined,
+    singleListingLogoUrl: listingIds.length === 1 ? singleMember?.logoImageUrl : undefined,
+  };
+};
+
+const splitOversizedActivityMembers = (
+  members: DiscoveryPoint[],
+  maxDiameterKm: number,
+): DiscoveryPoint[][] => {
+  if (members.length < 2 || !Number.isFinite(maxDiameterKm) || maxDiameterKm <= 0) {
+    return members.length ? [members] : [];
+  }
+  if (activityRegionDiameterKm(members) <= maxDiameterKm) return [members];
+
+  // Complete-link style grouping keeps every member of a discovery area within
+  // the same practical travel-scale diameter. This intentionally prevents
+  // continent-sized or multi-state "destination" pins such as Wichita -> DFW.
+  const sorted = [...members].sort((a, b) =>
+    a.latitude - b.latitude
+    || a.longitude - b.longitude
+    || a.id.localeCompare(b.id));
+
+  const groups: DiscoveryPoint[][] = [];
+  for (const member of sorted) {
+    const compatibleGroups = groups
+      .map((group, index) => ({
+        index,
+        maxDistanceKm: Math.max(...group.map((candidate) => haversineKm(member, candidate))),
+      }))
+      .filter(({ maxDistanceKm }) => maxDistanceKm <= maxDiameterKm)
+      .sort((a, b) => a.maxDistanceKm - b.maxDistanceKm || a.index - b.index);
+
+    if (!compatibleGroups.length) {
+      groups.push([member]);
+      continue;
+    }
+    groups[compatibleGroups[0].index].push(member);
+  }
+
+  return groups;
+};
+
+const activityRegionDiameterKm = (members: DiscoveryPoint[]): number => {
+  let diameter = 0;
+  for (let i = 0; i < members.length; i += 1) {
+    for (let j = i + 1; j < members.length; j += 1) {
+      diameter = Math.max(diameter, haversineKm(members[i], members[j]));
+    }
+  }
+  return diameter;
+};
+
+const resolveRepresentativeCoordinate = (members: DiscoveryPoint[]) => {
+  if (members.length === 1) {
+    return { latitude: members[0].latitude, longitude: members[0].longitude };
+  }
+
+  const centroid = {
+    latitude: members.reduce((sum, point) => sum + point.latitude, 0) / members.length,
+    longitude: members.reduce((sum, point) => sum + point.longitude, 0) / members.length,
+  };
+
+  // A pure centroid can land in a bay/ocean. Anchor the discovery marker to the
+  // real member location nearest that centroid; the runtime then performs a
+  // final visual land snap against the stylized GLB if necessary.
+  const representative = [...members].sort((a, b) => {
+    const distanceA = haversineKm(a, centroid);
+    const distanceB = haversineKm(b, centroid);
+    return distanceA - distanceB || a.id.localeCompare(b.id);
+  })[0];
+
+  return {
+    latitude: representative.latitude,
+    longitude: representative.longitude,
+  };
+};
+
+const haversineKm = (
+  a: Pick<DiscoveryPoint, 'latitude' | 'longitude'>,
+  b: Pick<DiscoveryPoint, 'latitude' | 'longitude'>,
+): number => {
+  const earthRadiusKm = 6371.0088;
+  const toRad = (degrees: number) => degrees * Math.PI / 180;
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const dLat = lat2 - lat1;
+  const dLon = toRad(b.longitude - a.longitude);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLon = Math.sin(dLon / 2);
+  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
+  return earthRadiusKm * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
 };
 
 const resolveActivityRegionName = (members: DiscoveryPoint[]): string => {

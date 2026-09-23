@@ -498,6 +498,36 @@ const replaceOwnerMedia = async (image: ImageRecord, asset: MediaAsset, role: Re
   await (savers[ownerType] as (value: any) => Promise<unknown>)({ ...owner, ...mediaFields });
 };
 
+const mediaAssetFromImageRecord = (image: ImageRecord): MediaAsset | null => {
+  if (
+    image.source !== 'media_asset'
+    || !image.mediaAssetId
+    || !image.externalId
+    || !image.status
+    || !image.createdAt
+    || !image.updatedAt
+  ) return null;
+  const rule = getMediaRule(image.role);
+  return {
+    id: image.mediaAssetId,
+    owner_type: image.ownerType,
+    owner_id: image.storageOwnerId ?? getMediaOwnerId(image.ownerType, image.ownerId),
+    role: image.role,
+    storage_provider: 'cloudflare_images',
+    external_id: image.externalId,
+    status: image.status,
+    aspect_mode: image.aspectMode ?? rule.aspectMode,
+    target_ratio: image.targetRatio ?? rule.targetRatio,
+    alt_text: image.altText ?? null,
+    sort_order: image.sortOrder ?? 0,
+    focal_point_x: image.focalPointX ?? null,
+    focal_point_y: image.focalPointY ?? null,
+    created_by: image.createdBy ?? null,
+    created_at: image.createdAt,
+    updated_at: image.updatedAt,
+  };
+};
+
 const clearPlaceholderReference = async (image: ImageRecord) => {
   if (!image.url || image.source !== 'legacy_url' || !isPlaceholderMediaUrl(image.url)) {
     throw new Error('This image is not a removable placeholder URL reference.');
@@ -579,6 +609,8 @@ const DevImageLibraryPage: React.FC = () => {
   const [dimensionsById, setDimensionsById] = useState<Record<string, ImageDimensions>>({});
   const [replacementBusyId, setReplacementBusyId] = useState<string | null>(null);
   const [replacementError, setReplacementError] = useState('');
+  const [heroRecropFile, setHeroRecropFile] = useState<File | null>(null);
+  const [heroRecropBusyId, setHeroRecropBusyId] = useState<string | null>(null);
   const [placeholderTarget, setPlaceholderTarget] = useState<ImageRecord | null>(null);
   const [clearingPlaceholder, setClearingPlaceholder] = useState(false);
   const [placeholderError, setPlaceholderError] = useState('');
@@ -608,6 +640,17 @@ const DevImageLibraryPage: React.FC = () => {
       active = false;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (!detailsTarget) return;
+    const refreshed = images.find((image) => image.id === detailsTarget.id);
+    if (refreshed) {
+      setDetailsTarget((current) => current?.id === refreshed.id ? refreshed : current);
+      return;
+    }
+    const sibling = images.find((image) => image.ownerType === detailsTarget.ownerType && image.ownerId === detailsTarget.ownerId);
+    setDetailsTarget(sibling ?? null);
+  }, [images, detailsTarget?.id, detailsTarget?.ownerId, detailsTarget?.ownerType]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -703,6 +746,41 @@ const DevImageLibraryPage: React.FC = () => {
     } finally {
       setReplacementBusyId(null);
     }
+  };
+
+  const beginHeroRecrop = async (image: ImageRecord) => {
+    if (image.role !== 'hero' || !image.isCurrent || image.source !== 'media_asset' || !image.url) return;
+    setHeroRecropBusyId(image.id);
+    setReplacementError('');
+    try {
+      const sourceUrl = getMediaAuditUrl(image) ?? image.url;
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error(`Could not load the current Hero source for recropping (HTTP ${response.status}).`);
+      const blob = await response.blob();
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(blob.type)) {
+        throw new Error('The current Hero source is not available in a crop-compatible JPG, PNG, or WebP format.');
+      }
+      const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
+      setHeroRecropFile(new File([blob], `${image.ownerName.replace(/[^a-zA-Z0-9_-]+/g, '-')}-hero-source.${extension}`, { type: blob.type }));
+    } catch (error) {
+      setReplacementError(error instanceof Error ? error.message : 'The current Hero could not be loaded for recropping.');
+    } finally {
+      setHeroRecropBusyId(null);
+    }
+  };
+
+  const useExistingMediaAsCurrent = async (image: ImageRecord) => {
+    if (image.isCurrent || (image.role !== 'logo' && image.role !== 'hero')) return;
+    const asset = mediaAssetFromImageRecord(image);
+    if (!asset) {
+      setReplacementError('Only complete canonical Logo or Hero assets can be promoted to current media.');
+      return;
+    }
+    if (asset.status !== 'approved') {
+      setReplacementError('Approve this media asset before making it the current Logo or Hero.');
+      return;
+    }
+    await handleMediaUploaded(image, asset, image.role);
   };
 
   const requestPlaceholderClear = (image: ImageRecord) => {
@@ -838,6 +916,26 @@ const DevImageLibraryPage: React.FC = () => {
     ? getAttentionReasons(detailsTarget, brokenIds.has(detailsTarget.id) || !detailsTarget.url, detailsDimensions)
     : [];
   const detailsMediaQa = detailsTarget ? getMediaQa(detailsTarget.role, detailsDimensions) : null;
+  const detailsOwnerMedia = useMemo(() => {
+    if (!detailsTarget) return [];
+    const roleOrder: Record<MediaRole, number> = { logo: 0, hero: 1, cover: 2, flyer: 3, gallery: 4, avatar: 5 };
+    return images
+      .filter((image) => image.ownerType === detailsTarget.ownerType && image.ownerId === detailsTarget.ownerId)
+      .slice()
+      .sort((a, b) => {
+        if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
+        const roleDelta = roleOrder[a.role] - roleOrder[b.role];
+        if (roleDelta) return roleDelta;
+        return new Date(b.createdAt ?? b.updatedAt ?? 0).getTime() - new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
+      });
+  }, [detailsTarget, images]);
+  const detailsCurrentLogo = detailsOwnerMedia.find((image) => image.role === 'logo' && image.isCurrent);
+  const detailsCurrentHero = detailsOwnerMedia.find((image) => image.role === 'hero' && image.isCurrent);
+  const canManageDetailsLogo = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user' && detailsTarget.ownerType !== 'cruise_sailing');
+  const canManageDetailsHero = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user');
+  const detailsOwnerInputKey = detailsTarget ? `${detailsTarget.ownerType}-${detailsTarget.ownerId}`.replace(/[^a-zA-Z0-9_-]/g, '-') : 'owner';
+  const detailsLogoInputId = `details-logo-${detailsOwnerInputKey}`;
+  const detailsHeroInputId = `details-hero-${detailsOwnerInputKey}`;
 
   return (
     <div className="min-h-full bg-[#060708] px-4 py-8 text-gray-100 sm:px-6 lg:px-10">
@@ -1181,18 +1279,121 @@ const DevImageLibraryPage: React.FC = () => {
       </div>
 
       {detailsTarget ? (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
-          <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-[#111315] shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
+        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-hidden bg-black/75 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
+          <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-6xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#111315] shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+            <div className="sticky top-0 z-30 flex items-start justify-between gap-4 border-b border-white/10 bg-[#111315]/95 px-5 py-4 backdrop-blur-xl sm:px-6">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300/70">Media details & usage</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300/70">Entity media workspace</div>
                 <h2 id="media-details-title" className="mt-1 text-xl font-semibold text-white">{detailsTarget.ownerName}</h2>
-                <p className="mt-1 text-sm text-gray-400">{ownerLabels[detailsTarget.ownerType]} · {detailsTarget.roleLabel}</p>
+                <p className="mt-1 text-sm text-gray-400">{ownerLabels[detailsTarget.ownerType]} · {detailsOwnerMedia.length} media reference{detailsOwnerMedia.length === 1 ? '' : 's'} · inspecting {detailsTarget.roleLabel.toLowerCase()}</p>
               </div>
               <button type="button" onClick={() => setDetailsTarget(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-gray-400 transition hover:bg-white/[0.08] hover:text-white" aria-label="Close media details"><X className="h-4 w-4" /></button>
             </div>
 
-            <div className="grid gap-5 px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="px-5 py-5 sm:px-6">
+              <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">All media for this entity</div>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-500">Review every image tied to {detailsTarget.ownerName}. Select any tile to inspect it below, or replace the current identity media without leaving this workspace.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canManageDetailsLogo ? (
+                      <div>
+                        <MediaUploader
+                          ownerType={detailsTarget.ownerType}
+                          ownerId={getMediaOwnerId(detailsTarget.ownerType, detailsTarget.ownerId)}
+                          role="logo"
+                          inputId={detailsLogoInputId}
+                          triggerOnly
+                          onUploaded={(asset) => { void handleMediaUploaded(detailsTarget, asset, 'logo'); }}
+                          onError={(message) => setReplacementError(message)}
+                        />
+                        <label htmlFor={detailsLogoInputId} className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.12] ${replacementBusyId === detailsTarget.id ? 'pointer-events-none opacity-50' : ''}`}>
+                          <Upload className="h-3.5 w-3.5" />
+                          {replacementBusyId === detailsTarget.id ? 'Updating…' : detailsCurrentLogo ? 'Replace logo' : 'Add logo'}
+                        </label>
+                      </div>
+                    ) : null}
+                    {canManageDetailsHero ? (
+                      <div>
+                        <MediaUploader
+                          ownerType={detailsTarget.ownerType}
+                          ownerId={getMediaOwnerId(detailsTarget.ownerType, detailsTarget.ownerId)}
+                          role="hero"
+                          inputId={detailsHeroInputId}
+                          triggerOnly
+                          onUploaded={(asset) => {
+                            setHeroRecropFile(null);
+                            void handleMediaUploaded(detailsTarget, asset, 'hero');
+                          }}
+                          onError={(message) => {
+                            setHeroRecropFile(null);
+                            setReplacementError(message);
+                          }}
+                          externalFile={heroRecropFile}
+                        />
+                        <label htmlFor={detailsHeroInputId} className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.12] ${replacementBusyId === detailsTarget.id ? 'pointer-events-none opacity-50' : ''}`}>
+                          <Upload className="h-3.5 w-3.5" />
+                          {replacementBusyId === detailsTarget.id ? 'Updating…' : detailsCurrentHero ? 'Replace hero' : 'Add hero'}
+                        </label>
+                      </div>
+                    ) : null}
+                    {detailsCurrentHero?.source === 'media_asset' && detailsCurrentHero.url ? (
+                      <button
+                        type="button"
+                        disabled={heroRecropBusyId === detailsCurrentHero.id || replacementBusyId === detailsTarget.id}
+                        onClick={() => void beginHeroRecrop(detailsCurrentHero)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/20 bg-violet-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-violet-300 transition hover:border-violet-400/35 hover:bg-violet-400/[0.12] disabled:cursor-wait disabled:opacity-50"
+                        title="Reposition and zoom the current Hero into a new 16:9 crop. The original is preserved as an extra upload."
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${heroRecropBusyId === detailsCurrentHero.id ? 'animate-spin' : ''}`} />
+                        {heroRecropBusyId === detailsCurrentHero.id ? 'Loading hero…' : 'Recrop hero'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {replacementError ? <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2.5 text-xs text-red-200">{replacementError}</div> : null}
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                  {detailsOwnerMedia.map((media) => {
+                    const selected = media.id === detailsTarget.id;
+                    const mediaBroken = brokenIds.has(media.id) || !media.url;
+                    const mediaAttention = getAttentionReasons(media, mediaBroken, dimensionsById[media.id]);
+                    return (
+                      <button
+                        key={media.id}
+                        type="button"
+                        onClick={() => setDetailsTarget(media)}
+                        className={`overflow-hidden rounded-xl border text-left transition ${selected ? 'border-red-400/60 bg-red-400/[0.07] ring-1 ring-red-400/20' : media.isCurrent ? 'border-emerald-400/30 bg-emerald-400/[0.035] hover:border-emerald-400/50' : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/[0.035]'}`}
+                      >
+                        <div className="relative aspect-[4/3] bg-black/35">
+                          {media.url ? <img src={media.url} alt="" className={`h-full w-full ${media.role === 'logo' || media.role === 'flyer' ? 'object-contain' : 'object-cover'}`} /> : <div className="flex h-full items-center justify-center text-red-300/70"><ImageOff className="h-5 w-5" /></div>}
+                          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                            <span className="rounded-md bg-black/80 px-1.5 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-gray-200">{media.roleLabel}</span>
+                            {media.isCurrent ? <span className="rounded-md bg-emerald-400 px-1.5 py-1 text-[8px] font-black uppercase tracking-[0.1em] text-black">Current</span> : null}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 p-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate text-[10px] font-semibold text-gray-200">{media.source === 'media_asset' ? 'Canonical media' : 'Legacy reference'}</span>
+                            {media.status ? <span className="shrink-0 text-[8px] uppercase tracking-[0.08em] text-gray-500">{media.status.replace('_', ' ')}</span> : null}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {media.usage === 'extra' ? <span className="rounded bg-amber-400/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-300">Extra</span> : null}
+                            {isPlaceholderRecord(media) ? <span className="rounded bg-amber-300/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-200">Placeholder</span> : null}
+                            {mediaAttention.length ? <span className="rounded bg-red-400/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-red-300">{mediaAttention.length} issue{mediaAttention.length === 1 ? '' : 's'}</span> : null}
+                            {selected ? <span className="rounded bg-red-400/15 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-red-300">Inspecting</span> : null}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <div className="space-y-4">
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                   <div className="aspect-[4/3]">
@@ -1267,6 +1468,34 @@ const DevImageLibraryPage: React.FC = () => {
                   </section>
                 ) : null}
 
+                {(detailsTarget.role === 'logo' || detailsTarget.role === 'hero' || isPlaceholderRecord(detailsTarget) || (!detailsTarget.isCurrent && detailsTarget.source === 'media_asset')) ? (
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Selected media actions</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {!detailsTarget.isCurrent && (detailsTarget.role === 'logo' || detailsTarget.role === 'hero') && detailsTarget.source === 'media_asset' ? (
+                        <button
+                          type="button"
+                          disabled={replacementBusyId === detailsTarget.id || detailsTarget.status !== 'approved'}
+                          onClick={() => void useExistingMediaAsCurrent(detailsTarget)}
+                          title={detailsTarget.status !== 'approved' ? 'Approve this asset before making it current.' : 'Use this as the current ' + detailsTarget.roleLabel.toLowerCase() + '.'}
+                          className="rounded-xl border border-sky-400/20 bg-sky-400/[0.08] px-3 py-2 text-xs font-bold text-sky-300 transition hover:bg-sky-400/[0.13] disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                          {replacementBusyId === detailsTarget.id ? 'Updating…' : 'Use as current ' + detailsTarget.roleLabel.toLowerCase()}
+                        </button>
+                      ) : null}
+                      {detailsTarget.isCurrent && detailsTarget.source === 'legacy_url' && isPlaceholderRecord(detailsTarget) && detailsTarget.ownerType !== 'user' ? (
+                        <button type="button" onClick={() => requestPlaceholderClear(detailsTarget)} className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-300/[0.12]">Remove placeholder</button>
+                      ) : null}
+                      {!detailsTarget.isCurrent && detailsTarget.source === 'media_asset' && detailsTarget.mediaAssetId && detailsTarget.externalId ? (
+                        <button type="button" onClick={() => requestDelete(detailsTarget)} className="rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-400/[0.12]">
+                          {detailsTarget.exactDuplicateCount > 1 ? 'Remove duplicate ref' : 'Delete unused image'}
+                        </button>
+                      ) : null}
+                    </div>
+                    {!detailsTarget.isCurrent && (detailsTarget.role === 'logo' || detailsTarget.role === 'hero') && detailsTarget.source === 'media_asset' && detailsTarget.status !== 'approved' ? <p className="mt-2 text-[11px] leading-5 text-gray-500">Approve this asset first if you want to promote it back to the current {detailsTarget.roleLabel.toLowerCase()}.</p> : null}
+                  </section>
+                ) : null}
+
                 <section className="rounded-2xl border border-white/10 bg-black/20 p-4 font-mono text-[10px] leading-5 text-gray-500">
                   <div className="break-all">Owner: {detailsTarget.ownerType}:{detailsTarget.ownerId}</div>
                   {detailsTarget.storageOwnerId && detailsTarget.storageOwnerId !== detailsTarget.ownerId ? <div className="break-all">Media owner UUID: {detailsTarget.storageOwnerId}</div> : null}
@@ -1276,12 +1505,13 @@ const DevImageLibraryPage: React.FC = () => {
                 </section>
               </div>
             </div>
+            </div>
           </div>
         </div>
       ) : null}
 
       {placeholderTarget ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-placeholder-title">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-placeholder-title">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-amber-300/25 bg-[#111315] shadow-2xl">
             <div className="border-b border-white/10 px-5 py-4 sm:px-6">
               <div className="flex items-start gap-3">
@@ -1326,7 +1556,7 @@ const DevImageLibraryPage: React.FC = () => {
       ) : null}
 
       {deleteTarget ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-image-title">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-image-title">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-red-400/20 bg-[#111315] shadow-2xl">
             <div className="border-b border-white/10 px-5 py-4 sm:px-6">
               <div className="flex items-start gap-3">
