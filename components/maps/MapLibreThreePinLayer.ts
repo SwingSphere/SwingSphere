@@ -300,7 +300,8 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
   private selectedLabelListingId: string | null = null;
   private projectedPins = new Map<string, { x: number; y: number; entity: MapPinEntity }>();
   private authoredBuildingListingIds = new Set<string>();
-  private startedAt = performance.now();
+  private hoverChangedAt = 0;
+  private selectionChangedAt = 0;
   private lifecycleStats = {
     listingSyncCount: 0,
     clusterSyncCount: 0,
@@ -309,6 +310,9 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     lastListingSyncDurationMs: 0,
     lastClusterSyncDurationMs: 0,
   };
+  private scratchOrigin = new THREE.Vector3(0, 0, 0);
+  private scratchClearance = new THREE.Vector3(0, 0, 0);
+  private scratchProjected = new THREE.Vector3();
 
   constructor(private listings: MapPinEntity[]) {}
 
@@ -453,11 +457,14 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
   setHovered(id: string | null) {
     if (this.hoveredId === id) return;
     this.hoveredId = id;
+    this.hoverChangedAt = performance.now();
     this.map?.triggerRepaint();
   }
 
   setSelected(id: string | null) {
+    if (this.selectedId === id) return;
     this.selectedId = id;
+    this.selectionChangedAt = performance.now();
     if (id) {
       const selectedView = this.views.get(id);
       if (selectedView) selectedView.group.visible = true;
@@ -485,19 +492,21 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     this.camera.matrixWorldInverse.identity();
     const worldSize = 512 * 2 ** this.map.getZoom();
     const baseScale = 72 / worldSize;
-    const elapsed = (performance.now() - this.startedAt) / 1000;
+    const now = performance.now();
+    const RIPPLE_DURATION_MS = 600;
+    const hoverRippleActive = Boolean(this.hoveredId && (now - this.hoverChangedAt < RIPPLE_DURATION_MS));
+    const selectRippleActive = Boolean(this.selectedId && (now - this.selectionChangedAt < RIPPLE_DURATION_MS));
+    let hasActiveAnimation = hoverRippleActive || selectRippleActive;
 
-    this.clusterViews.forEach((view, id) => {
+    this.clusterViews.forEach((view) => {
       const scale = baseScale * (view.hovered ? 1.08 : 0.92);
       view.group.position.set(view.mercator.x, view.mercator.y, 0);
       view.group.scale.set(scale, -scale, scale);
       view.column.material.color.setHex(view.hovered ? PIN_COLORS.active : PIN_COLORS.accent);
       view.column.material.opacity = view.hovered ? 1 : 0.88;
       view.glow.material.opacity = view.hovered ? 0.24 : 0.12;
-      const phaseSeed = Number.parseInt(id.slice(-2), 36);
-      const ripplePhase = (elapsed * 0.52 + (Number.isFinite(phaseSeed) ? phaseSeed : 0) * 0.03) % 1;
-      view.ripple.scale.setScalar(0.5 + ripplePhase * 2.8);
-      view.ripple.material.opacity = (view.hovered ? 0.16 : 0.07) * (1 - ripplePhase);
+      view.ripple.scale.setScalar(view.hovered ? 1.2 : 0.8);
+      view.ripple.material.opacity = view.hovered ? 0.14 : 0;
     });
 
     this.views.forEach((view, id) => {
@@ -510,7 +519,13 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       // spring-loaded pins. Hover/selection can breathe slightly, but the
       // marker never jumps away from the pointer or disappears at street zoom.
       const targetScale = selected ? 1.08 : hovered ? 0.98 : 0.82;
-      view.currentScale = THREE.MathUtils.lerp(view.currentScale, targetScale, 0.16);
+      const scaleDelta = Math.abs(view.currentScale - targetScale);
+      if (scaleDelta > 0.003) {
+        hasActiveAnimation = true;
+        view.currentScale = THREE.MathUtils.lerp(view.currentScale, targetScale, 0.16);
+      } else {
+        view.currentScale = targetScale;
+      }
       view.currentStemScale = 1;
       view.currentLift = 0;
 
@@ -528,14 +543,18 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       view.glow.material.color.setHex(selected || hovered ? palette.active : palette.base);
       view.glow.material.opacity = selected ? 0.2 : hovered ? 0.15 : 0.08;
       view.glow.scale.setScalar(selected ? 1.28 : hovered ? 1.12 : 0.92);
-      const ripplePhase = (elapsed * 0.62 + Number.parseInt(id.slice(-2), 36) * 0.03) % 1;
-      const rippleScale = 0.35 + ripplePhase * 4;
-      view.ripple.scale.setScalar(rippleScale);
-      view.ripple.material.opacity = selected
-        ? 0.16 * (1 - ripplePhase)
-        : hovered
-          ? 0.1 * (1 - ripplePhase)
-          : 0.035 * (1 - ripplePhase);
+
+      if (selected && selectRippleActive) {
+        const progress = Math.min(1, (now - this.selectionChangedAt) / RIPPLE_DURATION_MS);
+        view.ripple.scale.setScalar(0.35 + progress * 2.8);
+        view.ripple.material.opacity = 0.16 * (1 - progress);
+      } else if (hovered && hoverRippleActive) {
+        const progress = Math.min(1, (now - this.hoverChangedAt) / RIPPLE_DURATION_MS);
+        view.ripple.scale.setScalar(0.35 + progress * 2.2);
+        view.ripple.material.opacity = 0.1 * (1 - progress);
+      } else {
+        view.ripple.material.opacity = 0;
+      }
     });
 
     this.scene.updateMatrixWorld(true);
@@ -543,8 +562,8 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     const canvas = this.map.getCanvas();
     this.views.forEach((view, id) => {
       if (!view.group.visible || view.privacyOpacity <= 0.08) return;
-      const tipCenter = view.tip.localToWorld(new THREE.Vector3(0, 0, 0));
-      const projected = tipCenter.project(this.camera);
+      const tipCenter = view.tip.localToWorld(this.scratchOrigin.set(0, 0, 0));
+      const projected = this.scratchProjected.copy(tipCenter).project(this.camera);
       if (projected.z < -1 || projected.z > 1) return;
       this.projectedPins.set(id, {
         x: (projected.x * 0.5 + 0.5) * canvas.clientWidth,
@@ -556,7 +575,9 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     this.updateLabel(this.selectedLabel, this.selectedId, 16);
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
-    this.map.triggerRepaint();
+    if (hasActiveAnimation || (this.map && typeof this.map.isMoving === 'function' && this.map.isMoving())) {
+      this.map.triggerRepaint();
+    }
   }
 
   private updateLabel(element: HTMLDivElement, id: string | null, clearancePx: number) {
@@ -572,8 +593,9 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       return;
     }
     const tipClearance = view.type === 'club' ? 0.26 : view.type === 'promoter' ? 0.24 : 0.2;
-    const tipTop = view.tip.localToWorld(new THREE.Vector3(0, 0, tipClearance));
-    const projected = tipTop.clone().project(this.camera);
+    this.scratchClearance.set(0, 0, tipClearance);
+    const tipTop = view.tip.localToWorld(this.scratchClearance);
+    const projected = this.scratchProjected.copy(tipTop).project(this.camera);
     const canvas = this.map.getCanvas();
     const point = {
       x: (projected.x * 0.5 + 0.5) * canvas.clientWidth,

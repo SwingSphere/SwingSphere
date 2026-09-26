@@ -139,7 +139,7 @@ export const MapEngineBase = forwardRef<MapEngineBaseHandle, MapEngineBaseProps>
         layers: ["unclustered-point"],
       });
       const ids = Array.from(
-        new Set(
+        new Set<string>(
           feats
             .map((f: any) => f?.properties?.id)
             .filter((v: unknown): v is string => typeof v === "string"),

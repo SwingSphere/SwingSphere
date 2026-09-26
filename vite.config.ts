@@ -89,11 +89,22 @@ const loadPublicListings = () => {
     }
 
     const publicListing = JSON.parse(JSON.stringify(listing));
-    if (listing.locationVisibility === 'approximate_public' || listing.isAddressPrivate === true) {
+    if (
+      listing.locationVisibility === 'approximate_public'
+      || listing.locationVisibility === 'private'
+      || listing.locationVisibility === 'hidden'
+      || listing.isAddressPrivate === true
+      || listing.isPrivateLocation === true
+      || listing.locationMeta?.status === 'private'
+    ) {
       const address = listing.geopoint?.address ?? {};
       publicListing.location = [address.city, address.region, address.postalCode, address.country]
         .filter(Boolean)
         .join(', ');
+      // Geocoding and building-verification metadata can retain the precise
+      // street address even after the public point and label are rounded.
+      publicListing.locationMeta = { status: 'approximate' };
+      publicListing.isAddressPrivate = true;
       publicListing.geopoint = {
         latitude: Math.round(latitude * 100) / 100,
         longitude: Math.round(longitude * 100) / 100,
@@ -168,7 +179,8 @@ const loadPublicGlobeShowcaseEvents = () => {
     const city = String(address.city ?? '').trim();
     const region = String(address.region ?? '').trim();
     const country = String(address.country ?? '').trim();
-    const isApproximate = listing.locationVisibility === 'approximate_public';
+    const isApproximate = listing.isAddressPrivate === true
+      || listing.locationVisibility === 'approximate_public';
     const publicLatitude = isApproximate ? Math.round(latitude * 100) / 100 : latitude;
     const publicLongitude = isApproximate ? Math.round(longitude * 100) / 100 : longitude;
     const logoImageUrl = resolvePublicListingLogoUrl(listing);
@@ -788,6 +800,41 @@ const listingToAddress = (listing: any): GeoAddress => ({
   isCityState: listing?.geopoint?.address?.isCityState,
 });
 
+const buildGeoPaths = (address: GeoAddress, baseDir: string = '/geo') => {
+  const countrySlug = address.countrySlug || normalizeCountry(address.country || '') || 'us';
+  const admin1Slug = address.admin1Slug || normalizeAdmin1(address.region || '', countrySlug) || '';
+  const citySlug = address.citySlug || slugifyPlace(address.city || '') || '';
+  const postalCode = address.postalCode ? slugifyPlace(address.postalCode) : undefined;
+
+  const isAbs = path.isAbsolute(baseDir);
+  const join = (...parts: string[]) => (isAbs ? path.join(...parts) : parts.join('/').replace(/\/+/g, '/'));
+
+  const country = join(baseDir, 'country', countrySlug, 'outline.geojson');
+  const admin1 = admin1Slug ? join(baseDir, 'country', countrySlug, admin1Slug, 'outline.geojson') : undefined;
+  const city = citySlug ? join(baseDir, 'country', countrySlug, admin1Slug || '_admin1', citySlug, 'outline.geojson') : undefined;
+  const zip = postalCode ? join(baseDir, 'country', countrySlug, admin1Slug || '_admin1', 'zip', `${postalCode}.geojson`) : undefined;
+
+  return {
+    countrySlug,
+    admin1Slug,
+    normalizedAdmin1Slug: admin1Slug,
+    citySlug,
+    postalCode,
+    paths: {
+      country,
+      admin1,
+      city,
+      zip,
+    },
+  };
+};
+
+const buildGeoFilePaths = (address: GeoAddress, baseDir: string = PUBLIC_GEO_ROOT) =>
+  buildGeoPaths(address, baseDir);
+
+const buildGeoUrlPaths = (address: GeoAddress) =>
+  buildGeoPaths(address, '/geo');
+
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const GEO_USER_AGENT = 'SwingSphereGeoAdmin/1.0';
@@ -1388,8 +1435,8 @@ const normalizeCountyQueryForCityFallback = (rawQuery: string) => {
 };
 
 type DiskGeojsonReadResult =
-  | { ok: true; geojson: any }
-  | { ok: false; invalid: boolean; message: string };
+  | { ok: true; geojson: any; invalid?: false; message?: string }
+  | { ok: false; invalid: boolean; message: string; geojson?: any };
 
 const LEGACY_GEOJSON_INVALID_MESSAGE = 'Found legacy boundary file but it is not valid GeoJSON (Feature/FeatureCollection).';
 
@@ -1409,6 +1456,19 @@ const adaptToFeatureCollection = (parsed: any): DiskGeojsonReadResult => {
     return { ok: false, invalid: true, message: LEGACY_GEOJSON_INVALID_MESSAGE };
   }
   return { ok: false, invalid: true, message: LEGACY_GEOJSON_INVALID_MESSAGE };
+};
+
+const readGeojsonFromDisk = (filePath: string): DiskGeojsonReadResult => {
+  if (!fs.existsSync(filePath)) {
+    return { ok: false, invalid: false, message: 'File does not exist.' };
+  }
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return adaptToFeatureCollection(parsed);
+  } catch (err: any) {
+    return { ok: false, invalid: true, message: err?.message || 'Failed to read/parse GeoJSON from disk.' };
+  }
 };
 
 

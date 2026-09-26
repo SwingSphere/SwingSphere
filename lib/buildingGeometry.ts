@@ -27,6 +27,16 @@ export type ProviderFootprintFeature = {
   sourceLayer?: string | null;
 };
 
+/**
+ * MapLibre exposes vector-tile geometry through a prototype getter. Object
+ * spread does not copy that getter, so explicitly materialize geometry before
+ * a provider feature crosses into React state or another plain-object cache.
+ */
+export const materializeProviderFootprintFeature = <T extends ProviderFootprintFeature>(feature: T): T => ({
+  ...feature,
+  geometry: feature.geometry,
+});
+
 export type IndividualBuildingFootprint = {
   id: string;
   fingerprint: string;

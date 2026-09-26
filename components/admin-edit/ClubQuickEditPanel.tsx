@@ -9,6 +9,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAdminEditMode } from './AdminEditModeContext';
 import { nameSlug } from '../../lib/identityUtils';
 import { getClubSocialLinks, SOCIAL_NETWORK_OPTIONS, syncLegacySocialFields } from '../../lib/socialLinks';
+import DayProgramFields from '../club/DayProgramFields';
 
 export type ClubQuickEditField = 'title' | 'description' | 'schedule' | 'links' | 'logo' | 'hero' | 'gallery';
 
@@ -152,6 +153,9 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
                       <label className="text-xs font-semibold text-gray-400">Close
                         <input type="time" value={day.close ?? ''} onChange={(event) => updateScheduleDay(index, { close: event.target.value })} className="mt-1 block w-full rounded-lg border border-white/10 bg-black/35 px-2 py-2 text-sm text-white" />
                       </label>
+                      <div className="col-span-2">
+                        <DayProgramFields day={day} onChange={(patch) => updateScheduleDay(index, patch)} />
+                      </div>
                     </div>
                   ) : null}
                 </div>

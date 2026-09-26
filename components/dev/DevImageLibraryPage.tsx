@@ -17,6 +17,7 @@ type ImageRecord = {
   ownerType: MediaOwnerType;
   ownerId: string;
   ownerName: string;
+  ownerWebsite?: string;
   storageOwnerId?: string;
   role: MediaRole;
   roleLabel: string;
@@ -48,6 +49,7 @@ type LegacyMediaEntity = {
   id: string;
   type: Exclude<MediaOwnerType, 'user'>;
   name: string;
+  website?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
   galleryImageUrls?: string[];
@@ -65,7 +67,7 @@ type ImageDimensions = {
   source: 'source' | 'delivery';
 };
 
-type QuickView = 'all' | 'needs_attention' | 'pending_review';
+type QuickView = 'all' | 'needs_attention' | 'external' | 'pending_review';
 type ModerationFilter = 'all' | MediaStatus | 'legacy';
 type AttentionTone = 'amber' | 'red' | 'violet';
 type AttentionReason = {
@@ -101,22 +103,56 @@ const roleLabels: Record<MediaRole, string> = {
 
 const isNonEmptyUrl = (value: unknown): value is string => typeof value === 'string' && Boolean(value.trim());
 
+const normalizeWebsiteUrl = (value: unknown): string | undefined => {
+  if (!isNonEmptyUrl(value)) return undefined;
+  const raw = value.trim();
+  try {
+    return new URL(raw).toString();
+  } catch {
+    try {
+      return new URL(`https://${raw}`).toString();
+    } catch {
+      return undefined;
+    }
+  }
+};
+
+// Legacy fields can still point directly at a venue's server. A working URL
+// today is not a durable SwingSphere-hosted image.
+const isExternalImageReference = (image: ImageRecord) => {
+  if (!image.isCurrent || image.source !== 'legacy_url' || !image.url) return false;
+  try {
+    const host = new URL(image.url, window.location.origin).hostname.toLowerCase();
+    return host !== window.location.hostname.toLowerCase()
+      && host !== 'swingsphere.co'
+      && host !== 'www.swingsphere.co'
+      && host !== 'imagedelivery.net'
+      && !host.endsWith('.imagedelivery.net')
+      && !host.endsWith('.supabase.co');
+  } catch {
+    return false;
+  }
+};
+
 const addLegacyEntityImages = (target: ImageRecord[], entity: LegacyMediaEntity) => {
   const add = (role: MediaRole, value: unknown, suffix: string) => {
     if (!isNonEmptyUrl(value)) return;
+    const replacedByAsset = (role === 'logo' || role === 'hero')
+      && entity.mediaAssets?.some((asset) => asset.role === role);
     target.push({
       id: `legacy:${entity.type}:${entity.id}:${suffix}:${value}`,
       ownerType: entity.type,
       ownerId: entity.id,
       ownerName: entity.name,
+      ownerWebsite: normalizeWebsiteUrl(entity.website),
       role,
       roleLabel: roleLabels[role],
       url: value.trim(),
       source: 'legacy_url',
-      isCurrent: true,
-      currentReason: 'Current entity field',
+      isCurrent: !replacedByAsset,
+      currentReason: replacedByAsset ? undefined : 'Current entity field',
       ownerResolved: true,
-      usage: 'current',
+      usage: replacedByAsset ? 'extra' : 'current',
       ownerRoleCount: 1,
       exactDuplicateCount: 1,
       currentConflict: false,
@@ -159,10 +195,10 @@ const loadImageLibrary = async (): Promise<LoadResult> => {
       .order('updated_at', { ascending: false }),
   ]);
 
-  const entityIdentities = new Map<string, { id: string; name: string }>();
+  const entityIdentities = new Map<string, { id: string; name: string; website?: string }>();
   const attachedAssetIds = new Set<string>();
-  const registerEntity = (entity: { type: MediaOwnerType; id: string; name: string; mediaAssets?: MediaAsset[] }) => {
-    const identity = { id: entity.id, name: entity.name };
+  const registerEntity = (entity: { type: MediaOwnerType; id: string; name: string; website?: string; mediaAssets?: MediaAsset[] }) => {
+    const identity = { id: entity.id, name: entity.name, website: normalizeWebsiteUrl(entity.website) };
     entityIdentities.set(`${entity.type}:${entity.id}`, identity);
     entityIdentities.set(`${entity.type}:${getMediaOwnerId(entity.type, entity.id)}`, identity);
     (entity.mediaAssets ?? []).forEach((asset) => attachedAssetIds.add(asset.id));
@@ -264,6 +300,7 @@ const loadImageLibrary = async (): Promise<LoadResult> => {
         ownerType: asset.owner_type,
         ownerId: resolvedOwner?.id ?? asset.owner_id,
         ownerName: resolvedOwner?.name ?? asset.owner_id,
+        ownerWebsite: resolvedOwner?.website,
         storageOwnerId: asset.owner_id,
         role: asset.role,
         roleLabel: roleLabels[asset.role],
@@ -414,6 +451,7 @@ const getAttentionReasons = (
 ): AttentionReason[] => {
   const reasons: AttentionReason[] = [];
   if (isPlaceholderRecord(image)) reasons.push({ key: 'placeholder', label: 'Placeholder', detail: 'Known temporary placeholder media is still referenced.', tone: 'amber' });
+  if (isExternalImageReference(image)) reasons.push({ key: 'external', label: 'External image', detail: 'This current image is loaded from another website. Upload a copy to SwingSphere Images and attach it here so changes or outages at that site do not break the listing.', tone: 'amber' });
   if (image.usage === 'extra') reasons.push({ key: 'extra', label: 'Extra upload', detail: 'Another image is currently selected for this owner and role.', tone: 'amber' });
   if (image.exactDuplicateCount > 1) reasons.push({ key: 'duplicate', label: 'Duplicate ref', detail: 'Multiple records point to the same underlying image reference.', tone: 'violet' });
   if (image.usage === 'unresolved' || !image.ownerResolved) reasons.push({ key: 'unresolved', label: 'Unresolved', detail: 'SwingSphere cannot confidently match this media to a current owner state.', tone: 'violet' });
@@ -666,6 +704,7 @@ const DevImageLibraryPage: React.FC = () => {
       if (usage === 'placeholder' && !isPlaceholderRecord(image)) return false;
       if (usage !== 'all' && usage !== 'exact_duplicate' && usage !== 'placeholder' && image.usage !== usage) return false;
       if (quickView === 'needs_attention' && attentionReasons.length === 0) return false;
+      if (quickView === 'external' && !isExternalImageReference(image)) return false;
       if (quickView === 'pending_review' && image.status !== 'pending_review') return false;
       if (brokenOnly && !broken) return false;
       if (!normalizedQuery) return true;
@@ -686,6 +725,7 @@ const DevImageLibraryPage: React.FC = () => {
   const extraCount = images.filter((image) => image.usage === 'extra').length;
   const exactDuplicateCount = images.filter((image) => image.exactDuplicateCount > 1).length;
   const placeholderCount = images.filter(isPlaceholderRecord).length;
+  const externalCount = images.filter(isExternalImageReference).length;
   const unresolvedCount = images.filter((image) => image.usage === 'unresolved' || !image.ownerResolved).length;
   const pendingReviewCount = images.filter((image) => image.status === 'pending_review').length;
   const needsAttentionCount = images.filter((image) => getAttentionReasons(image, brokenIds.has(image.id) || !image.url, dimensionsById[image.id]).length > 0).length;
@@ -888,12 +928,12 @@ const DevImageLibraryPage: React.FC = () => {
     setBrokenOnly(false);
   };
 
-  const applySummaryFilter = (kind: 'current' | 'placeholder' | 'extra' | 'duplicate' | 'unresolved' | 'broken') => {
+  const applySummaryFilter = (kind: 'current' | 'placeholder' | 'external' | 'extra' | 'duplicate' | 'unresolved' | 'broken') => {
     setQuery('');
     setOwnerType('all');
     setRole('all');
     setSource('all');
-    setQuickView('all');
+    setQuickView(kind === 'external' ? 'external' : 'all');
     setModerationFilter('all');
     setBrokenOnly(false);
     setUsage(kind === 'current'
@@ -959,10 +999,11 @@ const DevImageLibraryPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
           {[
             { kind: 'current' as const, label: 'Current / in use', value: currentCount, description: 'Referenced by the current entity/profile display state. These are protected from generic deletion; recognized placeholders remain separately removable.' },
             { kind: 'placeholder' as const, label: 'Placeholders', value: placeholderCount, description: 'Known temporary placeholder URLs such as Picsum or placeholder services. These should eventually be replaced or cleared.' },
+            { kind: 'external' as const, label: 'External images', value: externalCount, description: 'Current image references hosted on other websites. They may work now but can disappear or block hotlinking. Upload replacements into SwingSphere Images.' },
             { kind: 'extra' as const, label: 'Extra uploads', value: extraCount, description: 'A different image is current for the same owner + role, so this upload is retained history but is not selected for display.' },
             { kind: 'duplicate' as const, label: 'Exact duplicate refs', value: exactDuplicateCount, description: 'Multiple records point to the exact same Cloudflare image ID or URL. This does not mean visually similar re-uploads are detected yet.' },
             { kind: 'unresolved' as const, label: 'Unresolved', value: unresolvedCount, description: 'SwingSphere cannot confidently resolve the owner or determine a current attachment for this media reference.' },
@@ -993,6 +1034,7 @@ const DevImageLibraryPage: React.FC = () => {
             {[
               { id: 'all' as const, label: 'All media', count: images.length },
               { id: 'needs_attention' as const, label: 'Needs attention', count: needsAttentionCount },
+              { id: 'external' as const, label: 'External images', count: externalCount },
               { id: 'pending_review' as const, label: 'Pending review', count: pendingReviewCount },
             ].map((view) => (
               <button
@@ -1125,6 +1167,7 @@ const DevImageLibraryPage: React.FC = () => {
                     <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
                       {image.isCurrent ? <span className="rounded-md bg-emerald-500/90 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">Current / in use</span> : null}
                       {placeholder ? <span className="rounded-md bg-amber-300 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">Placeholder</span> : null}
+                      {isExternalImageReference(image) ? <span className="rounded-md bg-amber-300 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">External image</span> : null}
                       <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white">{ownerLabels[image.ownerType]}</span>
                       <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-300">{image.roleLabel}</span>
                       {image.ownerRoleCount > 1 ? <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200">{image.ownerRoleCount} {image.roleLabel} refs</span> : null}
@@ -1282,10 +1325,22 @@ const DevImageLibraryPage: React.FC = () => {
         <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-hidden bg-black/75 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
           <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-6xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#111315] shadow-2xl sm:max-h-[calc(100vh-3rem)]">
             <div className="sticky top-0 z-30 flex items-start justify-between gap-4 border-b border-white/10 bg-[#111315]/95 px-5 py-4 backdrop-blur-xl sm:px-6">
-              <div>
+              <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300/70">Entity media workspace</div>
                 <h2 id="media-details-title" className="mt-1 text-xl font-semibold text-white">{detailsTarget.ownerName}</h2>
                 <p className="mt-1 text-sm text-gray-400">{ownerLabels[detailsTarget.ownerType]} · {detailsOwnerMedia.length} media reference{detailsOwnerMedia.length === 1 ? '' : 's'} · inspecting {detailsTarget.roleLabel.toLowerCase()}</p>
+                {detailsTarget.ownerWebsite ? (
+                  <a
+                    href={detailsTarget.ownerWebsite}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300 transition hover:text-sky-200"
+                    title={detailsTarget.ownerWebsite}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {detailsTarget.ownerType === 'club' ? 'Open club website' : 'Open website'}
+                  </a>
+                ) : null}
               </div>
               <button type="button" onClick={() => setDetailsTarget(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-gray-400 transition hover:bg-white/[0.08] hover:text-white" aria-label="Close media details"><X className="h-4 w-4" /></button>
             </div>

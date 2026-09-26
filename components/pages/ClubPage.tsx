@@ -4,7 +4,9 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath } from '../../lib/entityUtils';
-import { resolveBrandLogo } from '../../lib/entityBrandMedia';
+import { isPlaceholderMediaUrl, resolveBrandLogo } from '../../lib/entityBrandMedia';
+import { getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import ClubDetailTemplate from '../club/ClubDetailTemplate';
 import ClubPageAdminEditor from '../admin-edit/ClubPageAdminEditor';
 import ClubQuickEditPanel, { type ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
@@ -61,15 +63,31 @@ const ClubPage: React.FC = () => {
       .filter((event) => new Date(event.time.start).getTime() >= now)
       .sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime())
       .slice(0, 12);
-    return upcoming.map((event) => ({
-      id: event.id,
-      name: event.name,
-      dateTime: formatEventTimeRange(event.time.start, event.time.end),
-      city: [event.geopoint?.address?.city, event.geopoint?.address?.region].filter(Boolean).join(', ') || event.location || 'Location TBD',
-      tags: event.tags ?? [],
-      to: getEventCanonicalPath(event, index),
-    }));
-  }, [club, clubKey, index]);
+    return upcoming.map((event) => {
+      const organizer = organizations.find((organization) => organization.id === event.organizerOrganizationId);
+      const organizerLogo = organizer?.logoImageUrl;
+      const seriesLogo = event.eventSeriesId ? index.eventSeriesById.get(event.eventSeriesId)?.logoImageUrl : undefined;
+      const flyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer');
+      const flyerUrl = flyerAsset
+        ? getCloudflareImageUrl({ externalId: flyerAsset.external_id, variant: 'flyercard' })
+        : event.headerImageUrl;
+      return {
+        id: event.id,
+        name: event.name,
+        dateTime: formatEventTimeRange(event.time.start, event.time.end),
+        tags: [
+          ...(event.tags?.includes('Couples Welcome') || event.tags?.includes('Couples Only') ? ['Couples'] : []),
+          ...(event.tags?.includes('Single Women Welcome') ? ['Single women'] : []),
+          ...(event.tags?.includes('Single Men Welcome') ? ['Single men'] : []),
+          ...(event.tags?.includes('Approved Single Men Welcome') ? ['Approved single men'] : []),
+        ],
+        logoUrl: [organizerLogo, seriesLogo, getListingPrimaryLogoUrl(event)].find((url) => url && !isPlaceholderMediaUrl(url)),
+        logoAlt: organizer?.name ?? event.hostName ?? 'Event organizer',
+        flyerUrl: flyerUrl && !isPlaceholderMediaUrl(flyerUrl) ? flyerUrl : undefined,
+        to: getEventCanonicalPath(event, index),
+      };
+    });
+  }, [club, clubKey, index, organizations]);
 
   if (isLoading) {
     return (

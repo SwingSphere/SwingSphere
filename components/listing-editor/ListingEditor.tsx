@@ -6,6 +6,7 @@ import { clubKey, normalizeHostName } from '../../lib/identityUtils';
 import { formatListingAddress, isResolvedAddressPlausibleForInput, validateListingLocation, type ListingAddress } from '../../lib/listingLocationValidation';
 import { findPotentialListingDuplicates, type ListingDuplicateMatch } from '../../lib/listingDuplicateDetection';
 import ListingLocationPreview from './ListingLocationPreview';
+import DayProgramFields from '../club/DayProgramFields';
 import Button from '../Button';
 import MediaUploader from '../media/MediaUploader';
 import { EditorInput as Field, EditorSelect as Select, EditorSurface as Section, EditorTextArea as TextArea } from '../editor/EditorPrimitives';
@@ -1728,6 +1729,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
                       />
                     </div>
                     <div className="space-y-5 md:col-span-2">
+                      {isOpen ? <DayProgramFields day={day} onChange={(patch) => updateScheduleDay(index, { ...day, ...patch })} /> : null}
                       <CheckboxGroup
                         title="Day-specific welcome signals"
                         options={CLUB_SCHEDULE_ACCESS_RULES}
@@ -1793,6 +1795,9 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
                       updateScheduleDay(index, { ...day, close: event.target.value });
                     }}
                   />
+                  <div className="md:col-span-2">
+                    <DayProgramFields day={day} onChange={(patch) => updateScheduleDay(index, { ...day, ...patch })} />
+                  </div>
                   <div className="md:col-span-2">
                     <CheckboxGroup
                       title="Rules for this day"

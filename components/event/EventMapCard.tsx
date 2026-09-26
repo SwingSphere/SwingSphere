@@ -1,4 +1,6 @@
 import React from 'react';
+import { MapPinned } from 'lucide-react';
+import { getStreetViewPath } from '../../lib/streetViewAvailability';
 import MiniMapHybrid from '../maps/MiniMapHybrid';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import { trackOutboundClick } from '../../lib/analytics/outboundTracking';
@@ -11,6 +13,7 @@ type EventMapCardProps = {
   lat: number;
   lng: number;
   isPrivateLocation: boolean;
+  streetViewListingId?: string | null;
   organizationId?: string;
   eventSeriesId?: string;
   placementPrefix: string;
@@ -26,6 +29,7 @@ const EventMapCard: React.FC<EventMapCardProps> = ({
   lat,
   lng,
   isPrivateLocation,
+  streetViewListingId,
   organizationId,
   eventSeriesId,
   placementPrefix,
@@ -68,6 +72,15 @@ const EventMapCard: React.FC<EventMapCardProps> = ({
           showAttributionText={false}
         />
       </div>
+
+      {!isPrivateLocation && streetViewListingId ? (
+        <a
+          href={getStreetViewPath(streetViewListingId)}
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-300/30 bg-red-500/90 px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(197,29,52,0.18)] hover:bg-red-500"
+        >
+          <MapPinned size={16} />View on Map
+        </a>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
         <TrackedExternalLink

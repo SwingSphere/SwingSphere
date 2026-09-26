@@ -10,9 +10,9 @@ import {
 export const LISTINGS_SOURCE_ID = 'swing-listings';
 export const LISTING_INTERACTION_LAYER_ID = 'listing-interaction-hit';
 
-const hoverState = ['boolean', ['feature-state', 'hover'], false] as const;
-const pulseState = ['coalesce', ['feature-state', 'pulse'], 0.5] as const;
-const pulseOpacity = [
+const hoverState: any = ['boolean', ['feature-state', 'hover'], false];
+const pulseState: any = ['coalesce', ['feature-state', 'pulse'], 0.5];
+const pulseOpacity: any = [
   'interpolate',
   ['linear'],
   pulseState,
@@ -22,8 +22,8 @@ const pulseOpacity = [
   0.22,
   1,
   0.18,
-] as const;
-const pulseRadius = [
+];
+const pulseRadius: any = [
   'interpolate',
   ['linear'],
   pulseState,
@@ -33,8 +33,8 @@ const pulseRadius = [
   13.3,
   1,
   12.4,
-] as const;
-const selectedPulseOpacity = [
+];
+const selectedPulseOpacity: any = [
   'interpolate',
   ['linear'],
   pulseState,
@@ -44,8 +44,8 @@ const selectedPulseOpacity = [
   0.56,
   1,
   0.5,
-] as const;
-const selectedPulseRadius = [
+];
+const selectedPulseRadius: any = [
   'interpolate',
   ['linear'],
   pulseState,
@@ -55,16 +55,16 @@ const selectedPulseRadius = [
   20.4,
   1,
   19.5,
-] as const;
+];
 
-const pinOpacity = [
+const pinOpacity: any = [
   'case',
   hoverState,
   explorerPinTokens.hoverOpacity,
   explorerPinTokens.idleOpacity,
-] as const;
+];
 
-const labelText = [
+const labelText: any = [
   'format',
   ['get', 'labelTitle'],
   {
@@ -78,9 +78,9 @@ const labelText = [
     'font-scale': 0.72,
     'text-font': ['literal', ['Open Sans Regular', 'Arial Unicode MS Regular']],
   },
-] as const;
+];
 
-const venueLabelLayout = {
+const venueLabelLayout: any = {
   'text-field': labelText,
   'text-size': [
     'interpolate',
@@ -103,14 +103,14 @@ const venueLabelLayout = {
   'text-ignore-placement': false,
   'text-pitch-alignment': 'viewport',
   'text-rotation-alignment': 'viewport',
-} as const;
+};
 
-const venueLabelPaint = {
+const venueLabelPaint: any = {
   'text-color': '#F5F5F5',
   'text-halo-color': 'rgba(10,12,16,0.86)',
   'text-halo-width': 1.35,
   'text-halo-blur': 0.85,
-} as const;
+};
 
 export const listingLayers: Array<CircleLayerSpecification | SymbolLayerSpecification> = [
   {

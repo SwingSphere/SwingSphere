@@ -96,7 +96,7 @@ const ListingLocationPreview: React.FC<ListingLocationPreviewProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
-    const handleClick = (event: maplibregl.MapMouseEvent & maplibregl.EventData) => {
+    const handleClick = (event: maplibregl.MapMouseEvent) => {
       if (!isAdjusting || !onAdjustPin) return;
       onAdjustPin({ latitude: event.lngLat.lat, longitude: event.lngLat.lng });
     };

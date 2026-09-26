@@ -10,7 +10,7 @@ import EventPageLayout from '../event/EventPageLayout';
 import EventMapCard from '../event/EventMapCard';
 import EventCalendarCard from '../event/EventCalendarCard';
 import EventHostCard from '../event/EventHostCard';
-import { getListingImageUrl } from '../../lib/listingImage';
+import { getListingImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
@@ -25,6 +25,9 @@ import EventQuickEditPanel, { type EventQuickEditField } from '../admin-edit/Eve
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import { isPastEvent } from '../../lib/eventLifecycle';
+import { resolveStreetViewSourceListingId } from '../../lib/streetViewAvailability';
+import { isApproximateLocation } from '../../lib/publicLocation';
+import { getVenueForListing } from '../../lib/entityCompatibility';
 
 const MOCK_EVENT_SLUG = 'dev-mock-event';
 
@@ -90,7 +93,7 @@ const createMockEvent = (id: string = MOCK_EVENT_SLUG): EventData => {
 const EventPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const key = parsePrettyKeyParam(slug ?? '');
-  const { index, isLoading, error } = useEntityIndex();
+  const { index, listings, venues, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
   const isMockRoute = key === MOCK_EVENT_SLUG || key.startsWith('dummy-event-');
 
   const resolvedEvent = index?.eventsByKey.get(key) ?? (isMockRoute ? createMockEvent(key) : null);
@@ -149,7 +152,9 @@ const EventPage: React.FC = () => {
     ) ?? null;
   }, [hostName, index]);
   const presenterName = organizerOrganization?.name || hostName || 'Host TBD';
-  const presenterLogoUrl = organizerOrganization?.logoImageUrl || hostUser?.avatarUrl;
+  const presenterLogoUrl = organizerOrganization?.logoImageUrl
+    || (organizerOrganization && venue?.ownerOrganizationId === organizerOrganization.id ? getListingPrimaryLogoUrl(venue) : undefined)
+    || hostUser?.avatarUrl;
   const presenterHeroUrl = organizerOrganization?.headerImageUrl
     || (organizerOrganization && venue?.ownerOrganizationId === organizerOrganization.id ? getListingImageUrl(venue) : undefined);
   const presenterBio = organizerOrganization?.descriptionShort || organizerOrganization?.descriptionFull || hostUser?.bio;
@@ -164,7 +169,17 @@ const EventPage: React.FC = () => {
     const parts = [city, region].filter(Boolean).join(', ');
     return `${parts}${emoji ? ` ${emoji}` : ''}`;
   }, [event]);
-  const isPrivateLocation = Boolean(event?.isAddressPrivate);
+  const entityCollections = useMemo(
+    () => ({ listings, venues, organizations, relationships: organizationVenueRelationships }),
+    [listings, venues, organizations, organizationVenueRelationships],
+  );
+  const physicalVenue = event ? getVenueForListing(event, entityCollections) : null;
+  const isPrivateLocation = Boolean(event && (
+    isApproximateLocation(event) || (physicalVenue && physicalVenue.visibility !== 'public_exact')
+  ));
+  const streetViewListingId = event && !isPrivateLocation
+    ? resolveStreetViewSourceListingId(event, entityCollections)
+    : null;
 
   if (isLoading) {
     return (
@@ -317,15 +332,30 @@ const EventPage: React.FC = () => {
                     day: 'numeric',
                     year: 'numeric',
                   }).format(new Date(occurrence.time.start));
+                  const occurrenceHeroUrl = getListingPrimaryHeroUrl(occurrence);
                   return (
                     <Link
                       key={occurrence.id}
                       to={getEventCanonicalPath(occurrence, index)}
-                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-amber-300/40 hover:bg-amber-300/[0.06]"
+                      className="group relative isolate overflow-hidden rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-amber-300/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                     >
+                      {occurrenceHeroUrl && (
+                        <>
+                          <img
+                            src={occurrenceHeroUrl}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            onError={(error) => { error.currentTarget.style.display = 'none'; }}
+                            className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-top opacity-75 transition duration-300 group-hover:scale-105"
+                          />
+                          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-[#090b10]/85 via-[#090b10]/65 to-[#090b10]/35" />
+                          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-[#090b10]/65 to-transparent" />
+                        </>
+                      )}
                       <div className="font-bold text-white">{occurrence.occurrenceTitle || occurrence.name}</div>
                       <div className="mt-1 text-sm text-amber-200">{occurrenceDate}</div>
-                      <div className="mt-1 truncate text-xs text-gray-400">
+                      <div className="mt-1 truncate text-xs text-gray-200">
                         {[occurrenceAddress.city, occurrenceAddress.region].filter(Boolean).join(', ')}
                       </div>
                     </Link>
@@ -344,6 +374,7 @@ const EventPage: React.FC = () => {
               lat={eventDisplayCoords.lat}
               lng={eventDisplayCoords.lng}
               isPrivateLocation={isPrivateLocation}
+              streetViewListingId={streetViewListingId}
               organizationId={event.organizerOrganizationId}
               eventSeriesId={event.eventSeriesId}
               placementPrefix="event_page_mobile_directions"
@@ -363,7 +394,7 @@ const EventPage: React.FC = () => {
             hostPath={hostPath}
             hostEventsCount={hostEventsCount}
             hostAvatarUrl={hostUser?.avatarUrl}
-            hostLogoUrl={organizerOrganization?.logoImageUrl}
+            hostLogoUrl={presenterLogoUrl}
             hostHeroUrl={presenterHeroUrl}
             hostBio={presenterBio}
           />
@@ -381,6 +412,7 @@ const EventPage: React.FC = () => {
             lat={eventDisplayCoords.lat}
             lng={eventDisplayCoords.lng}
             isPrivateLocation={isPrivateLocation}
+            streetViewListingId={streetViewListingId}
             organizationId={event.organizerOrganizationId}
             eventSeriesId={event.eventSeriesId}
             placementPrefix="event_page_rail_directions"

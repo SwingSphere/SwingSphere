@@ -18,6 +18,7 @@ export type MobileExplorerPrototypeProps = {
   onSurfaceModeChange: (mode: 'globe' | 'map') => void;
   listings: Listing[];
   selectedListingId: string | null;
+  activeRegionId?: string | null;
   activeRegionName?: string | null;
   searchText: string;
   onSearchTextChange: (value: string) => void;
@@ -49,6 +50,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   surfaceMode,
   listings,
   selectedListingId,
+  activeRegionId,
   activeRegionName,
   searchText,
   onSearchTextChange,
@@ -66,6 +68,21 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   const [resultsOpen, setResultsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<MobileFilter>('all');
+  const lastAutoOpenedDestinationRef = React.useRef<string | null>(null);
+
+  // Automatically open the Destination panel when a destination/pin is explicitly selected
+  React.useEffect(() => {
+    const destinationKey = activeRegionId || (activeRegionName && activeRegionName !== 'Explore the world' ? activeRegionName : null);
+    if (destinationKey) {
+      if (destinationKey !== lastAutoOpenedDestinationRef.current) {
+        lastAutoOpenedDestinationRef.current = destinationKey;
+        setSheetOpen(true);
+      }
+    } else {
+      lastAutoOpenedDestinationRef.current = null;
+      setSheetOpen(false);
+    }
+  }, [activeRegionId, activeRegionName]);
 
   const visibleListings = useMemo(
     () => activeFilter === 'all' ? listings : listings.filter((listing) => listing.type === activeFilter),
@@ -123,7 +140,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
         </div>
       </div>
 
-      <div className={`pointer-events-auto absolute flex flex-col gap-2 ${tabletMode ? 'right-6 top-[max(1.5rem,env(safe-area-inset-top))]' : 'right-3 top-[calc(max(1.45rem,env(safe-area-inset-top))+7.55rem)]'}`}>
+      <div className={`pointer-events-auto absolute flex flex-col gap-2 ${tabletMode ? 'right-6 top-[max(1.5rem,env(safe-area-inset-top))]' : 'right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(max(1.45rem,env(safe-area-inset-top))+7.55rem)]'}`}>
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
@@ -151,7 +168,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
             : 'inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] rounded-[28px] shadow-[0_-22px_70px_rgba(0,0,0,0.58)]',
           sheetOpen ? (tabletMode ? 'h-[320px]' : 'h-[330px]') : (tabletMode ? 'h-[170px]' : 'h-[158px]'),
         ].join(' ')}
-        aria-label="Destination and nearby listings"
+        aria-label="Destination panel"
       >
         <button
           type="button"

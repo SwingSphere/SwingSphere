@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Listing } from '../types';
-import { getListingImageUrl, getListingLogoUrl, handleListingImageError } from '../lib/listingImage';
+import { getListingImageUrl, getListingLogoUrl, getListingPrimaryFlyerUrl, handleListingImageError } from '../lib/listingImage';
 import ListingAccessSummary from './listing/ListingAccessSummary';
 import EntityTypePill from './entity/EntityTypePill';
 
@@ -32,21 +32,25 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
   const tags = (listing.type === 'club' ? listing.generalAmenities ?? [] : listing.tags ?? []).slice(0, 2);
   const location = formatCardLocation(listing);
   const logoUrl = getListingLogoUrl(listing);
+  const backgroundUrl = listing.type === 'event' ? getListingPrimaryFlyerUrl(listing) : getListingImageUrl(listing);
   const monochrome = listing.type === 'club' && (listing.mediaPresentation === 'monochrome' || listing.id === 'club-epicure-cape-town');
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-gray-950 text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full"
+      className="group relative h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_30%,#461920,#090b10_70%)] text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full"
     >
-      <img
-        src={getListingImageUrl(listing)}
-        onError={handleListingImageError}
+      {backgroundUrl ? <img
+        src={backgroundUrl}
+        onError={(event) => {
+          if (listing.type === 'event') event.currentTarget.style.display = 'none';
+          else handleListingImageError(event);
+        }}
         alt={listing.name}
         loading="lazy"
         className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105 ${monochrome ? 'grayscale contrast-[1.08]' : ''}`}
-      />
+      /> : null}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/54 to-black/12" />
       <div className="ss-glass ss-glass--liquid absolute left-4 top-4 h-24 w-24 overflow-hidden rounded-[22px] [mask-image:linear-gradient(#000,#000)]">
         <img

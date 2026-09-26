@@ -93,10 +93,11 @@ const FALLBACK_CENTER: [number, number] = [
 const CONTEXT_LAYER_ID = 'street-view-context-buildings';
 const SUPPLEMENTAL_CONTEXT_SOURCE_ID = 'street-view-supplemental-buildings';
 const SUPPLEMENTAL_CONTEXT_LAYER_ID = 'street-view-supplemental-context-buildings';
-const SUPPLEMENTAL_CONTEXT_RADIUS_METERS = 320;
+const SUPPLEMENTAL_CONTEXT_RADIUS_METERS = 220;
 const SUPPLEMENTAL_CONTEXT_MIN_PRIMARY_FOOTPRINTS = 18;
 const AUTHORED_PARTS_SOURCE_ID = 'street-view-authored-provider-parts';
 const AUTHORED_CONTEXT_LAYER_ID = 'street-view-authored-provider-context';
+const AUTHORED_OCCLUDER_LAYER_ID = 'street-view-authored-provider-occluders';
 const AUTHORED_SELECTED_LAYER_ID = 'street-view-authored-selected-buildings';
 const SELECTED_SOURCE_ID = 'street-view-selected-buildings';
 const SELECTED_LAYER_ID = 'street-view-selected-extrusion';
@@ -116,8 +117,20 @@ const TERRAIN_EXAGGERATION = 1;
 const MASKED_PROVIDER_HEIGHT_METERS = 0.001;
 const TERRAIN_OCCLUDER_BASE_METERS = 0.001;
 const TERRAIN_MASKED_PROVIDER_COLOR = '#050608';
-const NEAR_FIELD_ATLAS_RADIUS_METERS = 210;
+const NEAR_FIELD_ATLAS_RADIUS_METERS = 220;
 const NEAR_FIELD_MAX_INDIVIDUAL_LAYERS = 96;
+
+export const SCENE_POPULATION_CONFIG = {
+  nearFieldRadiusMeters: 220,
+  transitionZoneRadiusMeters: 800,
+  transitionCellMeters: 140, // 140m grid cell for spatial sampling in transition zone
+  transitionMinHeightAtNearEdge: 36, // minimum height at 220m
+  transitionMinHeightAtFarEdge: 54,  // minimum height at 800m
+  transitionProminentFootprintArea: 1800, // m²
+  distantMinHeight: 65, // minimum height beyond 800m for skyline silhouette
+  distantCellMeters: 220, // spatial sampling in distant skyline
+  distantProminentFootprintArea: 3500, // m²
+};
 const NEAR_FIELD_LAYER_PREFIX = 'street-view-near-field-building-';
 const NEIGHBORHOOD_PULSE_INTERVAL_MS = 6500;
 const NEIGHBORHOOD_PULSE_WAVE_SPEED_MPS = 120;
@@ -230,10 +243,75 @@ const DEFAULT_VISUAL: VisualState = {
   occlusionMode: 'fade',
   occluderOpacity: 0.12,
   occlusionSensitivity: 82,
-  occlusionFadeMs: 1000,
+  occlusionFadeMs: 200,
 };
 
 const currentBuildingAsset = buildingAssets.find((asset) => asset?.listingId === LISTING_ID) ?? null;
+
+type ViewportPadding = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+const getUsableViewportPadding = (
+  container: HTMLElement | null,
+  contextPanel: HTMLElement | null,
+  headerOverlay: HTMLElement | null,
+  isMobile: boolean,
+): ViewportPadding => {
+  if (!isMobile || !container) {
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+
+  const containerRect = container.getBoundingClientRect();
+  if (containerRect.height <= 0) {
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+
+  let bottomObstruction = 0;
+  if (contextPanel) {
+    const panelRect = contextPanel.getBoundingClientRect();
+    bottomObstruction = Math.max(0, containerRect.bottom - panelRect.top);
+  }
+
+  let topObstruction = 0;
+  if (headerOverlay) {
+    const headerRect = headerOverlay.getBoundingClientRect();
+    topObstruction = Math.max(0, headerRect.bottom - containerRect.top);
+  }
+
+  // Fallback defaults if measured before full layout pass (compact mobile panel ~165-185px)
+  if (bottomObstruction === 0) {
+    bottomObstruction = Math.min(containerRect.height * 0.25, 185);
+  }
+  if (topObstruction === 0) {
+    topObstruction = Math.min(containerRect.height * 0.18, 140);
+  }
+
+  // Small breathing margin so building base does not sit directly against panel edge
+  bottomObstruction += 12;
+  topObstruction += 8;
+
+  // Clamp total padding to leave at least 25% of viewport clear
+  const maxTotalObstruction = containerRect.height * 0.75;
+  if (bottomObstruction + topObstruction > maxTotalObstruction) {
+    const scale = maxTotalObstruction / (bottomObstruction + topObstruction);
+    bottomObstruction = Math.round(bottomObstruction * scale);
+    topObstruction = Math.round(topObstruction * scale);
+  } else {
+    bottomObstruction = Math.round(bottomObstruction);
+    topObstruction = Math.round(topObstruction);
+  }
+
+  return {
+    top: topObstruction,
+    bottom: bottomObstruction,
+    left: 0,
+    right: 0,
+  };
+};
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -285,6 +363,41 @@ function geometryCenter(features: StreetFeature[]): [number, number] | null {
   if (!coords.length) return null;
   const total = coords.reduce((sum, point) => [sum[0] + point[0], sum[1] + point[1]] as [number, number], [0, 0]);
   return [total[0] / coords.length, total[1] / coords.length];
+}
+
+function getTargetFeatureRadiusMeters(features: StreetFeature[]): number {
+  const center = geometryCenter(features);
+  if (!center) return 18;
+  const coords: Array<[number, number]> = [];
+  const collect = (value: unknown) => {
+    if (!Array.isArray(value)) return;
+    if (typeof value[0] === 'number' && typeof value[1] === 'number') {
+      coords.push([Number(value[0]), Number(value[1])]);
+      return;
+    }
+    value.forEach(collect);
+  };
+  features.forEach((feature) => collect(feature.geometry?.coordinates));
+  if (!coords.length) return 18;
+  let maxDist = 0;
+  const latMeters = 111320;
+  const lngMeters = 111320 * Math.cos(center[1] * (Math.PI / 180));
+  coords.forEach(([lng, lat]) => {
+    const dx = (lng - center[0]) * lngMeters;
+    const dy = (lat - center[1]) * latMeters;
+    const dist = Math.hypot(dx, dy);
+    if (dist > maxDist) maxDist = dist;
+  });
+  return Math.max(10, Math.min(60, maxDist || 18));
+}
+
+function calculateZoomBounds(features: StreetFeature[]): { minZoom: number; maxZoom: number } {
+  const radius = getTargetFeatureRadiusMeters(features);
+  // Standoff scales with target building size so the camera never penetrates the geometry
+  const maxZoom = clamp(18.9 - (radius / 60) * 0.8, 17.9, 18.75);
+  // Standoff of ~120m-140m keeps the venue prominently in focus without turning into district-level map view
+  const minZoom = clamp(maxZoom - 1.85, 16.2, 17.0);
+  return { minZoom, maxZoom };
 }
 
 function featuresFromCurrentAsset(): StreetFeature[] {
@@ -609,46 +722,153 @@ function centerDistanceMeters(first: [number, number], second: [number, number])
   return Math.hypot(dx, dy);
 }
 
-function polygonOccludesVenue(
+// -----------------------------------------------------------------------------
+// Centralized Three-State Occlusion Configuration
+// -----------------------------------------------------------------------------
+export const OCCLUSION_CONFIG = {
+  // Screen-space padding (pixels) around the extruded target venue to form the visibility corridor
+  corridorPaddingPx: 20,
+
+  // Opacity applied to GHOSTED buildings (translucent spatial context)
+  ghostOpacity: 0.12,
+
+  // Opacity applied to HIDDEN buildings (0 to eliminate stacked alpha accumulation)
+  hiddenOpacity: 0.0,
+
+  // Transition duration (ms) for hardware opacity fades in MapLibre
+  transitionDurationMs: 200,
+
+  // Screen-space overlap ratio thresholds for entering/exiting HIDDEN state (hysteresis)
+  // Ratio of candidate's screen-space obstruction over the target venue's screen bounds
+  hiddenEnterOverlap: 0.45,  // Escalate from GHOSTED to HIDDEN if direct coverage exceeds 45%
+  hiddenExitOverlap: 0.28,   // Demote from HIDDEN to GHOSTED once coverage drops below 28%
+
+  // Camera distance thresholds (meters) defining close, mid, and far regimes
+  closeDistanceMeters: 90,   // Below this, venue is large; favor GHOSTED for neighbors
+  farDistanceMeters: 190,    // Above this, venue is small; escalate major occluders to HIDDEN
+
+  // Cumulative transmittance threshold: minimum target light throughput (0 to 1)
+  // If accumulated ghosted layers along sightline attenuate target visibility below this,
+  // the nearest/most obstructive occluders escalate to HIDDEN until throughput is restored.
+  minTargetTransmittance: 0.50, // Require at least 50% target visibility (max ~2 ghosted buildings)
+
+  // Distance from venue (meters) within which a building is considered an immediate neighbor.
+  // Immediate neighbors are protected as GHOSTED unless their direct overlap is extreme.
+  immediateNeighborRadiusMeters: 45,
+  immediateNeighborMaxOverlap: 0.85, // Even an immediate neighbor hides if it covers >85% of target
+} as const;
+
+export type OcclusionState = 'normal' | 'ghosted' | 'hidden';
+
+export type ExtrudedScreenBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  groundMinY: number;
+  groundMaxY: number;
+  roofMinY: number;
+};
+
+export function projectedExtrusionBounds(
   map: MapLibreMap,
   geometry: any,
-  venueBounds: ScreenBounds | null,
-  venueCenter: [number, number] | null,
-  sensitivityPx: number,
-): boolean {
-  if (!venueBounds || !venueCenter) return false;
-  const candidateBounds = projectedGeometryBounds(map, geometry);
-  const candidateCenter = geometryCentroid(geometry);
-  if (!candidateBounds || !candidateCenter) return false;
-  if (centerDistanceMeters(candidateCenter, venueCenter) > 180) return false;
+  heightMeters = 12,
+): ExtrudedScreenBounds | null {
+  const coords = geometryCoordinates(geometry);
+  if (!coords.length) return null;
+  let minX = Infinity;
+  let groundMinY = Infinity;
+  let maxX = -Infinity;
+  let groundMaxY = -Infinity;
+  coords.forEach((coordinate) => {
+    const point = map.project(coordinate);
+    minX = Math.min(minX, point.x);
+    groundMinY = Math.min(groundMinY, point.y);
+    maxX = Math.max(maxX, point.x);
+    groundMaxY = Math.max(groundMaxY, point.y);
+  });
+  if (![minX, groundMinY, maxX, groundMaxY].every(Number.isFinite)) return null;
 
-  // A true occluder must be on the camera-facing side of the venue. MapLibre's
-  // bearing tells us which direction points toward the top of the viewport; the
-  // camera sits on the opposite side of the fixed venue anchor.
-  const [dx, dy] = localMeters(candidateCenter, venueCenter);
-  const cameraSideRadians = (map.getBearing() + 180) * Math.PI / 180;
-  const cameraSideX = Math.sin(cameraSideRadians);
-  const cameraSideY = Math.cos(cameraSideRadians);
-  const towardCameraMeters = dx * cameraSideX + dy * cameraSideY;
-  if (towardCameraMeters <= 1.5) return false;
+  const pitchRad = (map.getPitch() * Math.PI) / 180;
+  const zoom = map.getZoom();
+  const centerLat = map.getCenter().lat;
+  const metersPerPx = (40075016.686 * Math.cos((centerLat * Math.PI) / 180)) / (512 * 2 ** zoom);
+  const heightPx = metersPerPx > 0 ? (heightMeters / metersPerPx) * Math.sin(pitchRad) : 0;
+  const roofMinY = groundMinY - heightPx;
 
-  // Reject source fragments that project behind the viewer or far outside the
-  // active viewport. querySourceFeatures() can include cached 360° preload tiles.
+  return {
+    minX,
+    maxX,
+    minY: roofMinY,
+    maxY: groundMaxY,
+    groundMinY,
+    groundMaxY,
+    roofMinY,
+  };
+}
+
+export function projectedTargetExtrusionBounds(
+  map: MapLibreMap,
+  features: StreetFeature[],
+): ExtrudedScreenBounds | null {
+  const allBounds: ExtrudedScreenBounds[] = [];
+  features.forEach((feature) => {
+    const height = Number(feature.properties?.height ?? 10);
+    const b = projectedExtrusionBounds(map, feature.geometry, height);
+    if (b) allBounds.push(b);
+  });
+  if (!allBounds.length) return null;
+  const minX = Math.min(...allBounds.map((b) => b.minX));
+  const maxX = Math.max(...allBounds.map((b) => b.maxX));
+  const minY = Math.min(...allBounds.map((b) => b.minY));
+  const maxY = Math.max(...allBounds.map((b) => b.maxY));
+  const groundMinY = Math.min(...allBounds.map((b) => b.groundMinY));
+  const groundMaxY = Math.max(...allBounds.map((b) => b.groundMaxY));
+  const roofMinY = Math.min(...allBounds.map((b) => b.roofMinY));
+  return { minX, maxX, minY, maxY, groundMinY, groundMaxY, roofMinY };
+}
+
+function estimateCameraDistanceMeters(map: MapLibreMap): number {
   const canvas = map.getCanvas();
-  const width = canvas.clientWidth || canvas.width;
-  const height = canvas.clientHeight || canvas.height;
-  const viewportMargin = Math.max(24, sensitivityPx * 0.45);
-  if (candidateBounds.maxX < -viewportMargin || candidateBounds.minX > width + viewportMargin
-    || candidateBounds.maxY < -viewportMargin || candidateBounds.minY > height + viewportMargin) return false;
+  const height = canvas.clientHeight || canvas.height || 768;
+  const zoom = map.getZoom();
+  const pitchRad = Math.min(1.45, (map.getPitch() * Math.PI) / 180);
+  const centerLat = map.getCenter().lat;
+  const metersPerPx = (40075016.686 * Math.cos((centerLat * Math.PI) / 180)) / (512 * 2 ** zoom);
+  const cosPitch = Math.max(0.18, Math.cos(pitchRad));
+  return (1.5 * height * metersPerPx) / cosPitch;
+}
 
-  // Perspective projection is the final gate. Foreground ground footprints sit
-  // lower on screen than Twist; buildings behind Twist project above it.
-  const horizontalOverlap = candidateBounds.maxX >= venueBounds.minX - sensitivityPx
-    && candidateBounds.minX <= venueBounds.maxX + sensitivityPx;
-  const inFrontOnScreen = candidateBounds.centerY >= venueBounds.centerY + Math.max(2, sensitivityPx * 0.035);
-  const nearSightline = candidateBounds.minY <= venueBounds.maxY + sensitivityPx
-    && candidateBounds.maxY >= venueBounds.minY - sensitivityPx * 0.25;
-  return horizontalOverlap && inFrontOnScreen && nearSightline;
+function localMeters(point: [number, number], origin: [number, number]): [number, number] {
+  const cosLat = Math.cos(((point[1] + origin[1]) * 0.5) * Math.PI / 180);
+  return [
+    (point[0] - origin[0]) * 111320 * Math.max(0.2, cosLat),
+    (point[1] - origin[1]) * 110540,
+  ];
+}
+
+function polygonRingAreaMeters(ring: Array<[number, number]>, origin: [number, number]): number {
+  if (!ring || ring.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = localMeters(ring[i], origin);
+    const [x2, y2] = localMeters(ring[i + 1], origin);
+    area += (x1 * y2 - x2 * y1);
+  }
+  return Math.abs(area) * 0.5;
+}
+
+function polygonGeometryAreaMeters(geometry: any, origin: [number, number]): number {
+  const parts = polygonParts(geometry);
+  if (!parts.length) return 0;
+  let totalArea = 0;
+  for (const part of parts) {
+    if (Array.isArray(part) && Array.isArray(part[0])) {
+      totalArea += polygonRingAreaMeters(part[0] as Array<[number, number]>, origin);
+    }
+  }
+  return totalArea;
 }
 
 function buildPersistentNearFieldAtlas(
@@ -663,7 +883,11 @@ function buildPersistentNearFieldAtlas(
       collection: { type: 'FeatureCollection', features: [] } as any,
       overlappingProviderIds: [] as string[],
       maskedProviderIds: [] as string[],
+      visibleContextIds: [] as string[],
+      culledContextIds: [] as string[],
       nearFeatures: [] as any[],
+      overflowFeatures: [] as any[],
+      zoneCounts: { nearField: 0, transition: 0, skyline: 0, culled: 0 },
     };
   }
 
@@ -720,6 +944,9 @@ function buildPersistentNearFieldAtlas(
   uniqueParts.forEach((part) => {
     if (!maskedProviderIds.has(part.providerId) || part.overlapsVenue) return;
     const atlasId = part.nearField ? `near:${nearIndex++}` : `sibling:${siblingIndex++}`;
+    const [dx, dy] = part.center ? localMeters(part.center, venueCenter) : [0, 0];
+    const coords = geometryCoordinates(part.geometry);
+    const radiusMetersPart = part.center ? Math.max(...coords.map((point) => centerDistanceMeters(point, part.center!)), 0) : 0;
     const feature = {
       type: 'Feature',
       id: atlasId,
@@ -732,6 +959,12 @@ function buildPersistentNearFieldAtlas(
         minHeight: part.minHeight,
       },
       geometry: clone(part.geometry),
+      meta: {
+        center: part.center,
+        dx,
+        dy,
+        radiusMeters: radiusMetersPart,
+      },
     };
     features.push(feature);
     if (part.nearField) nearFeatures.push(feature);
@@ -742,12 +975,13 @@ function buildPersistentNearFieldAtlas(
   // Keep the closest buildings individually animated and downgrade any overflow
   // to the shared sibling layer so geometry remains visible without unbounded
   // draw/style overhead.
+  const overflowFeatures: any[] = [];
   if (nearFeatures.length > NEAR_FIELD_MAX_INDIVIDUAL_LAYERS) {
     const animatedIds = new Set(
       [...nearFeatures]
         .sort((a, b) => {
-          const aCenter = geometryCentroid(a.geometry);
-          const bCenter = geometryCentroid(b.geometry);
+          const aCenter = a.meta?.center ?? geometryCentroid(a.geometry);
+          const bCenter = b.meta?.center ?? geometryCentroid(b.geometry);
           const aDistance = aCenter ? centerDistanceMeters(aCenter, venueCenter) : Number.POSITIVE_INFINITY;
           const bDistance = bCenter ? centerDistanceMeters(bCenter, venueCenter) : Number.POSITIVE_INFINITY;
           return aDistance - bDistance;
@@ -759,7 +993,10 @@ function buildPersistentNearFieldAtlas(
     features.forEach((feature) => {
       if (feature.properties?.role !== 'near') return;
       if (animatedIds.has(String(feature.properties.atlasId))) nearFeatures.push(feature);
-      else feature.properties.role = 'sibling';
+      else {
+        feature.properties.role = 'sibling';
+        overflowFeatures.push(feature);
+      }
     });
   }
 
@@ -779,26 +1016,145 @@ function buildPersistentNearFieldAtlas(
     });
   });
 
-  const sortIds = (ids: Set<string>) => Array.from(ids).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  // ---------------------------------------------------------------------------
+  // Intermediate Transition & Distant Skyline Classification (Zones 2 & 3)
+  // ---------------------------------------------------------------------------
+  const outsideFeatures = new Map<string, {
+    providerId: string;
+    properties: Record<string, unknown>;
+    center: [number, number];
+    distanceMeters: number;
+    height: number;
+    areaMeters: number;
+  }>();
+
+  providerFeatures.forEach((feature) => {
+    if (feature.id == null || !feature.geometry) return;
+    const providerId = String(feature.id);
+    if (maskedProviderIds.has(providerId) || overlappingProviderIds.has(providerId)) return;
+
+    const area = polygonGeometryAreaMeters(feature.geometry, venueCenter);
+    const existing = outsideFeatures.get(providerId);
+    if (existing) {
+      existing.areaMeters += area;
+      return;
+    }
+
+    const center = geometryCentroid(feature.geometry);
+    if (!center) return;
+    const distanceMeters = centerDistanceMeters(center, venueCenter);
+    const height = featureHeight(feature);
+    const properties = (feature.properties ?? {}) as Record<string, unknown>;
+
+    outsideFeatures.set(providerId, {
+      providerId,
+      properties,
+      center,
+      distanceMeters,
+      height,
+      areaMeters: area,
+    });
+  });
+
+  const transitionCellMap = new Map<string, { providerId: string; score: number }>();
+  const skylineCellMap = new Map<string, { providerId: string; score: number }>();
+  const visibleContextIdsSet = new Set<string>();
+  const culledContextIdsSet = new Set<string>();
+
+  outsideFeatures.forEach((feat) => {
+    const d = feat.distanceMeters;
+    const h = feat.height;
+    const a = feat.areaMeters;
+    const isNamed = Boolean(feat.properties.name || feat.properties['name:en']);
+
+    if (d <= SCENE_POPULATION_CONFIG.transitionZoneRadiusMeters) {
+      // Zone 2: Intermediate Transition Context (220m < d <= 800m)
+      const fraction = (d - SCENE_POPULATION_CONFIG.nearFieldRadiusMeters) /
+        (SCENE_POPULATION_CONFIG.transitionZoneRadiusMeters - SCENE_POPULATION_CONFIG.nearFieldRadiusMeters);
+      const minHeight = SCENE_POPULATION_CONFIG.transitionMinHeightAtNearEdge +
+        fraction * (SCENE_POPULATION_CONFIG.transitionMinHeightAtFarEdge - SCENE_POPULATION_CONFIG.transitionMinHeightAtNearEdge);
+
+      const isProminentHeight = h >= minHeight;
+      const isProminentFootprint = a >= SCENE_POPULATION_CONFIG.transitionProminentFootprintArea && h >= 22;
+      const isNamedAnchor = isNamed && h >= 28;
+
+      if (!isProminentHeight && !isProminentFootprint && !isNamedAnchor) {
+        culledContextIdsSet.add(feat.providerId);
+        return;
+      }
+
+      // Spatial sampling: at most 1 anchor per block cell (140m)
+      const [dx, dy] = localMeters(feat.center, venueCenter);
+      const cellX = Math.floor(dx / SCENE_POPULATION_CONFIG.transitionCellMeters);
+      const cellY = Math.floor(dy / SCENE_POPULATION_CONFIG.transitionCellMeters);
+      const cellKey = `${cellX}:${cellY}`;
+
+      const score = (h * Math.sqrt(Math.max(100, a))) * (isNamedAnchor ? 1.5 : 1.0);
+      const existing = transitionCellMap.get(cellKey);
+      if (!existing || existing.score < score) {
+        if (existing) {
+          culledContextIdsSet.add(existing.providerId);
+          visibleContextIdsSet.delete(existing.providerId);
+        }
+        transitionCellMap.set(cellKey, { providerId: feat.providerId, score });
+        visibleContextIdsSet.add(feat.providerId);
+      } else {
+        culledContextIdsSet.add(feat.providerId);
+      }
+    } else {
+      // Zone 3: Distant Skyline (d > 800m)
+      const isSkylineHeight = h >= SCENE_POPULATION_CONFIG.distantMinHeight;
+      const isSkylineFootprint = a >= SCENE_POPULATION_CONFIG.distantProminentFootprintArea && h >= 35;
+
+      if (!isSkylineHeight && !isSkylineFootprint) {
+        culledContextIdsSet.add(feat.providerId);
+        return;
+      }
+
+      // Spatial sampling: at most 1 skyline anchor per distant cell (220m)
+      const [dx, dy] = localMeters(feat.center, venueCenter);
+      const cellX = Math.floor(dx / SCENE_POPULATION_CONFIG.distantCellMeters);
+      const cellY = Math.floor(dy / SCENE_POPULATION_CONFIG.distantCellMeters);
+      const cellKey = `${cellX}:${cellY}`;
+
+      const score = h * 2 + Math.sqrt(a);
+      const existing = skylineCellMap.get(cellKey);
+      if (!existing || existing.score < score) {
+        if (existing) {
+          culledContextIdsSet.add(existing.providerId);
+          visibleContextIdsSet.delete(existing.providerId);
+        }
+        skylineCellMap.set(cellKey, { providerId: feat.providerId, score });
+        visibleContextIdsSet.add(feat.providerId);
+      } else {
+        culledContextIdsSet.add(feat.providerId);
+      }
+    }
+  });
+
+  const culledContextIds = Array.from(culledContextIdsSet).filter((id) => !visibleContextIdsSet.has(id));
+
+  const sortIds = (ids: Set<string> | string[]) => Array.from(ids).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   return {
     collection: { type: 'FeatureCollection', features } as any,
     overlappingProviderIds: sortIds(overlappingProviderIds),
     maskedProviderIds: sortIds(maskedProviderIds),
+    visibleContextIds: sortIds(visibleContextIdsSet),
+    culledContextIds: sortIds(culledContextIds),
     nearFeatures,
+    overflowFeatures,
+    zoneCounts: {
+      nearField: maskedProviderIds.size - overlappingProviderIds.size,
+      transition: transitionCellMap.size,
+      skyline: skylineCellMap.size,
+      culled: culledContextIds.length,
+    },
   };
 }
 
 function providerFeatureStateId(providerId: string): string | number {
   const numeric = Number(providerId);
   return Number.isFinite(numeric) && String(numeric) === providerId ? numeric : providerId;
-}
-
-function localMeters(point: [number, number], origin: [number, number]): [number, number] {
-  const cosLat = Math.cos(((point[1] + origin[1]) * 0.5) * Math.PI / 180);
-  return [
-    (point[0] - origin[0]) * 111320 * Math.max(0.2, cosLat),
-    (point[1] - origin[1]) * 110540,
-  ];
 }
 
 function normalizeReadableScreenRotation(rotation: number): number {
@@ -889,7 +1245,13 @@ function providerIds(features: StreetFeature[]): string[] {
 function providerContextColor(buildingColor: string) {
   return [
     'case',
-    ['boolean', ['feature-state', 'terrainPlateHidden'], false],
+    ['any',
+      ['boolean', ['feature-state', 'terrainPlateHidden'], false],
+      ['boolean', ['feature-state', 'nearFieldMasked'], false],
+      ['boolean', ['feature-state', 'landmarkMasked'], false],
+      ['boolean', ['feature-state', 'contextCulled'], false],
+      ['!', ['boolean', ['feature-state', 'contextVisible'], false]],
+    ],
     TERRAIN_MASKED_PROVIDER_COLOR,
     buildingColor,
   ] as any;
@@ -979,8 +1341,8 @@ type StreetViewToolPageProps = {
 };
 
 const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnly = false, presentationKind = 'desktop' }) => {
-  const isMobilePresentation = presentationOnly && presentationKind === 'mobile';
-  const isTabletPresentation = presentationOnly && presentationKind === 'tablet';
+  const isMobilePresentation = presentationOnly && (presentationKind === 'mobile' || (presentationKind !== 'tablet' && typeof window !== 'undefined' && window.innerWidth < 768));
+  const isTabletPresentation = presentationOnly && (presentationKind === 'tablet' || (!isMobilePresentation && typeof window !== 'undefined' && window.innerWidth < 1024));
   const { listings: liveListings } = useEntityIndex();
   const presentationListing = liveListings.find((listing) => listing.id === LISTING_ID) ?? selectedListing;
   const presentationLogoUrl = getListingLogoUrl(presentationListing);
@@ -1004,6 +1366,10 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     : LISTING_AVAILABILITY;
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const contextPanelRef = useRef<HTMLDivElement>(null);
+  const headerOverlayRef = useRef<HTMLDivElement>(null);
+  const isMobilePresentationRef = useRef(isMobilePresentation);
+  const resetMotionRef = useRef<(bearing: number, pitch: number, zoom: number) => void>(() => {});
   const selectedFeaturesRef = useRef<StreetFeature[]>(clone(DEFAULT_SELECTION));
   const cameraRef = useRef<CameraState>({ ...DEFAULT_CAMERA, center: [...DEFAULT_CENTER] as [number, number] });
   const visualRef = useRef<VisualState>({ ...DEFAULT_VISUAL });
@@ -1100,6 +1466,12 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
 
     const camera = cameraRef.current;
     const visual = visualRef.current;
+    const initialPadding = getUsableViewportPadding(
+      mapContainerRef.current,
+      contextPanelRef.current,
+      headerOverlayRef.current,
+      isMobilePresentationRef.current,
+    );
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: createStreetStyle(visual),
@@ -1107,6 +1479,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       zoom: camera.zoom,
       pitch: camera.pitch,
       bearing: camera.bearing,
+      padding: initialPadding,
       minZoom: 15.5,
       maxZoom: 19,
       minPitch: 45,
@@ -1130,12 +1503,47 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     });
     mapRef.current = map;
 
+    const updatePadding = () => {
+      if (!mapRef.current) return;
+      const nextPadding = getUsableViewportPadding(
+        mapContainerRef.current,
+        contextPanelRef.current,
+        headerOverlayRef.current,
+        isMobilePresentationRef.current,
+      );
+      mapRef.current.setPadding(nextPadding);
+      const center = geometryCenter(selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset')) ?? geometryCenter(selectedFeaturesRef.current);
+      if (center) {
+        const point = mapRef.current.project(center);
+        setVenueScreenPoint({ x: point.x, y: point.y - 10 });
+      }
+    };
+
     const measureAndResize = () => {
       map.resize();
+      updatePadding();
       const canvas = map.getCanvas();
       const rect = canvas.getBoundingClientRect();
       setCanvasLayout(`${Math.round(rect.width)}×${Math.round(rect.height)} css · ${canvas.width}×${canvas.height} px`);
     };
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updatePadding();
+      });
+      if (mapContainerRef.current) resizeObserver.observe(mapContainerRef.current);
+      if (contextPanelRef.current) resizeObserver.observe(contextPanelRef.current);
+      if (headerOverlayRef.current) resizeObserver.observe(headerOverlayRef.current);
+    }
+
+    const handleViewportChange = () => {
+      updatePadding();
+    };
+    window.visualViewport?.addEventListener('resize', handleViewportChange);
+    window.visualViewport?.addEventListener('scroll', handleViewportChange);
+    window.addEventListener('orientationchange', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       measureAndResize();
       if (presentationOnly) {
@@ -1147,9 +1555,19 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
 
     const providerFeatureCache = new Map<string, any>();
     const maskedProviderIds = new Set<string>();
+    const culledProviderIds = new Set<string>();
     let supplementalContextAttempted = false;
     let nearFieldAtlas: ReturnType<typeof buildPersistentNearFieldAtlas> | null = null;
-    const nearFieldLayers = new Map<string, { layerId: string; targetOpacity: number; targetBase: number; distanceMeters: number }>();
+    let overflowOccluderIdsKey = '';
+    let overflowOccluderOpacity = visualRef.current.buildingOpacity;
+    const overflowOccluderStates = new Map<string, OcclusionState>();
+    const nearFieldLayers = new Map<string, {
+      layerId: string;
+      targetOpacity: number;
+      targetBase: number;
+      distanceMeters: number;
+      occlusionState: OcclusionState;
+    }>();
     const neighborhoodPulseTimeouts = new Set<number>();
     let neighborhoodPulseInterval = 0;
     let arrivalStartTimeout = 0;
@@ -1253,6 +1671,13 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           id: providerFeatureStateId(providerId),
         }, { terrainPlateHidden: terrainEnabled });
       });
+      culledProviderIds.forEach((providerId) => {
+        map.setFeatureState({
+          source: BUILDING_SOURCE_ID,
+          sourceLayer: BUILDING_SOURCE_LAYER,
+          id: providerFeatureStateId(providerId),
+        }, { terrainPlateHidden: terrainEnabled });
+      });
       map.triggerRepaint();
     };
     setTerrainProviderPlateVisibilityRef.current = setTerrainProviderPlateVisibility;
@@ -1266,6 +1691,33 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           id: providerFeatureStateId(providerId),
         }, {
           [stateKey]: true,
+          contextVisible: false,
+          terrainPlateHidden: Boolean(map.getTerrain()),
+        });
+      });
+    };
+
+    const setProviderContextState = (visibleContextIds: string[], culledContextIds: string[]) => {
+      visibleContextIds.forEach((providerId) => {
+        map.setFeatureState({
+          source: BUILDING_SOURCE_ID,
+          sourceLayer: BUILDING_SOURCE_LAYER,
+          id: providerFeatureStateId(providerId),
+        }, {
+          contextVisible: true,
+          contextCulled: false,
+          terrainPlateHidden: false,
+        });
+      });
+      culledContextIds.forEach((providerId) => {
+        culledProviderIds.add(providerId);
+        map.setFeatureState({
+          source: BUILDING_SOURCE_ID,
+          sourceLayer: BUILDING_SOURCE_LAYER,
+          id: providerFeatureStateId(providerId),
+        }, {
+          contextVisible: false,
+          contextCulled: true,
           terrainPlateHidden: Boolean(map.getTerrain()),
         });
       });
@@ -1320,41 +1772,240 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         return;
       }
       const authored = selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset');
-      const venueBounds = projectedFeatureBounds(map, authored);
-      const venueCenter = geometryCenter(authored);
-      if (!venueBounds || !venueCenter) return;
+      const activeVenueFeatures = authored.length ? authored : selectedFeaturesRef.current;
+      const venueCenter = geometryCenter(activeVenueFeatures);
+      const targetBounds = projectedTargetExtrusionBounds(map, activeVenueFeatures);
+      if (!targetBounds || !venueCenter) return;
 
+      const targetWidth = Math.max(1, targetBounds.maxX - targetBounds.minX);
+      const targetHeight = Math.max(1, targetBounds.maxY - targetBounds.minY);
+      const targetArea = targetWidth * targetHeight;
+
+      const pad = OCCLUSION_CONFIG.corridorPaddingPx;
+      const corridorMinX = targetBounds.minX - pad;
+      const corridorMaxX = targetBounds.maxX + pad;
+      const corridorMinY = targetBounds.minY - pad;
+      const corridorMaxY = targetBounds.maxY + pad;
+
+      const cameraSideRadians = ((map.getBearing() + 180) * Math.PI) / 180;
+      const cameraSideX = Math.sin(cameraSideRadians);
+      const cameraSideY = Math.cos(cameraSideRadians);
+      const cameraDistance = estimateCameraDistanceMeters(map);
+      const isPulledBack = cameraDistance > OCCLUSION_CONFIG.farDistanceMeters;
+      const isClose = cameraDistance < OCCLUSION_CONFIG.closeDistanceMeters;
+
+      type Candidate = {
+        atlasId: string;
+        feature: any;
+        isNearField: boolean;
+        towardCameraMeters: number;
+        coverage: number;
+        isImmediateNeighbor: boolean;
+        previousState: OcclusionState;
+        state: OcclusionState;
+      };
+
+      const candidates: Candidate[] = [];
+      const evaluatedStates = new Map<string, OcclusionState>();
+
+      const evaluateFeature = (feature: any, isNearField: boolean) => {
+        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
+        if (!atlasId) return;
+
+        const previousState: OcclusionState = isNearField
+          ? (nearFieldLayers.get(atlasId)?.occlusionState ?? 'normal')
+          : (overflowOccluderStates.get(atlasId) ?? 'normal');
+
+        if (visualRef.current.occlusionMode === 'off') {
+          evaluatedStates.set(atlasId, 'normal');
+          return;
+        }
+
+        const dx = Number(feature.meta?.dx ?? 0);
+        const dy = Number(feature.meta?.dy ?? 0);
+        const radiusMeters = Number(feature.meta?.radiusMeters ?? 10);
+        const height = Number(feature.properties?.height ?? 12);
+
+        // Fast scalar rejection: strictly behind venue or behind camera
+        const towardCameraMeters = dx * cameraSideX + dy * cameraSideY;
+        if (towardCameraMeters + radiusMeters <= 0 || (cameraDistance > 0 && towardCameraMeters - radiusMeters >= cameraDistance)) {
+          evaluatedStates.set(atlasId, 'normal');
+          return;
+        }
+
+        // Project candidate extrusion
+        const candBounds = projectedExtrusionBounds(map, feature.geometry, height);
+        if (!candBounds) {
+          evaluatedStates.set(atlasId, 'normal');
+          return;
+        }
+
+        // Check intersection with padded corridor
+        const inCorridor = candBounds.maxX >= corridorMinX
+          && candBounds.minX <= corridorMaxX
+          && candBounds.maxY >= corridorMinY
+          && candBounds.minY <= corridorMaxY;
+
+        if (!inCorridor) {
+          evaluatedStates.set(atlasId, 'normal');
+          return;
+        }
+
+        // Compute screen-space coverage over target venue
+        const overlapW = Math.max(0, Math.min(candBounds.maxX, targetBounds.maxX) - Math.max(candBounds.minX, targetBounds.minX));
+        const overlapH = Math.max(0, Math.min(candBounds.maxY, targetBounds.maxY) - Math.max(candBounds.minY, targetBounds.minY));
+        const coverage = Math.min(1, (overlapW * overlapH) / targetArea);
+
+        const distanceToVenue = Math.hypot(dx, dy);
+        const isImmediateNeighbor = distanceToVenue <= OCCLUSION_CONFIG.immediateNeighborRadiusMeters;
+
+        candidates.push({
+          atlasId,
+          feature,
+          isNearField,
+          towardCameraMeters,
+          coverage,
+          isImmediateNeighbor,
+          previousState,
+          state: 'ghosted',
+        });
+      };
+
+      nearFieldAtlas.nearFeatures.forEach((feat: any) => evaluateFeature(feat, true));
+      nearFieldAtlas.overflowFeatures.forEach((feat: any) => evaluateFeature(feat, false));
+
+      // Sort candidates in depth order (closest to camera first)
+      candidates.sort((a, b) => b.towardCameraMeters - a.towardCameraMeters);
+
+      // Initial classification with hysteresis
+      candidates.forEach((cand) => {
+        const enterThreshold = cand.isImmediateNeighbor
+          ? OCCLUSION_CONFIG.immediateNeighborMaxOverlap
+          : isPulledBack
+            ? OCCLUSION_CONFIG.hiddenEnterOverlap * 0.85
+            : isClose
+              ? 0.75
+              : OCCLUSION_CONFIG.hiddenEnterOverlap;
+
+        const exitThreshold = cand.isImmediateNeighbor
+          ? OCCLUSION_CONFIG.immediateNeighborMaxOverlap * 0.8
+          : isPulledBack
+            ? OCCLUSION_CONFIG.hiddenExitOverlap * 0.85
+            : isClose
+              ? 0.55
+              : OCCLUSION_CONFIG.hiddenExitOverlap;
+
+        if (cand.previousState === 'hidden') {
+          cand.state = cand.coverage >= exitThreshold ? 'hidden' : 'ghosted';
+        } else {
+          cand.state = cand.coverage >= enterThreshold ? 'hidden' : 'ghosted';
+        }
+      });
+
+      // Cumulative transmittance check along sightline
+      const ghostOpacity = visualRef.current.occluderOpacity;
+      const ghostWallTransmittance = Math.pow(1 - ghostOpacity, 2);
+      const ghostedCandidates = candidates.filter((c) => c.state === 'ghosted');
+      let currentTransmittance = Math.pow(ghostWallTransmittance, ghostedCandidates.length);
+
+      if (currentTransmittance < OCCLUSION_CONFIG.minTargetTransmittance) {
+        const candidatesToEscalate = [...ghostedCandidates]
+          .filter((c) => !c.isImmediateNeighbor)
+          .sort((a, b) => b.coverage - a.coverage);
+
+        for (const cand of candidatesToEscalate) {
+          if (currentTransmittance >= OCCLUSION_CONFIG.minTargetTransmittance) break;
+          cand.state = 'hidden';
+          currentTransmittance /= ghostWallTransmittance;
+        }
+      }
+
+      candidates.forEach((cand) => {
+        evaluatedStates.set(cand.atlasId, cand.state);
+      });
+
+      // Apply to nearField individual layers
       let occluderCount = 0;
+      const transitionDuration = animate
+        ? Math.max(0, Math.min(visualRef.current.occlusionFadeMs, OCCLUSION_CONFIG.transitionDurationMs))
+        : 0;
+
       nearFieldAtlas.nearFeatures.forEach((feature: any) => {
         const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
         const entry = nearFieldLayers.get(atlasId);
         if (!entry) return;
-        const isOccluder = visualRef.current.occlusionMode !== 'off'
-          && polygonOccludesVenue(map, feature.geometry, venueBounds, venueCenter, visualRef.current.occlusionSensitivity);
-        if (isOccluder) occluderCount += 1;
-        const targetOpacity = isOccluder
-          ? (visualRef.current.occlusionMode === 'hide' ? 0.015 : visualRef.current.occluderOpacity)
-          : visualRef.current.buildingOpacity;
+
+        const state = evaluatedStates.get(atlasId) ?? 'normal';
+        entry.occlusionState = state;
+        if (state !== 'normal') occluderCount += 1;
+
+        const targetOpacity = state === 'hidden'
+          ? OCCLUSION_CONFIG.hiddenOpacity
+          : state === 'ghosted'
+            ? (visualRef.current.occlusionMode === 'hide' ? OCCLUSION_CONFIG.hiddenOpacity : visualRef.current.occluderOpacity)
+            : visualRef.current.buildingOpacity;
+
         const minHeightValue = Number(feature.properties?.minHeight ?? 0);
         const minHeight = Number.isFinite(minHeightValue) && minHeightValue >= 0 ? minHeightValue : 0;
-        const targetBase = map.getTerrain() && isOccluder && minHeight <= TERRAIN_OCCLUDER_BASE_METERS
+        const targetBase = map.getTerrain() && state !== 'normal' && minHeight <= TERRAIN_OCCLUDER_BASE_METERS
           ? TERRAIN_OCCLUDER_BASE_METERS
           : minHeight;
+
         if (Math.abs(entry.targetBase - targetBase) >= 0.0005) {
           map.setPaintProperty(entry.layerId, 'fill-extrusion-base', targetBase);
           entry.targetBase = targetBase;
         }
+
         if (Math.abs(entry.targetOpacity - targetOpacity) >= 0.002) {
           map.setPaintProperty(entry.layerId, 'fill-extrusion-opacity-transition', {
-            duration: animate ? Math.max(0, visualRef.current.occlusionFadeMs) : 0,
+            duration: transitionDuration,
             delay: 0,
           } as any);
           map.setPaintProperty(entry.layerId, 'fill-extrusion-opacity', targetOpacity);
           entry.targetOpacity = targetOpacity;
         }
       });
-      setOccludingPolygonCount(occluderCount);
-      map.triggerRepaint();
+
+      // Apply to overflow features via authored layers
+      const overflowGhostedIds: string[] = [];
+      const overflowHiddenIds: string[] = [];
+      nearFieldAtlas.overflowFeatures.forEach((feature: any) => {
+        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
+        const state = evaluatedStates.get(atlasId) ?? 'normal';
+        overflowOccluderStates.set(atlasId, state);
+        if (state === 'ghosted') {
+          overflowGhostedIds.push(atlasId);
+          occluderCount += 1;
+        } else if (state === 'hidden') {
+          overflowHiddenIds.push(atlasId);
+          occluderCount += 1;
+        }
+      });
+
+      const overflowKey = `${overflowGhostedIds.join(',')}|${overflowHiddenIds.join(',')}`;
+      if (overflowKey !== overflowOccluderIdsKey && map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
+        const ghostedMatches = ['in', ['get', 'atlasId'], ['literal', overflowGhostedIds]] as any;
+        const allExcludedMatches = ['in', ['get', 'atlasId'], ['literal', [...overflowGhostedIds, ...overflowHiddenIds]]] as any;
+
+        if (overflowGhostedIds.length || overflowHiddenIds.length) {
+          map.setFilter(AUTHORED_CONTEXT_LAYER_ID, ['all', ['==', ['get', 'role'], 'sibling'], ['!', allExcludedMatches]] as any);
+        } else {
+          map.setFilter(AUTHORED_CONTEXT_LAYER_ID, ['==', ['get', 'role'], 'sibling'] as any);
+        }
+        map.setFilter(AUTHORED_OCCLUDER_LAYER_ID, ghostedMatches);
+        overflowOccluderIdsKey = overflowKey;
+      }
+
+      const nextOverflowOpacity = overflowGhostedIds.length
+        ? (visualRef.current.occlusionMode === 'hide' ? OCCLUSION_CONFIG.hiddenOpacity : visualRef.current.occluderOpacity)
+        : visualRef.current.buildingOpacity;
+
+      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID) && Math.abs(nextOverflowOpacity - overflowOccluderOpacity) >= 0.002) {
+        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity', nextOverflowOpacity);
+        overflowOccluderOpacity = nextOverflowOpacity;
+      }
+
+      setOccludingPolygonCount((current) => current === occluderCount ? current : occluderCount);
     };
 
     const runNeighborhoodPulse = () => {
@@ -1406,6 +2057,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       atlasSource.setData(nearFieldAtlas.collection);
       setOverlappingProviderIds(nearFieldAtlas.overlappingProviderIds);
       setProviderMaskState(nearFieldAtlas.maskedProviderIds, 'nearFieldMasked');
+      setProviderContextState(nearFieldAtlas.visibleContextIds, nearFieldAtlas.culledContextIds);
       const venueCenter = geometryCenter(selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset'))
         ?? DEFAULT_CENTER;
 
@@ -1435,6 +2087,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           targetOpacity: visualRef.current.buildingOpacity,
           targetBase: minHeight,
           distanceMeters,
+          occlusionState: 'normal',
         });
         nearFieldLayerIdsRef.current.push(layerId);
       });
@@ -1481,12 +2134,16 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         map.setPaintProperty(CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
       if (map.getLayer(SUPPLEMENTAL_CONTEXT_LAYER_ID)) {
-        map.setPaintProperty(SUPPLEMENTAL_CONTEXT_LAYER_ID, 'fill-extrusion-color', providerContextColor(next.buildingColor));
+        map.setPaintProperty(SUPPLEMENTAL_CONTEXT_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
         map.setPaintProperty(SUPPLEMENTAL_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
       if (map.getLayer(AUTHORED_CONTEXT_LAYER_ID)) {
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
+      }
+      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
+        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
+        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
       }
       nearFieldLayers.forEach((entry) => {
         if (!map.getLayer(entry.layerId)) return;
@@ -1648,7 +2305,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
 
       const countRenderedBuildings = () => {
         const contextCount = map.getLayer(CONTEXT_LAYER_ID)
-          ? map.queryRenderedFeatures({ layers: [CONTEXT_LAYER_ID] }).length
+          ? map.queryRenderedFeatures({ layers: [CONTEXT_LAYER_ID] }).filter((feature) => Boolean(feature.state?.contextVisible)).length
           : 0;
         const supplementalContextCount = map.getLayer(SUPPLEMENTAL_CONTEXT_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [SUPPLEMENTAL_CONTEXT_LAYER_ID] }).length
@@ -1656,13 +2313,14 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         const authoredContextCount = map.getLayer(AUTHORED_CONTEXT_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [AUTHORED_CONTEXT_LAYER_ID] }).length
           : 0;
+        const nearFieldLayersCount = nearFieldLayers.size;
         const authoredSelectedCount = map.getLayer(AUTHORED_SELECTED_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [AUTHORED_SELECTED_LAYER_ID] }).length
           : 0;
         const selectedCount = map.getLayer(SELECTED_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [SELECTED_LAYER_ID] }).length
           : 0;
-        const totalContext = contextCount + supplementalContextCount + authoredContextCount;
+        const totalContext = contextCount + supplementalContextCount + authoredContextCount + nearFieldLayersCount;
         const totalSelected = authoredSelectedCount + selectedCount;
         return { contextCount: totalContext, selectedCount: totalSelected, total: totalContext + totalSelected };
       };
@@ -1754,7 +2412,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         source: SUPPLEMENTAL_CONTEXT_SOURCE_ID,
         minzoom: 14.5,
         paint: {
-          'fill-extrusion-color': providerContextColor(visualRef.current.buildingColor),
+          'fill-extrusion-color': visualRef.current.buildingColor,
           'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 6],
           'fill-extrusion-base': 0,
           'fill-extrusion-opacity': visualRef.current.buildingOpacity,
@@ -1774,18 +2432,28 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
             ['any',
               ['boolean', ['feature-state', 'nearFieldMasked'], false],
               ['boolean', ['feature-state', 'landmarkMasked'], false],
+              ['boolean', ['feature-state', 'contextCulled'], false],
             ],
             MASKED_PROVIDER_HEIGHT_METERS,
-            ['*', 1, ['coalesce', ['get', 'render_height'], ['get', 'height'], 8]],
+            ['case',
+              ['boolean', ['feature-state', 'contextVisible'], false],
+              ['*', 1, ['coalesce', ['get', 'render_height'], ['get', 'height'], 8]],
+              MASKED_PROVIDER_HEIGHT_METERS,
+            ],
           ],
           'fill-extrusion-base': [
             'case',
             ['any',
               ['boolean', ['feature-state', 'nearFieldMasked'], false],
               ['boolean', ['feature-state', 'landmarkMasked'], false],
+              ['boolean', ['feature-state', 'contextCulled'], false],
             ],
             MASKED_PROVIDER_HEIGHT_METERS,
-            ['*', 1, ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0]],
+            ['case',
+              ['boolean', ['feature-state', 'contextVisible'], false],
+              ['*', 1, ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0]],
+              MASKED_PROVIDER_HEIGHT_METERS,
+            ],
           ],
           'fill-extrusion-opacity': visualRef.current.buildingOpacity,
           'fill-extrusion-vertical-gradient': true,
@@ -1805,6 +2473,20 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           'fill-extrusion-height': ['get', 'height'],
           'fill-extrusion-base': ['get', 'minHeight'],
           'fill-extrusion-opacity': visualRef.current.buildingOpacity,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      } as any);
+      map.addLayer({
+        id: AUTHORED_OCCLUDER_LAYER_ID,
+        type: 'fill-extrusion',
+        source: AUTHORED_PARTS_SOURCE_ID,
+        filter: ['in', ['get', 'atlasId'], ['literal', []]],
+        paint: {
+          'fill-extrusion-color': visualRef.current.buildingColor,
+          'fill-extrusion-height': ['get', 'height'],
+          'fill-extrusion-base': ['get', 'minHeight'],
+          'fill-extrusion-opacity': visualRef.current.buildingOpacity,
+          'fill-extrusion-opacity-transition': { duration: visualRef.current.occlusionFadeMs, delay: 0 },
           'fill-extrusion-vertical-gradient': true,
         },
       } as any);
@@ -1932,14 +2614,39 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     };
 
     const canvas = map.getCanvasContainer();
-    const drag = { active: false, pointerId: -1, x: 0, y: 0, bearing: camera.bearing, pitch: camera.pitch, moved: false };
+    const activeVenueFeatures = selectedFeaturesRef.current.filter((f) => f.properties.source === 'asset').length
+      ? selectedFeaturesRef.current.filter((f) => f.properties.source === 'asset')
+      : selectedFeaturesRef.current;
+    const zoomBounds = calculateZoomBounds(activeVenueFeatures);
+
     const cameraMotion = {
       raf: 0,
       lastTime: 0,
       targetBearing: camera.bearing,
       targetPitch: camera.pitch,
+      targetZoom: clamp(camera.zoom, zoomBounds.minZoom, zoomBounds.maxZoom),
     };
+
+    resetMotionRef.current = (bearing: number, pitch: number, zoom: number) => {
+      if (cameraMotion.raf) {
+        window.cancelAnimationFrame(cameraMotion.raf);
+        cameraMotion.raf = 0;
+      }
+      cameraMotion.targetBearing = normalizeBearing(bearing);
+      cameraMotion.targetPitch = clamp(pitch, 52, 85);
+      cameraMotion.targetZoom = clamp(zoom, zoomBounds.minZoom, zoomBounds.maxZoom);
+      cameraMotion.lastTime = 0;
+    };
+
+    // Apply strict non-scrollable touch actions to prevent iOS Safari gesture leakage
     canvas.style.cursor = 'grab';
+    canvas.style.touchAction = 'none';
+    canvas.style.overscrollBehavior = 'none';
+    const canvasElement = map.getCanvas();
+    if (canvasElement) {
+      canvasElement.style.touchAction = 'none';
+      canvasElement.style.overscrollBehavior = 'none';
+    }
 
     const runCameraMotion = (time: number) => {
       cameraMotion.raf = 0;
@@ -1947,22 +2654,30 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       cameraMotion.lastTime = time;
       const currentBearing = map.getBearing();
       const currentPitch = map.getPitch();
+      const currentZoom = map.getZoom();
       const bearingDelta = normalizeBearing(cameraMotion.targetBearing - currentBearing);
       const pitchDelta = cameraMotion.targetPitch - currentPitch;
+      const zoomDelta = cameraMotion.targetZoom - currentZoom;
       const blend = 1 - Math.exp(-dt / 58);
       const nextBearing = normalizeBearing(currentBearing + bearingDelta * blend);
       const nextPitch = clamp(currentPitch + pitchDelta * blend, 52, 85);
+      const nextZoom = clamp(currentZoom + zoomDelta * blend, zoomBounds.minZoom, zoomBounds.maxZoom);
       map.jumpTo({
         center: cameraRef.current.center,
-        zoom: cameraRef.current.zoom,
+        zoom: nextZoom,
         bearing: nextBearing,
         pitch: nextPitch,
       });
-      cameraRef.current = { ...cameraRef.current, bearing: nextBearing, pitch: nextPitch };
-      if (Math.abs(bearingDelta) > 0.035 || Math.abs(pitchDelta) > 0.035) {
+      cameraRef.current = { ...cameraRef.current, bearing: nextBearing, pitch: nextPitch, zoom: nextZoom };
+      if (Math.abs(bearingDelta) > 0.035 || Math.abs(pitchDelta) > 0.035 || Math.abs(zoomDelta) > 0.005) {
         cameraMotion.raf = window.requestAnimationFrame(runCameraMotion);
       } else {
-        const settled = { ...cameraRef.current, bearing: cameraMotion.targetBearing, pitch: cameraMotion.targetPitch };
+        const settled = {
+          ...cameraRef.current,
+          bearing: cameraMotion.targetBearing,
+          pitch: cameraMotion.targetPitch,
+          zoom: cameraMotion.targetZoom,
+        };
         map.jumpTo(settled);
         cameraRef.current = settled;
         setCameraState(settled);
@@ -1973,48 +2688,135 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       }
     };
 
-    const moveTowardCamera = (bearing: number, pitch: number) => {
+    const moveTowardCamera = (bearing: number, pitch: number, zoom = cameraMotion.targetZoom) => {
       cameraMotion.targetBearing = normalizeBearing(bearing);
       cameraMotion.targetPitch = clamp(pitch, 52, 85);
+      cameraMotion.targetZoom = clamp(zoom, zoomBounds.minZoom, zoomBounds.maxZoom);
       if (!cameraMotion.raf) cameraMotion.raf = window.requestAnimationFrame(runCameraMotion);
     };
 
+    const activePointers = new Map<number, { x: number; y: number }>();
+    const pinchState = {
+      active: false,
+      initialDistance: 0,
+      lastDistance: 0,
+    };
+    const drag = {
+      active: false,
+      primaryPointerId: -1,
+      lastX: 0,
+      lastY: 0,
+      moved: false,
+    };
+
     const endDrag = (event?: PointerEvent) => {
-      if (!drag.active || (event && event.pointerId !== drag.pointerId)) return;
-      if (event && canvas.hasPointerCapture?.(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      drag.active = false;
-      canvas.style.cursor = 'grab';
-      if (drag.moved) {
-        suppressClickRef.current = true;
-        if (!presentationOnly) {
-          setDirty(true);
-          setStatus('Camera angle changed. Save State to keep this arrival view.');
+      if (event) {
+        activePointers.delete(event.pointerId);
+        if (canvas.hasPointerCapture?.(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+      } else {
+        activePointers.clear();
+      }
+
+      if (activePointers.size === 1) {
+        const [remainingId, pos] = activePointers.entries().next().value as [number, { x: number; y: number }];
+        drag.active = true;
+        drag.primaryPointerId = remainingId;
+        drag.lastX = pos.x;
+        drag.lastY = pos.y;
+        pinchState.active = false;
+        canvas.style.cursor = 'grabbing';
+      } else if (activePointers.size === 0) {
+        drag.active = false;
+        pinchState.active = false;
+        canvas.style.cursor = 'grab';
+        if (drag.moved) {
+          suppressClickRef.current = true;
+          if (!presentationOnly) {
+            setDirty(true);
+            setStatus('Camera angle or distance changed. Save State to keep this arrival view.');
+          }
         }
       }
     };
 
     const onPointerDown = (event: PointerEvent) => {
       if (!sceneReady && !revealRef.current) return;
-      if (event.button !== 0) return;
-      drag.active = true;
-      drag.pointerId = event.pointerId;
-      drag.x = event.clientX;
-      drag.y = event.clientY;
-      drag.bearing = cameraMotion.targetBearing = map.getBearing();
-      drag.pitch = cameraMotion.targetPitch = map.getPitch();
-      drag.moved = false;
+      if (event.pointerType !== 'touch' && event.button !== 0) return;
+
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       canvas.setPointerCapture?.(event.pointerId);
-      canvas.style.cursor = 'grabbing';
+
+      if (activePointers.size === 1) {
+        drag.active = true;
+        drag.primaryPointerId = event.pointerId;
+        drag.lastX = event.clientX;
+        drag.lastY = event.clientY;
+        drag.moved = false;
+        pinchState.active = false;
+        canvas.style.cursor = 'grabbing';
+      } else if (activePointers.size === 2) {
+        const pts = Array.from(activePointers.values());
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        pinchState.active = true;
+        pinchState.initialDistance = dist;
+        pinchState.lastDistance = dist;
+        drag.moved = true;
+      }
       event.preventDefault();
     };
 
     const onPointerMove = (event: PointerEvent) => {
-      if (!drag.active || event.pointerId !== drag.pointerId) return;
-      const dx = event.clientX - drag.x;
-      const dy = event.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-      if (!drag.moved) return;
-      moveTowardCamera(drag.bearing - dx * 0.19, drag.pitch + dy * 0.125);
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size >= 2) {
+        const pts = Array.from(activePointers.values());
+        const currentDistance = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        if (pinchState.lastDistance > 0 && Math.abs(currentDistance - pinchState.initialDistance) > 1.5) {
+          pinchState.active = true;
+          const zoomDelta = Math.log2(currentDistance / pinchState.lastDistance) * 1.5;
+          const nextZoom = clamp(cameraMotion.targetZoom + zoomDelta, zoomBounds.minZoom, zoomBounds.maxZoom);
+          pinchState.lastDistance = currentDistance;
+          moveTowardCamera(cameraMotion.targetBearing, cameraMotion.targetPitch, nextZoom);
+        }
+      } else if (activePointers.size === 1 && !pinchState.active && drag.active) {
+        const dx = event.clientX - drag.lastX;
+        const dy = event.clientY - drag.lastY;
+        if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+        if (drag.moved) {
+          drag.lastX = event.clientX;
+          drag.lastY = event.clientY;
+          moveTowardCamera(
+            cameraMotion.targetBearing - dx * 0.19,
+            cameraMotion.targetPitch + dy * 0.125,
+            cameraMotion.targetZoom,
+          );
+        }
+      }
+      event.preventDefault();
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const deltaMultiplier = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? 400 : 1;
+      const deltaY = event.deltaY * deltaMultiplier;
+      const zoomDelta = -deltaY * 0.0016;
+      const nextZoom = clamp(cameraMotion.targetZoom + zoomDelta, zoomBounds.minZoom, zoomBounds.maxZoom);
+      moveTowardCamera(cameraMotion.targetBearing, cameraMotion.targetPitch, nextZoom);
+      if (!presentationOnly) {
+        setDirty(true);
+      }
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
+    const onGesture = (event: Event) => {
       event.preventDefault();
     };
 
@@ -2049,7 +2851,17 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', endDrag);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('gesturestart', onGesture, { passive: false });
+    canvas.addEventListener('gesturechange', onGesture, { passive: false });
+    const onMapMove = () => {
+      if (revealRef.current) {
+        refreshNearFieldOcclusion(true);
+      }
+    };
     map.on('load', onLoad);
+    map.on('move', onMapMove);
     map.on('sourcedata', onSourceData);
     map.on('idle', onIdle);
     map.on('render', onRender);
@@ -2057,6 +2869,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
 
     return () => {
       disposed = true;
+      resetMotionRef.current = () => {};
       refreshOcclusionRef.current = () => {};
       setTerrainProviderPlateVisibilityRef.current = () => {};
       if (cameraMotion.raf) window.cancelAnimationFrame(cameraMotion.raf);
@@ -2069,7 +2882,17 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', endDrag);
       canvas.removeEventListener('pointercancel', endDrag);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('gesturestart', onGesture);
+      canvas.removeEventListener('gesturechange', onGesture);
+      resizeObserver?.disconnect();
+      window.visualViewport?.removeEventListener('resize', handleViewportChange);
+      window.visualViewport?.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('orientationchange', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
       map.off('load', onLoad);
+      map.off('move', onMapMove);
       map.off('sourcedata', onSourceData);
       map.off('idle', onIdle);
       map.off('render', onRender);
@@ -2082,7 +2905,33 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
   }, [presentationOnly, profileLoaded]);
 
   useEffect(() => {
+    isMobilePresentationRef.current = isMobilePresentation;
+    if (mapRef.current) {
+      const nextPadding = getUsableViewportPadding(
+        mapContainerRef.current,
+        contextPanelRef.current,
+        headerOverlayRef.current,
+        isMobilePresentation,
+      );
+      mapRef.current.setPadding(nextPadding);
+      const center = geometryCenter(selectedFeaturesRef.current) ?? DEFAULT_CENTER;
+      mapRef.current.jumpTo({ center });
+    }
+  }, [isMobilePresentation]);
+
+  useEffect(() => {
     selectedFeaturesRef.current = selectedFeatures;
+    const activeVenueFeatures = selectedFeatures.filter((f) => f.properties.source === 'asset').length
+      ? selectedFeatures.filter((f) => f.properties.source === 'asset')
+      : selectedFeatures;
+    const bounds = calculateZoomBounds(activeVenueFeatures);
+    if (cameraRef.current.zoom < bounds.minZoom || cameraRef.current.zoom > bounds.maxZoom) {
+      const clampedZoom = clamp(cameraRef.current.zoom, bounds.minZoom, bounds.maxZoom);
+      cameraRef.current = { ...cameraRef.current, zoom: clampedZoom };
+      setCameraState(cameraRef.current);
+      resetMotionRef.current(cameraRef.current.bearing, cameraRef.current.pitch, clampedZoom);
+      mapRef.current?.jumpTo({ zoom: clampedZoom });
+    }
     const map = mapRef.current;
     if (map?.getSource(AUTHORED_PARTS_SOURCE_ID)) {
       refreshOcclusionRef.current(revealRef.current);
@@ -2102,6 +2951,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     next.zoom = clamp(next.zoom, 15.5, 19);
     cameraRef.current = next;
     setCameraState(next);
+    resetMotionRef.current(next.bearing, next.pitch, next.zoom);
     const map = mapRef.current;
     map?.jumpTo(next);
     if (map?.getSource(STREET_LABEL_SOURCE_ID)) refreshLocalStreetLabelsForMap(map, DEFAULT_CENTER);
@@ -2145,6 +2995,10 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       if (map.getLayer(AUTHORED_CONTEXT_LAYER_ID)) {
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
+      }
+      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
+        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
+        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
       }
       nearFieldLayerIdsRef.current.forEach((layerId) => {
         if (!map.getLayer(layerId)) return;
@@ -2231,8 +3085,22 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
   };
 
   const resetCamera = () => {
+    if (mapRef.current) {
+      const nextPadding = getUsableViewportPadding(
+        mapContainerRef.current,
+        contextPanelRef.current,
+        headerOverlayRef.current,
+        isMobilePresentationRef.current,
+      );
+      mapRef.current.setPadding(nextPadding);
+    }
     const center = geometryCenter(selectedFeaturesRef.current) ?? DEFAULT_CENTER;
-    applyCamera({ ...DEFAULT_CAMERA, center });
+    const defaultCam: CameraState = {
+      ...DEFAULT_CAMERA,
+      center,
+    };
+    resetMotionRef.current(defaultCam.bearing, defaultCam.pitch, defaultCam.zoom);
+    applyCamera(defaultCam);
     setStatus(`Camera reset to the ${LISTING_NAME} prototype arrival.`);
   };
 
@@ -2328,9 +3196,17 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         </header> : null}
 
         <main className={presentationOnly ? 'h-full min-h-0' : 'grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.62fr)]'}>
-          <section className={presentationOnly ? 'relative h-full min-h-[560px] overflow-hidden bg-[#020305]' : 'relative min-h-[560px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#020305] shadow-[0_30px_90px_rgba(0,0,0,0.42)] xl:min-h-0'}>
+          <section
+            className={presentationOnly ? 'relative h-full min-h-[560px] overflow-hidden bg-[#020305]' : 'relative min-h-[560px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#020305] shadow-[0_30px_90px_rgba(0,0,0,0.42)] xl:min-h-0'}
+            style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+          >
             <div className="absolute inset-0 z-0">
-              <div ref={mapContainerRef} className="h-full w-full" aria-label={`${LISTING_NAME} Street View prototype`} />
+              <div
+                ref={mapContainerRef}
+                className="h-full w-full select-none"
+                style={{ touchAction: 'none', overscrollBehavior: 'none', WebkitUserSelect: 'none' }}
+                aria-label={`${LISTING_NAME} Street View prototype`}
+              />
             </div>
             <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_50%,rgba(0,0,0,0.2))]" />
             <div
@@ -2378,7 +3254,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
                 >
                   <ChevronRight size={14} className="rotate-180" />Back
                 </button>
-                <div className={`pointer-events-none absolute z-30 flex items-center ${isMobilePresentation ? 'left-4 top-[72px] max-w-[calc(100%-32px)] gap-3' : isTabletPresentation ? 'left-5 top-[78px] gap-4' : 'left-5 top-[76px] gap-5'}`}>
+                <div ref={headerOverlayRef} className={`pointer-events-none absolute z-30 flex items-center ${isMobilePresentation ? 'left-4 top-[72px] max-w-[calc(100%-32px)] gap-3' : isTabletPresentation ? 'left-5 top-[78px] gap-4' : 'left-5 top-[76px] gap-5'}`}>
                   <div className={`flex shrink-0 items-center justify-center overflow-hidden border border-white/[0.14] bg-black/65 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl ${isMobilePresentation ? 'h-[84px] w-[84px] rounded-[22px]' : isTabletPresentation ? 'h-[108px] w-[108px] rounded-[26px]' : 'h-[124px] w-[124px] rounded-[28px]'}`}>
                     <img src={presentationLogoUrl} alt={`${presentationName} logo`} className="h-full w-full object-contain" />
                   </div>
@@ -2394,14 +3270,14 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
               </>
             ) : null}
 
-            <div className={`pointer-events-auto absolute z-30 overflow-hidden border border-white/10 bg-[rgba(10,12,16,0.88)] shadow-[0_22px_65px_rgba(0,0,0,0.38)] backdrop-blur-2xl ${presentationOnly ? (isMobilePresentation ? 'bottom-[max(12px,env(safe-area-inset-bottom))] left-3 right-3 rounded-[22px]' : isTabletPresentation ? 'bottom-5 left-5 w-[min(520px,calc(100%-40px))] rounded-[22px]' : 'bottom-5 left-5 w-[min(560px,calc(100%-40px))] rounded-[22px]') : 'left-3 top-3 w-[min(560px,calc(100%-40px))] rounded-[22px]'}`}>
+            <div ref={contextPanelRef} className={`pointer-events-auto absolute z-30 overflow-hidden border border-white/10 bg-[rgba(10,12,16,0.88)] shadow-[0_22px_65px_rgba(0,0,0,0.38)] backdrop-blur-2xl ${presentationOnly ? (isMobilePresentation ? 'bottom-[max(12px,env(safe-area-inset-bottom))] left-3 right-3 rounded-[22px]' : isTabletPresentation ? 'bottom-5 left-5 w-[min(520px,calc(100%-40px))] rounded-[22px]' : 'bottom-5 left-5 w-[min(560px,calc(100%-40px))] rounded-[22px]') : 'left-3 top-3 w-[min(560px,calc(100%-40px))] rounded-[22px]'}`}>
               {presentationOnly ? (
                 <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                   <img src={presentationHeroUrl} alt="" className="h-full w-full object-cover opacity-[0.5]" />
                   <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,10,13,0.88)_0%,rgba(8,10,13,0.72)_50%,rgba(8,10,13,0.58)_100%),linear-gradient(180deg,rgba(8,10,13,0.18)_0%,rgba(8,10,13,0.88)_100%)]" />
                 </div>
               ) : null}
-              <div className={`relative ${isMobilePresentation ? 'p-4' : 'p-5'}`}>
+              <div className={`relative ${isMobilePresentation ? 'p-3.5' : 'p-5'}`}>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-red-300">Venue context</span>
                 <div className="flex items-center gap-2">
@@ -2409,21 +3285,21 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
                   <span className="rounded-full border border-red-400/30 bg-red-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.14em] text-red-100">Public</span>
                 </div>
               </div>
-              {presentationOnly && presentationDescription ? <p className={`${isMobilePresentation ? 'mt-3 text-[11px] leading-[1.55]' : 'mt-4 text-[11px] leading-5'} text-zinc-200`}>{presentationDescription}</p> : null}
+              {presentationOnly && !isMobilePresentation && presentationDescription ? <p className="mt-4 text-[11px] leading-5 text-zinc-200">{presentationDescription}</p> : null}
               {presentationOnly && presentationAmenities.length ? (
                 amenitiesExpanded ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <div className={`${isMobilePresentation ? 'mt-2.5' : 'mt-3'} flex flex-wrap items-center gap-1.5`}>
                     {presentationAmenities.map((amenity) => <span key={amenity} className="rounded-full border border-white/[0.09] bg-black/30 px-2.5 py-1 text-[8px] font-medium text-zinc-100">{amenity}</span>)}
                     <button type="button" onClick={() => setAmenitiesExpanded(false)} className="rounded-full border border-white/[0.12] bg-black/45 px-2.5 py-1 text-[8px] font-semibold text-zinc-200 hover:text-white">Show less</button>
                   </div>
                 ) : (
-                  <div className="mt-3 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                  <div className={`${isMobilePresentation ? 'mt-2.5' : 'mt-3'} flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap`}>
                     {presentationAmenities.slice(0, compactAmenityCount).map((amenity) => <span key={amenity} className="shrink-0 rounded-full border border-white/[0.09] bg-black/30 px-2.5 py-1 text-[8px] font-medium text-zinc-100">{amenity}</span>)}
                     {presentationAmenities.length > compactAmenityCount ? <button type="button" onClick={() => setAmenitiesExpanded(true)} className={`shrink-0 rounded-full border border-white/[0.12] bg-black/45 px-2.5 py-1 text-[8px] font-semibold text-zinc-100 hover:text-white ${isMobilePresentation ? 'min-h-8' : ''}`}>+{presentationAmenities.length - compactAmenityCount}</button> : null}
                   </div>
                 )
               ) : null}
-              <div className="mt-4 flex items-start gap-2 border-t border-white/[0.08] pt-3">
+              <div className={`${isMobilePresentation ? 'mt-2.5 pt-2' : 'mt-4 pt-3'} flex items-start gap-2 border-t border-white/[0.08]`}>
                 <MapPin size={13} className="mt-0.5 shrink-0 text-zinc-500" />
                 <div><p className="text-[10px] text-zinc-200">{LISTING_ADDRESS_LINE1}</p><p className="mt-0.5 text-[9px] text-zinc-500">{LISTING_LOCALITY || LISTING_ADDRESS}</p></div>
               </div>
@@ -2434,7 +3310,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
                   <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">View</span><span className="mt-1 block text-[10px] text-zinc-200">Fixed orbit</span></div>
                 </div>
               ) : null}
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className={`${isMobilePresentation ? 'mt-2.5' : 'mt-3'} grid grid-cols-2 gap-2`}>
                 <a href={LISTING_MAP_URL} target="_blank" rel="noreferrer" className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-300/35 bg-red-500/90 px-3 text-[9px] font-semibold text-white hover:bg-red-500 ${isMobilePresentation ? 'h-11' : 'h-9'}`}><ExternalLink size={11} />Directions</a>
                 {presentationOnly ? (
                   <button type="button" onClick={resetCamera} className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3 text-[9px] font-semibold text-zinc-300 hover:border-white/20 hover:text-white ${isMobilePresentation ? 'h-11' : 'h-9'}`}><RotateCcw size={11} />Recenter</button>
@@ -2442,7 +3318,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
                   <a href="/globe" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-3 text-[9px] font-semibold text-zinc-300 hover:border-white/20 hover:text-white"><Navigation size={11} />Back to Globe</a>
                 )}
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[8px] text-zinc-500"><MousePointer2 size={10} />Drag gently to look around · the venue remains the visual anchor</p>
+              <p className="mt-2 flex items-center gap-1.5 text-[8px] text-zinc-500"><MousePointer2 size={10} />{isMobilePresentation ? 'Drag to orbit · pinch to zoom · venue remains fixed target' : 'Drag gently to look around · scroll to zoom · the venue remains the visual anchor'}</p>
               </div>
             </div>
 
@@ -2571,6 +3447,32 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
   );
 };
 
-export const StreetViewPresentationPage: React.FC<{ kind?: StreetViewPresentationKind }> = ({ kind = 'desktop' }) => <StreetViewToolPage presentationOnly presentationKind={kind} />;
+export const StreetViewPresentationPage: React.FC<{ kind?: StreetViewPresentationKind }> = ({ kind }) => {
+  const [resolvedKind, setResolvedKind] = useState<StreetViewPresentationKind>(() => {
+    if (kind) return kind;
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 768) return 'mobile';
+      if (window.innerWidth < 1024) return 'tablet';
+    }
+    return 'desktop';
+  });
+
+  useEffect(() => {
+    if (kind) {
+      setResolvedKind(kind);
+      return;
+    }
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 768) setResolvedKind('mobile');
+      else if (w < 1024) setResolvedKind('tablet');
+      else setResolvedKind('desktop');
+    };
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [kind]);
+
+  return <StreetViewToolPage presentationOnly presentationKind={resolvedKind} />;
+};
 
 export default StreetViewToolPage;

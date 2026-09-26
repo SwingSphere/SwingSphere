@@ -36,10 +36,10 @@ const ExplorerDetailsPanel: React.FC<ExplorerDetailsPanelProps> = ({
     : null;
 
   if (selectedTravel) {
-    if ('type' in selectedTravel && selectedTravel.type === 'resort') {
-      return <ResortSidebar resort={selectedTravel} onClose={onClose} mode={mode} />;
+    if ('series' in selectedTravel) {
+      return <CruiseSidebar series={selectedTravel.series} sailing={selectedTravel.sailing} onClose={onClose} mode={mode} />;
     }
-    return <CruiseSidebar series={selectedTravel.series} sailing={selectedTravel.sailing} onClose={onClose} mode={mode} />;
+    return <ResortSidebar resort={selectedTravel} onClose={onClose} mode={mode} />;
   }
 
   if (organization) {

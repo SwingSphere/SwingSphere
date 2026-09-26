@@ -9,7 +9,7 @@
     "test:building-verification": "node scripts/run-typescript-entry.mjs test tests/buildingVerification.test.ts",
     "test:mobile": "node scripts/run-typescript-entry.mjs test tests/devMobileRouting.test.ts && node --test tests/mobileGlobeRuntimePolicy.test.mjs",
     "test:sitemap": "node scripts/run-typescript-entry.mjs test tests/devSitemap.test.ts",
-    "test:privacy": "node --test tests/publicStreetViewPrivacy.test.mjs",
+    "test:privacy": "node --test tests/publicStreetViewPrivacy.test.mjs tests/publicListingsPrivacy.test.mjs",
     "test:hybrid-geospatial": "node --test tests/hybridGeospatialCalibration.test.mjs tests/countryBoundaryCoverage.test.mjs",
     "audit:hybrid-borders": "node scripts/globe/audit-hybrid-borders.mjs --strict",
     "typecheck:mobile": "tsc -p tsconfig.mobile.json",

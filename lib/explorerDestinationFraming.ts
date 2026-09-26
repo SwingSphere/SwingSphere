@@ -26,7 +26,7 @@ export type ExplorerMapCameraFraming = {
   bearing: number;
   padding: ExplorerMapPadding;
   durationMs: number;
-  source: 'listing' | 'building-asset' | 'fallback';
+  source: 'listing' | 'building-asset' | 'listing-distribution' | 'region-center' | 'fallback';
 };
 
 export type ExplorerMapBoundsFraming = {

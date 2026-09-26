@@ -21,6 +21,8 @@ import { MobileListingCard } from './MobileListingCard';
 import { useDevMobileSaved } from './useDevMobileSaved';
 import TabletNearbyPreviewPanel from '../tablet/TabletNearbyPreviewPanel';
 
+const MotionDiv = motion.div as React.ComponentType<any>;
+
 const StreetViewPresentationPage = React.lazy(() => import('../StreetViewToolPage').then((module) => ({ default: module.StreetViewPresentationPage })));
 
 const MobileExplorerPage: React.FC = () => {
@@ -340,7 +342,7 @@ const MobileNearbyScreen: React.FC = () => {
               <div className="min-h-0 min-w-0 overflow-hidden">
                 <AnimatePresence initial={false}>
                   {selectedNearbyItem ? (
-                    <motion.div
+                    <MotionDiv
                       key={selectedNearbyItem.listing.id}
                       initial={{ opacity: 0, x: 72 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -356,7 +358,7 @@ const MobileNearbyScreen: React.FC = () => {
                         onOpenDetails={() => openListing(selectedNearbyItem.listing)}
                         onClose={() => setTabletSelectedListingId(null)}
                       />
-                    </motion.div>
+                    </MotionDiv>
                   ) : null}
                 </AnimatePresence>
               </div>

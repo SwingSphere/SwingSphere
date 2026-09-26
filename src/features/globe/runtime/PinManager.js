@@ -152,8 +152,9 @@ export class PinManager {
     this.#syncGlobeRotation();
     this.#updateHover();
     this.selectionAnimationActive = false;
+    const cachedRect = this.renderer.renderer.domElement.getBoundingClientRect();
     for (const view of this.markerViews) {
-      this.#updateView(view, delta);
+      this.#updateView(view, delta, cachedRect);
       if (view.animationActive) this.selectionAnimationActive = true;
     }
   }
@@ -526,7 +527,7 @@ export class PinManager {
     this.anchorViews.push(anchor);
   }
 
-  #updateView(view, deltaSeconds) {
+  #updateView(view, deltaSeconds, cachedRect = null) {
     const eventId = String(view.marker.event.id ?? view.marker.event.name);
     const isHovered = this.hoveredEvent && String(this.hoveredEvent.id ?? this.hoveredEvent.name) === eventId;
     const isSelected = this.selectedEvent && String(this.selectedEvent.id ?? this.selectedEvent.name) === eventId;
@@ -574,7 +575,8 @@ export class PinManager {
       camera: this.renderer.camera,
       domElement: this.renderer.renderer.domElement,
       globe: this.renderer.globe,
-      presentationOpacity: view.currentPresentationOpacity
+      presentationOpacity: view.currentPresentationOpacity,
+      cachedRect
     });
     view.animationActive = Boolean(
       isHovered ||
@@ -615,32 +617,6 @@ export class PinManager {
       // exact ray misses land, visually attach the pin to the nearest land
       // vertex instead of leaving it floating over water.
       snapFallbackToLandGeometry: true
-    });
-  }
-
-  #logClickTravelVectors(view, focusWorldPosition) {
-    if (!focusWorldPosition) return;
-    const pinWorldPosition = this.getMarkerTrueWorldPosition(view.marker.id, this.tmpPinWorld);
-    if (!pinWorldPosition) return;
-    const globeCenter = this.renderer.globe.getWorldPosition(this.tmpWorld);
-    const pinNormal = pinWorldPosition.clone().sub(globeCenter).normalize();
-    const focusNormal = focusWorldPosition.clone().sub(globeCenter).normalize();
-    console.info("[SwingSphere] Globe pin travel vectors", {
-      clickedListingId: view.marker.event.listingId ?? view.marker.event.id ?? view.marker.id,
-      clickedListingName: view.marker.event.name ?? view.marker.name,
-      canonicalLngLat: {
-        lng: view.marker.event.lon,
-        lat: view.marker.event.lat
-      },
-      pinRenderedLngLat: {
-        lng: view.marker.event.lon,
-        lat: view.marker.event.lat
-      },
-      pinWorldPosition: pinWorldPosition.toArray(),
-      focusWorldPosition: focusWorldPosition.toArray(),
-      pinWorldNormalized: pinNormal.toArray(),
-      focusWorldNormalized: focusNormal.toArray(),
-      pinFocusDot: pinNormal.dot(focusNormal)
     });
   }
 

@@ -15,6 +15,7 @@ import { mockVenues } from '../data/mockVenues';
 import { eventSeries } from '../data/eventSeries';
 import { organizationRelationships as defaultOrganizationRelationships } from '../data/organizationRelationships';
 import {
+  getPrimaryVenueForClub,
   resolveEventOrganizerOrganizationId,
   resolveEventVenueId,
 } from './entityCompatibility';
@@ -89,6 +90,7 @@ export const buildEntityIndex = (
   const organizationRelationshipsBySourceId = new Map<string, OrganizationRelationship[]>();
   const organizationRelationshipsByTargetId = new Map<string, OrganizationRelationship[]>();
   const eventsByVenueId = new Map<string, EventData[]>();
+  const clubKeysByVenueId = new Map<string, Set<string>>();
   const eventsByOrganizationId = new Map<string, EventData[]>();
   const eventsBySeriesId = new Map<string, EventData[]>();
 
@@ -126,16 +128,29 @@ export const buildEntityIndex = (
     const key = clubKey(club);
     clubKeyById.set(club.id, key);
     if (!clubsByKey.has(key)) clubsByKey.set(key, club);
+
+    const venueIds = new Set([
+      `venue-${club.id}`,
+      club.primaryVenueId,
+      getPrimaryVenueForClub(club, { venues, relationships })?.id,
+    ].filter((id): id is string => Boolean(id)));
+    for (const venueId of venueIds) {
+      const keys = clubKeysByVenueId.get(venueId) ?? new Set<string>();
+      keys.add(key);
+      clubKeysByVenueId.set(venueId, keys);
+    }
   }
 
   for (const event of events) {
-    // TODO(SEMv2 Phase 4): remove venueKey indexes after public routes resolve event venues by venueId.
-    const venueKey = event.venueKey ?? '';
-    if (venueKey) {
-      eventVenueClubKeyById.set(event.id, venueKey);
-      const venueEvents = eventsByVenueClubKey.get(venueKey) ?? [];
+    const venueId = resolveEventVenueId(event, { listings, venues, organizations, relationships });
+    const linkedClubKeys = new Set(venueId ? clubKeysByVenueId.get(venueId) ?? [] : []);
+    // Retain legacy venueKey links when no club can be resolved from the venue ID.
+    if (!linkedClubKeys.size && event.venueKey) linkedClubKeys.add(event.venueKey);
+    for (const key of linkedClubKeys) {
+      eventVenueClubKeyById.set(event.id, key);
+      const venueEvents = eventsByVenueClubKey.get(key) ?? [];
       venueEvents.push(event);
-      eventsByVenueClubKey.set(venueKey, venueEvents);
+      eventsByVenueClubKey.set(key, venueEvents);
     }
 
     const hostName = normalizeHostName(event.hostName ?? '');
@@ -159,7 +174,6 @@ export const buildEntityIndex = (
       }
     }
 
-    const venueId = resolveEventVenueId(event, { listings, venues, organizations, relationships });
     if (venueId) {
       const venueEvents = eventsByVenueId.get(venueId) ?? [];
       venueEvents.push(event);

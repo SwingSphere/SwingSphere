@@ -427,7 +427,11 @@ export class GlobeRenderer {
     this.frameListeners.forEach((listener) => listener({ delta, elapsed }));
     this.renderer.info.reset();
     const renderStartedAt = performance.now();
-    this.composer.render();
+    if (this.bloomPass?.enabled) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
     const renderCostMs = performance.now() - renderStartedAt;
     this.renderedFrames += 1;
     this.performanceSamples.push({

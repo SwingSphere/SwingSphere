@@ -19,25 +19,8 @@ type ListingDiscoverySignals = Listing & {
   addedAt?: string;
   createdAt?: string;
   created_at?: string;
-  curated?: boolean;
-  curatedOrder?: number;
-  featured?: boolean;
-  featuredPriority?: number;
-  homepagePriority?: number;
-  isFeatured?: boolean;
-  priority?: number;
   updatedAt?: string;
   updated_at?: string;
-};
-
-const getFeaturedRank = (listing: Listing) => {
-  const signals = listing as ListingDiscoverySignals;
-  if (typeof signals.homepagePriority === 'number') return signals.homepagePriority;
-  if (typeof signals.featuredPriority === 'number') return signals.featuredPriority;
-  if (typeof signals.curatedOrder === 'number') return signals.curatedOrder;
-  if (typeof signals.priority === 'number') return signals.priority;
-  if (signals.isFeatured || signals.featured || signals.curated) return 0;
-  return null;
 };
 
 const getListingTimestamp = (listing: Listing) => {
@@ -49,20 +32,13 @@ const getListingTimestamp = (listing: Listing) => {
 };
 
 const buildFeaturedListings = (listings: Listing[]) => {
-  const approvedListings = listings.filter((listing) => listing.status === 'approved' && isActiveDiscoveryListing(listing));
-  const withSourceIndex = approvedListings.map((listing, sourceIndex) => ({ listing, sourceIndex }));
-  const hasFeaturedSignal = withSourceIndex.some(({ listing }) => getFeaturedRank(listing) !== null);
-
-  if (!hasFeaturedSignal) return approvedListings.slice(0, 5);
-
-  return withSourceIndex
-    .sort((a, b) => {
-      const rankA = getFeaturedRank(a.listing) ?? Number.POSITIVE_INFINITY;
-      const rankB = getFeaturedRank(b.listing) ?? Number.POSITIVE_INFINITY;
-      return rankA - rankB || a.sourceIndex - b.sourceIndex;
-    })
-    .slice(0, 5)
-    .map(({ listing }) => listing);
+  const clubs = listings.filter((listing) => listing.type === 'club' && listing.status === 'approved' && isActiveDiscoveryListing(listing));
+  const shuffled = [...clubs];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, 5);
 };
 
 const buildRecentlyAddedListings = (listings: Listing[]) => {
@@ -139,7 +115,7 @@ const LandingPage: React.FC = () => {
       <section className="ss-homepage-discovery border-t border-white/10 py-14">
           <div className="container mx-auto px-6 lg:px-8">
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <h2 className="text-2xl font-bold text-white md:text-3xl">Featured Clubs & Events</h2>
+                <h2 className="text-2xl font-bold text-white md:text-3xl">{activeDiscoveryTab === 'featured' ? 'Featured Clubs' : 'Recently Added'}</h2>
                 <div className="ss-glass ss-glass--liquid flex w-fit rounded-full p-1">
                   {[
                     ['featured', 'Featured'],

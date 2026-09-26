@@ -90,7 +90,7 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
   const filterSummary = useMemo(() => {
     const parts: string[] = [];
     if (selectedTags.length) parts.push(`${selectedTags.length} access filter${selectedTags.length === 1 ? '' : 's'}`);
-    if (timeLens.mode !== 'any') parts.push('Date selected');
+    if (timeLens.mode !== 'none') parts.push('Date selected');
     return parts.length ? parts.join(' · ') : 'Audience, access and welcome';
   }, [selectedTags.length, timeLens.mode]);
 

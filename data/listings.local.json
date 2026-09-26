@@ -1,58 +1,40 @@
 [
   {
     "id": "club-twist-sf",
-    "location": "387 Bay Street, San Francisco, California 94133, United States",
+    "name": "Twist SF",
+    "type": "club",
+    "status": "approved",
     "website": "https://www.twist-sf.com/",
-    "contactEmail": "info@twist-sf.com",
     "geopoint": {
-      "latitude": 37.8055766,
-      "longitude": -122.4132692,
       "address": {
-        "addressLine1": "387, Bay Street",
         "city": "San Francisco",
         "region": "California",
-        "postalCode": "94133",
         "country": "United States",
-        "countrySlug": "us",
-        "admin1Slug": "ca",
         "citySlug": "san-francisco",
-        "isCityState": false
-      }
+        "admin1Slug": "ca",
+        "postalCode": "94133",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "387, Bay Street"
+      },
+      "latitude": 37.8055766,
+      "longitude": -122.4132692
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.95,
-      "normalizedAddress": "387, Bay Street, San Francisco, California, 94133, United States",
-      "geocoderLabel": "387, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
-      "geocoderSource": "nominatim",
-      "warnings": [
-        "low-geocode-confidence"
-      ],
-      "validatedAt": "2026-06-25T06:03:17.931Z"
-    },
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f9b5a963-b624-4d23-9502-4aaf2afc8200/heropage",
-    "galleryImageUrls": [],
-    "postedByUserId": "user1",
-    "status": "approved",
-    "type": "club",
-    "name": "Twist SF",
-    "description_short": "A dedicated on-premise lifestyle venue in San Francisco hosting couples-focused Friday parties, couples-and-single-women Saturdays, selected Her Fantasy Sundays and midweek erotic wellness classes.",
-    "description_full": "Twist SF is a dedicated private lifestyle party venue at Fisherman's Wharf rather than a residence or rotating hotel event. The club combines front social areas, a BYOB bar with mixers, lounges, a dance floor with a stage and dance poles, lockers, coat check, restrooms, a shower and multiple open and private play spaces. Friday parties are couple-centric and may admit a tightly limited number of pre-approved single men. Saturday parties welcome couples and single women but do not admit solo men. Selected Sunday Her Fantasy events welcome additional approved single men, while Wednesday programming may include couples erotic yoga and other educational or wellness classes. Consent, communication, privacy and responsible alcohol use are central to the venue rules, and no sexual participation is required.",
+    "location": "387 Bay Street, San Francisco, California 94133, United States",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "open": "19:30",
         "close": "21:00",
         "rules": [
           "Selected Couples Classes",
           "Couples Erotic Yoga",
           "Schedule Varies"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "22:00",
         "close": "04:00",
         "rules": [
@@ -60,32 +42,92 @@
           "Single Women Welcome",
           "Limited Pre-Approved Single Men",
           "Advance Approval Required for Solo Men"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "22:00",
         "close": "04:00",
         "rules": [
           "Couples Welcome",
           "Single Women Welcome",
           "No Solo Men"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Sunday",
-        "isClosed": false,
         "rules": [
           "Selected Her Fantasy Events",
           "Couples Welcome",
           "Single Women Welcome",
           "Approved Single Men Welcome",
           "Check Event Calendar"
-        ]
+        ],
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "Regular weekend parties run Friday and Saturday from 10:00 PM to 4:00 AM. Selected Sunday Her Fantasy events and Wednesday couples classes use event-specific hours, so guests should confirm the current calendar before visiting.",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-05T02:49:49.80008+00:00",
+    "mediaAssets": [
+      {
+        "id": "7f73c80a-39a7-44fb-a627-4c8152574e86",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "4c15bc_5b17ed35df994bfdb523c2f32e23137e~mv2-cropped",
+        "owner_id": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
+        "created_at": "2026-07-17T04:06:23.304127+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-07-17T04:06:23.304127+00:00",
+        "aspect_mode": "cover",
+        "external_id": "f9b5a963-b624-4d23-9502-4aaf2afc8200",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "b0d84b83-c6e6-44cd-a9bb-9a2afbbdc61f",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (1)",
+        "owner_id": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
+        "created_at": "2026-09-05T02:49:49.089196+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T02:49:49.089196+00:00",
+        "aspect_mode": "contain",
+        "external_id": "75478ddd-c63b-48c0-f104-aeac57317f00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@twist-sf.com",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [
+        "low-geocode-confidence"
+      ],
+      "confidence": 0.95,
+      "validatedAt": "2026-06-25T06:03:17.931Z",
+      "geocoderLabel": "387, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      "geocoderSource": "nominatim",
+      "normalizedAddress": "387, Bay Street, San Francisco, California, 94133, United States"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/75478ddd-c63b-48c0-f104-aeac57317f00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f9b5a963-b624-4d23-9502-4aaf2afc8200/heropage",
+    "postedByUserId": "user1",
+    "primaryVenueId": "venue-club-twist-sf",
+    "buildingAssetId": "building-asset-club-twist-sf",
+    "attendancePolicy": "varies_by_event",
+    "description_full": "Twist SF is a dedicated private lifestyle party venue at Fisherman's Wharf rather than a residence or rotating hotel event. The club combines front social areas, a BYOB bar with mixers, lounges, a dance floor with a stage and dance poles, lockers, coat check, restrooms, a shower and multiple open and private play spaces. Friday parties are couple-centric and may admit a tightly limited number of pre-approved single men. Saturday parties welcome couples and single women but do not admit solo men. Selected Sunday Her Fantasy events welcome additional approved single men, while Wednesday programming may include couples erotic yoga and other educational or wellness classes. Consent, communication, privacy and responsible alcohol use are central to the venue rules, and no sexual participation is required.",
+    "galleryImageUrls": [],
     "generalAmenities": [
       "Dedicated Lifestyle Venue",
       "On-Premise Club",
@@ -120,31 +162,12 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "buildingAssetId": "building-asset-club-twist-sf",
-    "mediaAssets": [
-      {
-        "id": "7f73c80a-39a7-44fb-a627-4c8152574e86",
-        "owner_type": "club",
-        "owner_id": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
-        "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "f9b5a963-b624-4d23-9502-4aaf2afc8200",
-        "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "4c15bc_5b17ed35df994bfdb523c2f32e23137e~mv2-cropped",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T04:06:23.304127+00:00",
-        "updated_at": "2026-07-17T04:06:23.304127+00:00"
-      }
-    ],
-    "attendancePolicy": "varies_by_event",
+    "description_short": "A dedicated on-premise lifestyle venue in San Francisco hosting couples-focused Friday parties, couples-and-single-women Saturdays, selected Her Fantasy Sundays and midweek erotic wellness classes.",
     "entryRequirements": [
       "screening_approval_required"
-    ]
+    ],
+    "ownerOrganizationId": "org-club-twist-sf",
+    "specialScheduleNotes": "Regular weekend parties run Friday and Saturday from 10:00 PM to 4:00 AM. Selected Sunday Her Fantasy events and Wednesday couples classes use event-specific hours, so guests should confirm the current calendar before visiting."
   },
   {
     "id": "club-power-exchange-sf",
@@ -464,8 +487,9 @@
         "isClosed": false,
         "open": "21:00",
         "close": "03:00",
+        "audienceDetails": "Primarily couples and single women; special events may have different admission",
+        "entryConditions": "Members only; exact address is provided to ticketed members",
         "rules": [
-          "Members Only",
           "Adults Only",
           "Dress Code"
         ]
@@ -475,8 +499,9 @@
         "isClosed": false,
         "open": "21:00",
         "close": "05:00",
+        "audienceDetails": "Primarily couples and single women; special events may have different admission",
+        "entryConditions": "Members only; exact address is provided to ticketed members",
         "rules": [
-          "Members Only",
           "Adults Only",
           "Dress Code"
         ]
@@ -1082,10 +1107,8 @@
         "isClosed": false,
         "open": "22:00",
         "close": "04:00",
+        "audienceDetails": "Couples and select singles; confirm this event's admission rules",
         "rules": [
-          "Single Men Welcome",
-          "Couples Only",
-          "Single Women Welcome",
           "Newbie Friendly"
         ]
       },
@@ -1094,10 +1117,8 @@
         "isClosed": false,
         "open": "22:00",
         "close": "04:00",
+        "audienceDetails": "Couples and select singles; confirm this event's admission rules",
         "rules": [
-          "Couples Only",
-          "Single Men Welcome",
-          "Single Women Welcome",
           "Newbie Friendly"
         ]
       },
@@ -1940,90 +1961,109 @@
   },
   {
     "id": "club-colette-austin",
-    "location": "13800 Dragline Drive, Austin, Texas 78728, United States",
+    "name": "Colette - Austin",
+    "type": "club",
+    "status": "approved",
     "website": "https://members.coletteclubs.com/clubs/austin",
-    "contactEmail": "austingm@coletteclubs.com",
     "geopoint": {
-      "latitude": 30.431512,
-      "longitude": -97.683172,
       "address": {
-        "addressLine1": "13800 Dragline Drive",
         "city": "Austin",
         "region": "Texas",
-        "postalCode": "78728",
         "country": "United States",
-        "countrySlug": "us",
-        "admin1Slug": "tx",
         "citySlug": "wells-branch",
-        "isCityState": false
-      }
+        "admin1Slug": "tx",
+        "postalCode": "78728",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "13800 Dragline Drive"
+      },
+      "latitude": 30.43143173463357,
+      "longitude": -97.68357932567596
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.94,
-      "normalizedAddress": "13800 Dragline Drive, Austin, Texas 78728, United States",
-      "geocoderSource": "official_club_page_and_public_map",
-      "warnings": [],
-      "validatedAt": "2026-07-17T00:00:00.000Z"
-    },
-    "galleryImageUrls": [],
-    "postedByUserId": "admin-import",
-    "status": "approved",
-    "type": "club",
-    "name": "Colette - Austin",
-    "description_short": "colette Austin is a private, membership-only on-premises social club for couples, single women, and single men. It offers an upscale, non-smoking atmosphere with high-tech lighting, a dance floor, lockers, lounges, DJs, and a second-floor social area.",
-    "attendancePolicy": "mixed_open",
-    "entryRequirements": [
-      "membership_required",
-      "government_id",
-      "dress_code"
-    ],
+    "location": "13800 Dragline Drive, Austin, Texas 78728, United States",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "open": "21:00",
         "close": "02:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Thursday",
-        "isClosed": false,
         "open": "21:00",
         "close": "02:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "21:00",
         "close": "02:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "21:00",
         "close": "03:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       }
     ],
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-26T03:27:12.563922+00:00",
+    "clubBrandId": "brand-colette",
+    "mediaAssets": [
+      {
+        "id": "80545d0c-75b5-4789-9100-b012ad44114a",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_27_55 PM (1)",
+        "owner_id": "63801665-5a8c-446b-ac2e-7c6de8bfdd53",
+        "created_at": "2026-09-02T22:28:46.986258+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T22:28:46.986258+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2f62b83e-0313-45d5-2af7-a4232b278500",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "austingm@coletteclubs.com",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.94,
+      "validatedAt": "2026-07-17T00:00:00.000Z",
+      "geocoderSource": "official_club_page_and_public_map",
+      "normalizedAddress": "13800 Dragline Drive, Austin, Texas 78728, United States"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2f62b83e-0313-45d5-2af7-a4232b278500/logosquare",
+    "postedByUserId": "admin-import",
+    "buildingAssetId": "building-asset-club-colette-austin",
+    "attendancePolicy": "mixed_open",
+    "galleryImageUrls": [],
     "generalAmenities": [
       "Upscale",
       "Dance Floor",
@@ -2035,28 +2075,12 @@
       "Dress Code",
       "Non-Smoking"
     ],
-    "buildingAssetId": "building-asset-club-colette-austin",
-    "mediaAssets": [
-      {
-        "id": "6e0f43ee-a33a-4ca4-b71f-96202908df60",
-        "owner_type": "club",
-        "owner_id": "63801665-5a8c-446b-ac2e-7c6de8bfdd53",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "f5b444dd-4b00-4f72-63d2-7136f132be00",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "colette",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T10:27:58.929377+00:00",
-        "updated_at": "2026-07-29T10:27:58.929377+00:00"
-      }
-    ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f5b444dd-4b00-4f72-63d2-7136f132be00/logosquare"
+    "description_short": "colette Austin is a private, membership-only on-premises social club for couples, single women, and single men. It offers an upscale, non-smoking atmosphere with high-tech lighting, a dance floor, lockers, lounges, DJs, and a second-floor social area.",
+    "entryRequirements": [
+      "membership_required",
+      "government_id",
+      "dress_code"
+    ]
   },
   {
     "id": "club-colette-houston",
@@ -2537,85 +2561,147 @@
   },
   {
     "id": "club-2a2-rio-de-janeiro",
-    "location": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
+    "name": "Clube 2A2",
+    "type": "club",
+    "status": "approved",
     "website": "https://clube2a2.com.br/home/",
-    "contactEmail": "reservas2a2@gmail.com",
     "geopoint": {
-      "latitude": -22.9574018,
-      "longitude": -43.1972616,
       "address": {
-        "addressLine1": "Rua Visconde de Caravelas, 176",
         "city": "Rio de Janeiro",
         "region": "Rio de Janeiro",
-        "postalCode": "22271-041",
         "country": "Brazil",
-        "countrySlug": "br",
-        "admin1Slug": "rio-de-janeiro",
         "citySlug": "rio-de-janeiro",
-        "isCityState": false
-      }
+        "admin1Slug": "rio-de-janeiro",
+        "postalCode": "22271-041",
+        "countrySlug": "br",
+        "isCityState": false,
+        "addressLine1": "Rua Visconde de Caravelas, 176"
+      },
+      "latitude": -22.957343671576922,
+      "longitude": -43.19729268550873
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.99,
-      "normalizedAddress": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
-      "geocoderLabel": "Boate 2A2 - R. Visc. de Caravelas, 176 - Botafogo, Rio de Janeiro - RJ, 22271-041, Brazil",
-      "geocoderSource": "official-site+google-maps",
-      "warnings": [],
-      "manualAdjustment": true,
-      "validatedAt": "2026-08-16T21:45:00.000Z"
-    },
-    "postedByUserId": "user1",
-    "status": "approved",
-    "type": "club",
-    "name": "Clube 2A2",
-    "description_short": "Operating in Rio de Janeiro since 1995, Clube 2A2 is an upscale adult lifestyle club for couples and open-minded guests. The venue presents swing, ménage, exhibitionist, voyeur and fetish-oriented experiences in a consent-focused setting with a lounge, dance floor, bars, performance areas, private and shared play spaces, and themed weekly events. Attendance varies by night: couples and single women are welcome on Wednesdays, Fridays and Saturdays, while single men are also admitted on Thursdays.",
+    "location": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "open": "21:00",
         "close": "04:00",
         "rules": [
           "Couples Only",
           "Single Women Welcome",
           "Lingerie Night"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Thursday",
-        "isClosed": false,
         "open": "22:00",
         "close": "04:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "22:00",
         "close": "05:00",
         "rules": [
           "Couples Only",
           "Single Women Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "22:00",
         "close": "05:00",
         "rules": [
           "Couples Only",
           "Single Women Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "Hours and admission policies may vary by event. The official FAQ lists Wednesday 21:00-04:00, Thursday 22:00-04:00, and Friday-Saturday 22:00-05:00. Single men are admitted only on Thursdays under the standard weekly policy.",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-26T03:27:06.355949+00:00",
+    "mediaAssets": [
+      {
+        "id": "b4176d27-3ccc-476d-a375-0c989ebffdb8",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 05_58_05 PM",
+        "owner_id": "fae9ba8f-37ca-4bcd-aa84-8e37fecc1d75",
+        "created_at": "2026-09-25T00:58:50.53177+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T00:58:50.53177+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2cee4bc6-2401-43d4-62ab-faad1b859100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "142c8087-588d-4157-a5fc-507fd5535a6e",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 05_59_41 PM-cropped",
+        "owner_id": "fae9ba8f-37ca-4bcd-aa84-8e37fecc1d75",
+        "created_at": "2026-09-25T00:59:51.001278+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T00:59:51.001278+00:00",
+        "aspect_mode": "cover",
+        "external_id": "b49e343b-579c-4fd6-af15-21ee506c5400",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "reservas2a2@gmail.com",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.99,
+      "validatedAt": "2026-08-16T21:45:00.000Z",
+      "geocoderLabel": "Boate 2A2 - R. Visc. de Caravelas, 176 - Botafogo, Rio de Janeiro - RJ, 22271-041, Brazil",
+      "geocoderSource": "official-site+google-maps",
+      "manualAdjustment": true,
+      "normalizedAddress": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
+      "buildingVerification": {
+        "notes": [
+          "house number differs (184)",
+          "street matches",
+          "pin intersects footprint",
+          "checked 12 nearby building candidates",
+          "search expanded to 250m"
+        ],
+        "status": "mismatch",
+        "checkedAt": "2026-08-16T22:56:35.165Z",
+        "confidence": 0.72,
+        "pinIntersects": true,
+        "distanceMeters": 0,
+        "listingAddress": "Rua Visconde de Caravelas, 176, Botafogo, Rio de Janeiro, RJ, 22271-041, Brazil",
+        "candidateAddress": "184 Rua Visconde de Caravelas",
+        "candidateSecondary": "Rio de Janeiro, Rio de Janeiro, 22271-060",
+        "providerFeatureIds": [
+          "133124820"
+        ],
+        "searchRadiusMeters": 250
+      }
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2cee4bc6-2401-43d4-62ab-faad1b859100/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/b49e343b-579c-4fd6-af15-21ee506c5400/heropage",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_night",
     "generalAmenities": [
       "Upscale",
       "Swinger Community",
@@ -2634,28 +2720,8 @@
       "Privacy-Focused",
       "Consent-Focused"
     ],
-    "attendancePolicy": "varies_by_night",
-    "mediaAssets": [
-      {
-        "id": "bfcb9718-5ea6-41f2-b056-78524933249a",
-        "owner_type": "club",
-        "owner_id": "fae9ba8f-37ca-4bcd-aa84-8e37fecc1d75",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "d8b64865-379e-4b9b-da53-43df90f02b00",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "cropped-Logo-2a2-melhorada-1-1-180x180",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-22T03:13:56.262059+00:00",
-        "updated_at": "2026-07-22T03:13:56.262059+00:00"
-      }
-    ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d8b64865-379e-4b9b-da53-43df90f02b00/logosquare",
+    "description_short": "Operating in Rio de Janeiro since 1995, Clube 2A2 is an upscale adult lifestyle club for couples and open-minded guests. The venue presents swing, ménage, exhibitionist, voyeur and fetish-oriented experiences in a consent-focused setting with a lounge, dance floor, bars, performance areas, private and shared play spaces, and themed weekly events. Attendance varies by night: couples and single women are welcome on Wednesdays, Fridays and Saturdays, while single men are also admitted on Thursdays.",
+    "specialScheduleNotes": "Hours and admission policies may vary by event. The official FAQ lists Wednesday 21:00-04:00, Thursday 22:00-04:00, and Friday-Saturday 22:00-05:00. Single men are admitted only on Thursdays under the standard weekly policy.",
     "buildingAssetId": "building-asset-club-2a2-rio-de-janeiro"
   },
   {
@@ -7650,64 +7716,109 @@
   },
   {
     "id": "club-swingers-oase-ammerzoden",
-    "type": "club",
     "name": "Swingers Oase",
-    "description_short": "A long-running, intimate swinger club in Ammerzoden with all-inclusive food and drinks, multiple play rooms, a warm jacuzzi, themed parties and event-specific attendance for couples, women, men and queer guests.",
-    "description_full": "Swingers Oase is a permanent on-premise lifestyle club in Ammerzoden, Gelderland. The venue describes itself as a small, homey but complete swingers club and runs an event-driven calendar with gangbang nights, couples-focused parties, bi-curious and queer events, themed Saturdays and Sunday social/play sessions. Depending on the event, couples, single women, single men, trans women, bi men and queer guests may be admitted. The club advertises multiple play rooms, a warm jacuzzi, dance floor, DJ programming, buffet service and all-inclusive drinks, food and facilities. Consent is central to the venue's published rules: participation is optional and mutual respect is expected. Single men are welcome at many events but are commonly required to reserve in advance.",
-    "location": "Haarstraat 20, 5324 AN Ammerzoden, Gelderland, Netherlands",
-    "website": "https://swingersoase.com/",
+    "type": "club",
     "phone": "+31 6 303 51 333",
     "status": "approved",
-    "postedByUserId": "user1",
-    "locationVisibility": "exact_public",
+    "website": "https://swingersoase.com/",
     "geopoint": {
-      "latitude": 51.7479521,
-      "longitude": 5.2275095,
       "address": {
-        "addressLine1": "Haarstraat 20",
         "city": "Ammerzoden",
         "region": "Gelderland",
-        "postalCode": "5324 AN",
         "country": "Netherlands",
-        "countrySlug": "nl",
-        "admin1Slug": "gelderland",
         "citySlug": "ammerzoden",
-        "isCityState": false
-      }
+        "admin1Slug": "gelderland",
+        "postalCode": "5324 AN",
+        "countrySlug": "nl",
+        "isCityState": false,
+        "addressLine1": "Haarstraat 20"
+      },
+      "latitude": 51.7479521,
+      "longitude": 5.2275095
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.99,
-      "source": "official-site+nominatim-poi",
-      "warnings": []
-    },
+    "location": "Haarstraat 20, 5324 AN Ammerzoden, Gelderland, Netherlands",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "open": "20:00",
-        "close": "00:00"
+        "close": "00:00",
+        "isClosed": false
       },
       {
         "day": "Thursday",
-        "isClosed": false,
         "open": "20:00",
-        "close": "00:00"
+        "close": "00:00",
+        "isClosed": false
       },
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "20:00",
-        "close": "01:00"
+        "close": "01:00",
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "20:00",
-        "close": "02:00"
+        "close": "02:00",
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "Swingers Oase is event-driven rather than operating on one fixed weekly timetable. Current 2026 events commonly run Wednesday and Thursday around 20:00-00:00, Friday around 20:00-01:00, Saturday around 20:00-02:00 and selected Sundays around 16:00-22:00. Attendance mix, pricing and reservations vary by event, so guests should check the official calendar before visiting.",
+    "createdAt": "2026-09-07T00:28:57.236825+00:00",
+    "updatedAt": "2026-09-20T03:17:26.492635+00:00",
+    "mediaAssets": [
+      {
+        "id": "bb0bc7f9-977d-475b-a26a-76432813ca6e",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_16_23 PM (1)",
+        "owner_id": "3c7666e4-22dd-46ba-acfc-643c24b39d92",
+        "created_at": "2026-09-20T03:16:30.454145+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:16:30.454145+00:00",
+        "aspect_mode": "contain",
+        "external_id": "7dd75e58-afbf-4c1f-c7f7-38fc5887ec00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "9f69dfc6-470c-4049-9db2-cb905dcfb11c",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_16_23 PM (2)-cropped",
+        "owner_id": "3c7666e4-22dd-46ba-acfc-643c24b39d92",
+        "created_at": "2026-09-20T03:17:25.695899+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:17:25.695899+00:00",
+        "aspect_mode": "cover",
+        "external_id": "57a47d6f-3c13-49df-99f2-c63c0b82dd00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "locationMeta": {
+      "source": "official-site+nominatim-poi",
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.99
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7dd75e58-afbf-4c1f-c7f7-38fc5887ec00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/57a47d6f-3c13-49df-99f2-c63c0b82dd00/heropage",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_event",
+    "description_full": "Swingers Oase is a permanent on-premise lifestyle club in Ammerzoden, Gelderland. The venue describes itself as a small, homey but complete swingers club and runs an event-driven calendar with gangbang nights, couples-focused parties, bi-curious and queer events, themed Saturdays and Sunday social/play sessions. Depending on the event, couples, single women, single men, trans women, bi men and queer guests may be admitted. The club advertises multiple play rooms, a warm jacuzzi, dance floor, DJ programming, buffet service and all-inclusive drinks, food and facilities. Consent is central to the venue's published rules: participation is optional and mutual respect is expected. Single men are welcome at many events but are commonly required to reserve in advance.",
+    "galleryImageUrls": [
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_2763-scaled.jpeg",
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3008-scaled.jpeg",
+      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3037.jpeg"
+    ],
     "generalAmenities": [
       "Permanent Swinger Club",
       "On-Premise Club",
@@ -7731,55 +7842,78 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "attendancePolicy": "varies_by_event",
-    "logoImageUrl": "https://swingersoase.com/wp-content/uploads/2020/04/ico.png",
-    "headerImageUrl": "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3222-scaled.jpeg",
-    "galleryImageUrls": [
-      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_2763-scaled.jpeg",
-      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3008-scaled.jpeg",
-      "https://swingersoase.com/wp-content/uploads/2026/05/IMG_3037.jpeg"
-    ]
+    "description_short": "A long-running, intimate swinger club in Ammerzoden with all-inclusive food and drinks, multiple play rooms, a warm jacuzzi, themed parties and event-specific attendance for couples, women, men and queer guests.",
+    "locationVisibility": "exact_public",
+    "specialScheduleNotes": "Swingers Oase is event-driven rather than operating on one fixed weekly timetable. Current 2026 events commonly run Wednesday and Thursday around 20:00-00:00, Friday around 20:00-01:00, Saturday around 20:00-02:00 and selected Sundays around 16:00-22:00. Attendance mix, pricing and reservations vary by event, so guests should check the official calendar before visiting.",
+    "buildingAssetId": "building-asset-club-swingers-oase-ammerzoden"
   },
   {
     "id": "club-tokyo-valentino-lifestyle-atlanta",
-    "type": "club",
     "name": "Tokyo Valentino Lifestyle Club",
-    "description_short": "A 24-hour Atlanta lifestyle club on Cheshire Bridge Road with open and private play rooms, dark rooms, Amsterdam-style booths, private bedrooms, showers and a strongly consent-focused adult social environment.",
-    "description_full": "Tokyo Valentino Lifestyle Club is the adult lifestyle-club component of the long-running Tokyo Valentino business on Cheshire Bridge Road in Atlanta. The club explicitly advertises open and private play rooms, dark rooms, eight Amsterdam-style booths, private bedrooms with leather day beds, a deluxe master suite, showers, lockers and massage rooms. Condoms, lubricant, towels, shower shoes and locks are available on site. The venue is BYOB and operates around the clock except for a weekly Wednesday-morning closure for deep cleaning and repairs. Its published etiquette emphasizes affirmative consent, privacy, communication and respect; phones, cameras and recording devices are prohibited, prostitution and drugs are banned, and visibly intoxicated guests may be refused entry. Admission is open to adults rather than limited to couples, with some pricing differentiated by gender and event period.",
-    "location": "1739 Cheshire Bridge Rd NE, Atlanta, Georgia 30324, United States",
-    "website": "https://tokyolifestyleclub.com/",
-    "contactEmail": "chris@fegholdings.com",
+    "type": "club",
     "phone": "+1 404-698-5219",
     "status": "approved",
-    "postedByUserId": "user1",
-    "locationVisibility": "exact_public",
+    "website": "https://tokyolifestyleclub.com/",
     "geopoint": {
-      "latitude": 33.8075108,
-      "longitude": -84.3653154,
       "address": {
-        "addressLine1": "1739 Cheshire Bridge Rd NE",
         "city": "Atlanta",
         "region": "Georgia",
-        "postalCode": "30324",
         "country": "United States",
-        "countrySlug": "us",
-        "admin1Slug": "georgia",
         "citySlug": "atlanta",
-        "isCityState": false
-      }
+        "admin1Slug": "georgia",
+        "postalCode": "30324",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "1739 Cheshire Bridge Rd NE"
+      },
+      "latitude": 33.8075108,
+      "longitude": -84.3653154
     },
+    "location": "1739 Cheshire Bridge Rd NE, Atlanta, Georgia 30324, United States",
+    "schedule": [],
+    "createdAt": "2026-09-07T01:08:32.659308+00:00",
+    "updatedAt": "2026-09-20T02:32:59.429396+00:00",
+    "mediaAssets": [
+      {
+        "id": "93faccfd-03b8-4b05-a181-cd32172e440c",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "fefda174-0e4e-459f-9860-7d925f8786ee",
+        "owner_id": "709e44ff-fd8d-4381-ad7c-ada78424d389",
+        "created_at": "2026-09-08T07:36:37.18126+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T07:36:37.18126+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c828d442-4073-4dbf-fed5-60a6bfa23b00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "chris@fegholdings.com",
     "locationMeta": {
+      "source": "official-site+nominatim-poi",
       "status": "validated",
-      "coordinatePrecision": "poi",
+      "warnings": [],
       "confidence": 0.99,
-      "normalizedAddress": "1739 Cheshire Bridge Rd NE, Atlanta, GA 30324, United States",
       "geocoderLabel": "Tokyo Valentino Lifestyle Club, 1739 Cheshire Bridge Road, Atlanta, Georgia 30324, United States",
       "geocoderSource": "official-site+nominatim-poi",
-      "source": "official-site+nominatim-poi",
-      "warnings": []
+      "normalizedAddress": "1739 Cheshire Bridge Rd NE, Atlanta, GA 30324, United States",
+      "coordinatePrecision": "poi"
     },
-    "schedule": [],
-    "specialScheduleNotes": "Open 24/7 except Wednesday from 02:00 to 10:00, when the club closes for cleaning and repairs. Admission pricing varies substantially by day and time, and selected recurring Wednesday, Friday and Saturday events use their own pricing windows. Guests should check the official site for the current event calendar and admission price before visiting.",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c828d442-4073-4dbf-fed5-60a6bfa23b00/logosquare",
+    "headerImageUrl": "https://tokyolifestyleclub.com/assets/img/about.jpg",
+    "postedByUserId": "user1",
+    "attendancePolicy": "mixed_open",
+    "description_full": "Tokyo Valentino Lifestyle Club is the adult lifestyle-club component of the long-running Tokyo Valentino business on Cheshire Bridge Road in Atlanta. The club explicitly advertises open and private play rooms, dark rooms, eight Amsterdam-style booths, private bedrooms with leather day beds, a deluxe master suite, showers, lockers and massage rooms. Condoms, lubricant, towels, shower shoes and locks are available on site. The venue is BYOB and operates around the clock except for a weekly Wednesday-morning closure for deep cleaning and repairs. Its published etiquette emphasizes affirmative consent, privacy, communication and respect; phones, cameras and recording devices are prohibited, prostitution and drugs are banned, and visibly intoxicated guests may be refused entry. Admission is open to adults rather than limited to couples, with some pricing differentiated by gender and event period.",
+    "galleryImageUrls": [
+      "https://tokyolifestyleclub.com/assets/img/relaxation-beds.jpg",
+      "https://tokyolifestyleclub.com/assets/img/amsterdam-booths.jpg",
+      "https://tokyolifestyleclub.com/assets/img/vip-rooms.jpg"
+    ],
     "generalAmenities": [
       "Lifestyle Club",
       "On-Premise Club",
@@ -7807,13 +7941,888 @@
       "No Drugs or Prostitution",
       "No Visible Intoxication"
     ],
-    "attendancePolicy": "mixed_open",
-    "logoImageUrl": "https://tokyolifestyleclub.com/assets/img/logo.png",
-    "headerImageUrl": "https://tokyolifestyleclub.com/assets/img/about.jpg",
+    "description_short": "A 24-hour Atlanta lifestyle club on Cheshire Bridge Road with open and private play rooms, dark rooms, Amsterdam-style booths, private bedrooms, showers and a strongly consent-focused adult social environment.",
+    "locationVisibility": "exact_public",
+    "specialScheduleNotes": "Open 24/7 except Wednesday from 02:00 to 10:00, when the club closes for cleaning and repairs. Admission pricing varies substantially by day and time, and selected recurring Wednesday, Friday and Saturday events use their own pricing windows. Guests should check the official site for the current event calendar and admission price before visiting.",
+    "buildingAssetId": "building-asset-club-tokyo-valentino-lifestyle-atlanta"
+  },
+  {
+    "id": "event-her-fantasy-90786-2026-09-27",
+    "type": "event",
+    "name": "Her Fantasy Sexy Schoolgirl at Twist",
+    "occurrenceTitle": "Her Fantasy Sexy Schoolgirl at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's schoolgirl themed Sunday party welcomes couples, single women and screened single men at Twist SF.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/90675/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/90786",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6688689/1cd216a9-8785-45a3-b4d9-786e3fadc29a/original.jpg?v=tczqur",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-09-27T22:00",
+      "end": "2026-09-28T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-bronze-96234-2026-10-02",
+    "type": "event",
+    "name": "Young Swingers at Twist!",
+    "occurrenceTitle": "Young Swingers at Twist!",
+    "hostName": "bronze party",
+    "eventSeriesId": "series-bronze-party",
+    "organizerOrganizationId": "org-promoter-bronze-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Bronze Party's Young Swingers Night at Twist SF offers special pricing for couples under 30 while welcoming couples and single women of all ages. Single men are not admitted.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://bronzeparty.com/events/96234/orders/new",
+    "sourceEventUrl": "https://bronzeparty.com/events/96234",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/7144221/b00936b9-97fa-4904-b462-b10dc49140a3/original.png?v=tk14li",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
+    "attendancePolicy": "couples_and_single_women",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-10-02T22:00",
+      "end": "2026-10-03T04:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Bronze Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "No Single Men",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-her-fantasy-96825-2026-10-04",
+    "type": "event",
+    "name": "Her Fantasy Autumn Kink at Twist",
+    "occurrenceTitle": "Her Fantasy Autumn Kink at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's autumn kink themed Sunday party at Twist SF welcomes couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/96824/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/96825",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/7194682/ed04fb21-253a-498d-a2ad-dd5ee960d4bb/original.jpg?v=tks29t",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-10-04T22:00",
+      "end": "2026-10-05T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-her-fantasy-93358-2026-10-11",
+    "type": "event",
+    "name": "Her Fantasy Hotwives at Twist",
+    "occurrenceTitle": "Her Fantasy Hotwives at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's Hotwives party at Twist SF is a women centered Sunday event welcoming couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/93357/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/93358",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6901106/ceccaaeb-8e9a-4831-9c7c-4a514d02886e/original.jpg?v=tgctp1",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-10-11T22:00",
+      "end": "2026-10-12T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-her-fantasy-90347-2026-10-25",
+    "type": "event",
+    "name": "Her Fantasy Halloween at Twist",
+    "occurrenceTitle": "Her Fantasy Halloween at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's Halloween themed Sunday party at Twist SF welcomes couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/90345/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/90347",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6658589/81860433-2c82-4c12-a1d8-70a7fcfbc799/original.jpg?v=tcix21",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-10-25T22:00",
+      "end": "2026-10-26T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-bronze-93500-2026-10-31",
+    "name": "Halloween Ball at Danzhaus San Francisco",
+    "tags": [
+      "Bronze Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "No Single Men",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "time": {
+      "end": "2026-11-01T04:00",
+      "start": "2026-10-31T22:00"
+    },
+    "type": "event",
+    "status": "approved",
+    "venueId": "venue-danzhaus-sf",
+    "website": "https://bronzeparty.com/events/93500/orders/new",
+    "geopoint": {
+      "address": {
+        "city": "San Francisco",
+        "region": "California",
+        "country": "United States",
+        "citySlug": "san-francisco",
+        "admin1Slug": "ca",
+        "postalCode": "94107",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "1275 Connecticut Street"
+      },
+      "latitude": 37.7503,
+      "longitude": -122.396
+    },
+    "hostName": "bronze party",
+    "location": "Danzhaus On-Premise Club, 1275 Connecticut Street, San Francisco, California 94107, United States",
+    "createdAt": "2026-09-25T05:39:20.472533+00:00",
+    "updatedAt": "2026-09-25T05:59:01.20088+00:00",
+    "mediaAssets": [
+      {
+        "id": "d6406a4d-dd2e-47f2-b5d3-10877b73297d",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "chrome_HocSR9PNbB",
+        "owner_id": "3593fc46-75d3-4ac0-a1ba-298e635e0fe8",
+        "created_at": "2026-09-25T05:58:58.59079+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:58:58.59079+00:00",
+        "aspect_mode": "contain",
+        "external_id": "af8ef69a-f68b-446b-0836-66c6b0ce5a00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@bronzeparty.com",
+    "locationMeta": {
+      "source": "official venue address; coordinates approximated from adjacent address",
+      "status": "needs_review",
+      "warnings": [
+        "Coordinates require precise geocoding"
+      ],
+      "confidence": 0.7,
+      "manualAdjustment": true,
+      "coordinatePrecision": "street"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
+    "eventSeriesId": "series-bronze-party",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6910714/304e0a10-a0a8-46e0-a4f0-9f1211641c77/original.gif?v=thxwsd",
+    "postedByUserId": "user1",
+    "sourceEventUrl": "https://bronzeparty.com/events/93500",
+    "occurrenceTitle": "Halloween Ball at Danzhaus San Francisco",
+    "attendancePolicy": "couples_and_single_women",
+    "description_full": "Bronze Party's Halloween Ball at Danzhaus in San Francisco features a costume contest and on premise play. Couples and single women are welcome; single men are not admitted.",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "organizerOrganizationId": "org-promoter-bronze-party",
+    "buildingAssetId": "building-asset-event-bronze-93500-2026-10-31"
+  },
+  {
+    "id": "event-her-fantasy-90348-2026-11-08",
+    "type": "event",
+    "name": "Her Fantasy Hotwives at Twist",
+    "occurrenceTitle": "Her Fantasy Hotwives at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's Hotwives party at Twist SF is a women centered Sunday event welcoming couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/90342/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/90348",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6658580/50e64c5a-3265-44ea-af1d-e49caddfa02b/original.jpg?v=tciwvx",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-11-08T22:00",
+      "end": "2026-11-09T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-her-fantasy-90349-2026-11-22",
+    "type": "event",
+    "name": "Her Fantasy Spicy Ladies at Twist",
+    "occurrenceTitle": "Her Fantasy Spicy Ladies at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's Spicy Ladies Sunday party at Twist SF welcomes couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/90341/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/90349",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6658574/f9f3e504-7af1-4a1b-bce1-a4a68f67f91f/original.jpg?v=tciwt3",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-11-22T22:00",
+      "end": "2026-11-23T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-bronze-93356-2026-11-25",
+    "type": "event",
+    "name": "Bronze B4 the Feast at Twist",
+    "occurrenceTitle": "Bronze B4 the Feast at Twist",
+    "hostName": "bronze party",
+    "eventSeriesId": "series-bronze-party",
+    "organizerOrganizationId": "org-promoter-bronze-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Bronze Party's pre Thanksgiving celebration at Twist SF welcomes couples and single women. Single men are not admitted.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://bronzeparty.com/events/93356/orders/new",
+    "sourceEventUrl": "https://bronzeparty.com/events/93356",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6901101/ee37f69f-1925-40ce-bd9b-6e4d8201e61a/original.jpg?v=tgct1y",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
+    "attendancePolicy": "couples_and_single_women",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-11-25T22:00",
+      "end": "2026-11-26T04:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Bronze Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "No Single Men",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-her-fantasy-90355-2026-12-06",
+    "type": "event",
+    "name": "Her Fantasy Holiday Kickoff at Twist",
+    "occurrenceTitle": "Her Fantasy Holiday Kickoff at Twist",
+    "hostName": "her fantasy party",
+    "eventSeriesId": "series-her-fantasy",
+    "organizerOrganizationId": "org-promoter-her-fantasy-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Her Fantasy's holiday kickoff Sunday party at Twist SF welcomes couples, single women and screened single men.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://herfantasyparty.com/events/90354/orders/new?promoter_id=133278",
+    "sourceEventUrl": "https://bronzeparty.com/events/90355",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6658958/50dedb31-29ac-4ef4-a0f8-95a9b3c5131c/original.jpg?v=tcj20b",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-12-06T22:00",
+      "end": "2026-12-07T03:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Her Fantasy Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "event-bronze-90365-2026-12-12",
+    "type": "event",
+    "name": "12th Annual Mrs. Clause is Bi at Twist",
+    "occurrenceTitle": "12th Annual Mrs. Clause is Bi at Twist",
+    "hostName": "bronze party",
+    "eventSeriesId": "series-bronze-party",
+    "organizerOrganizationId": "org-promoter-bronze-party",
+    "venueId": "venue-club-twist-sf",
+    "description_full": "Bronze Party's twelfth annual Mrs. Clause is Bi holiday party at Twist SF welcomes couples and single women. Single men are not admitted.",
+    "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
+    "website": "https://bronzeparty.com/events/90365/orders/new",
+    "sourceEventUrl": "https://bronzeparty.com/events/90365",
+    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6660229/0f53f9fc-6526-4686-9375-ced5b11dd1bd/original.jpeg?v=tcli83",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
+    "attendancePolicy": "couples_and_single_women",
+    "entryRequirements": [
+      "screening_approval_required"
+    ],
+    "time": {
+      "start": "2026-12-12T22:00",
+      "end": "2026-12-13T04:00"
+    },
+    "geopoint": {
+      "latitude": 37.8055766,
+      "longitude": -122.4132692,
+      "address": {
+        "addressLine1": "387 Bay Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94133",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "san-francisco",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "source": "official event page and existing Twist listing",
+      "warnings": []
+    },
+    "tags": [
+      "Bronze Party",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "No Single Men",
+      "On-Premise Play",
+      "Screened Event",
+      "Advance Tickets"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@bronzeparty.com"
+  },
+  {
+    "id": "club-tucan-club-almind",
+    "name": "Tucan Club",
+    "type": "club",
+    "phone": "+45 28 41 20 60",
+    "status": "approved",
+    "website": "https://tucanclub.dk/",
+    "geopoint": {
+      "address": {
+        "city": "Almind",
+        "region": "Region of Southern Denmark",
+        "country": "Denmark",
+        "citySlug": "almind",
+        "admin1Slug": "region-of-southern-denmark",
+        "postalCode": "6051",
+        "countrySlug": "denmark",
+        "addressLine1": "Møsvråvej 60"
+      },
+      "latitude": 55.5655973814711,
+      "longitude": 9.532372721780057
+    },
+    "location": "Møsvråvej 60, 6051 Almind, Region of Southern Denmark, Denmark",
+    "schedule": [
+      {
+        "day": "Monday",
+        "isClosed": true
+      },
+      {
+        "day": "Tuesday",
+        "isClosed": true
+      },
+      {
+        "day": "Wednesday",
+        "open": "19:00",
+        "close": "00:00",
+        "rules": [
+          "Hours may vary by event"
+        ],
+        "isClosed": false
+      },
+      {
+        "day": "Thursday",
+        "open": "19:00",
+        "close": "00:00",
+        "rules": [
+          "Hours may vary by event"
+        ],
+        "isClosed": false
+      },
+      {
+        "day": "Friday",
+        "open": "18:00",
+        "close": "02:00",
+        "rules": [
+          "Hours may vary by event"
+        ],
+        "isClosed": false
+      },
+      {
+        "day": "Saturday",
+        "open": "18:00",
+        "close": "02:00",
+        "rules": [
+          "Hours may vary by event"
+        ],
+        "isClosed": false
+      },
+      {
+        "day": "Sunday",
+        "open": "14:00",
+        "close": "21:00",
+        "rules": [
+          "Hours may vary by event"
+        ],
+        "isClosed": false
+      }
+    ],
+    "createdAt": "2026-09-23T02:15:00.023763+00:00",
+    "updatedAt": "2026-09-23T02:25:30.069709+00:00",
+    "mediaAssets": [
+      {
+        "id": "0a311a4c-eb59-40a9-994b-9f99fdac9f87",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 07_23_14 PM (1)",
+        "owner_id": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+        "created_at": "2026-09-23T02:23:24.171805+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:23:24.171805+00:00",
+        "aspect_mode": "contain",
+        "external_id": "f0c57677-9bb4-4133-b0fd-d3091e2beb00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "5358afc1-4619-42fb-93bc-ce876374e98c",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 07_23_14 PM (2)-cropped",
+        "owner_id": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+        "created_at": "2026-09-23T02:23:39.04439+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:23:39.04439+00:00",
+        "aspect_mode": "cover",
+        "external_id": "227a8b88-b0ac-4f91-3960-f7c43bafba00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "93f445c8-b463-4c6b-ab12-5ce647d1a9c9",
+        "role": "gallery",
+        "status": "pending_review",
+        "alt_text": "1a412868-7bf5-48f3-80f8-c6312f9fcc43-cropped",
+        "owner_id": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+        "created_at": "2026-09-23T02:24:57.746536+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:24:57.746536+00:00",
+        "aspect_mode": "cover",
+        "external_id": "32bcdfd2-f9bd-4e89-3e7a-f4caf6380000",
+        "target_ratio": "4:3",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "d8850e2f-aba8-4dd8-b46d-7c62cd3163ad",
+        "role": "gallery",
+        "status": "pending_review",
+        "alt_text": "843b40c6-b0d6-416c-b3e3-734a87f44d1a-cropped",
+        "owner_id": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+        "created_at": "2026-09-23T02:25:07.073039+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:25:07.073039+00:00",
+        "aspect_mode": "cover",
+        "external_id": "00c5fe56-6ec4-4daf-92de-b41918d33a00",
+        "target_ratio": "4:3",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "6da46cf1-9c6c-4286-84f0-d851e4d19a61",
+        "role": "gallery",
+        "status": "pending_review",
+        "alt_text": "c1fe7afa-0b35-4c2b-9f35-43bf94091ecc-cropped",
+        "owner_id": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+        "created_at": "2026-09-23T02:25:18.235544+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:25:18.235544+00:00",
+        "aspect_mode": "cover",
+        "external_id": "f127d9d1-df29-4b48-5445-bd29ee904e00",
+        "target_ratio": "4:3",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@tucanclub.dk",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [],
+      "confidence": 1,
+      "validatedAt": "2026-09-22T00:00:00Z",
+      "geocoderLabel": "Møsvråvej 60, 6051 Almind",
+      "geocoderSource": "DAWA address data via DinGeo",
+      "normalizedAddress": "Møsvråvej 60, 6051 Almind, Denmark",
+      "coordinatePrecision": "address"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f0c57677-9bb4-4133-b0fd-d3091e2beb00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/227a8b88-b0ac-4f91-3960-f7c43bafba00/heropage",
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "attendancePolicy": "varies_by_night",
+    "description_full": "Tucan Club is an established erotic lifestyle nightclub and wellness club in Almind, East/Central Jutland, between Kolding and Vejle. The club describes roughly 1,900 square metres of facilities, including lounge and nightclub areas, a wellness section with a large jacuzzi, Roman steam sauna and massage chairs, themed private rooms, shared play areas, the Sky Lounge, massage spaces and outdoor areas. Programming changes by night, with mixed-attendance events, couples-focused nights, Rainbow Night and other themed events. New guests can receive guided tours, and the club emphasizes consent, discretion and respect for a clear “no thanks.” Membership is available but is not required for a single visit; non-members are asked to contact the club directly to arrange attendance.",
     "galleryImageUrls": [
-      "https://tokyolifestyleclub.com/assets/img/relaxation-beds.jpg",
-      "https://tokyolifestyleclub.com/assets/img/amsterdam-booths.jpg",
-      "https://tokyolifestyleclub.com/assets/img/vip-rooms.jpg"
-    ]
+      "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/32bcdfd2-f9bd-4e89-3e7a-f4caf6380000/gallerythumb",
+      "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/00c5fe56-6ec4-4daf-92de-b41918d33a00/gallerythumb",
+      "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f127d9d1-df29-4b48-5445-bd29ee904e00/gallerythumb"
+    ],
+    "generalAmenities": [
+      "1,900 Square Metres",
+      "Bar",
+      "Nightclub",
+      "Dance Floor",
+      "Lounge",
+      "Sky Lounge",
+      "Wellness Area",
+      "Jacuzzi",
+      "Roman Steam Sauna",
+      "Massage Chairs",
+      "Massage Room",
+      "Themed Rooms",
+      "Private Play Rooms",
+      "Open Play Areas",
+      "BDSM / Fetish Area",
+      "Tantra / Soft Play Area",
+      "Outdoor Adventure Garden",
+      "Heated Outdoor Pool",
+      "Newcomer Tours",
+      "Meet & Greet",
+      "Couples Welcome",
+      "Single Women Welcome",
+      "Single Men Welcome",
+      "Consent-Focused",
+      "Privacy-Focused"
+    ],
+    "description_short": "A large, upscale lifestyle nightclub and wellness club in Almind between Kolding and Vejle, with 1,900 m² of themed rooms, lounges, dance areas, spa facilities, private and shared play spaces, and event nights for couples and singles.",
+    "entryRequirements": [],
+    "locationVisibility": "exact_public",
+    "specialScheduleNotes": "Attendance rules vary by event. The club runs mixed nights, couples-focused nights, Rainbow Night and themed events. Online registration is for members; non-members can arrange a visit by contacting the club by phone or email. Membership is optional for a one-night visit.",
+    "buildingAssetId": "building-asset-club-tucan-club-almind"
   }
 ]

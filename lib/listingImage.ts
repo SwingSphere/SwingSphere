@@ -45,9 +45,12 @@ export const getListingPrimaryLogoUrl = (listing: Listing | null | undefined): s
 export const getListingLogoUrl = (listing: Listing | null | undefined): string =>
   getListingPrimaryLogoUrl(listing) ?? LISTING_IMAGE_FALLBACK;
 
+export const getListingPrimaryFlyerUrl = (listing: Listing | null | undefined): string | null =>
+  getMediaAssetUrl(listing, 'flyer');
+
 export const getListingFlyerUrl = (listing: Listing | null | undefined): string => {
   if (!listing) return LISTING_IMAGE_FALLBACK;
-  return getMediaAssetUrl(listing, 'flyer')
+  return getListingPrimaryFlyerUrl(listing)
     ?? resolveImageCandidate(listing.headerImageUrl)
     ?? getListingLogoUrl(listing);
 };

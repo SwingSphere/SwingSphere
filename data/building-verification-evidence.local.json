@@ -6968,5 +6968,663 @@
     "rejectionReasons": [
       "provider returned no usable individual building footprints"
     ]
+  },
+  {
+    "version": 1,
+    "listingId": "event-bronze-93500-2026-10-31",
+    "venueId": "venue-danzhaus-sf",
+    "inputSnapshotHash": "bvs-66c46279",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "event-bronze-93500-2026-10-31:2026-09-26T03:14:54.905Z",
+    "listingName": "Halloween Ball at Danzhaus San Francisco",
+    "normalizedAddress": "1275 connecticut street san francisco california 94107 united states",
+    "canonicalCoordinate": {
+      "lat": 37.7503,
+      "lng": -122.396
+    },
+    "coordinateProvenance": "Official event venue address; coordinates approximated from neighboring address 1261 Connecticut Street",
+    "coordinateConfidence": null,
+    "evaluatedAt": "2026-09-26T03:14:54.905Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 20,
+      "individualFootprintCount": 14
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bbsvpx-1-4",
+      "providerFeatureIds": [
+        "976375480"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1275, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1275",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 4.413459467395072,
+      "pinToCentroidMeters": 11.152722702294442,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-14tx1s1-1-4",
+      "providerFeatureIds": [
+        "34744180"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1261;1263, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1261;1263",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 4.192840269335353,
+      "score": 45,
+      "confidence": 0.45,
+      "reasons": [
+        "house number conflicts (1261;1263)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "scoreMargin": 55,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 55.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "event-bronze-93500-2026-10-31",
+    "venueId": "venue-danzhaus-sf",
+    "inputSnapshotHash": "bvs-035ecb89",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "event-bronze-93500-2026-10-31:2026-09-26T03:17:23.003Z",
+    "listingName": "Halloween Ball at Danzhaus San Francisco",
+    "normalizedAddress": "1275 connecticut street san francisco california 94107 united states",
+    "canonicalCoordinate": {
+      "lat": 37.7502010706155,
+      "lng": -122.396020889282
+    },
+    "coordinateProvenance": "Official event venue address; coordinates approximated from neighboring address 1261 Connecticut Street",
+    "coordinateConfidence": null,
+    "evaluatedAt": "2026-09-26T03:17:23.003Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 20,
+      "individualFootprintCount": 14
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bbsvpx-1-4",
+      "providerFeatureIds": [
+        "976375480"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1275, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1275",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 1.9990818985021045e-8,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-14tx1s1-1-4",
+      "providerFeatureIds": [
+        "34744180"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1261;1263, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1261;1263",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 6.347224122572745,
+      "pinToCentroidMeters": 13.963316273425612,
+      "score": 29,
+      "confidence": 0.29,
+      "reasons": [
+        "house number conflicts (1261;1263)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 71,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 71.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "event-bronze-93500-2026-10-31",
+    "venueId": "venue-danzhaus-sf",
+    "inputSnapshotHash": "bvs-035ecb89",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "event-bronze-93500-2026-10-31:2026-09-26T03:25:40.692Z",
+    "listingName": "Halloween Ball at Danzhaus San Francisco",
+    "normalizedAddress": "1275 connecticut street san francisco california 94107 united states",
+    "canonicalCoordinate": {
+      "lat": 37.7502010706155,
+      "lng": -122.396020889282
+    },
+    "coordinateProvenance": "Official event venue address; coordinates approximated from neighboring address 1261 Connecticut Street",
+    "coordinateConfidence": null,
+    "evaluatedAt": "2026-09-26T03:25:40.692Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 20,
+      "individualFootprintCount": 14
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-1bbsvpx-1-4",
+      "providerFeatureIds": [
+        "976375480"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1275, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1275",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 1.9990818985021045e-8,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-14tx1s1-1-4",
+      "providerFeatureIds": [
+        "34744180"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "1261;1263, Connecticut Street, Potrero Terrace, Potrero Hill, Bayview District, San Francisco, California, 94107, United States",
+      "addressComponents": {
+        "houseNumber": "1261;1263",
+        "road": "Connecticut Street",
+        "city": "San Francisco",
+        "region": "California",
+        "postalCode": "94107",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 6.347224122572745,
+      "pinToCentroidMeters": 13.963316273425612,
+      "score": 29,
+      "confidence": 0.29,
+      "reasons": [
+        "house number conflicts (1261;1263)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 71,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 71.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "club-swingers-oase-ammerzoden",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-9076e524",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-swingers-oase-ammerzoden:2026-09-26T03:27:35.104Z",
+    "listingName": "Swingers Oase",
+    "normalizedAddress": "haarstraat 20 ammerzoden gelderland 5324 an netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.7479521,
+      "lng": 5.2275095
+    },
+    "coordinateProvenance": "official-site+nominatim-poi",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-26T03:27:35.104Z",
+    "providerSnapshot": {
+      "source": "Not loaded",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 2,
+      "individualFootprintCount": 54
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-gltohg-1-4",
+      "providerFeatureIds": [
+        "21254210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Swingersoase, 20, Haarstraat, Ammerzoden, Maasdriel, Gelderland, Nederland, 5324 AN, Nederland",
+      "addressComponents": {
+        "houseNumber": "20",
+        "road": "Haarstraat",
+        "city": "Ammerzoden",
+        "region": "Gelderland",
+        "postalCode": "5324 AN",
+        "country": "Nederland",
+        "countryCode": "NL"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 1.090974634121846,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ldsrls-1-16",
+      "providerFeatureIds": [
+        "21254210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "18, Haarstraat, Ammerzoden, Maasdriel, Gelderland, Nederland, 5324 AN, Nederland",
+      "addressComponents": {
+        "houseNumber": "18",
+        "road": "Haarstraat",
+        "city": "Ammerzoden",
+        "region": "Gelderland",
+        "postalCode": "5324 AN",
+        "country": "Nederland",
+        "countryCode": "NL"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.128064232955408,
+      "pinToCentroidMeters": 18.448914728014326,
+      "score": 24,
+      "confidence": 0.24,
+      "reasons": [
+        "house number conflicts (18)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 76,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 76.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "club-tokyo-valentino-lifestyle-atlanta",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-2abf3b25",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-tokyo-valentino-lifestyle-atlanta:2026-09-26T03:28:09.579Z",
+    "listingName": "Tokyo Valentino Lifestyle Club",
+    "normalizedAddress": "1739 cheshire bridge road ne atlanta georgia 30324 united states",
+    "canonicalCoordinate": {
+      "lat": 33.8075108,
+      "lng": -84.3653154
+    },
+    "coordinateProvenance": "official-site+nominatim-poi",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-26T03:28:09.579Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 6,
+      "individualFootprintCount": 15
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-79oiv8-1-9",
+      "providerFeatureIds": [
+        "2265644680"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Tokyo Valentino Lifestyle Club, 1739, Cheshire Bridge Road, Mayfair, Lindbergh, Atlanta, Fulton County, Georgia, 30324, United States",
+      "addressComponents": {
+        "houseNumber": "1739",
+        "road": "Cheshire Bridge Road",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30324",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 8.170780312027569,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-xtmhmc-1-124",
+      "providerFeatureIds": [
+        "36033950"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Sprouts Farmers Market, 1845, Piedmont Avenue Northeast, Mayfair, Lindbergh, Atlanta, Fulton County, Georgia, 30324, United States",
+      "addressComponents": {
+        "houseNumber": "1845",
+        "road": "Piedmont Avenue Northeast",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30324",
+        "country": "United States",
+        "countryCode": "US"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 19.06939280305665,
+      "pinToCentroidMeters": 107.57291469091358,
+      "score": 2,
+      "confidence": 0.02,
+      "reasons": [
+        "house number conflicts (1845)",
+        "street name does not match",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 98,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 98.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "club-swingers-oase-ammerzoden",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-9076e524",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-swingers-oase-ammerzoden:2026-09-26T03:28:18.216Z",
+    "listingName": "Swingers Oase",
+    "normalizedAddress": "haarstraat 20 ammerzoden gelderland 5324 an netherlands",
+    "canonicalCoordinate": {
+      "lat": 51.7479521,
+      "lng": 5.2275095
+    },
+    "coordinateProvenance": "official-site+nominatim-poi",
+    "coordinateConfidence": 0.99,
+    "evaluatedAt": "2026-09-26T03:28:18.216Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 100,
+      "tileFeatureCount": 2,
+      "individualFootprintCount": 54
+    },
+    "outcome": "verified",
+    "autoAccept": true,
+    "autoAcceptMethod": "exact_address_and_pin",
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-gltohg-1-4",
+      "providerFeatureIds": [
+        "21254210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Swingersoase, 20, Haarstraat, Ammerzoden, Maasdriel, Gelderland, Nederland, 5324 AN, Nederland",
+      "addressComponents": {
+        "houseNumber": "20",
+        "road": "Haarstraat",
+        "city": "Ammerzoden",
+        "region": "Gelderland",
+        "postalCode": "5324 AN",
+        "country": "Nederland",
+        "countryCode": "NL"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 1.090974634121846,
+      "score": 100,
+      "confidence": 1,
+      "reasons": [
+        "house number matches",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1ldsrls-1-16",
+      "providerFeatureIds": [
+        "21254210"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "18, Haarstraat, Ammerzoden, Maasdriel, Gelderland, Nederland, 5324 AN, Nederland",
+      "addressComponents": {
+        "houseNumber": "18",
+        "road": "Haarstraat",
+        "city": "Ammerzoden",
+        "region": "Gelderland",
+        "postalCode": "5324 AN",
+        "country": "Nederland",
+        "countryCode": "NL"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 9.128064232955408,
+      "pinToCentroidMeters": 18.448914728014326,
+      "score": 24,
+      "confidence": 0.24,
+      "reasons": [
+        "house number conflicts (18)",
+        "street name strongly matches",
+        "postal code matches",
+        "city matches",
+        "country matches"
+      ]
+    },
+    "scoreMargin": 76,
+    "acceptanceReasons": [
+      "exact normalized address agrees with the footprint address",
+      "pin agrees within the strict tolerance",
+      "candidate outranks runner-up by 76.0 points"
+    ],
+    "rejectionReasons": []
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-da343bcb",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-ice-lounge-wichita:2026-09-26T03:29:19.734Z",
+    "listingName": "Ice Lounge - Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-09-26T03:29:19.734Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 7,
+      "individualFootprintCount": 15
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
   }
 ]

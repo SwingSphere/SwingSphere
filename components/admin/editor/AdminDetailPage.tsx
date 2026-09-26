@@ -39,6 +39,7 @@ import {
   type TaxonomyInput,
 } from '../../../lib/listingTaxonomy';
 import { formatEntryRequirements as formatAccessEntryRequirements } from '../../../lib/accessDisplay';
+import DayProgramFields from '../../club/DayProgramFields';
 import { buildEditorTaxonomyGroups } from '../../../lib/taxonomySupabase';
 import MediaUploader from '../../media/MediaUploader';
 import { getCloudflareImageUrl } from '../../../lib/media/getCloudflareImageUrl';
@@ -807,22 +808,22 @@ const ClubScheduleEditor = ({
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60">
-      <div className="grid grid-cols-[120px_88px_1fr_1fr] gap-3 border-b border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
-        <span>Day</span><span>Status</span><span>Opens</span><span>Closes</span>
-      </div>
       <div className="divide-y divide-gray-200">
         {schedule.map((day, index) => (
-          <div key={day.day} className="grid grid-cols-[120px_88px_1fr_1fr] items-center gap-3 px-4 py-3">
-            <span className="text-sm font-semibold text-gray-800">{day.day}</span>
-            <button
-              type="button"
-              onClick={() => updateDay(index, { isClosed: !day.isClosed })}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${day.isClosed ? 'bg-gray-200 text-gray-600' : 'bg-emerald-50 text-emerald-700'}`}
-            >
-              {day.isClosed ? 'Closed' : 'Open'}
-            </button>
-            <input className={inputClass} type="time" disabled={day.isClosed} value={day.open ?? ''} onChange={(event) => updateDay(index, { open: event.target.value })} />
-            <input className={inputClass} type="time" disabled={day.isClosed} value={day.close ?? ''} onChange={(event) => updateDay(index, { close: event.target.value })} />
+          <div key={day.day} className="space-y-3 px-4 py-3">
+            <div className="grid grid-cols-2 items-center gap-3 sm:grid-cols-[120px_88px_1fr_1fr]">
+              <span className="text-sm font-semibold text-gray-800">{day.day}</span>
+              <button
+                type="button"
+                onClick={() => updateDay(index, { isClosed: !day.isClosed })}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${day.isClosed ? 'bg-gray-200 text-gray-600' : 'bg-emerald-50 text-emerald-700'}`}
+              >
+                {day.isClosed ? 'Closed' : 'Open'}
+              </button>
+              <input className={inputClass} type="time" disabled={day.isClosed} value={day.open ?? ''} onChange={(event) => updateDay(index, { open: event.target.value })} />
+              <input className={inputClass} type="time" disabled={day.isClosed} value={day.close ?? ''} onChange={(event) => updateDay(index, { close: event.target.value })} />
+            </div>
+            {!day.isClosed ? <DayProgramFields day={day} tone="light" onChange={(patch) => updateDay(index, patch)} /> : null}
           </div>
         ))}
       </div>

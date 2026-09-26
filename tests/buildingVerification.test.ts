@@ -7,6 +7,7 @@ import {
   auditBuildingGeometry,
   extractIndividualBuildingFootprints,
   geometryFingerprint,
+  materializeProviderFootprintFeature,
   pointIntersectsBuildingGeometry,
   pointToBuildingDistanceMeters,
 } from '../lib/buildingGeometry.ts';
@@ -25,6 +26,7 @@ import { createNominatimBuildingAddressResolver, createCachedBuildingAddressReso
 import { runBuildingVerificationPipeline } from '../lib/buildingVerificationPipeline.ts';
 import { createBuildingAssetRevision, createBuildingVerificationInputSnapshot, guardBuildingAssetPersistence } from '../lib/buildingPersistenceGuard.ts';
 import { fuseBuildingNeighborhood } from '../lib/buildingNeighborhoodFusion.ts';
+import { fetchArcGisBuildingFootprints, fetchSupplementalBuildingFootprints } from '../lib/buildingFootprintSources.ts';
 import { createGeneratedBuildingCandidate, GENERATED_BUILDING_ID_PREFIX } from '../lib/buildingReconstruction.ts';
 import { isResolvedAddressPlausibleForInput } from '../lib/listingLocationValidation.ts';
 import { assessListingCoordinateQuality } from '../lib/listingLocationQuality.ts';
@@ -34,6 +36,46 @@ import type { BuildingVerificationEvidenceRecord } from '../lib/buildingVerifica
 const root = process.cwd();
 const listings = JSON.parse(fs.readFileSync(path.join(root, 'data/listings.local.json'), 'utf8')) as Listing[];
 const assets = JSON.parse(fs.readFileSync(path.join(root, 'data/building-assets.local.json'), 'utf8')) as BuildingAsset[];
+test('ArcGIS fallback requests nearby building GeoJSON and preserves provider IDs', async () => {
+  const result = await fetchArcGisBuildingFootprints({
+    center: { lng: -122.396, lat: 37.7503 },
+    radiusMeters: 250,
+    fetchImpl: (async (url: string) => {
+      const request = new URL(url);
+      assert.equal(request.searchParams.get('geometryType'), 'esriGeometryEnvelope');
+      assert.equal(request.searchParams.get('f'), 'geojson');
+      assert.equal(request.searchParams.get('outSR'), '4326');
+      return new Response(JSON.stringify({
+        type: 'FeatureCollection',
+        features: [{ type: 'Feature', properties: { OBJECTID: 42 }, geometry: square(-122.396, 37.7503) }],
+      }), { status: 200 });
+    }) as typeof fetch,
+  });
+  assert.equal(result.features.length, 1);
+  assert.equal(result.features[0].id, 'microsoft-ml:esri:42');
+});
+
+test('ArcGIS Danzhaus live coverage', { skip: !process.env.ARCGIS_LIVE_COVERAGE }, async () => {
+  const result = await fetchArcGisBuildingFootprints({
+    center: { lng: -122.396, lat: 37.7503 },
+    radiusMeters: 250,
+    fetchImpl: (async (...args: Parameters<typeof fetch>) => {
+      const response = await fetch(...args);
+      assert.equal(response.headers.get('access-control-allow-origin'), '*', 'the public fallback must support browser CORS');
+      return response;
+    }) as typeof fetch,
+  });
+  assert.ok(result.features.length > 0, 'the Danzhaus neighborhood must contain building footprints');
+  const workspace = extractIndividualBuildingFootprints(result.features, { lng: -122.396, lat: 37.7503 }, { radiusMeters: 250 });
+  assert.ok(workspace.footprints.length > 0, 'the returned polygons must be usable in the inspector');
+  const supplemental = await fetchSupplementalBuildingFootprints({
+    listingId: 'event-bronze-93500-2026-10-31',
+    center: { lng: -122.396, lat: 37.7503 },
+    radiusMeters: 250,
+  });
+  assert.ok(supplemental.features.length > 0, 'the inspector fallback must return the nearby buildings');
+});
+
 const square = (lng: number, lat: number, size = 0.0001): GeoJSON.Polygon => ({
   type: 'Polygon',
   coordinates: [[[lng, lat], [lng + size, lat], [lng + size, lat + size], [lng, lat + size], [lng, lat]]],
@@ -524,6 +566,31 @@ test('BuildingAsset persistence rejects stale location and asset revisions', () 
   assert.ok(staleAsset.reasons.some((reason) => reason.includes('BuildingAsset changed')));
 });
 
+test('manual event building save uses the canonical Venue snapshot', () => {
+  const listing = listings.find((item) => item.id === 'event-bronze-93500-2026-10-31')!;
+  const venue: VenueData = {
+    id: 'venue-danzhaus-sf', type: 'venue', name: 'Danzhaus', slug: 'danzhaus-sf',
+    address: listing.geopoint.address, latitude: 37.7502010706155, longitude: -122.396020889282,
+    visibility: 'public_exact', status: 'approved', amenities: [],
+    locationMeta: { status: 'validated', source: 'official venue address' },
+  };
+  const collections = { listings, venues: [venue] };
+  const canonical = createBuildingVerificationInputSnapshot(listing, collections)!;
+  const listingOnly = createBuildingVerificationInputSnapshot(listing, { listings })!;
+  assert.equal(canonical.venueId, venue.id);
+  assert.equal(canonical.latitude, venue.latitude);
+  assert.notEqual(canonical.hash, listingOnly.hash);
+  const geometry = square(venue.longitude - 0.00002, venue.latitude - 0.00002, 0.00004);
+  const asset: BuildingAsset = {
+    id: `building-asset-${listing.id}`, listingId: listing.id, venueId: venue.id, version: 1,
+    provider: { source: 'OpenFreeMap', featureIds: ['test-footprint'] }, geometry,
+    capture: { createdAt: '2026-09-26T00:00:00Z', updatedAt: '2026-09-26T00:00:00Z', polygonCount: 1, ringCount: 1, vertexCount: 5 },
+  };
+  const args = { listing, collections, asset, mode: 'manual' as const, expectedExistingAsset: null };
+  assert.equal(guardBuildingAssetPersistence({ ...args, expectedSnapshot: canonical }).ok, true);
+  assert.equal(guardBuildingAssetPersistence({ ...args, expectedSnapshot: listingOnly }).ok, false);
+});
+
 test('current snapshot hash prevents verbose display-address evidence from blocking a manual save', () => {
   const listing = listings.find((item) => item.id === 'club-lussuria-bangkok')!;
   const snapshot = createBuildingVerificationInputSnapshot(listing, { listings })!;
@@ -647,6 +714,29 @@ test('shared neighborhood fusion supplements missing coverage deterministically'
   assert.match(result.sourceLabel, /Hybrid/);
   const workspace = extractIndividualBuildingFootprints(result.features, center, { radiusMeters: 250 });
   assert.ok(workspace.footprints.some((footprint) => footprint.pinIntersects));
+});
+
+test('materializing a MapLibre-style feature preserves inherited geometry for the inspector workspace', () => {
+  const center = { lng: -122.396, lat: 37.7503 };
+  const geometry = square(center.lng - 0.00003, center.lat - 0.00003, 0.00006);
+  const prototype = Object.create(null, {
+    geometry: { enumerable: false, get: () => geometry },
+  });
+  const mapLibreFeature = Object.assign(Object.create(prototype), {
+    id: 1275,
+    properties: { render_height: 6 },
+    source: 'OpenFreeMap',
+    sourceLayer: 'building',
+  });
+
+  assert.equal(Object.prototype.hasOwnProperty.call(mapLibreFeature, 'geometry'), false);
+  assert.equal(({ ...mapLibreFeature } as typeof mapLibreFeature).geometry, undefined, 'plain spread reproduces the lost-geometry failure');
+
+  const materialized = materializeProviderFootprintFeature(mapLibreFeature);
+  assert.equal(Object.prototype.hasOwnProperty.call(materialized, 'geometry'), true);
+  const workspace = extractIndividualBuildingFootprints([materialized], center, { radiusMeters: 250 });
+  assert.equal(workspace.footprints.length, 1);
+  assert.equal(workspace.footprints[0].pinIntersects, true);
 });
 
 test('generated footprint fallback requires an authoritative precise pin and never replaces sourced geometry', () => {

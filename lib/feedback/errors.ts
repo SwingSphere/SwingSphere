@@ -24,7 +24,11 @@ const SAFE_MESSAGES: Record<FeedbackRepositoryErrorCode, string> = {
 };
 
 export class FeedbackRepositoryError extends Error {
-  constructor(public readonly code: FeedbackRepositoryErrorCode, message = SAFE_MESSAGES[code]) {
+  constructor(
+    public readonly code: FeedbackRepositoryErrorCode,
+    message = SAFE_MESSAGES[code],
+    public readonly cause?: unknown,
+  ) {
     super(message);
     this.name = 'FeedbackRepositoryError';
   }

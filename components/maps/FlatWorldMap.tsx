@@ -294,9 +294,9 @@ const getGeoJsonBounds = (geoJson: GeoJSON.GeoJSON): maplibregl.LngLatBounds | n
     }
     value.forEach(visit);
   };
-  if (geoJson.type === 'FeatureCollection') geoJson.features.forEach((feature) => visit(feature.geometry?.coordinates));
-  else if (geoJson.type === 'Feature') visit(geoJson.geometry?.coordinates);
-  else visit((geoJson as GeoJSON.Geometry).coordinates);
+  if (geoJson.type === 'FeatureCollection') geoJson.features.forEach((feature) => visit((feature.geometry as any)?.coordinates));
+  else if (geoJson.type === 'Feature') visit((geoJson.geometry as any)?.coordinates);
+  else visit((geoJson as any).coordinates);
   return hasPoint ? bounds : null;
 };
 
@@ -572,7 +572,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     setMapDiagnostics({
       mounted: !!map,
       loaded: !!map && map.loaded(),
-      styleLoaded: !!map && map.isStyleLoaded(),
+      styleLoaded: !!map && Boolean(map.isStyleLoaded()),
       containerWidth: rect ? Math.round(rect.width) : 0,
       containerHeight: rect ? Math.round(rect.height) : 0,
       canvasWidth: canvasRect ? Math.round(canvasRect.width) : canvas?.width ?? 0,
@@ -1543,7 +1543,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     });
   };
 
-  const addLayerSafely = (layer: maplibregl.AnyLayer, beforeId?: string) => {
+  const addLayerSafely = (layer: Parameters<maplibregl.Map['addLayer']>[0], beforeId?: string) => {
     const map = mapRef.current;
     if (!map) return;
     if (map.getLayer(layer.id)) return;
@@ -1777,7 +1777,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       SELECTED_BUILDING_ASSET_LAYER_ID,
       AUTHORED_BUILDINGS_LAYER_ID,
     ];
-    const fillExtrusionLayersById = new Map(
+    const fillExtrusionLayersById = new Map<string, any>(
       map.getStyle().layers
         .filter((layer) => layer.type === 'fill-extrusion')
         .map((layer) => [layer.id, layer]),
@@ -2002,14 +2002,14 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       geometryType: selectedBuilding.feature.geometry?.type ?? null,
       polygonCount: getPolygonCount(selectedBuilding.feature.geometry),
     };
-    const venueSelectedBuilding = {
+    const venueSelectedBuilding: BuildingInteractionState = {
       featureId: selectedBuilding.buildingId,
       layerId: BUILDINGS_LAYER_ID,
       kind: 'venue-selected',
       listingId: selectedIdRef.current,
       assetId: null,
       providerFeatureId: selectedBuilding.buildingId,
-      sourceLayer: selectedBuilding.feature.sourceLayer ?? venueArrival.buildings.sourceLayer,
+      sourceLayer: (selectedBuilding.feature as any).sourceLayer ?? venueArrival.buildings.sourceLayer,
     };
     selectedBuildingRef.current = venueSelectedBuilding;
     setSelectedBuilding(venueSelectedBuilding);
@@ -2017,7 +2017,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
     applyDebugControls();
     publishDebugState();
     emitVenueBuildingCapture({
-      selectedFeature: selectedBuilding.feature,
+      selectedFeature: selectedBuilding.feature as any,
       selectedBuildingId: selectedBuilding.buildingId,
       contextBuildingIds: currentContextBuildingIdsRef.current,
       queriedFeatureCount: context.queriedFeatureCount,
@@ -2080,7 +2080,7 @@ const FlatWorldMap: React.FC<FlatWorldMapProps> = ({
       geometryType: asset.geometry.type,
       polygonCount: getPolygonCount(asset.geometry),
     };
-    const venueSelectedAssetBuilding = {
+    const venueSelectedAssetBuilding: BuildingInteractionState = {
       featureId: asset.id,
       layerId: AUTHORED_BUILDINGS_LAYER_ID,
       kind: 'venue-selected',

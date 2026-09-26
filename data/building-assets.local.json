@@ -5,10 +5,11 @@
     "venueId": "venue-club-twist-sf",
     "version": 1,
     "provider": {
-      "source": "OpenFreeMap",
+      "source": "SwingSphere Building Asset",
       "featureIds": [
         "13581200"
-      ]
+      ],
+      "origin": "provider"
     },
     "geometry": {
       "type": "MultiPolygon",
@@ -75,9 +76,11 @@
         ]
       ]
     },
+    "renderHeightMeters": 6.48,
+    "renderMinHeightMeters": 0,
     "capture": {
       "createdAt": "2026-06-28T02:18:45.635Z",
-      "updatedAt": "2026-06-28T05:03:57.038Z",
+      "updatedAt": "2026-09-26T03:26:14.911Z",
       "polygonCount": 2,
       "ringCount": 2,
       "vertexCount": 13
@@ -674,17 +677,11 @@
     "listingId": "club-colette-austin",
     "version": 1,
     "provider": {
-      "source": "SwingSphere Workspace Geometry",
+      "source": "SwingSphere Building Asset",
       "featureIds": [
-        "3825089470",
-        "57008210",
-        "3825089030",
-        "3825088990",
-        "1681866320",
-        "3825099170",
-        "3825099110",
-        "3825089260"
-      ]
+        "3825089470"
+      ],
+      "origin": "provider"
     },
     "geometry": {
       "type": "Polygon",
@@ -737,11 +734,11 @@
         ]
       ]
     },
-    "renderHeightMeters": 10,
+    "renderHeightMeters": 6.48,
     "renderMinHeightMeters": 0,
     "capture": {
       "createdAt": "2026-07-28T07:48:49.603Z",
-      "updatedAt": "2026-07-28T07:48:49.918Z",
+      "updatedAt": "2026-09-26T03:27:18.345Z",
       "polygonCount": 1,
       "ringCount": 1,
       "vertexCount": 11
@@ -3832,10 +3829,11 @@
     "listingId": "club-2a2-rio-de-janeiro",
     "version": 1,
     "provider": {
-      "source": "SwingSphere Workspace Geometry",
+      "source": "SwingSphere Building Asset",
       "featureIds": [
         "133124820"
-      ]
+      ],
+      "origin": "provider"
     },
     "geometry": {
       "type": "Polygon",
@@ -3888,11 +3886,11 @@
         ]
       ]
     },
-    "renderHeightMeters": 10,
+    "renderHeightMeters": 6.48,
     "renderMinHeightMeters": 0,
     "capture": {
       "createdAt": "2026-08-16T22:57:37.776Z",
-      "updatedAt": "2026-08-16T22:57:38.086Z",
+      "updatedAt": "2026-09-26T03:27:07.552Z",
       "polygonCount": 1,
       "ringCount": 1,
       "vertexCount": 11
@@ -4775,6 +4773,267 @@
     "capture": {
       "createdAt": "2026-09-20T02:30:08.434Z",
       "updatedAt": "2026-09-20T02:30:08.872Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 5
+    }
+  },
+  {
+    "id": "building-asset-event-bronze-93500-2026-10-31",
+    "listingId": "event-bronze-93500-2026-10-31",
+    "venueId": "venue-danzhaus-sf",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "976375480"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -122.39619791507721,
+            37.75024772798861
+          ],
+          [
+            -122.3958545923233,
+            37.750268935861584
+          ],
+          [
+            -122.39584386348724,
+            37.75015441327524
+          ],
+          [
+            -122.39618718624115,
+            37.75013320536942
+          ],
+          [
+            -122.39619791507721,
+            37.75024772798861
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 8,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-26T03:25:44.456Z",
+      "updatedAt": "2026-09-26T03:25:44.737Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 5
+    }
+  },
+  {
+    "id": "building-asset-club-tucan-club-almind",
+    "listingId": "club-tucan-club-almind",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "1059604870"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            9.532726407051086,
+            55.56556712655737
+          ],
+          [
+            9.532731771469116,
+            55.565542859520576
+          ],
+          [
+            9.532248973846436,
+            55.5655337593779
+          ],
+          [
+            9.532248973846436,
+            55.56557015993593
+          ],
+          [
+            9.532093405723572,
+            55.56556712655737
+          ],
+          [
+            9.532093405723572,
+            55.5655337593779
+          ],
+          [
+            9.532018303871155,
+            55.5655337593779
+          ],
+          [
+            9.532018303871155,
+            55.56556712655737
+          ],
+          [
+            9.53189492225647,
+            55.56556409317861
+          ],
+          [
+            9.53188955783844,
+            55.56566419455473
+          ],
+          [
+            9.532259702682495,
+            55.565673294667164
+          ],
+          [
+            9.532265067100525,
+            55.56563082745768
+          ],
+          [
+            9.532726407051086,
+            55.565636894204715
+          ],
+          [
+            9.532726407051086,
+            55.565603527084505
+          ],
+          [
+            9.532785415649414,
+            55.565606560460225
+          ],
+          [
+            9.532785415649414,
+            55.56556712655737
+          ],
+          [
+            9.532726407051086,
+            55.56556712655737
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-26T03:28:06.140Z",
+      "updatedAt": "2026-09-26T03:28:06.377Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 17
+    }
+  },
+  {
+    "id": "building-asset-club-tokyo-valentino-lifestyle-atlanta",
+    "listingId": "club-tokyo-valentino-lifestyle-atlanta",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "2265644680"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -84.36546206474304,
+            33.80761225356345
+          ],
+          [
+            -84.36535477638245,
+            33.80766128441647
+          ],
+          [
+            -84.36530113220215,
+            33.807576594743594
+          ],
+          [
+            -84.3651294708252,
+            33.80764791236844
+          ],
+          [
+            -84.36506509780884,
+            33.80755430797362
+          ],
+          [
+            -84.36504900455475,
+            33.807558765328096
+          ],
+          [
+            -84.36499536037445,
+            33.80748299027077
+          ],
+          [
+            -84.36522603034973,
+            33.80738938569557
+          ],
+          [
+            -84.3653815984726,
+            33.807491904986904
+          ],
+          [
+            -84.36546206474304,
+            33.80761225356345
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 4,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-26T03:28:14.900Z",
+      "updatedAt": "2026-09-26T03:28:15.156Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 10
+    }
+  },
+  {
+    "id": "building-asset-club-swingers-oase-ammerzoden",
+    "listingId": "club-swingers-oase-ammerzoden",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "21254210"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            5.227373242378235,
+            51.74790360617234
+          ],
+          [
+            5.227518081665039,
+            51.74803313406906
+          ],
+          [
+            5.2276307344436646,
+            51.747986636918085
+          ],
+          [
+            5.227480530738831,
+            51.74785378765162
+          ],
+          [
+            5.227373242378235,
+            51.74790360617234
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-09-26T03:29:02.323Z",
+      "updatedAt": "2026-09-26T03:29:02.783Z",
       "polygonCount": 1,
       "ringCount": 1,
       "vertexCount": 5

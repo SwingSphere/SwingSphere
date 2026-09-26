@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ExternalLink, Globe, Link2, Mail, Pencil } from 'lucide-react';
-import { resolveCountryFlagEmoji } from '../../lib/formatting';
+import { formatClockTime, resolveCountryFlagEmoji } from '../../lib/formatting';
 import type { ClubData } from '../../types';
 import ClubPageLayout from './ClubPageLayout';
 import ClubHero from './ClubHero';
@@ -11,7 +11,6 @@ import ClubMapCard from './ClubMapCard';
 import { getListingImageUrl } from '../../lib/listingImage';
 import { formatListingPhysicalAddress, getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
 import { getApproximateLocationCenter, isApproximateLocation } from '../../lib/publicLocation';
-import ListingAccessSummary from '../listing/ListingAccessSummary';
 import ClubReviewsSection from './ClubReviewsSection';
 import ClubHouseRulesSection from './ClubHouseRulesSection';
 import type { ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
@@ -32,12 +31,12 @@ type ClubDetailTemplateProps = {
 const getScheduleSummary = (club: ClubData): string => {
   if (!club.schedule?.length) {
     return club.specialScheduleNotes?.trim()
-      ? 'Schedule varies by event or current club programming.'
+      ? 'See current hours and programming below.'
       : 'Current recurring hours are not published.';
   }
   const firstOpen = club.schedule.find((day) => !day.isClosed && day.open && day.close);
   if (!firstOpen) return 'Recurring days are known, but exact hours vary.';
-  return `Typical availability: ${firstOpen.day} ${firstOpen.open} - ${firstOpen.close}.`;
+  return `Typical availability: ${firstOpen.day} ${formatClockTime(firstOpen.open)} – ${formatClockTime(firstOpen.close)}.`;
 };
 
 const unique = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
@@ -135,17 +134,9 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
       }
       main={
         <>
-          <section className="ss-glass ss-glass--ambient rounded-[24px] p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Start here</p>
-            <h2 className="mt-1 text-2xl font-bold text-white">What to Expect</h2>
-            <p className="mt-2 text-sm leading-6 text-gray-400">The essential visitor information in one place: who can attend, what entry requires, when the club is typically open, and any club-specific guidance to know before arriving.</p>
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <ListingAccessSummary listing={club} variant="detail" />
-              <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} specialScheduleNotes={club.specialScheduleNotes} onQuickEdit={() => onQuickEdit?.('schedule')} />
-              <ClubHouseRulesSection content={extended.houseRules} />
-            </div>
-          </section>
-          <WhatHappensHere description={club.description_short} onQuickEdit={() => onQuickEdit?.('description')} />
+          <WhatHappensHere clubName={club.name} description={club.description_short} onQuickEdit={() => onQuickEdit?.('description')} />
+          <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} specialScheduleNotes={club.specialScheduleNotes} attendancePolicy={club.attendancePolicy} entryRequirements={club.entryRequirements} calendarHref={`/events?clubId=${encodeURIComponent(club.id)}`} onQuickEdit={() => onQuickEdit?.('schedule')} />
+          <ClubHouseRulesSection content={extended.houseRules} />
           <ClubEventsPreview
             events={upcomingEvents}
             viewAllHref={`/events?clubId=${encodeURIComponent(club.id)}`}

@@ -36,13 +36,20 @@ type TabletExplorerOverlayProps = {
   isUpdating?: boolean;
 };
 
-const navItems = [
+type NavItem = {
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  emphasized?: boolean;
+};
+
+const navItems: NavItem[] = [
   { label: 'Explore', path: '', icon: Globe2 },
   { label: 'Nearby', path: '/nearby', icon: MapPin },
   { label: 'Add', path: '/add', icon: Plus, emphasized: true },
   { label: 'Saved', path: '/saved', icon: Bookmark },
   { label: 'Account', path: '/account', icon: UserRound },
-] as const;
+];
 
 const humanize = (value?: string) => value
   ? value.replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase())

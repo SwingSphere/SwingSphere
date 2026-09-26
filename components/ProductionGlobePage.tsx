@@ -2689,7 +2689,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       surface: 'map',
       lng: destination.lng,
       lat: destination.lat,
-      zoom: destination.framing.zoom,
+      zoom: destination.framing.kind === 'camera' ? destination.framing.zoom : destination.framing.maxZoom,
       pitch: destination.framing.pitch,
       bearing: destination.framing.bearing,
     });
@@ -2776,7 +2776,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       surface: 'globe',
       lng: destination.lng,
       lat: destination.lat,
-      zoom: destination.framing.zoom,
+      zoom: destination.framing.kind === 'camera' ? destination.framing.zoom : destination.framing.maxZoom,
       pitch: destination.framing.pitch,
       bearing: destination.framing.bearing,
     });
@@ -2821,7 +2821,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     };
     setTravelDestination(destination);
     setTravelPhase('planning');
-    setSelectedListingId(null);
+    setSelectedListingId(region.listingIds?.[0] ?? null);
     setSelectedOrganizationId(null);
     setActiveActivityRegionId(region.id);
     setCamera({
@@ -2898,7 +2898,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setUsaDiscoveryRegionId(metroMatch.region.id);
     setUsaDiscoveryMetroId(metroMatch.metro.id);
     setActiveActivityRegionId(marker.id);
-    setSelectedListingId(null);
+    setSelectedListingId(marker.listingIds?.[0] ?? null);
     setSelectedOrganizationId(null);
     setTravelDestination(null);
     setTravelPhase('idle');
@@ -3421,7 +3421,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       surface: 'map',
       lng: destination.lng,
       lat: destination.lat,
-      zoom: destination.framing.zoom,
+      zoom: destination.framing.kind === 'camera' ? destination.framing.zoom : destination.framing.maxZoom,
       pitch: destination.framing.pitch,
       bearing: destination.framing.bearing,
     });
@@ -4031,6 +4031,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             onSurfaceModeChange={setManualSurfaceMode}
             listings={discoveryRailListings}
             selectedListingId={detailListingId}
+            activeRegionId={activeActivityRegionId}
             activeRegionName={discoveryRailRegionName}
             searchText={searchText}
             onSearchTextChange={setSearchText}
@@ -4521,86 +4522,6 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         className={['absolute inset-0', isSurface ? 'pointer-events-auto' : 'pointer-events-none'].join(' ')}
         aria-label="SwingSphere Globe V1"
       />
-
-      {variant === 'page' && runtimeState !== 'ready' ? (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/35">
-          <div className="rounded-lg border border-gray-800 bg-black/80 px-4 py-3 text-sm text-gray-300 shadow-xl">
-            {runtimeState === 'loading' ? 'Loading Globe V1' : `Globe failed to load: ${runtimeError ?? 'Unknown error'}`}
-          </div>
-        </div>
-      ) : null}
-
-      {variant === 'page' ? (
-        <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-xs rounded-lg border border-gray-800 bg-black/70 px-4 py-3 shadow-xl backdrop-blur-md">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">Globe V1 Integration</p>
-        <p className="mt-1 text-[11px] text-gray-500">Temporary mock listings: SF, LA, New York, London, Sydney.</p>
-        </div>
-      ) : null}
-
-      {variant === 'page' ? (
-        <div className="absolute bottom-4 left-4 z-20 w-[360px] max-w-[calc(100vw-2rem)] rounded-lg border border-gray-800 bg-black/85 text-gray-200 shadow-2xl backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => setIsAtmospherePanelOpen((current) => !current)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-300"
-          >
-            <span>Atmosphere Tool</span>
-            <span className="text-gray-500">{isAtmospherePanelOpen ? 'Hide' : 'Show'}</span>
-          </button>
-          {isAtmospherePanelOpen ? (
-            <div className="max-h-[70vh] overflow-y-auto border-t border-gray-800 p-4">
-              <AtmosphereShellControls
-                title="Inner Shell"
-                shell={atmosphereTool.atmosphere.inner}
-                onChange={(key, value) => updateShellValue('inner', key, value)}
-              />
-              <AtmosphereShellControls
-                title="Outer Shell"
-                shell={atmosphereTool.atmosphere.outer}
-                onChange={(key, value) => updateShellValue('outer', key, value)}
-              />
-              <NumberControl
-                label="Rim radius"
-                value={atmosphereTool.crimsonRim.radius}
-                min={0.82}
-                max={1.12}
-                step={0.001}
-                onChange={updateRimRadius}
-              />
-              <pre className="mt-4 max-h-40 overflow-auto rounded-md border border-gray-800 bg-black/70 p-3 text-[11px] leading-4 text-gray-400">
-                {formatAtmosphereSnippet(atmosphereTool)}
-              </pre>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={copyAtmosphereConfig}
-                  className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/20"
-                >
-                  Copy Config
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAtmosphereTool(defaultAtmosphereToolState)}
-                  className="rounded-md border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-gray-800"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {variant === 'page' ? (
-        <ExplorerDetailsPanel
-          onClose={closePanel}
-          selectedListingId={detailListingId}
-          selectedOrganizationId={selectedOrganizationId}
-          listings={listings}
-          organizations={organizations}
-          entityIndex={entityIndex ?? undefined}
-        />
-      ) : null}
     </div>
   );
 };

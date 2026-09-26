@@ -270,7 +270,8 @@ export class GlobeMarker {
     domElement = null,
     globe = null,
     presentationOpacity = 1,
-    suppressLabel = false
+    suppressLabel = false,
+    cachedRect = null
   }) {
     const style = this.style;
     this.heroTargetEmphasis = Boolean(heroTarget);
@@ -407,9 +408,11 @@ export class GlobeMarker {
         hoverOpacity: THREE.MathUtils.clamp(targetHoverLabelOpacity, 0, 1) * presentationOpacity,
         selected,
         hovered,
+        forceLabel,
         camera,
         domElement,
-        globe
+        globe,
+        cachedRect
       });
     } else if (this.label.sprite) {
       const labelY = this.wrapper.position.y
@@ -482,12 +485,18 @@ export class GlobeMarker {
     disposeObject3D(this.group);
   }
 
-  #updateDomLabel({ selectedOpacity, hoverOpacity, selected, hovered, camera, domElement, globe }) {
+  #updateDomLabel({ selectedOpacity, hoverOpacity, selected, hovered, forceLabel, camera, domElement, globe, cachedRect }) {
     if (!this.label?.element || !camera || !domElement) {
       this.label?.hide?.();
       return;
     }
-    const rect = domElement.getBoundingClientRect();
+    // Optimization: Skip matrix computations, DOM rect queries, and projection
+    // if the marker label is not active (selected, hovered, or forced).
+    if (!selected && !hovered && !forceLabel) {
+      this.label.hide();
+      return;
+    }
+    const rect = cachedRect || domElement.getBoundingClientRect();
     if (!rect.width || !rect.height) {
       this.label.hide();
       return;
@@ -503,7 +512,7 @@ export class GlobeMarker {
     const visible = this.tmpSurfaceNormal.dot(this.tmpCameraDirection) > -0.08;
     const projected = this.tmpLabelWorld.project(camera);
     const onScreen = projected.z > -1 && projected.z < 1;
-    if (!visible || !onScreen || (!selected && !hovered)) {
+    if (!visible || !onScreen) {
       this.label.hide();
       return;
     }
@@ -975,15 +984,20 @@ function createVenueLabelDomSet(markerId, title, subtitle, countryIso2, logoUrl,
     element.style.transform = `translate(-50%, -100%) translate(${Math.round(clampedX)}px, ${Math.round(clampedAnchorY)}px)`;
   };
 
+  let isCurrentlyHidden = false;
+
   return {
     element: selectedElement,
     hoverElement,
     root: mountRoot,
     update({ selectedOpacity, hoverOpacity, x, y, viewportWidth, viewportHeight, selected, hovered }) {
+      isCurrentlyHidden = false;
       setElementState(selectedElement, selected ? selectedOpacity : 0, x, y, style.selectedLabelOffsetPx, viewportWidth, viewportHeight, true);
       setElementState(hoverElement, !selected && hovered ? hoverOpacity : 0, x, y, style.hoverLabelOffsetPx, viewportWidth, viewportHeight, false);
     },
     hide() {
+      if (isCurrentlyHidden) return;
+      isCurrentlyHidden = true;
       selectedElement.style.opacity = "0";
       selectedElement.style.visibility = "hidden";
       hoverElement.style.opacity = "0";

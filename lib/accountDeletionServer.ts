@@ -111,11 +111,15 @@ export const deleteAuthenticatedAccount = async (authorization?: string | null) 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Account deletion failed.';
     if (serviceClient) {
-      await serviceClient.rpc('admin_fail_account_deletion', {
-        p_request_id: begin.requestId,
-        p_failure_code: externalIds.length ? 'account_deletion_failed' : 'database_deletion_failed',
-        p_failure_detail: message,
-      }).catch(() => undefined);
+      try {
+        await serviceClient.rpc('admin_fail_account_deletion', {
+          p_request_id: begin.requestId,
+          p_failure_code: externalIds.length ? 'account_deletion_failed' : 'database_deletion_failed',
+          p_failure_detail: message,
+        });
+      } catch {
+        // Preserve the original deletion failure even if recording it fails.
+      }
     }
     throw error;
   }

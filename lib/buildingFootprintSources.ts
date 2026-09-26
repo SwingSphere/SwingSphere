@@ -167,6 +167,80 @@ export type SupplementalFusionStats = {
   primaryFootprints: number;
 };
 
+// This public feature layer can serve small neighborhoods directly in browsers
+// where the Node-only Microsoft dataset endpoint is not deployed (Cloudflare Pages).
+const ESRI_MICROSOFT_BUILDINGS_URL =
+  'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/MSBFP2/FeatureServer/0/query';
+
+export const fetchArcGisBuildingFootprints = async (args: {
+  center: LngLat;
+  radiusMeters: number;
+  maxFeatures?: number;
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+}): Promise<SupplementalBuildingFootprintResponse> => {
+  const radiusMeters = Math.max(20, Math.min(750, args.radiusMeters));
+  const latitudeDelta = radiusMeters / 110_540;
+  const longitudeDelta = radiusMeters / Math.max(1, 111_320 * Math.cos(args.center.lat * Math.PI / 180));
+  const bounds = [
+    args.center.lng - longitudeDelta,
+    args.center.lat - latitudeDelta,
+    args.center.lng + longitudeDelta,
+    args.center.lat + latitudeDelta,
+  ];
+  const maxFeatures = Math.max(1, Math.min(2_000, args.maxFeatures ?? 900));
+  const query = new URLSearchParams({
+    where: '1=1',
+    geometry: bounds.join(','),
+    geometryType: 'esriGeometryEnvelope',
+    inSR: '4326',
+    outSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects',
+    outFields: 'OBJECTID',
+    returnGeometry: 'true',
+    resultRecordCount: String(maxFeatures),
+    f: 'geojson',
+  });
+  const response = await (args.fetchImpl ?? fetch)(`${ESRI_MICROSOFT_BUILDINGS_URL}?${query}`, {
+    signal: args.signal,
+  });
+  if (!response.ok) throw new Error(`ArcGIS building coverage returned ${response.status}`);
+  const payload = await response.json() as {
+    features?: Array<GeoJSON.Feature<GeoJSON.Geometry, Record<string, unknown>>>;
+    exceededTransferLimit?: boolean;
+    error?: { message?: string };
+  };
+  if (payload.error) throw new Error(payload.error.message || 'ArcGIS building coverage returned an error.');
+  if (!Array.isArray(payload.features)) throw new Error('ArcGIS building coverage returned invalid GeoJSON.');
+  const features = payload.features.flatMap((feature) => {
+    if (feature.geometry?.type !== 'Polygon' && feature.geometry?.type !== 'MultiPolygon') return [];
+    const objectId = feature.properties?.OBJECTID ?? feature.id;
+    if (objectId === null || objectId === undefined) return [];
+    return [{
+      type: 'Feature' as const,
+      id: `${MICROSOFT_BUILDING_ID_PREFIX}esri:${objectId}`,
+      geometry: feature.geometry,
+      properties: {
+        ...feature.properties,
+        render_height: 6,
+        swingsphere_provider_source: 'Microsoft Building Footprints / Esri',
+        swingsphere_provider_attribution: 'Microsoft Building Footprints / Esri · ODbL',
+      },
+    }];
+  });
+  return {
+    type: 'FeatureCollection',
+    features,
+    provider: 'Microsoft Building Footprints / Esri',
+    attribution: 'Microsoft Building Footprints / Esri · ODbL',
+    datasetRelease: '2022',
+    quadKeys: [],
+    cacheHits: 0,
+    downloadedTiles: 0,
+    truncated: Boolean(payload.exceededTransferLimit || payload.features.length >= maxFeatures),
+  };
+};
+
 export const fetchSupplementalBuildingFootprints = async (args: {
   listingId: string;
   center: LngLat;
@@ -179,27 +253,40 @@ export const fetchSupplementalBuildingFootprints = async (args: {
   args.signal?.addEventListener('abort', relayAbort, { once: true });
   if (args.signal?.aborted) relayAbort();
   const timer = setTimeout(() => controller.abort(new Error('Supplemental building request timed out.')), 45_000);
+  let serverError: unknown = null;
   try {
-  const response = await adminFetch('/api/admin/building-footprints/supplemental', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal: controller.signal,
-    body: JSON.stringify({
-      listingId: args.listingId,
-      lat: args.center.lat,
-      lng: args.center.lng,
-      radiusMeters: args.radiusMeters,
-      maxFeatures: args.maxFeatures,
-    }),
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || `Supplemental building provider returned ${response.status}`);
-  }
-  return await response.json();
+    const response = await adminFetch('/api/admin/building-footprints/supplemental', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        listingId: args.listingId,
+        lat: args.center.lat,
+        lng: args.center.lng,
+        radiusMeters: args.radiusMeters,
+        maxFeatures: args.maxFeatures,
+      }),
+    });
+    if (!response.ok) {
+      const message = await response.text().catch(() => '');
+      throw new Error(message || `Supplemental building provider returned ${response.status}`);
+    }
+    const result = await response.json() as SupplementalBuildingFootprintResponse;
+    if (result.features?.length) return result;
+  } catch (error) {
+    serverError = error;
+    if (args.signal?.aborted) throw error;
   } finally {
     clearTimeout(timer);
     args.signal?.removeEventListener('abort', relayAbort);
+  }
+
+  // A production Pages deployment has no Vite admin route. Keep the lookup
+  // usable without asking an administrator to verify an unseen building.
+  try {
+    return await fetchArcGisBuildingFootprints(args);
+  } catch (fallbackError) {
+    throw new Error(`Building providers unavailable: ${serverError instanceof Error ? serverError.message : 'primary source empty'}; ArcGIS: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
   }
 };
 

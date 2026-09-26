@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MiniMapHybrid from '../maps/MiniMapHybrid';
-import type { GeoJsonObject } from 'geojson';
+import type { Feature, GeoJsonObject } from 'geojson';
 
 type ClubLocation = {
   id: string;
@@ -211,7 +211,7 @@ const resolveCityBoundary = async (lat: number, lng: number): Promise<{ geoJson:
     }>(detailsUrl);
     const geometry = details?.geometry ?? details?.geometry_geojson ?? details?.geojson ?? null;
     if (!geometry) return null;
-    const feature: GeoJsonObject = {
+    const feature: Feature = {
       type: 'Feature',
       properties: { name: reverse.display_name },
       geometry: geometry as any,

@@ -15,6 +15,7 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath } from '../../lib/entityUtils';
 import { resolveBrandLogo } from '../../lib/entityBrandMedia';
+import { getListingFlyerUrl, getListingImageUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
 import type { EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
 import HostHero from '../host/HostHero';
@@ -179,6 +180,12 @@ const HostPage: React.FC = () => {
   const [hostBadges, setHostBadges] = useState<BadgeAwardView[]>([]);
 
   const hostProfile = index?.hostsBySlug.get(slug) ?? null;
+  const ownedClub = useMemo(() => {
+    const organizationId = hostProfile?.organization?.id;
+    if (!organizationId) return null;
+    const matches = listings.filter((listing) => listing.type === 'club' && listing.ownerOrganizationId === organizationId);
+    return matches.length === 1 ? matches[0] : null;
+  }, [hostProfile?.organization?.id, listings]);
   const resolvedHostLogo = useMemo(() => {
     const organizationId = hostProfile?.organization?.id;
     if (!organizationId) return undefined;
@@ -401,8 +408,8 @@ const HostPage: React.FC = () => {
           hostName={hostProfile.name}
           cadenceText={cadenceText}
           themePills={themePills}
-          logoImageUrl={resolvedHostLogo}
-          headerImageUrl={hostProfile.organization?.headerImageUrl}
+          logoImageUrl={resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined)}
+          headerImageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
           description={hostProfile.organization?.descriptionShort}
           operatorName={operatorOrganization?.name}
           displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.includes('producer') ? 'Producer' : hostProfile.organization?.displayTypes?.includes('community') ? 'Community' : 'Host'}
@@ -428,11 +435,16 @@ const HostPage: React.FC = () => {
               </div>
               <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
                 <div className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-black/30 sm:aspect-square">
-                  {nextEvent.headerImageUrl ? (
-                    <img src={nextEvent.headerImageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full bg-[radial-gradient(circle_at_30%_30%,rgba(239,68,68,.3),transparent_36%),linear-gradient(145deg,#17191f,#08090c)]" />
-                  )}
+                  <img
+                    src={getListingFlyerUrl(nextEvent)}
+                    alt={`${nextEvent.name} event artwork`}
+                    className="h-full w-full object-contain"
+                    onError={(error) => {
+                      const fallback = nextEvent.headerImageUrl;
+                      if (fallback && error.currentTarget.src !== fallback) error.currentTarget.src = fallback;
+                      else error.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{nextEvent.name}</h2>

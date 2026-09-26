@@ -304,6 +304,10 @@ export class CountrySelectionManager {
       this.renderer.renderer.domElement.style.cursor = "pointer";
       return;
     }
+    if (Math.abs(this.pointer.x) > 1 || Math.abs(this.pointer.y) > 1) {
+      if (this.hoverRegion || this.hoverWorldPosition) this.#clearHover();
+      return;
+    }
     this.raycaster.setFromCamera(this.pointer, this.renderer.camera);
     let hitPoint = null;
     let hitDistance = null;

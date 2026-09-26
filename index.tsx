@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import App from './App';
@@ -118,7 +118,7 @@ const RootEntryPage: React.FC = () => {
 };
 
 const SITE_MODE = import.meta.env.VITE_SITE_MODE === 'coming-soon' ? 'coming-soon' : 'full';
-const configuredBasename = import.meta.env.VITE_APP_BASENAME || undefined;
+const configuredBasename = typeof import.meta.env.VITE_APP_BASENAME === 'string' && import.meta.env.VITE_APP_BASENAME ? import.meta.env.VITE_APP_BASENAME : undefined;
 const APP_BASENAME = configuredBasename && window.location.pathname.startsWith(configuredBasename)
   ? configuredBasename
   : undefined;

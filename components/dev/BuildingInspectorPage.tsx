@@ -41,7 +41,7 @@ import { buildBuildingsSource, getBuildingsSourceId, venueArrival } from '../map
 import { swingMapStyle } from '../maps/mapStyle';
 import BuildingVerificationAuditPanel from './BuildingVerificationAuditPanel';
 import { buildingAddressBelongsToFootprint, inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
-import { geometryFingerprint, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
+import { geometryFingerprint, materializeProviderFootprintFeature, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
 import {
   fetchOpenFreeMapBuildingFootprints,
   fetchOsOpenMapLocalBuildingAtPoint,
@@ -457,7 +457,7 @@ const RESOLVER_FAILURE_COPY: Record<ResolverFailureStatus, { title: string; acti
   EMPTY_GEOMETRY: { title: 'Provider returned empty geometry', action: 'Try the expanded neighborhood or another provider.' },
   INVALID_GEOMETRY: { title: 'Provider geometry is malformed', action: 'Keep this case in geometry review; do not save it automatically.' },
   UNSUPPORTED_GEOMETRY: { title: 'Provider geometry type is unsupported', action: 'Use an individual Polygon or MultiPolygon footprint.' },
-  NO_PROVIDER_FEATURE: { title: 'No usable provider footprint', action: 'Check the coordinate and provider coverage; this is not a silent failure.' },
+  NO_PROVIDER_FEATURE: { title: 'No usable provider footprint', action: 'The street map and saved pin remain visible. Retry building coverage before selecting a footprint.' },
   OUTSIDE_RADIUS: { title: 'Buildings exist, but not near the stored pin', action: 'Review the listing coordinate before choosing a footprint.' },
   PROVIDER_SYNC_MISMATCH: { title: 'Provider tiles are out of sync', action: 'Reload the neighborhood before making a decision.' },
   PROVIDER_TIMEOUT: { title: 'Provider tiles timed out', action: 'Retry later; do not treat this as no building data.' },
@@ -2623,8 +2623,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [assetFilter, setAssetFilter] = useState<BuildingAssetFilter>('missing');
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [resolvedVenueFeatureId, setResolvedVenueFeatureId] = useState<string | null>(null);
-  const [savedGeometrySignature, setSavedGeometrySignature] = useState('');
   const [assetStatusMessage, setAssetStatusMessage] = useState<string | null>(null);
+  const [venueNameDraft, setVenueNameDraft] = useState('');
   const [localListings, setLocalListings] = useState<Listing[]>([]);
   const [localVenues, setLocalVenues] = useState<VenueData[]>([]);
   const [localBuildingAssets, setLocalBuildingAssets] = useState<BuildingAsset[]>([]);
@@ -2645,6 +2645,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       (landmarkListing?.id === selectedVenueId ? landmarkListing : null),
     [landmarkListing, listings, selectedVenueId],
   );
+  const selectedPhysicalVenue = useMemo(
+    () => selectedVenue ? getVenueForListing(selectedVenue, semv2Collections) : null,
+    [selectedVenue, semv2Collections],
+  );
+  const persistedSelectedVenue = selectedPhysicalVenue && venues.some((venue) => venue.id === selectedPhysicalVenue.id)
+    ? selectedPhysicalVenue : null;
+  const selectedVenueDisplayName = selectedPhysicalVenue?.name ?? selectedVenue?.name ?? 'No venue selected';
+  useEffect(() => {
+    setVenueNameDraft(selectedPhysicalVenue?.name ?? '');
+  }, [selectedPhysicalVenue?.id, selectedPhysicalVenue?.name]);
   const selectedVenueAsset = useMemo(
     () => getBuildingAssetForListing(selectedVenue, buildingAssets, venues, listings, organizations, relationships),
     [buildingAssets, listings, organizations, relationships, selectedVenue, venues],
@@ -2703,7 +2713,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     return center ? haversineMeters(selectedVenueCoords, { lat: center[1], lng: center[0] }) : null;
   }, [selectedVenueAsset, selectedVenueCoords]);
   const filteredVenues = useMemo(() => {
-    const query = venueSearch.trim().toLowerCase();
+    const query = normalizeAddressText(venueSearch);
     return listings
       .filter((listing) => {
         const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
@@ -2716,11 +2726,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           listing.name,
           listing.type,
           listing.location,
+          formatListingPhysicalAddress(listing, semv2Collections),
           getListingCityLabel(listing, semv2Collections),
           getListingPhysicalAddress(listing, semv2Collections).addressLine1,
           getListingPhysicalAddress(listing, semv2Collections).postalCode,
-        ].filter(Boolean).join(' ').toLowerCase();
-        return haystack.includes(query);
+        ].filter(Boolean).join(' ');
+        return normalizeAddressText(haystack).includes(query);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [assetFilter, buildingAssets, listingLocationAudits, listings, organizations, relationships, semv2Collections, venueSearch, venues]);
@@ -2758,9 +2769,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     });
     return records;
   }, [resolution, workspacePolygonMetadata]);
+  // The street plane and saved pin must be visible before a provider footprint
+  // resolves, so an empty provider result does not leave the workspace black.
   const sceneOrigin = useMemo(
-    () => getGeometryCenter(resolution?.geometry ?? null),
-    [resolution?.geometry],
+    () => getGeometryCenter(resolution?.geometry ?? null)
+      ?? (selectedVenueCoords ? [selectedVenueCoords.lng, selectedVenueCoords.lat] as [number, number] : null),
+    [resolution?.geometry, selectedVenueCoords],
   );
   const rawGeoJSONText = useMemo(
     () => (resolution ? stringifyGeoJSON(resolution.rawGeoJSON) : ''),
@@ -2865,10 +2879,11 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
 
   const saveStateLabel = useMemo(() => {
     if (selectedSummary.count > 0) {
-      return selectedGeometrySignature && selectedGeometrySignature === savedGeometrySignature ? 'Saved' : 'Unsaved Changes';
+      const persistedSignature = getGeometrySignature(selectedVenueAsset?.geometry);
+      return selectedGeometrySignature && selectedGeometrySignature === persistedSignature ? 'Saved' : 'Unsaved Changes';
     }
     return selectedVenueAsset ? 'Saved asset available' : 'Never Saved';
-  }, [savedGeometrySignature, selectedGeometrySignature, selectedSummary.count, selectedVenueAsset]);
+  }, [selectedGeometrySignature, selectedSummary.count, selectedVenueAsset]);
   const selectedMetrics = useMemo(
     () => getBaseFeatureMetrics(resolution?.geometry ?? null),
     [resolution?.geometry],
@@ -4064,11 +4079,13 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           sourceLayer: SOURCE_LAYER,
         }) as MapGeoJSONFeature[];
         allFeatures = openFreeMapFeatures;
+        // Loading nearby buildings is independent of whether the address can
+        // later be verified. The venue load already blocks private/approximate
+        // locations; a pin under review still needs its surrounding context.
         const canUseNeighborhoodFusion = Boolean(
           options.useWorkspace &&
           options.workspaceCenter &&
           options.intelligenceListing &&
-          listingHasExactBuildingAddress(options.intelligenceListing, semv2Collections) &&
           !isApproximateLocation(options.intelligenceListing)
         );
         const sourceReadyForFusion = requestedBuildingSourceMode === 'microsoft'
@@ -4097,7 +4114,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                 });
                 if (!isCurrentRun()) return;
                 directOpenFreeMapCache = direct.features.map((providerFeature) => ({
-                  ...providerFeature,
+                  ...materializeProviderFootprintFeature(providerFeature),
                   state: {},
                 } as unknown as MapGeoJSONFeature));
                 primaryOpenFreeMapFeatures = [...openFreeMapFeatures, ...directOpenFreeMapCache];
@@ -4162,7 +4179,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               });
               if (!isCurrentRun()) return;
               fusedFeatureCache = fusion.features.map((providerFeature) => ({
-                ...providerFeature,
+                ...materializeProviderFootprintFeature(providerFeature),
                 state: {},
               } as unknown as MapGeoJSONFeature));
               allFeatures = fusedFeatureCache;
@@ -4211,7 +4228,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           if (generated) {
             generatedCandidateForRun = generated;
             const generatedFeature = {
-              ...generated.feature,
+              ...materializeProviderFootprintFeature(generated.feature),
               state: {},
             } as unknown as MapGeoJSONFeature;
             allFeatures = [...allFeatures, generatedFeature];
@@ -4371,7 +4388,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               notes: ['no provider building found inside expanded search radius'],
             });
           }
-          setStatus(`No provider building was found within ${searchRadiusMeters}m of ${listing.name}. The location is flagged for admin review.`);
+          setStatus(`No building footprint was returned within ${searchRadiusMeters}m of ${listing.name}. The street map and saved pin remain visible; retry another building source before reviewing the pin.${neighborhoodFusionWarnings.length ? ` Provider details: ${neighborhoodFusionWarnings.join(' ')}` : ''}`);
         } else {
           setStatus(`Feature id ${featureId} was not returned by the OpenFreeMap building source before the wait window expired.`);
         }
@@ -4655,7 +4672,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       checkedCandidateCount: 0,
     });
     setResolvedVenueFeatureId(null);
-    setSavedGeometrySignature(getGeometrySignature(savedAsset?.geometry));
     setAssetStatusMessage(null);
     setGeneratedBuildingCandidate(null);
     setResolution(null);
@@ -4800,7 +4816,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setResolvedVenueFeatureId(asset.provider.featureIds[0] ?? null);
     setFeatureIdInput(asset.provider.featureIds[0] ?? featureIdInput);
     featureIdInputRef.current = asset.provider.featureIds[0] ?? featureIdInputRef.current;
-    setSavedGeometrySignature(getGeometrySignature(asset.geometry));
     setLoadedBuildingSourceLabel(`Saved · ${asset.provider.source || 'unknown source'}`);
     setAssetStatusMessage(`Loaded saved building asset updated ${new Date(asset.capture.updatedAt).toLocaleString()}.`);
     setStatus(`Loaded saved building asset for ${venueName}: ${asset.capture.polygonCount} polygon(s).`);
@@ -4855,6 +4870,30 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setFragmentRecords([getFragmentRecord(candidate.feature)].filter((entry): entry is FragmentRecord => Boolean(entry)));
     setForensicReport(null);
     setStatus(`Promoted nearby provider candidate ${candidate.featureId} to editable geometry.`);
+  };
+
+  const saveSelectedVenueName = async () => {
+    if (!persistedSelectedVenue) return;
+    const name = venueNameDraft.trim();
+    if (!name) {
+      setAssetStatusMessage('Enter a venue name before saving.');
+      return;
+    }
+    if (name === persistedSelectedVenue.name) return;
+    setIsLoading(true);
+    setLoadingPhase('Saving venue name');
+    setAssetStatusMessage(null);
+    try {
+      const savedVenue = await api.saveVenue({ ...persistedSelectedVenue, name });
+      setLocalVenues((current) => current.map((venue) => venue.id === savedVenue.id ? savedVenue : venue));
+      onVenueLocationSaved?.(savedVenue);
+      setAssetStatusMessage(`Saved venue name: ${savedVenue.name}.`);
+    } catch (error) {
+      setAssetStatusMessage((error as Error).message || 'Failed to save venue name.');
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
   };
 
   const saveSelectedBuildingAsset = async () => {
@@ -4931,7 +4970,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     };
 
     const assetOwnerListing = listings.find((listing) => listing.id === assetOwnerListingId) ?? selectedVenue;
-    const expectedSnapshot = createBuildingVerificationInputSnapshot(assetOwnerListing, { listings });
+    const expectedSnapshot = createBuildingVerificationInputSnapshot(assetOwnerListing, semv2Collections);
     if (!expectedSnapshot) {
       setAssetStatusMessage('Save blocked: the canonical asset owner has no valid location snapshot.');
       return;
@@ -4952,9 +4991,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         allowReplaceExisting: Boolean(existingAsset),
         expectedExistingAsset: createBuildingAssetRevision(existingAsset),
       });
-      setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
       setAssetStatusMessage(`Saved building asset at ${new Date(saved.asset.capture.updatedAt).toLocaleString()}.`);
-      setStatus(`Saved building asset for ${selectedVenue.name}: ${saved.asset.capture.polygonCount} polygon(s).`);
+      setStatus(`Saved building asset for ${selectedVenueDisplayName}: ${saved.asset.capture.polygonCount} polygon(s).`);
       setLocalBuildingAssets((current) => {
         const index = current.findIndex((item) => item.id === saved.asset.id);
         if (index < 0) return [...current, saved.asset];
@@ -4981,7 +5019,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     if (!selectedVenue) return;
     const ownerListingId = selectedVenueAsset?.listingId ?? selectedVenue.id;
     const ownerListing = listings.find((listing) => listing.id === ownerListingId) ?? selectedVenue;
-    const expectedSnapshot = createBuildingVerificationInputSnapshot(ownerListing, { listings });
+    const expectedSnapshot = createBuildingVerificationInputSnapshot(ownerListing, semv2Collections);
     const expectedExistingAsset = createBuildingAssetRevision(selectedVenueAsset);
     const restorable = buildingAssetHistory.find((event) => event.action === 'replace' && event.previousAsset);
     if (!expectedSnapshot || !expectedExistingAsset || !restorable) {
@@ -5003,7 +5041,6 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       if (saved.listing) {
         setLocalListings((current) => current.map((item) => item.id === saved.listing?.id ? saved.listing : item));
       }
-      setSavedGeometrySignature(getGeometrySignature(saved.asset.geometry));
       setBuildingAssetHistory(await api.getBuildingAssetHistory(ownerListingId));
       onBuildingAssetSaved?.(saved.asset, saved.listing);
       setAssetStatusMessage(`Restored the previous BuildingAsset revision from ${new Date(restorable.occurredAt).toLocaleString()}. Reload the saved asset to inspect it.`);
@@ -5481,7 +5518,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         <div className="inline-flex w-[calc(100%-1rem)] items-start justify-between gap-3 align-middle">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-zinc-50">Venue Summary</h2>
-            <p className="mt-0.5 truncate text-[11px] text-zinc-500">{selectedVenue.name}</p>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-500">{selectedVenueDisplayName}</p>
           </div>
           <div className="flex shrink-0 gap-1.5">
             {selectedVenueAsset && (
@@ -5514,6 +5551,28 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         </div>
       </summary>
       <div className="mt-3 space-y-2 text-xs text-zinc-300">
+        {persistedSelectedVenue && (
+          <div className="flex items-end gap-2">
+            <label className="min-w-0 flex-1 text-[11px] text-zinc-400">
+              Venue name
+              <input
+                type="text"
+                value={venueNameDraft}
+                onChange={(event) => setVenueNameDraft(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-zinc-100"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={isLoading || !venueNameDraft.trim() || venueNameDraft.trim() === persistedSelectedVenue.name}
+              onClick={() => void saveSelectedVenueName()}
+              className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-100 disabled:opacity-50"
+            >
+              Save name
+            </button>
+          </div>
+        )}
+        {selectedVenue.type !== 'club' && <Row label="Selected listing" value={selectedVenue.name} />}
         <Row label="Listing type" value={selectedVenue.type} />
         <Row
           label="Address"
@@ -5763,7 +5822,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           </details>
 
           <div className="ml-auto hidden min-w-0 items-center gap-3 px-3 text-[11px] text-zinc-500 md:flex">
-            <span className="max-w-64 truncate">{selectedVenue?.name ?? 'No venue selected'}</span>
+            <span className="max-w-64 truncate">{selectedVenueDisplayName}</span>
             <span className={saveStateLabel === 'Saved' ? 'text-emerald-300' : 'text-amber-200'}>{saveStateLabel}</span>
           </div>
         </header>
@@ -5836,7 +5895,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
               <span className="text-[11px] uppercase tracking-wide text-zinc-500">Search venue</span>
               <input
                 value={venueSearch}
-                onChange={(event) => setVenueSearch(event.target.value)}
+                onChange={(event) => {
+                  setVenueSearch(event.target.value);
+                  if (event.target.value.trim()) setAssetFilter('all');
+                }}
                 className="h-10 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-red-400/60"
                 placeholder="Search by name, city, address, or type"
               />
@@ -5909,7 +5971,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
                 );
               }) : (
                 <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-xs text-zinc-500">
-                  No venues match the current filters.
+                  {venueSearch.trim() ? 'No clubs or events match that name or address.' : 'No venues match the current filters.'}
                 </div>
               )}
             </div>
@@ -6348,6 +6410,9 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             </div>
             <div className="mt-1 text-sm font-semibold text-zinc-100">{RESOLVER_FAILURE_COPY[resolverState.failure].title}</div>
             <div className="mt-1 text-[11px] leading-4 text-zinc-400">{RESOLVER_FAILURE_COPY[resolverState.failure].action}</div>
+            {resolverState.failure === 'NO_PROVIDER_FEATURE' && (
+              <div className="mt-2 text-[10px] leading-4 text-zinc-500">{loadedBuildingSourceLabel} · {status}</div>
+            )}
           </div>
         ) : null}
         {selectedVenue && (!resolverState.failure || resolverState.failure === 'FEATURE_FOUND') && ['checking', 'unconfirmed', 'mismatch', 'skipped'].includes(addressIntelligence.status) ? (
@@ -6532,7 +6597,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-zinc-100">
-                  {selectedVenue?.name ?? 'No venue selected'}
+                  {selectedVenueDisplayName}
                 </div>
                 <div className="mt-1 text-[11px] text-zinc-500">
                   {saveStateLabel} · Green = selected · Gold = suggested / hover · Red beacon = venue pin · Street plane = real-world context

@@ -21,6 +21,11 @@ export interface DaySchedule {
   open?: string;
   close?: string;
   rules?: string[];
+  attendancePolicy?: AttendancePolicy;
+  audienceDetails?: string;
+  program?: string;
+  entryConditions?: string;
+  occurrence?: 'weekly' | 'selected_events';
 }
 
 export type AttendancePolicy =

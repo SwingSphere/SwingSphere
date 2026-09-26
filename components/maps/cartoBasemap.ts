@@ -1,4 +1,5 @@
-const CARTO_BASEMAP_KEY = (import.meta.env.VITE_CARTO_BASEMAP_KEY ?? 'cb1_2frk_1_8c9919b56379f96b4d7feb1a').trim();
+const rawKey = import.meta.env.VITE_CARTO_BASEMAP_KEY;
+const CARTO_BASEMAP_KEY = (typeof rawKey === 'string' && rawKey ? rawKey : 'cb1_2frk_1_8c9919b56379f96b4d7feb1a').trim();
 
 export const withCartoBasemapKey = (tileUrl: string) => {
   if (!CARTO_BASEMAP_KEY) {

@@ -8,8 +8,10 @@ export type ClubEventPreviewItem = {
   id: string;
   name: string;
   dateTime: string;
-  city: string;
   tags: string[];
+  logoUrl?: string;
+  logoAlt?: string;
+  flyerUrl?: string;
   to?: string;
 };
 
@@ -46,8 +48,10 @@ const ClubEventsPreview: React.FC<ClubEventsPreviewProps> = ({
                 key={item.id}
                 title={item.name}
                 dateTime={item.dateTime}
-                city={item.city}
                 tags={item.tags}
+                logoUrl={item.logoUrl}
+                logoAlt={item.logoAlt}
+                flyerUrl={item.flyerUrl}
                 to={item.to}
               />
             ))}

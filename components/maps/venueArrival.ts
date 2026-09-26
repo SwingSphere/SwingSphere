@@ -1,6 +1,8 @@
 import type {
+  DataDrivenPropertyValueSpecification,
   FilterSpecification,
   FillExtrusionLayerSpecification,
+  GeoJSONFeature,
   MapGeoJSONFeature,
   Map as MapLibreMap,
   SourceSpecification,
@@ -86,7 +88,7 @@ export interface VenueArrivalMotionConfig {
 }
 
 export interface SelectedBuildingMatch {
-  feature: MapGeoJSONFeature;
+  feature: MapGeoJSONFeature | GeoJSONFeature;
   buildingId: string;
   lngLat: { lng: number; lat: number };
   containsVenuePoint: boolean;
@@ -268,22 +270,29 @@ export const buildBuildingsSource = (
   return source;
 };
 
-const buildingHeightExpression = (config: VenueArrivalConfig, heightBoost = 1) => [
-  '*',
-  config.buildingHeightScale * heightBoost,
+const buildingHeightExpression = (
+  config: VenueArrivalConfig,
+  heightBoost = 1,
+): DataDrivenPropertyValueSpecification<number> =>
   [
-    'coalesce',
-    ['get', 'render_height'],
-    ['get', 'height'],
-    config.buildingFallbackHeight,
-  ],
-];
+    '*',
+    config.buildingHeightScale * heightBoost,
+    [
+      'coalesce',
+      ['get', 'render_height'],
+      ['get', 'height'],
+      config.buildingFallbackHeight,
+    ],
+  ] as unknown as DataDrivenPropertyValueSpecification<number>;
 
-const buildingBaseExpression = (config: VenueArrivalConfig) => [
-  '*',
-  config.buildingHeightScale,
-  ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
-];
+const buildingBaseExpression = (
+  config: VenueArrivalConfig,
+): DataDrivenPropertyValueSpecification<number> =>
+  [
+    '*',
+    config.buildingHeightScale,
+    ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
+  ] as unknown as DataDrivenPropertyValueSpecification<number>;
 
 export const buildBuildingsLayer = (
   config: VenueArrivalConfig = venueArrival,
@@ -373,7 +382,7 @@ export const buildSelectedBuildingFilter = (
   if (config.buildings.identifier.strategy === 'feature-id') {
     return ['==', '$id', normalizeFeatureIdFilterValue(buildingId)] as FilterSpecification;
   }
-  return ['==', buildingIdExpression(config), buildingId] as FilterSpecification;
+  return ['==', buildingIdExpression(config), buildingId] as unknown as FilterSpecification;
 };
 
 export const buildVenueBuildingFilter = (
@@ -392,13 +401,13 @@ export const buildVenueBuildingFilter = (
   }
 
   if (!buildingIds.length) {
-    return ['==', buildingIdExpression(config), '__none__'] as FilterSpecification;
+    return ['==', buildingIdExpression(config), '__none__'] as unknown as FilterSpecification;
   }
-  return ['in', buildingIdExpression(config), ['literal', buildingIds]] as FilterSpecification;
+  return ['in', buildingIdExpression(config), ['literal', buildingIds]] as unknown as FilterSpecification;
 };
 
 const getFeatureBuildingId = (
-  feature: MapGeoJSONFeature,
+  feature: MapGeoJSONFeature | GeoJSONFeature,
   config: VenueArrivalConfig = venueArrival,
 ): string | null => {
   const identifier = config.buildings.identifier;
@@ -479,7 +488,7 @@ const pointInPolygonRings = (point: [number, number], rings: number[][][]): bool
   return !rings.slice(1).some((hole) => pointInRing(point, hole));
 };
 
-const getFeatureCenter = (feature: MapGeoJSONFeature): { lng: number; lat: number } | null => {
+const getFeatureCenter = (feature: MapGeoJSONFeature | GeoJSONFeature): { lng: number; lat: number } | null => {
   const geometry = feature.geometry;
   if (!geometry || geometry.type === 'GeometryCollection') return null;
 
@@ -503,7 +512,7 @@ const getFeatureCenter = (feature: MapGeoJSONFeature): { lng: number; lat: numbe
   return { lng: total.lng / points.length, lat: total.lat / points.length };
 };
 
-const getFeaturePolygons = (feature: MapGeoJSONFeature): number[][][][] => {
+const getFeaturePolygons = (feature: MapGeoJSONFeature | GeoJSONFeature): number[][][][] => {
   const geometry = feature.geometry;
   if (!geometry || geometry.type === 'GeometryCollection') return [];
   if (geometry.type === 'Polygon') return [geometry.coordinates as number[][][]];
@@ -733,7 +742,7 @@ const polygonDistanceMeters = (
 };
 
 const getFootprintDistance = (
-  feature: MapGeoJSONFeature,
+  feature: MapGeoJSONFeature | GeoJSONFeature,
   venuePoint: { lng: number; lat: number },
 ): { containsVenuePoint: boolean; edgeDistanceMeters: number } | null => {
   const polygons = getFeaturePolygons(feature);
@@ -818,7 +827,7 @@ export const collectLoadedBuildingFragments = (
   map: Pick<MapLibreMap, 'querySourceFeatures'>,
   featureId: string,
   config: VenueArrivalConfig = venueArrival,
-): MapGeoJSONFeature[] => {
+): GeoJSONFeature[] => {
   const features = map.querySourceFeatures(getBuildingsSourceId(config), {
     sourceLayer: config.buildings.sourceLayer,
   });
