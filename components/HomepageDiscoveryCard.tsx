@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Listing } from '../types';
-import { getListingImageUrl, getListingLogoUrl, getListingPrimaryFlyerUrl, handleListingImageError } from '../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../lib/listingImage';
 import ListingAccessSummary from './listing/ListingAccessSummary';
 import EntityTypePill from './entity/EntityTypePill';
 
@@ -32,7 +32,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
   const tags = (listing.type === 'club' ? listing.generalAmenities ?? [] : listing.tags ?? []).slice(0, 2);
   const location = formatCardLocation(listing);
   const logoUrl = getListingLogoUrl(listing);
-  const backgroundUrl = listing.type === 'event' ? getListingPrimaryFlyerUrl(listing) : getListingImageUrl(listing);
+  const backgroundUrl = getListingCardImageUrl(listing);
   const monochrome = listing.type === 'club' && (listing.mediaPresentation === 'monochrome' || listing.id === 'club-epicure-cape-town');
 
   return (

@@ -3,7 +3,7 @@ import { disposeObject3D } from "./math/objectPools.js";
 import { resolveRenderedGlobeLandSurfaceAnchor } from "./math/surfaceAnchoring.js";
 import { wgs84ToRenderedGlobeLocal } from "./math/geoProjection.js";
 import { createMarkerStyle, DEFAULT_MARKER_STYLE, GlobeMarker, makeSurfaceQuaternion } from "./GlobeMarker.js";
-import { getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from "../../../../lib/listingImage.ts";
+import { getListingCardImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from "../../../../lib/listingImage.ts";
 
 
 export class PinManager {
@@ -475,7 +475,7 @@ export class PinManager {
       ?? marker.event?.logoImageUrl
       ?? "";
     const labelHeroUrl = this.config.pinPlacement?.labelHeroBackground
-      ? (getListingPrimaryHeroUrl(listing) ?? marker.event?.headerImageUrl ?? "")
+      ? (getListingCardImageUrl(listing) ?? marker.event?.headerImageUrl ?? "")
       : "";
     const globeMarker = new GlobeMarker({
       id: marker.id,

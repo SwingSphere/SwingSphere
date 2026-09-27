@@ -1,7 +1,7 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 import type { Listing } from '../../types';
-import { getListingHeroUrl, handleListingImageError } from '../../lib/listingImage';
+import { getListingCardImageUrl, handleListingImageError } from '../../lib/listingImage';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import { formatAddressRegion } from '../../lib/formatting';
 import CountryFlag from '../ui/CountryFlag';
@@ -68,7 +68,7 @@ const ExplorerNearbyCarousel: React.FC<{
                 className={`group relative h-full min-w-0 overflow-hidden rounded-xl border text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_14px_34px_rgba(0,0,0,0.28)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 ${index === 5 ? 'hidden 2xl:block' : ''} ${selected ? 'border-red-500/80 bg-red-500/10' : 'border-white/[0.08] bg-[rgba(12,16,24,0.5)] hover:border-red-500/65 hover:bg-red-500/[0.06] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_38px_rgba(0,0,0,0.34),0_0_0_1px_rgba(239,68,68,0.08)]'}`}
               >
                 <img
-                  src={getListingHeroUrl(listing)}
+                  src={getListingCardImageUrl(listing)}
                   onError={handleListingImageError}
                   alt=""
                   loading="lazy"

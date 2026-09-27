@@ -4,8 +4,8 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath } from '../../lib/entityUtils';
-import { isPlaceholderMediaUrl, resolveBrandLogo } from '../../lib/entityBrandMedia';
-import { getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import { getEventCardImageUrl, getListingPrimaryLogoUrl, isPlaceholderMediaUrl } from '../../lib/listingImage';
+import { resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import ClubDetailTemplate from '../club/ClubDetailTemplate';
 import ClubPageAdminEditor from '../admin-edit/ClubPageAdminEditor';
@@ -67,10 +67,7 @@ const ClubPage: React.FC = () => {
       const organizer = organizations.find((organization) => organization.id === event.organizerOrganizationId);
       const organizerLogo = organizer?.logoImageUrl;
       const seriesLogo = event.eventSeriesId ? index.eventSeriesById.get(event.eventSeriesId)?.logoImageUrl : undefined;
-      const flyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer');
-      const flyerUrl = flyerAsset
-        ? getCloudflareImageUrl({ externalId: flyerAsset.external_id, variant: 'flyercard' })
-        : event.headerImageUrl;
+      const flyerUrl = getEventCardImageUrl(event);
       return {
         id: event.id,
         name: event.name,

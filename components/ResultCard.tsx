@@ -1,6 +1,6 @@
 import React from "react";
 import type { Listing } from "../types";
-import { getListingImageUrl, handleListingImageError } from "../lib/listingImage";
+import { getListingCardImageUrl, handleListingImageError } from "../lib/listingImage";
 import { getPublicLocationLabel, isApproximateLocation } from "../lib/publicLocation";
 import ListingAccessSummary from "./listing/ListingAccessSummary";
 
@@ -63,7 +63,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       onKeyDown={handleKey}
     >
       <img
-        src={getListingImageUrl(listing)}
+        src={getListingCardImageUrl(listing)}
         onError={handleListingImageError}
         alt={listing.name ?? "Listing image"}
         loading="lazy"

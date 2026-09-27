@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import type { EventData } from '../../types';
 import type { EntityIndex } from '../../lib/entityIndex';
 import { getListingCanonicalPath } from '../../lib/entityUtils';
-import { getListingHeroUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
+import { getEventCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
 import { getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
 import { formatAddressRegion, formatEventTimeRange } from '../../lib/formatting';
 import { getCompactAudienceLabel } from '../../lib/accessDisplay';
@@ -49,7 +49,7 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
   return (
     <div className={shellClass}>
       <div className={mode === 'floating' ? 'relative h-44 shrink-0 xl:h-48' : 'relative h-48 shrink-0 xl:h-52'}>
-        <img src={getListingHeroUrl(event)} onError={handleListingImageError} alt={event.name} className="h-full w-full object-cover" />
+        <img src={getEventCardImageUrl(event)} onError={handleListingImageError} alt={event.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
         <button onClick={onClose} className="ss-glass ss-glass--liquid ss-glass--interactive absolute right-4 top-4 rounded-full p-2 text-white" aria-label="Close event details">
           <X className="h-5 w-5" />

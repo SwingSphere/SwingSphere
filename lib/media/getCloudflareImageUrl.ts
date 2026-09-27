@@ -1,8 +1,10 @@
 import type { MediaVariant } from './types';
 
 const getAccountHash = () => {
-  const env = import.meta.env as Record<string, string | undefined>;
-  return env.NEXT_PUBLIC_CLOUDFLARE_IMAGES_ACCOUNT_HASH || env.VITE_CLOUDFLARE_IMAGES_ACCOUNT_HASH || '';
+  const env = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : process.env) as Record<string, string | undefined> | undefined;
+  return env?.NEXT_PUBLIC_CLOUDFLARE_IMAGES_ACCOUNT_HASH
+    || env?.VITE_CLOUDFLARE_IMAGES_ACCOUNT_HASH
+    || '0YABV7zDubNpRHPPku3C9Q';
 };
 
 type CloudflareImageUrlInput = {

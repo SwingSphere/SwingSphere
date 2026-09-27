@@ -7045,43 +7045,107 @@
   },
   {
     "id": "club-cupids-swinton",
-    "type": "club",
     "name": "Cupid's Swingers Club",
-    "description_short": "A long-running Manchester-area swingers club in Swinton with themed parties, mixed-audience nights, couples-focused events and dedicated on-premise play spaces.",
-    "description_full": "Cupid's Swingers Club is a long-running private members club in Swinton, Greater Manchester. The venue hosts a busy calendar of themed lifestyle parties for couples, single women, transgender guests and, depending on the event, single men. Its weekly programming includes mixed-audience parties, daytime sessions, newbie nights, fetish and fantasy events, and a recurring Wednesday night reserved for couples and single women. The club is explicitly on-premise, with social, dance and play areas intended for consensual adult encounters. Membership is free for couples, single women and trans guests, while single men can purchase six- or twelve-month membership. All guests must be 21 or older and present valid photo identification.",
-    "location": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
-    "website": "https://www.cupidsswingersclub.co.uk/",
-    "contactEmail": "Cupidsswingersclub@yahoo.com",
+    "type": "club",
     "phone": "+44 161 794 8877",
     "status": "approved",
-    "postedByUserId": "user1",
+    "website": "https://www.cupidsswingersclub.co.uk/",
     "geopoint": {
-      "latitude": 53.5149992,
-      "longitude": -2.3431375,
       "address": {
-        "addressLine1": "13-17 Sutherland Street",
         "city": "Swinton",
         "region": "Greater Manchester",
+        "country": "United Kingdom",
         "postalCode": "M27 6AT",
-        "country": "United Kingdom"
-      }
+        "addressLine1": "13-17 Sutherland Street"
+      },
+      "latitude": 53.5152148798457,
+      "longitude": -2.3433963098707453
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.99,
-      "geocoderSource": "google-business-pin+official-site+salford-licensing+os-openmap-local",
-      "normalizedAddress": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
-      "warnings": []
-    },
+    "location": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
     "schedule": [
       {
         "day": "Wednesday",
-        "isClosed": false,
         "open": "18:00",
-        "close": "01:00"
+        "close": "01:00",
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "Cupid's operates through a dense event calendar rather than one fixed weekly audience policy. Typical events run during daytime or evening hours, often into 1:00 a.m. or later. Wednesday is a recurring couples-and-single-women-only night; other events may welcome couples, single women, transgender guests and single men. Visitors should check the current event page for door time, audience rules, pricing and advance guest-list requirements.",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-09-27T02:37:59.548187+00:00",
+    "mediaAssets": [
+      {
+        "id": "01a7ba76-0abb-4852-b6b7-d5c909f831b8",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "cupids",
+        "owner_id": "809f3765-69dc-49ff-a703-281d002704b7",
+        "created_at": "2026-09-02T19:15:43.853773+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T19:15:43.853773+00:00",
+        "aspect_mode": "contain",
+        "external_id": "f9ae3928-9333-4c42-24f5-1134e400c300",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "1df41654-b6d6-4a28-b334-8cea77f0b971",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 07_38_53 PM-cropped",
+        "owner_id": "809f3765-69dc-49ff-a703-281d002704b7",
+        "created_at": "2026-09-25T02:39:02.849184+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T02:39:02.849184+00:00",
+        "aspect_mode": "cover",
+        "external_id": "71ebacf9-4ec0-4fe3-76ba-7a0eb1247a00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "Cupidsswingersclub@yahoo.com",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [],
+      "confidence": 0.94,
+      "geocoderSource": "postcodes.io+official-site+salford-licensing",
+      "normalizedAddress": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
+      "buildingVerification": {
+        "notes": [
+          "street does not match well",
+          "pin intersects footprint",
+          "checked 5 nearby building candidates",
+          "search expanded to 250m"
+        ],
+        "status": "mismatch",
+        "checkedAt": "2026-08-16T23:14:54.637Z",
+        "confidence": 0.27,
+        "pinIntersects": true,
+        "distanceMeters": 0,
+        "listingAddress": "13-17 Sutherland Street, Swinton, Greater Manchester, M27 6AT, United Kingdom",
+        "candidateAddress": "Rutland Street",
+        "candidateSecondary": "Salford, England, M27 6AU",
+        "providerFeatureIds": [
+          "os-openmap-local:OML_Building1300000v1"
+        ],
+        "searchRadiusMeters": 250
+      }
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f9ae3928-9333-4c42-24f5-1134e400c300/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/71ebacf9-4ec0-4fe3-76ba-7a0eb1247a00/heropage",
+    "postedByUserId": "user1",
+    "attendancePolicy": "varies_by_event",
+    "description_full": "Cupid's Swingers Club is a long-running private members club in Swinton, Greater Manchester. The venue hosts a busy calendar of themed lifestyle parties for couples, single women, transgender guests and, depending on the event, single men. Its weekly programming includes mixed-audience parties, daytime sessions, newbie nights, fetish and fantasy events, and a recurring Wednesday night reserved for couples and single women. The club is explicitly on-premise, with social, dance and play areas intended for consensual adult encounters. Membership is free for couples, single women and trans guests, while single men can purchase six- or twelve-month membership. All guests must be 21 or older and present valid photo identification.",
+    "galleryImageUrls": [
+      "https://framerusercontent.com/images/NtzKdpfr6DfzmtMxTSyq5Xm9Ac.webp?width=1536&height=1024"
+    ],
     "generalAmenities": [
       "Private Members Club",
       "On-Premise Club",
@@ -7110,15 +7174,11 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "attendancePolicy": "varies_by_event",
+    "description_short": "A long-running Manchester-area swingers club in Swinton with themed parties, mixed-audience nights, couples-focused events and dedicated on-premise play spaces.",
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://framerusercontent.com/images/bC85aOizU316JCyHLWNEkIFTvc.webp?width=993&height=130",
-    "headerImageUrl": "https://framerusercontent.com/images/Rj0uD6i9hzzqjpScVwtNOlrQ.webp?width=2240&height=1487",
-    "galleryImageUrls": [
-      "https://framerusercontent.com/images/NtzKdpfr6DfzmtMxTSyq5Xm9Ac.webp?width=1536&height=1024"
-    ],
+    "specialScheduleNotes": "Cupid's operates through a dense event calendar rather than one fixed weekly audience policy. Typical events run during daytime or evening hours, often into 1:00 a.m. or later. Wednesday is a recurring couples-and-single-women-only night; other events may welcome couples, single women, transgender guests and single men. Visitors should check the current event page for door time, audience rules, pricing and advance guest-list requirements.",
     "buildingAssetId": "building-asset-club-cupids-swinton"
   },
   {

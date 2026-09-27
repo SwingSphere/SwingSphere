@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatClockTime, formatEventTimeRange } from '../../../lib/formatting';
-import { getListingHeroUrl, getListingLogoUrl, handleListingImageError } from '../../../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../../lib/listingImage';
 import type { Listing } from '../../../types';
 
 type TabletNearbyPreviewPanelProps = {
@@ -61,7 +61,7 @@ const TabletNearbyPreviewPanel: React.FC<TabletNearbyPreviewPanelProps> = ({
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/[0.09] bg-[rgba(8,10,14,0.88)] shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-[26px] backdrop-saturate-150" aria-label={`${listing.name} nearby preview`}>
       <div className="relative h-[250px] shrink-0 overflow-hidden bg-[#11151b]">
-        <img src={getListingHeroUrl(listing)} onError={handleListingImageError} alt="" className="h-full w-full object-cover" />
+        <img src={getListingCardImageUrl(listing)} onError={handleListingImageError} alt="" className="h-full w-full object-cover" />
         <button type="button" onClick={onClose} className="absolute right-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full border border-white/[0.12] bg-black/60 text-white backdrop-blur-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300" aria-label="Close nearby preview"><X className="h-5 w-5" /></button>
         <div className="absolute inset-0 bg-gradient-to-t from-[#090b10] via-black/10 to-black/30" />
         <div className="absolute bottom-4 left-4 h-[92px] w-[92px] overflow-hidden rounded-[22px] border border-white/[0.15] bg-black/70 p-1 shadow-2xl backdrop-blur-md">

@@ -13,7 +13,7 @@ import type { ExplorerListingType } from './ExplorerProvider';
 import { useAppStore } from '../../store/appStore';
 import TimeLensModal from '../time-lens/TimeLensModal';
 import { getTimeLensSummary } from '../time-lens/timeLensSummary';
-import { getListingHeroUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
 import { formatAddressRegion } from '../../lib/formatting';
@@ -388,7 +388,7 @@ const ExplorerListingCard: React.FC<{
       className={`group relative grid h-full min-h-0 w-full grid-cols-[58px_1fr_auto] items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.22)] backdrop-blur-md outline-none cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-160 ease-out motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/30 ${selected ? 'border-red-500/70 bg-red-500/12' : 'border-white/[0.08] bg-[rgba(12,16,24,0.46)] hover:border-white/18 hover:bg-white/[0.07]'} ${isTransitioning ? 'opacity-96' : 'opacity-100'}`}
     >
       <img
-        src={getListingHeroUrl(listing)}
+        src={getListingCardImageUrl(listing)}
         onError={handleListingImageError}
         alt=""
         loading="lazy"

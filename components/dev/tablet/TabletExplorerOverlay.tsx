@@ -15,7 +15,7 @@ import {
 import type { EntityIndex } from '../../../lib/entityIndex';
 import { formatClockTime, formatEventTimeRange } from '../../../lib/formatting';
 import { getListingCanonicalPath } from '../../../lib/entityUtils';
-import { getListingHeroUrl, getListingLogoUrl, handleListingImageError } from '../../../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../../lib/listingImage';
 import type { Listing } from '../../../types';
 
 type TabletFilter = 'all' | 'event' | 'club';
@@ -187,7 +187,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
       {selectedListing ? (
         <aside className="pointer-events-auto absolute bottom-[14.75rem] right-5 top-[6.4rem] w-[min(320px,38vw)] min-w-[292px] overflow-hidden rounded-[30px] border border-white/[0.1] bg-[rgba(9,11,16,0.94)] shadow-[0_28px_90px_rgba(0,0,0,0.56)] backdrop-blur-[28px] backdrop-saturate-150" aria-label={`${selectedListing.name} preview`}>
           <div className="relative h-[205px] overflow-hidden bg-[#11151b]">
-            <img src={getListingHeroUrl(selectedListing)} onError={handleListingImageError} alt="" className="h-full w-full object-cover" />
+            <img src={getListingCardImageUrl(selectedListing)} onError={handleListingImageError} alt="" className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#090b10] via-black/10 to-black/30" />
             <div className="absolute left-4 top-4 h-[74px] w-[74px] overflow-hidden rounded-[20px] border border-white/[0.16] bg-black/70 shadow-xl backdrop-blur-md">
               <img src={getListingLogoUrl(selectedListing)} onError={handleListingImageError} alt={`${selectedListing.name} logo`} className="h-full w-full object-contain" />

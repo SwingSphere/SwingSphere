@@ -10,7 +10,7 @@ import EventPageLayout from '../event/EventPageLayout';
 import EventMapCard from '../event/EventMapCard';
 import EventCalendarCard from '../event/EventCalendarCard';
 import EventHostCard from '../event/EventHostCard';
-import { getListingImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import { getEventCardImageUrl, getListingImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
@@ -207,8 +207,8 @@ const EventPage: React.FC = () => {
   const eventFlyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer') ?? null;
   const eventGalleryAssets = event.mediaAssets?.filter((asset) => asset.role === 'gallery') ?? [];
   const eventCoverImage = eventHeroAsset
-    ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? getListingImageUrl(event)
-    : getListingImageUrl(event);
+    ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event)
+    : getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event);
   const eventLogoImage = eventLogoAsset
     ? getCloudflareImageUrl({ externalId: eventLogoAsset.external_id, variant: 'logosquare' })
     : event.logoImageUrl || eventSeries?.logoImageUrl;
@@ -332,17 +332,17 @@ const EventPage: React.FC = () => {
                     day: 'numeric',
                     year: 'numeric',
                   }).format(new Date(occurrence.time.start));
-                  const occurrenceHeroUrl = getListingPrimaryHeroUrl(occurrence);
+                  const occurrenceCardUrl = getEventCardImageUrl(occurrence);
                   return (
                     <Link
                       key={occurrence.id}
                       to={getEventCanonicalPath(occurrence, index)}
                       className="group relative isolate overflow-hidden rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-amber-300/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                     >
-                      {occurrenceHeroUrl && (
+                      {occurrenceCardUrl && (
                         <>
                           <img
-                            src={occurrenceHeroUrl}
+                            src={occurrenceCardUrl}
                             alt=""
                             aria-hidden="true"
                             loading="lazy"

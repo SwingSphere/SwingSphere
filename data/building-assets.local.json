@@ -3904,7 +3904,8 @@
       "source": "Ordnance Survey OpenMap Local",
       "featureIds": [
         "os-openmap-local:OML_Building3300000v1"
-      ]
+      ],
+      "origin": "provider"
     },
     "geometry": {
       "type": "Polygon",
@@ -3949,11 +3950,11 @@
         ]
       ]
     },
-    "renderHeightMeters": 5,
+    "renderHeightMeters": 6.48,
     "renderMinHeightMeters": 0,
     "capture": {
       "createdAt": "2026-08-16T23:14:58.585Z",
-      "updatedAt": "2026-08-16T23:19:27.638Z",
+      "updatedAt": "2026-09-27T02:38:00.940Z",
       "polygonCount": 1,
       "ringCount": 1,
       "vertexCount": 9

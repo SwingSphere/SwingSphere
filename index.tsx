@@ -31,6 +31,7 @@ const AdminMiniMapHybridTest = React.lazy(() => import('./components/admin/Admin
 const AdminToolPage = React.lazy(() => import('./components/admin/AdminToolPage'));
 const EventPage = React.lazy(() => import('./components/pages/EventPage'));
 const EventsIndexPage = React.lazy(() => import('./components/pages/EventsIndexPage'));
+const DiscoverPage = React.lazy(() => import('./components/pages/DiscoverPage'));
 const ClubPage = React.lazy(() => import('./components/pages/ClubPage'));
 const HostPage = React.lazy(() => import('./components/pages/HostPage'));
 const HostDashboard = React.lazy(() => import('./components/host/HostDashboard'));
@@ -208,6 +209,7 @@ root.render(
               <Route path="admin/building-inspector" element={<ProtectedRoute roles={['Admin']}><AdminToolPage /></ProtectedRoute>} />
               <Route path="admin/minimap-hybrid-test" element={<ProtectedRoute roles={['Admin']}><AdminMiniMapHybridTest /></ProtectedRoute>} />
               <Route path="listing/:id" element={<ListingRedirectPage />} />
+              <Route path="discover" element={<DiscoverPage />} />
               <Route path="events" element={<EventsIndexPage />} />
               <Route path="events/:slug" element={<EventPage />} />
               <Route path="clubs/:slug" element={<ClubPage />} />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Listing } from '../types';
-import { getListingImageUrl, handleListingImageError } from '../lib/listingImage';
+import { getListingCardImageUrl, handleListingImageError } from '../lib/listingImage';
 import { getListingDisplayCoords } from '../lib/explorerMarkers';
 
 type MapViewProps = {
@@ -31,7 +31,7 @@ const MapPin: React.FC<{ listing: Listing; x: number; y: number; onSelect: (l: L
 const InfoPopup: React.FC<{ listing: Listing, onClose: () => void }> = ({ listing, onClose }) => (
     <div className="absolute top-4 left-4 z-20 bg-gray-800/80 backdrop-blur-md rounded-lg shadow-lg p-3 w-64 border border-gray-700">
         <button onClick={onClose} className="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
-        <img src={getListingImageUrl(listing)} onError={handleListingImageError} alt={listing.name} className="w-full h-24 object-cover rounded-md mb-2"/>
+        <img src={getListingCardImageUrl(listing)} onError={handleListingImageError} alt={listing.name} className="w-full h-24 object-cover rounded-md mb-2"/>
         <h3 className="font-bold text-white">{listing.name}</h3>
         <p className="text-sm text-gray-400">{listing.location}</p>
     </div>

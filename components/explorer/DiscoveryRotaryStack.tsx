@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Map } from 'lucide-react';
 import type { Listing } from '../../types';
-import { getListingHeroUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import { resolveCountryIsoCodes } from '../../lib/globeEntityAdapter';
 
@@ -211,7 +211,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
           || scopeName;
         const name = listing?.name ?? host?.name ?? scopeName;
         const logoUrl = listing ? getListingLogoUrl(listing) : host?.logoUrl ?? '';
-        const heroUrl = listing ? getListingHeroUrl(listing) : host?.heroUrl ?? host?.logoUrl ?? '';
+        const heroUrl = listing ? getListingCardImageUrl(listing) : host?.heroUrl ?? host?.logoUrl ?? '';
 
         return (
           <button

@@ -1134,5 +1134,157 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-cupids-swinton-1790476681570",
+    "listingId": "club-cupids-swinton",
+    "venueId": null,
+    "action": "replace",
+    "occurredAt": "2026-09-27T02:38:00.940Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-cupids-swinton",
+      "venueId": null,
+      "normalizedAddress": "13 17 sutherland street swinton greater manchester m27 6at united kingdom",
+      "latitude": 53.5152148798457,
+      "longitude": -2.3433963098707453,
+      "visibility": "public_exact",
+      "coordinateProvenance": "postcodes.io+official-site+salford-licensing",
+      "coordinateConfidence": 0.94,
+      "validatedAt": null,
+      "hash": "bvs-bcef20c3"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-cupids-swinton",
+      "listingId": "club-cupids-swinton",
+      "version": 1,
+      "provider": {
+        "source": "Ordnance Survey OpenMap Local",
+        "featureIds": [
+          "os-openmap-local:OML_Building3300000v1"
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -2.34337654553104,
+              53.5151870743373
+            ],
+            [
+              -2.34301937762268,
+              53.5151043350573
+            ],
+            [
+              -2.34309734882853,
+              53.5149555298896
+            ],
+            [
+              -2.34377324211881,
+              53.5151599485943
+            ],
+            [
+              -2.34350991398378,
+              53.5154742298018
+            ],
+            [
+              -2.34341316877796,
+              53.5154457467845
+            ],
+            [
+              -2.34346931608964,
+              53.5153770020802
+            ],
+            [
+              -2.34326673472186,
+              53.5153146691149
+            ],
+            [
+              -2.34337654553104,
+              53.5151870743373
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-08-16T23:14:58.585Z",
+        "updatedAt": "2026-08-16T23:19:27.638Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 9
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-cupids-swinton",
+      "listingId": "club-cupids-swinton",
+      "version": 1,
+      "provider": {
+        "source": "Ordnance Survey OpenMap Local",
+        "featureIds": [
+          "os-openmap-local:OML_Building3300000v1"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -2.34337654553104,
+              53.5151870743373
+            ],
+            [
+              -2.34301937762268,
+              53.5151043350573
+            ],
+            [
+              -2.34309734882853,
+              53.5149555298896
+            ],
+            [
+              -2.34377324211881,
+              53.5151599485943
+            ],
+            [
+              -2.34350991398378,
+              53.5154742298018
+            ],
+            [
+              -2.34341316877796,
+              53.5154457467845
+            ],
+            [
+              -2.34346931608964,
+              53.5153770020802
+            ],
+            [
+              -2.34326673472186,
+              53.5153146691149
+            ],
+            [
+              -2.34337654553104,
+              53.5151870743373
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6.48,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-08-16T23:14:58.585Z",
+        "updatedAt": "2026-09-27T02:38:00.940Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 9
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

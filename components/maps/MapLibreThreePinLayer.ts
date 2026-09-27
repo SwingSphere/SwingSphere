@@ -24,7 +24,7 @@ type MapPinEntity = Listing | MapHostPin;
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import { resolveCountryIsoCodes } from '../../lib/globeEntityAdapter';
 import { createVenueLabelElement } from '../../src/features/globe/runtime/GlobeMarker.js';
-import { getListingHeroUrl, getListingLogoUrl } from '../../lib/listingImage';
+import { getListingCardImageUrl, getListingLogoUrl } from '../../lib/listingImage';
 
 export const THREE_PIN_LAYER_ID = 'swingsphere-three-pins';
 
@@ -265,7 +265,7 @@ const setLabelContent = (element: HTMLDivElement, listing: MapPinEntity, selecte
   const countryIso2 = resolveCountryIsoCodes(address.country).iso2;
   const fullListing = 'status' in listing ? listing as Listing : null;
   const logoUrl = fullListing ? getListingLogoUrl(fullListing) : listing.logoImageUrl ?? '';
-  const heroUrl = fullListing ? getListingHeroUrl(fullListing) : listing.logoImageUrl ?? '';
+  const heroUrl = fullListing ? getListingCardImageUrl(fullListing) : listing.logoImageUrl ?? '';
   const template = createVenueLabelElement(
     listing.name,
     address.city,
