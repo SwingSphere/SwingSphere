@@ -4,6 +4,8 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUtils';
 import { getClubForOrganization } from '../../lib/entityCompatibility';
 import EntityPageShell from '../entity/EntityPageShell';
+import { DetailContextNav } from '../navigation/DetailContextNav';
+import { hasStreetViewForListing } from '../../lib/streetViewAvailability';
 import DescriptionSection from '../entity/DescriptionSection';
 import VenuePageAdminEditor from '../admin-edit/VenuePageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
@@ -80,7 +82,18 @@ const VenuePage: React.FC = () => {
         canEdit={canEdit}
       />
       <EntityPageShell
-      hero={
+        contextNav={
+          <DetailContextNav
+            breadcrumbs={[
+              { label: 'Directory', href: '/discover' },
+              { label: 'Venues', href: '/discover' },
+              { label: venue.name },
+            ]}
+            listingId={venue.primaryClubId || venue.id}
+            streetViewAvailable={hasStreetViewForListing(venue.id) || hasStreetViewForListing(venue.primaryClubId)}
+          />
+        }
+        hero={
         <section className="pt-10">
           <div className="rounded-2xl border border-gray-800 bg-gray-950/80 p-6 sm:p-8">
             <p className="text-xs uppercase tracking-[0.24em] text-red-300/80">Venue</p>

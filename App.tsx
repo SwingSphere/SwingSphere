@@ -24,13 +24,14 @@ const App: React.FC = () => {
   }
 
   const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/usa-pin-lab', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
-  const explorerSurface = location.pathname === '/map'
-    ? 'map' as const
-    : location.pathname === '/discover'
-      ? 'directory' as const
-      : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/usa-pin-lab' || location.pathname === '/dev/language-explorer-globe'
-        ? 'globe' as const
-        : null;
+  const explorerSurface =
+    location.pathname === '/map'
+      ? ('map' as const)
+      : location.pathname === '/discover'
+        ? ('directory' as const)
+        : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/usa-pin-lab' || location.pathname === '/dev/language-explorer-globe'
+          ? ('globe' as const)
+          : null;
   const isScrollablePage = !isGlobeExperienceRoute;
   const explorerScopeSearch = new URLSearchParams(location.search).has('activityRegion') ? location.search : '';
   const showDebugBadge = DEV_TOOLS_ENABLED && location.pathname.startsWith('/dev/');

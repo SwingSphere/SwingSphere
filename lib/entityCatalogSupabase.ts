@@ -190,6 +190,7 @@ const mapCruiseSailing = (row: any): CruiseSailingData => ({
   cabinSummary: row.cabin_summary ?? undefined,
   pricingSummary: row.pricing_summary ?? undefined,
   theme: row.theme ?? undefined,
+  logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
   status: row.status,
 });
@@ -465,6 +466,7 @@ export const saveCruiseSailing = async (sailing: CruiseSailingData): Promise<Cru
     cabin_summary: sailing.cabinSummary ?? null,
     pricing_summary: sailing.pricingSummary ?? null,
     theme: sailing.theme ?? null,
+    logo_image_url: sailing.logoImageUrl ?? null,
     header_image_url: sailing.headerImageUrl ?? null,
     status: sailing.status,
     created_by: actorId,

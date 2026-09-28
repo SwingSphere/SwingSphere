@@ -3,6 +3,8 @@ import { ExternalLink, Globe, Link2, Mail, Pencil } from 'lucide-react';
 import { formatClockTime, resolveCountryFlagEmoji } from '../../lib/formatting';
 import type { ClubData } from '../../types';
 import ClubPageLayout from './ClubPageLayout';
+import { DetailContextNav } from '../navigation/DetailContextNav';
+import { hasStreetViewForListing } from '../../lib/streetViewAvailability';
 import ClubHero from './ClubHero';
 import WhatHappensHere from './WhatHappensHere';
 import ClubEventsPreview, { type ClubEventPreviewItem } from './ClubEventsPreview';
@@ -117,6 +119,17 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
 
   return (
     <ClubPageLayout
+      contextNav={
+        <DetailContextNav
+          breadcrumbs={[
+            { label: 'Directory', href: '/discover' },
+            { label: 'Clubs', href: '/discover?type=clubs' },
+            { label: club.name },
+          ]}
+          listingId={club.id}
+          streetViewAvailable={!isApproximateVenue && hasStreetViewForListing(club.id)}
+        />
+      }
       hero={
         <ClubHero
           clubId={club.id}

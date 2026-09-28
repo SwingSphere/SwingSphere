@@ -2935,13 +2935,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   enterLocalViewForListingRef.current = explorerNavigationController.enterLocalViewForVenue;
 
   useEffect(() => {
-    if (!mobilePrototype) return;
     const requestedListingId = new URLSearchParams(location.search).get('mapListing');
     if (!requestedListingId || mobileMapRequestHandledRef.current === requestedListingId) return;
     if (!globeListings.some((listing) => listing.id === requestedListingId)) return;
     mobileMapRequestHandledRef.current = requestedListingId;
     enterLocalViewForListingRef.current(requestedListingId);
-  }, [globeListings, location.search, mobilePrototype]);
+  }, [globeListings, location.search]);
 
   const resolveCanonicalGlobeTarget = (snapshot: GlobeNavigationSnapshot) => {
     const navigationState = navigationStateRef.current;
@@ -3963,9 +3962,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             </div>
           ) : null}
 
-          {!isTabletPrototype ? <GlobeStageOverlays
+          {!isTabletPrototype && surfaceMode === 'globe' ? <GlobeStageOverlays
             variant="fullBleed"
             stats={globeStats}
+            hasExplorerDetails={hasExplorerDetails}
             onCenter={returnToWorld}
             onZoomIn={() => {
               const snapshot = globeRef.current?.getNavigationSnapshot();
@@ -3997,7 +3997,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
 
         {!mobilePrototype && !isTabletPrototype && geoContextTitle ? (
           <div
-            className="pointer-events-none absolute left-1/2 top-[78px] z-30 -translate-x-1/2 text-center"
+            className="pointer-events-none absolute left-1/2 top-[clamp(92px,11.5vh,104px)] z-30 -translate-x-1/2 text-center"
             aria-live="polite"
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/48 px-3 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.28)] backdrop-blur-xl">
@@ -4020,10 +4020,29 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             onClearSelection={closePanel}
             onNavigate={navigateInCurrentExperience}
             onRecenter={returnToWorld}
+            onZoomIn={() => {
+              const snapshot = globeRef.current?.getNavigationSnapshot();
+              if (!snapshot) return;
+              globeRef.current?.setNavigationPose({
+                lng: snapshot.lng,
+                lat: snapshot.lat,
+                zoomIntent: Math.min(1, snapshot.zoomIntent + 0.12),
+              });
+            }}
+            onZoomOut={() => {
+              const snapshot = globeRef.current?.getNavigationSnapshot();
+              if (!snapshot) return;
+              globeRef.current?.setNavigationPose({
+                lng: snapshot.lng,
+                lat: snapshot.lat,
+                zoomIntent: Math.max(0, snapshot.zoomIntent - 0.12),
+              });
+            }}
             onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter])}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}
             isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
+            stats={globeStats}
           />
         ) : (
           <MobileExplorerPrototype
@@ -4047,7 +4066,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         )}
 
         <div className={`pointer-events-none absolute inset-0 z-20 max-md:hidden ${mobilePrototype ? 'hidden' : ''}`}>
-          <div className="pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(76px,9vh,84px)] w-[clamp(248px,17vw,292px)]">
+          <div className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(92px,11.5vh,104px)] w-[clamp(248px,17vw,292px)] ${hasExplorerDetails ? 'max-lg:hidden' : ''}`}>
             <ExplorerFilterPanel
               searchText={searchText}
               onSearchTextChange={setSearchText}
@@ -4061,7 +4080,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             />
           </div>
 
-          <aside className={`pointer-events-auto absolute right-[clamp(14px,1.25vw,22px)] top-[clamp(76px,9vh,84px)] w-[clamp(320px,22vw,388px)] origin-top transition-[bottom,opacity,transform] duration-300 ease-out ${hasExplorerDetails ? 'bottom-[clamp(14px,1.8vh,20px)] translate-x-0 opacity-100' : 'pointer-events-none bottom-[clamp(184px,22vh,210px)] translate-x-4 opacity-0'}`} aria-label="Listing details">
+          <aside className={`pointer-events-auto absolute right-[clamp(14px,1.25vw,22px)] top-[clamp(92px,11.5vh,104px)] w-[clamp(320px,22vw,388px)] origin-top transition-[bottom,opacity,transform] duration-300 ease-out ${hasExplorerDetails ? 'bottom-[clamp(14px,1.8vh,20px)] translate-x-0 opacity-100' : 'pointer-events-none bottom-[clamp(184px,22vh,210px)] translate-x-4 opacity-0'}`} aria-label="Listing details">
             <ExplorerDetailsPanel
               mode="floating"
               onClose={closePanel}
@@ -4088,7 +4107,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             </div>
           ) : null}
 
-          <div data-globe-tour="nearby" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
+          <div data-globe-tour="nearby" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right,left] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)] max-lg:left-[clamp(14px,1.25vw,22px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
             <ExplorerNearbyCarousel
               listings={discoveryRailListings}
               selectedListingId={discoveryRailSelectedListingId}
@@ -5194,6 +5213,7 @@ const SpatialDebugOverlay: React.FC<{ snapshot: SpatialDebugSnapshot }> = ({ sna
 const GlobeStageOverlays: React.FC<{
   variant?: 'docked' | 'fullBleed';
   stats?: { countryCount: number; cityCount: number; eventCount: number };
+  hasExplorerDetails?: boolean;
   onCenter?: () => void;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
@@ -5201,37 +5221,44 @@ const GlobeStageOverlays: React.FC<{
 }> = ({
   variant = 'docked',
   stats = { countryCount: 0, cityCount: 0, eventCount: 0 },
+  hasExplorerDetails = false,
   onCenter,
   onZoomIn,
   onZoomOut,
   onWorld,
 }) => (
   <>
-    <div className={`ss-glass ss-glass--liquid pointer-events-none absolute z-10 hidden w-[clamp(132px,9vw,154px)] overflow-hidden rounded-2xl px-3.5 py-3 text-gray-300 md:block ${variant === 'fullBleed' ? 'bottom-[calc(clamp(154px,19vh,176px)+32px)] left-[calc(clamp(14px,1.25vw,22px)+clamp(248px,17vw,292px)+16px)]' : 'bottom-20 left-5'}`}>
-      <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-2.5">
-        <Globe2 className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-        <div>
-          <div className="text-base font-semibold leading-none text-white">{stats.countryCount}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Countries</div>
-        </div>
+    <div
+      className={`ss-glass ss-glass--liquid pointer-events-none absolute z-10 hidden items-center gap-4 rounded-full px-4 py-2 text-gray-300 md:flex transition-[right,bottom] duration-200 ${
+        variant === 'fullBleed'
+          ? `bottom-[calc(clamp(154px,19vh,176px)+18px)] ${
+              hasExplorerDetails
+                ? 'right-[clamp(350px,23.5vw,416px)]'
+                : 'right-[clamp(14px,1.5vw,24px)]'
+            }`
+          : 'bottom-20 right-5'
+      }`}
+    >
+      <div className="flex items-center gap-1.5">
+        <Globe2 className="h-3.5 w-3.5 shrink-0 text-red-300" aria-hidden="true" />
+        <span className="text-xs font-semibold text-white">{stats.countryCount}</span>
+        <span className="text-[10px] uppercase tracking-wider text-gray-400">Countries</span>
       </div>
-      <div className="flex items-center gap-2.5 border-b border-white/[0.08] py-2.5">
-        <MapPin className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-        <div>
-          <div className="text-base font-semibold leading-none text-white">{stats.cityCount}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Cities</div>
-        </div>
+      <div className="h-3 w-px bg-white/10" aria-hidden="true" />
+      <div className="flex items-center gap-1.5">
+        <MapPin className="h-3.5 w-3.5 shrink-0 text-red-300" aria-hidden="true" />
+        <span className="text-xs font-semibold text-white">{stats.cityCount}</span>
+        <span className="text-[10px] uppercase tracking-wider text-gray-400">Cities</span>
       </div>
-      <div className="flex items-center gap-2.5 pt-2.5">
-        <CalendarDays className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-        <div>
-          <div className="text-base font-semibold leading-none text-white">{stats.eventCount}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-500">Events</div>
-        </div>
+      <div className="h-3 w-px bg-white/10" aria-hidden="true" />
+      <div className="flex items-center gap-1.5">
+        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-red-300" aria-hidden="true" />
+        <span className="text-xs font-semibold text-white">{stats.eventCount}</span>
+        <span className="text-[10px] uppercase tracking-wider text-gray-400">Events</span>
       </div>
     </div>
 
-    <div className={`pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-8 text-sm text-gray-400 ${variant === 'fullBleed' ? 'bottom-8' : 'bottom-20'}`}>
+    <div className={`pointer-events-none absolute left-1/2 z-10 hidden xl:flex -translate-x-1/2 items-center gap-8 text-sm text-gray-400 ${variant === 'fullBleed' ? 'bottom-8' : 'bottom-20'}`}>
       <span className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-gray-500" aria-hidden="true" />
         Drag to rotate
@@ -5246,7 +5273,13 @@ const GlobeStageOverlays: React.FC<{
       </span>
     </div>
 
-    <div className="pointer-events-auto absolute left-[calc(clamp(14px,1.25vw,22px)+clamp(248px,17vw,292px)+16px)] top-[clamp(76px,9vh,84px)] z-10 flex flex-col gap-2 max-md:hidden">
+    <div
+      className={`pointer-events-auto absolute top-[clamp(92px,11.5vh,104px)] z-20 hidden lg:flex flex-col gap-2 transition-[right] duration-200 ${
+        hasExplorerDetails
+          ? 'right-[clamp(346px,23.5vw,412px)]'
+          : 'right-[clamp(14px,1.5vw,24px)]'
+      }`}
+    >
       {[
         { label: 'Center globe', icon: <Crosshair className="h-5 w-5" />, onClick: onCenter },
         { label: 'Zoom in', icon: <Plus className="h-5 w-5" />, onClick: onZoomIn },
@@ -5257,7 +5290,7 @@ const GlobeStageOverlays: React.FC<{
           key={control.label}
           type="button"
           onClick={control.onClick}
-          className="ss-glass ss-glass--liquid ss-glass--interactive flex h-11 w-11 items-center justify-center rounded-xl text-gray-100"
+          className="ss-glass ss-glass--liquid ss-glass--interactive flex h-11 w-11 items-center justify-center rounded-xl text-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.32)]"
           aria-label={control.label}
         >
           {control.icon}

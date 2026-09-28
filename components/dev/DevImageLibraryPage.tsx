@@ -505,7 +505,7 @@ const replaceOwnerMedia = async (image: ImageRecord, asset: MediaAsset, role: Re
     return;
   }
 
-  if (image.ownerType === 'user' || (role === 'logo' && image.ownerType === 'cruise_sailing')) {
+  if (image.ownerType === 'user') {
     throw new Error(`${roleLabels[role]} replacement is not supported for ${ownerLabels[image.ownerType].toLowerCase()} records.`);
   }
 
@@ -971,7 +971,7 @@ const DevImageLibraryPage: React.FC = () => {
   }, [detailsTarget, images]);
   const detailsCurrentLogo = detailsOwnerMedia.find((image) => image.role === 'logo' && image.isCurrent);
   const detailsCurrentHero = detailsOwnerMedia.find((image) => image.role === 'hero' && image.isCurrent);
-  const canManageDetailsLogo = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user' && detailsTarget.ownerType !== 'cruise_sailing');
+  const canManageDetailsLogo = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user');
   const canManageDetailsHero = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user');
   const detailsOwnerInputKey = detailsTarget ? `${detailsTarget.ownerType}-${detailsTarget.ownerId}`.replace(/[^a-zA-Z0-9_-]/g, '-') : 'owner';
   const detailsLogoInputId = `details-logo-${detailsOwnerInputKey}`;
@@ -1145,8 +1145,7 @@ const DevImageLibraryPage: React.FC = () => {
                 replaceableRole
                 && image.isCurrent
                 && image.ownerResolved
-                && image.ownerType !== 'user'
-                && !(replaceableRole === 'logo' && image.ownerType === 'cruise_sailing'),
+                && image.ownerType !== 'user',
               );
               const replaceInputId = `replace-${replaceableRole ?? 'media'}-${image.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
               return (

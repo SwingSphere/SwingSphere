@@ -47,18 +47,34 @@ const HostQuickEditPanel: React.FC<Props> = ({ organization, field, onClose }) =
     markUnsaved();
   };
 
-  const handleUploaded = (asset: MediaAsset) => {
+  const handleUploaded = async (asset: MediaAsset) => {
     const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
     const mediaAssets = [
       ...(draft.mediaAssets ?? []).filter((item) => item.role !== asset.role),
       asset,
     ];
-    updateDraft({
+    const nextDraft: OrganizationData = {
       ...draft,
       mediaAssets,
-      ...(asset.role === 'logo' ? { logoImageUrl: url } : {}),
-      ...(asset.role === 'hero' ? { headerImageUrl: url } : {}),
-    });
+      ...(asset.role === 'logo' ? { logoImageUrl: url ?? undefined } : {}),
+      ...(asset.role === 'hero' ? { headerImageUrl: url ?? undefined } : {}),
+    };
+    updateDraft(nextDraft);
+
+    // Media upload and organization persistence are separate operations. Persist the
+    // canonical image URL immediately so a refresh cannot discard a successful upload.
+    setSaving(true);
+    try {
+      await api.saveOrganization(nextDraft);
+      markSaved();
+      addToast({ message: `${labels[asset.role === 'logo' ? 'logo' : 'hero']} updated.`, type: 'success' });
+      onClose();
+      window.setTimeout(() => window.location.reload(), 150);
+    } catch (error) {
+      addToast({ message: error instanceof Error ? error.message : 'Image uploaded, but the host image reference could not be saved.', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const save = async () => {

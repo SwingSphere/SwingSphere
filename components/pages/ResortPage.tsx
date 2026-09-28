@@ -8,6 +8,7 @@ import TravelPageAdminEditor from '../admin-edit/TravelPageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import EntityPageShell from '../entity/EntityPageShell';
+import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 
@@ -58,7 +59,17 @@ const ResortPage: React.FC = () => {
     <>
       <TravelPageAdminEditor entity={resort} organizations={organizations} cruiseSeries={cruiseSeries} sailings={sailings} canEdit={canEdit} />
       <EntityPageShell
-      hero={
+        contextNav={
+          <DetailContextNav
+            breadcrumbs={[
+              { label: 'Directory', href: '/discover' },
+              { label: 'Travel', href: '/travel' },
+              { label: resort.name },
+            ]}
+            listingId={resort.id}
+          />
+        }
+        hero={
         <TravelHero
           typeLabel="Resort"
           title={resort.name}

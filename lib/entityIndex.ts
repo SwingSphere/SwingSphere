@@ -163,13 +163,35 @@ export const buildEntityIndex = (
       const hostEvents = eventsByHostSlug.get(slug) ?? [];
       hostEvents.push(event);
       eventsByHostSlug.set(slug, hostEvents);
+      const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, { listings, venues, organizations, relationships });
+      const organizerOrganization = organizerOrganizationId
+        ? organizationsById.get(organizerOrganizationId)
+        : undefined;
+      // Event-derived host pages still need an editable organization-shaped record.
+      // saveOrganization() upserts this compatibility record into Supabase on first save.
+      const editableOrganization: OrganizationData = organizerOrganization ?? {
+        id: `org-host-${slug}`,
+        type: 'organization',
+        name: event.hostName,
+        slug,
+        displayTypes: ['host'],
+        status: 'approved',
+      };
       if (!hostsBySlug.has(slug)) {
-        hostsBySlug.set(slug, { slug, name: event.hostName, events: hostEvents });
+        hostsBySlug.set(slug, {
+          slug,
+          name: editableOrganization.name || event.hostName,
+          events: hostEvents,
+          organization: editableOrganization,
+        });
       } else {
         const existing = hostsBySlug.get(slug);
         if (existing) {
           existing.events = hostEvents;
-          if (!existing.name) existing.name = event.hostName;
+          if (!existing.name) existing.name = editableOrganization.name || event.hostName;
+          if (!existing.organization || (organizerOrganization && existing.organization.id.startsWith('org-host-'))) {
+            existing.organization = editableOrganization;
+          }
         }
       }
     }

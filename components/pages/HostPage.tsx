@@ -10,14 +10,16 @@ import {
   LockKeyhole,
   MapPin,
   ShieldCheck,
+  Ship,
 } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath } from '../../lib/entityUtils';
 import { resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getListingFlyerUrl, getListingImageUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
-import type { EventData } from '../../types';
+import type { CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
+import { DetailContextNav } from '../navigation/DetailContextNav';
 import HostHero from '../host/HostHero';
 import EventCardCompact from '../host/EventCardCompact';
 import ShowMoreList from '../host/ShowMoreList';
@@ -29,6 +31,7 @@ import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import ListingClaimCard from '../claims/ListingClaimCard';
 import { getPublicOrganizationBadges } from '../../lib/badges/badgeService';
+import * as api from '../../lib/api';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
 
 const inferThemes = (events: EventData[]): string[] => {
@@ -178,6 +181,8 @@ const HostPage: React.FC = () => {
   } = useEntityIndex();
   const slug = hostSlug ?? '';
   const [hostBadges, setHostBadges] = useState<BadgeAwardView[]>([]);
+  const [cruiseSeries, setCruiseSeries] = useState<CruiseSeriesData[]>([]);
+  const [cruiseSailings, setCruiseSailings] = useState<CruiseSailingData[]>([]);
 
   const hostProfile = index?.hostsBySlug.get(slug) ?? null;
   const ownedClub = useMemo(() => {
@@ -210,6 +215,23 @@ const HostPage: React.FC = () => {
     postedByUserId: hostProfile?.organization?.postedByUserId,
     organizationIds: [hostProfile?.organization?.id, operatorOrganization?.id],
   });
+  const canEditHostPage = Boolean(hostProfile?.organization) && canEdit;
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.getCruiseSeries(), api.getCruiseSailings()])
+      .then(([seriesRows, sailingRows]) => {
+        if (!active) return;
+        setCruiseSeries(seriesRows);
+        setCruiseSailings(sailingRows);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCruiseSeries([]);
+        setCruiseSailings([]);
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,15 +264,33 @@ const HostPage: React.FC = () => {
       entityId: organization.id,
       entityType: 'organization',
       label: organization.name,
-      canEdit,
+      canEdit: canEditHostPage,
       supportsInlineQuickEdit: true,
     });
     return () => clearPublicPage(organization.id);
-  }, [canEdit, clearPublicPage, hostProfile?.organization, registerPublicPage]);
+  }, [canEditHostPage, clearPublicPage, hostProfile?.organization, registerPublicPage]);
   const hostEvents = useMemo(
     () => (hostProfile?.events ?? []).filter((event) => event.status === 'approved'),
     [hostProfile?.events],
   );
+
+  const hostCruiseSeries = useMemo(() => {
+    const organizationId = hostProfile?.organization?.id;
+    if (!organizationId) return [];
+    return cruiseSeries.filter((series) =>
+      series.operatorOrganizationId === organizationId
+      && (series.status === 'approved' || series.status === 'active'));
+  }, [cruiseSeries, hostProfile?.organization?.id]);
+
+  const upcomingCruiseSailings = useMemo(() => {
+    const seriesIds = new Set(hostCruiseSeries.map((series) => series.id));
+    const now = Date.now();
+    return cruiseSailings
+      .filter((sailing) => seriesIds.has(sailing.cruiseSeriesId)
+        && (sailing.status === 'approved' || sailing.status === 'active')
+        && toTimestamp(sailing.endsAt) >= now)
+      .sort((a, b) => toTimestamp(a.startsAt) - toTimestamp(b.startsAt));
+  }, [cruiseSailings, hostCruiseSeries]);
 
   const themePills = useMemo(() => inferThemes(hostEvents), [hostEvents]);
   const cadenceText = useMemo(
@@ -398,9 +438,19 @@ const HostPage: React.FC = () => {
       venues={venues}
       relationships={organizationVenueRelationships}
       users={users}
-      canEdit={canEdit}
+      canEdit={canEditHostPage}
     />
     <HostPageLayout
+      contextNav={
+        <DetailContextNav
+          breadcrumbs={[
+            { label: 'Directory', href: '/discover' },
+            { label: 'Hosts', href: '/discover?type=hosts' },
+            { label: hostProfile.name },
+          ]}
+          listingId={ownedClub?.id}
+        />
+      }
       hero={
         <HostHero
           hostSlug={hostProfile.slug}
@@ -416,13 +466,54 @@ const HostPage: React.FC = () => {
           regions={hostRegions}
           website={hostExternalLinks.website}
           eventsListed={hostEvents.length}
+          cruisesListed={hostCruiseSeries.length}
           hostingSince={hostSince}
           badges={hostBadges}
-          onQuickEdit={setQuickEditField}
+          onQuickEdit={canEditHostPage ? setQuickEditField : undefined}
         />
       }
       main={
         <>
+          {upcomingCruiseSailings.length ? (
+            <section className="ss-glass ss-glass--liquid overflow-hidden rounded-2xl border border-cyan-300/15">
+              <div className="flex items-end justify-between gap-4 px-5 pb-4 pt-5 sm:px-6">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Upcoming Travel</p>
+                  <h2 className="mt-1 text-lg font-semibold text-gray-100">Cruise Sailings</h2>
+                  <p className="mt-1 text-xs text-gray-400">Dated departures operated by {hostProfile.name}</p>
+                </div>
+                <span className="text-xs tabular-nums text-gray-500">{upcomingCruiseSailings.length} upcoming</span>
+              </div>
+              <div className="border-t border-white/10">
+                {upcomingCruiseSailings.map((sailing) => {
+                  const series = hostCruiseSeries.find((candidate) => candidate.id === sailing.cruiseSeriesId);
+                  if (!series) return null;
+                  const dateRange = `${new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(sailing.startsAt))} – ${new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(sailing.endsAt))}`;
+                  return (
+                    <Link
+                      key={sailing.id}
+                      to={`/cruises/${series.slug}`}
+                      className="group grid gap-3 border-b border-white/[0.07] px-5 py-4 last:border-b-0 hover:bg-white/[0.035] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:px-6"
+                    >
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-200">
+                        <Ship size={21} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-white">{sailing.name}</div>
+                        <div className="mt-1 text-xs text-gray-400">{dateRange} · {sailing.durationNights} nights</div>
+                        <div className="mt-1 text-xs text-gray-500">Departs {sailing.departurePort.portName}, {sailing.departurePort.country}</div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-cyan-100">
+                        {sailing.bookingStatus ? sailing.bookingStatus.replaceAll('_', ' ') : 'View cruise'}
+                        <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {nextEvent ? (
             <section className="ss-glass ss-glass--liquid ss-glass--crimson overflow-hidden rounded-2xl p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -654,6 +745,18 @@ const HostPage: React.FC = () => {
                 <dt className="text-gray-500">Approved events</dt>
                 <dd className="font-semibold tabular-nums text-gray-200">{hostEvents.length}</dd>
               </div>
+              {hostCruiseSeries.length ? (
+                <div className="flex items-center justify-between gap-4 py-2.5">
+                  <dt className="text-gray-500">Cruise series</dt>
+                  <dd className="font-semibold tabular-nums text-gray-200">{hostCruiseSeries.length}</dd>
+                </div>
+              ) : null}
+              {upcomingCruiseSailings.length ? (
+                <div className="flex items-center justify-between gap-4 py-2.5">
+                  <dt className="text-gray-500">Upcoming sailings</dt>
+                  <dd className="font-semibold tabular-nums text-gray-200">{upcomingCruiseSailings.length}</dd>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-4 py-2.5">
                 <dt className="text-gray-500">First listed event</dt>
                 <dd className="font-semibold text-gray-200">{hostSince || 'Not available'}</dd>

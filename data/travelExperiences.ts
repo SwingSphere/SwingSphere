@@ -85,6 +85,32 @@ export const resorts: ResortData[] = [
 
 export const cruiseSeries: CruiseSeriesData[] = [
   {
+    id: 'cruise-series-margarita-pleasures-select-cruise',
+    type: 'cruise_series',
+    name: 'Margarita Pleasures — Select Cruise',
+    slug: 'margarita-pleasures-select-cruise',
+    operatorOrganizationId: 'org-promoter-margarita-pleasures',
+    descriptionShort: 'A boutique, invitation-only libertine cruise series by Margarita Pleasures, sailing the Croatian Adriatic aboard a private 18-cabin mega-yacht.',
+    descriptionFull: 'Margarita Pleasures Select Cruise is a curated adults-only lifestyle voyage designed primarily for libertine couples, with a very small number of carefully selected single women and men. The private seven-night yacht experience combines daily Adriatic swim stops, themed evenings, half-board dining, two included dinners, nightlife ashore, and a liberty sun deck where consensual intimate play is permitted. Every application is reviewed privately before acceptance, with discretion, consent, elegant dress, and guest chemistry central to the experience.',
+    audienceLabel: 'Invitation-only libertine couples cruise with a limited number of selected singles',
+    experienceHighlights: [
+      'Private 18-cabin mega-yacht',
+      'Seven-night Croatian Adriatic itinerary',
+      'Daily secluded swim stops',
+      'Liberty sun deck with consensual intimate play',
+      'Themed evenings and yacht parties',
+      'Half-board plus two included dinners',
+      'Private guest selection and screening',
+      'Adults 18+',
+    ],
+    logoImageUrl: 'https://www.margarita-pleasures.com/images/logo/margarita-barvni-na-crni-podlagi-dolg-logo.jpg',
+    headerImageUrl: 'https://margarita-pleasures.com/images/yacht-exterior-01.png',
+    galleryImageUrls: [
+      'https://margarita-pleasures.com/images/yacht-exterior-01.png',
+    ],
+    status: 'approved',
+  },
+  {
     id: 'cruise-series-preview-sphere-at-sea',
     type: 'cruise_series',
     name: 'Sphere at Sea',
@@ -98,6 +124,43 @@ export const cruiseSeries: CruiseSeriesData[] = [
 ];
 
 export const cruiseSailings: CruiseSailingData[] = [
+  {
+    id: 'cruise-sailing-margarita-select-2027-07',
+    type: 'cruise_sailing',
+    cruiseSeriesId: 'cruise-series-margarita-pleasures-select-cruise',
+    name: 'Select Cruise Croatia — July 2027',
+    slug: 'margarita-select-cruise-croatia-july-2027',
+    shipName: 'Private 18-Cabin Mega-Yacht',
+    startsAt: '2027-07-17T00:00:00+02:00',
+    endsAt: '2027-07-24T00:00:00+02:00',
+    durationNights: 7,
+    bookingUrl: 'https://margarita-pleasures.com/index.php/select-cruise',
+    bookingStatus: 'booking_open',
+    cabinSummary: '18 en-suite cabins; Comfort and Premium categories, priced per cabin for two guests',
+    pricingSummary: 'Standard: €6,840 Comfort / €9,240 Premium per cabin; check the operator for currently available promotions',
+    theme: 'Boutique libertine Adriatic voyage',
+    departurePort: {
+      id: 'port-sibenik-croatia',
+      portName: 'Port of Šibenik',
+      city: 'Šibenik',
+      country: 'Croatia',
+      latitude: 43.733333,
+      longitude: 15.883333,
+      isEmbarkation: true,
+    },
+    itinerary: [
+      { id: 'margarita-2027-sibenik', portName: 'Šibenik', city: 'Šibenik', country: 'Croatia', isEmbarkation: true },
+      { id: 'margarita-2027-primosten', portName: 'Primošten', city: 'Primošten', country: 'Croatia' },
+      { id: 'margarita-2027-brac', portName: 'Brač', country: 'Croatia' },
+      { id: 'margarita-2027-hvar', portName: 'Hvar', city: 'Hvar', country: 'Croatia' },
+      { id: 'margarita-2027-vis', portName: 'Vis', city: 'Vis', country: 'Croatia' },
+      { id: 'margarita-2027-korcula', portName: 'Korčula', city: 'Korčula', country: 'Croatia' },
+      { id: 'margarita-2027-jakljan', portName: 'Jakljan', country: 'Croatia' },
+      { id: 'margarita-2027-dubrovnik', portName: 'Dubrovnik', city: 'Dubrovnik', country: 'Croatia', isDisembarkation: true },
+    ],
+    headerImageUrl: 'https://margarita-pleasures.com/images/yacht-exterior-01.png',
+    status: 'approved',
+  },
   {
     id: 'cruise-sailing-preview-sphere-at-sea-2027-04',
     type: 'cruise_sailing',

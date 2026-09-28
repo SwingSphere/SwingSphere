@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import Button from './Button';
 import { useAppStore } from '../store/appStore';
 import { DEV_TOOLS_ENABLED } from '../lib/devTools';
-import { ChevronDown, UserRound } from 'lucide-react';
+import { ChevronDown, Globe2, ListFilter, MapPin, UserRound } from 'lucide-react';
 
 type HeaderProps = {
   variant?: 'default' | 'landing';
@@ -47,38 +47,61 @@ export const Header: React.FC<HeaderProps> = ({
           : 'ss-glass ss-glass--liquid sticky top-0 z-[80] rounded-none border-x-0 border-t-0'
       }`}
     >
-      <div className="container mx-auto grid grid-cols-[1fr_auto] items-center gap-3 md:grid-cols-[1fr_auto_1fr] md:gap-6">
-        <div onClick={onHomeClick} className="flex items-center gap-3 cursor-pointer justify-self-start">
-          <img src="/swingsphere-logo.png" alt="SwingSphere Logo" className="h-9 w-auto sm:h-10" />
-          <span className="hidden font-bold text-xl tracking-wider text-white sm:inline">
+      <div className="container mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-6">
+        <div onClick={onHomeClick} className="flex items-center gap-2 sm:gap-3 cursor-pointer justify-self-start shrink-0">
+          <img src="/swingsphere-logo.png" alt="SwingSphere Logo" className="h-8 w-auto sm:h-10" />
+          <span className="hidden font-bold text-lg sm:text-xl tracking-wider text-white sm:inline">
             <span className="text-red-500">SWING</span>SPHERE
           </span>
         </div>
         {explorerSurface ? (
-          <div className="ss-glass ss-glass--liquid hidden items-center gap-1 md:flex rounded-full p-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-300 justify-self-center">
+          <div className="ss-glass ss-glass--liquid flex items-center gap-0.5 sm:gap-1 rounded-full p-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.14em] sm:tracking-[0.22em] text-gray-300 justify-self-center">
             <button
               type="button"
               onClick={onGlobeClick}
-              className={`ss-glass--interactive rounded-full px-3 py-1.5 transition-colors ${explorerSurface === 'globe' ? 'ss-glass--crimson bg-red-500/12 text-white' : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'}`}
+              className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
+                explorerSurface === 'globe'
+                  ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
+                  : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
+              }`}
+              aria-label="Globe discovery"
+              title="Explore the 3D globe"
             >
-              Globe
+              <Globe2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="hidden min-[440px]:inline">Globe</span>
             </button>
             <button
               type="button"
               onClick={onMapClick}
-              className={`ss-glass--interactive rounded-full px-3 py-1.5 transition-colors ${explorerSurface === 'map' ? 'ss-glass--crimson bg-red-500/12 text-white' : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'}`}
+              className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
+                explorerSurface === 'map'
+                  ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
+                  : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
+              }`}
+              aria-label="Map discovery"
+              title="Explore the 2D map"
             >
-              Map
+              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="hidden min-[440px]:inline">Map</span>
             </button>
             <button
               type="button"
               onClick={onDirectoryClick}
-              className={`ss-glass--interactive rounded-full px-3 py-1.5 transition-colors ${explorerSurface === 'directory' ? 'ss-glass--crimson bg-red-500/12 text-white' : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'}`}
+              className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
+                explorerSurface === 'directory'
+                  ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
+                  : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
+              }`}
+              aria-label="Directory discovery"
+              title="Browse the directory"
             >
-              Directory
+              <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="hidden min-[440px]:inline">Directory</span>
             </button>
           </div>
-        ) : <span className="hidden md:block" />}
+        ) : (
+          <span aria-hidden="true" />
+        )}
         <nav className="flex items-center gap-2 [&_button]:whitespace-nowrap sm:gap-4 justify-self-end">
           {currentUser ? (
             <>
@@ -93,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <NavLink
                         to="/dev/sitemap"
                         className={({ isActive }) =>
-                          `ss-glass ss-glass--liquid ss-glass--interactive px-3 py-1 text-sm font-medium rounded-lg ${
+                          `hidden xl:inline-flex ss-glass ss-glass--liquid ss-glass--interactive px-3 py-1 text-sm font-medium rounded-lg ${
                             isActive ? 'ss-glass--crimson text-red-100' : 'text-red-200/85 hover:text-red-100'
                           }`
                         }
@@ -101,7 +124,9 @@ export const Header: React.FC<HeaderProps> = ({
                         Dev Tools
                       </NavLink>
                     )}
-                    <Button variant="secondary" onClick={onAdminClick}>Admin Panel</Button>
+                    <div className="hidden lg:block">
+                      <Button variant="secondary" onClick={onAdminClick}>Admin Panel</Button>
+                    </div>
                   </>
                 )}
               </div>

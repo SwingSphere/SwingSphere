@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight, ListFilter } from 'lucide-react';
 import LandingHeroGlobe from './LandingHeroGlobe';
 import LandingStatsBar from './LandingStatsBar';
 import HomepageDiscoveryCard from './HomepageDiscoveryCard';
@@ -70,6 +71,9 @@ const LandingPage: React.FC = () => {
   const featuredListings = useMemo(() => buildFeaturedListings(listings), [listings]);
   const recentlyAddedListings = useMemo(() => buildRecentlyAddedListings(listings), [listings]);
   const discoveryListings = activeDiscoveryTab === 'featured' ? featuredListings : recentlyAddedListings;
+  const openGlobeExperience = () => {
+    navigate('/globe');
+  };
 
   useEffect(() => {
     const introCompleteTimer = window.setTimeout(() => {
@@ -101,9 +105,20 @@ const LandingPage: React.FC = () => {
               Discover clubs, events, hosts, and destinations through an interactive world built for exploration.
             </p>
             <div className="ss-landing-hero-intro__cta flex flex-col items-center md:items-start">
-              <ExploreGlobeButton onActivate={() => navigate('/globe')} />
+              <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+                <ExploreGlobeButton onActivate={openGlobeExperience} />
+                <button
+                  type="button"
+                  onClick={() => navigate('/discover')}
+                  className="group inline-flex min-h-14 items-center justify-center gap-2.5 rounded-2xl border border-white/15 bg-white/[0.055] px-6 text-base font-bold tracking-[-0.015em] text-gray-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.09] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-300 motion-reduce:transform-none"
+                >
+                  <ListFilter size={20} strokeWidth={1.9} className="text-red-300" aria-hidden="true" />
+                  <span>Browse the Directory</span>
+                  <ArrowRight size={18} strokeWidth={2} className="text-gray-400 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
+                </button>
+              </div>
               <p className="ss-landing-hero-intro__microcopy mt-3 text-sm text-gray-500">
-                Browse freely. Share only what you choose.
+                Explore visually or browse directly. Share only what you choose.
               </p>
             </div>
           </div>

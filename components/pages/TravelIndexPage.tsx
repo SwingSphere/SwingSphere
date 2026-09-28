@@ -2,10 +2,18 @@ import React from 'react';
 import { ArrowRight, Building2, Ship } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cruiseSeries, resorts } from '../../data/travelExperiences';
+import { DetailContextNav } from '../navigation/DetailContextNav';
 
 const TravelIndexPage: React.FC = () => (
   <main className="flex-grow overflow-y-auto no-scrollbar">
-    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10">
+    <div className="mx-auto max-w-6xl px-4 pb-20 pt-4">
+      <DetailContextNav
+        backTo="/discover"
+        breadcrumbs={[
+          { label: 'Directory', href: '/discover' },
+          { label: 'Travel' },
+        ]}
+      />
       <section className="relative overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#070a0f] p-7 sm:p-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_15%,rgba(61,190,221,0.18),transparent_28%),radial-gradient(circle_at_20%_85%,rgba(119,77,255,0.15),transparent_30%)]" />
         <div className="relative">
@@ -22,7 +30,7 @@ const TravelIndexPage: React.FC = () => (
             <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Permanent destinations</p><h2 className="text-2xl font-black text-white">Resorts</h2></div>
           </div>
           <div className="mt-5 space-y-3">
-            {resorts.map((resort) => (
+            {resorts.filter((resort) => resort.status === 'approved' || resort.status === 'active').map((resort) => (
               <Link key={resort.id} to={`/resorts/${resort.slug}`} className="ss-glass ss-glass--interactive flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                 <div className="min-w-0 flex-1"><div className="font-bold text-white">{resort.name}</div><div className="mt-1 text-xs text-gray-400">{resort.geopoint.address.city}, {resort.geopoint.address.region} · {resort.accommodationSummary}</div></div>
                 <ArrowRight className="h-5 w-5 text-violet-200" />
@@ -37,7 +45,7 @@ const TravelIndexPage: React.FC = () => (
             <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Recurring sailings</p><h2 className="text-2xl font-black text-white">Cruises</h2></div>
           </div>
           <div className="mt-5 space-y-3">
-            {cruiseSeries.map((series) => (
+            {cruiseSeries.filter((series) => series.status === 'approved' || series.status === 'active').map((series) => (
               <Link key={series.id} to={`/cruises/${series.slug}`} className="ss-glass ss-glass--interactive flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                 <div className="min-w-0 flex-1"><div className="font-bold text-white">{series.name}</div><div className="mt-1 text-xs text-gray-400">{series.audienceLabel} · Multiple sailings</div></div>
                 <ArrowRight className="h-5 w-5 text-cyan-200" />

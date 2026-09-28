@@ -354,6 +354,7 @@ export interface CruiseSailingData {
   cabinSummary?: string;
   pricingSummary?: string;
   theme?: string;
+  logoImageUrl?: string;
   headerImageUrl?: string;
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: EntityStatus;

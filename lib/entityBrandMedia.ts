@@ -111,7 +111,7 @@ const buildNodeMaps = (catalog: BrandMediaCatalog) => {
   for (const brand of clubBrands) add({ type: 'club_brand', id: brand.id, name: brand.name, logoImageUrl: brand.logoImageUrl, headerImageUrl: brand.headerImageUrl });
   for (const resort of resorts) add({ type: 'resort', id: resort.id, name: resort.name, logoImageUrl: resort.logoImageUrl, headerImageUrl: resort.headerImageUrl });
   for (const series of cruiseSeries) add({ type: 'cruise_series', id: series.id, name: series.name, logoImageUrl: series.logoImageUrl, headerImageUrl: series.headerImageUrl });
-  for (const sailing of cruiseSailings) add({ type: 'cruise_sailing', id: sailing.id, name: sailing.name, headerImageUrl: sailing.headerImageUrl });
+  for (const sailing of cruiseSailings) add({ type: 'cruise_sailing', id: sailing.id, name: sailing.name, logoImageUrl: sailing.logoImageUrl, headerImageUrl: sailing.headerImageUrl });
 
   return {
     nodeByKey,

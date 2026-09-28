@@ -7,6 +7,7 @@ import { parsePrettyKeyParam, hostSlug, normalizeHostName } from '../../lib/iden
 import { getClubCanonicalPath, getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
 import type { EventData } from '../../types';
 import EventPageLayout from '../event/EventPageLayout';
+import { DetailContextNav } from '../navigation/DetailContextNav';
 import EventMapCard from '../event/EventMapCard';
 import EventCalendarCard from '../event/EventCalendarCard';
 import EventHostCard from '../event/EventHostCard';
@@ -261,7 +262,18 @@ const EventPage: React.FC = () => {
         />
       ) : null}
       <EventPageLayout
-      hero={
+        contextNav={
+          <DetailContextNav
+            breadcrumbs={[
+              { label: 'Directory', href: '/discover' },
+              { label: 'Events', href: '/discover?type=events' },
+              { label: event.name },
+            ]}
+            listingId={event.id}
+            streetViewAvailable={Boolean(streetViewListingId)}
+          />
+        }
+        hero={
         <>
           <EventHero
             eventId={event.id}

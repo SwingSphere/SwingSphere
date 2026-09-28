@@ -6,6 +6,7 @@ import { getEventCanonicalPath, getListingCanonicalPath } from '../../lib/entity
 import { getEventCardImageUrl, getListingPrimaryHeroUrl } from '../../lib/listingImage';
 import { isPlaceholderMediaUrl } from '../../lib/entityBrandMedia';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
+import { DetailContextNav } from '../navigation/DetailContextNav';
 import type { ClubData, EventData } from '../../types';
 
 const toTimestamp = (value?: string): number => {
@@ -74,7 +75,25 @@ const EventsIndexPage: React.FC = () => {
 
   return (
     <main className="flex-grow overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-4 py-10">
+      <div className="mx-auto max-w-5xl px-4 pt-4 pb-10">
+        <DetailContextNav
+          backTo={scopedClub ? getListingCanonicalPath(scopedClub, index) : '/discover?type=events'}
+          backLabel={scopedClub ? `Back to ${scopedClub.name}` : 'Back to Events'}
+          breadcrumbs={
+            scopedClub
+              ? [
+                  { label: 'Directory', href: '/discover' },
+                  { label: 'Clubs', href: '/discover?type=clubs' },
+                  { label: scopedClub.name, href: getListingCanonicalPath(scopedClub, index) },
+                  { label: 'Events' },
+                ]
+              : [
+                  { label: 'Directory', href: '/discover' },
+                  { label: 'Events' },
+                ]
+          }
+          listingId={scopedClub?.id}
+        />
         <header className="relative isolate min-h-[220px] overflow-hidden rounded-2xl border border-white/[0.1] bg-gray-950 shadow-2xl">
           {scopedHeroUrl && !isPlaceholderMediaUrl(scopedHeroUrl) ? (
             <img src={scopedHeroUrl} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />

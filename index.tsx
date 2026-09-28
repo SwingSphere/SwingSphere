@@ -11,7 +11,6 @@ import { ExplorerProvider } from './components/explorer/ExplorerProvider';
 import { DEV_TOOLS_ENABLED } from './lib/devTools';
 import ComingSoonPage from './components/ComingSoonPage';
 import InboundAnalyticsTracker from './components/analytics/InboundAnalyticsTracker';
-import { resolveBrowserDeviceExperience } from './lib/deviceExperience';
 
 const ProductionGlobePage = React.lazy(() => import('./components/ProductionGlobePage'));
 const ListingSubmissionForm = React.lazy(() => import('./components/ListingSubmissionForm'));
@@ -111,12 +110,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const root = ReactDOM.createRoot(rootElement);
 
-const RootEntryPage: React.FC = () => {
-  const experience = resolveBrowserDeviceExperience();
-  if (experience === 'mobile') return <Navigate to="/mobile" replace />;
-  if (experience === 'tablet') return <Navigate to="/tablet" replace />;
-  return <LandingPage />;
-};
+const RootEntryPage: React.FC = () => <LandingPage />;
 
 const SITE_MODE = import.meta.env.VITE_SITE_MODE === 'coming-soon' ? 'coming-soon' : 'full';
 const configuredBasename = typeof import.meta.env.VITE_APP_BASENAME === 'string' && import.meta.env.VITE_APP_BASENAME ? import.meta.env.VITE_APP_BASENAME : undefined;

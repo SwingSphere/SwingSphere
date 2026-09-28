@@ -1,15 +1,17 @@
 import React from 'react';
 
 type ClubPageLayoutProps = {
+  contextNav?: React.ReactNode;
   hero: React.ReactNode;
   main: React.ReactNode;
   rail: React.ReactNode;
 };
 
-const ClubPageLayout: React.FC<ClubPageLayoutProps> = ({ hero, main, rail }) => {
+const ClubPageLayout: React.FC<ClubPageLayoutProps> = ({ contextNav, hero, main, rail }) => {
   return (
     <main className="ss-detail-page flex-grow overflow-y-auto no-scrollbar">
-      <div className="mx-auto max-w-6xl px-4 pb-20">
+      <div className="mx-auto max-w-6xl px-4 pt-4 pb-20">
+        {contextNav}
         {hero}
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section className="space-y-8">

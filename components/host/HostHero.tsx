@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, ExternalLink, MapPin, Pencil, ShieldCheck } from 'lucide-react';
+import { CalendarDays, ExternalLink, MapPin, Pencil, ShieldCheck, Ship } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
 import BadgeShelf from '../badges/BadgeShelf';
@@ -21,6 +21,7 @@ type HostHeroProps = {
   regions?: string[];
   website?: string;
   eventsListed?: number;
+  cruisesListed?: number;
   hostingSince?: string;
   badges?: BadgeAwardView[];
   onQuickEdit?: (field: HostQuickEditField) => void;
@@ -47,6 +48,7 @@ const HostHero: React.FC<HostHeroProps> = ({
   regions = [],
   website,
   eventsListed = 0,
+  cruisesListed = 0,
   hostingSince,
   badges = [],
   onQuickEdit,
@@ -131,6 +133,7 @@ const HostHero: React.FC<HostHeroProps> = ({
 
             <div className="mt-3 flex flex-wrap gap-2">
               <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><CalendarDays size={18} className="text-red-300" /><div><div className="font-bold text-white">{eventsListed}</div><div className="text-[11px] text-gray-400">events listed</div></div></div>
+              {cruisesListed > 0 ? <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><Ship size={18} className="text-cyan-300" /><div><div className="font-bold text-white">{cruisesListed}</div><div className="text-[11px] text-gray-400">cruise series</div></div></div> : null}
               <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><ShieldCheck size={18} className="text-red-300" /><div><div className="font-bold text-white">Profile</div><div className="text-[11px] text-gray-400">promoter identity</div></div></div>
               {hostingSince ? <div className="ss-glass ss-glass--ambient rounded-2xl px-4 py-3"><div className="font-bold text-white">Since {hostingSince}</div><div className="text-[11px] text-gray-400">on SwingSphere</div></div> : null}
             </div>

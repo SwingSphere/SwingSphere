@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Database, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Database, RefreshCw, Rocket } from 'lucide-react';
 import { getListings } from '../../lib/api';
+import { adminFetchJson } from '../../lib/adminApi';
 import { getPlatformHealth, type PlatformHealthItem, type PlatformHealthSnapshot, type PlatformStatus } from '../../lib/admin/platformHealth';
 import { syncApprovedListingFeedbackTargets } from '../../lib/feedback';
 
@@ -41,6 +42,8 @@ const AdminSettings: React.FC = () => {
   const [healthError, setHealthError] = useState('');
   const [feedbackSyncState, setFeedbackSyncState] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [feedbackSyncMessage, setFeedbackSyncMessage] = useState('');
+  const [deploymentSyncState, setDeploymentSyncState] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [deploymentSyncMessage, setDeploymentSyncMessage] = useState('');
 
   const refreshHealth = useCallback(async () => {
     setHealthState('loading');
@@ -60,6 +63,37 @@ const AdminSettings: React.FC = () => {
   useEffect(() => {
     void refreshHealth();
   }, [refreshHealth]);
+
+  const runDeploymentSync = async () => {
+    if (!health || health.migrationMatches || deploymentSyncState === 'syncing') return;
+
+    const confirmed = window.confirm(
+      'Repair migration drift and deploy production from this local checkout? This will build, commit safe working-tree changes, apply pending Supabase migrations, push main, and deploy Cloudflare Pages.',
+    );
+    if (!confirmed) return;
+
+    setDeploymentSyncState('syncing');
+    setDeploymentSyncMessage('');
+    try {
+      const result = await adminFetchJson<{
+        commit: string;
+        committed: boolean;
+        migrationApplied: boolean;
+      }>('/api/admin/deployment-sync/run', { method: 'POST' });
+
+      const steps = [
+        result.committed ? `committed ${result.commit}` : `using existing commit ${result.commit}`,
+        result.migrationApplied ? 'applied pending migrations' : 'database already current',
+        'deployed production',
+      ];
+      setDeploymentSyncState('success');
+      setDeploymentSyncMessage(`Production sync complete: ${steps.join(' · ')}.`);
+      await refreshHealth();
+    } catch (error) {
+      setDeploymentSyncState('error');
+      setDeploymentSyncMessage(error instanceof Error ? error.message : 'Production sync failed.');
+    }
+  };
 
   const syncFeedbackTargets = async () => {
     setFeedbackSyncState('syncing');
@@ -85,6 +119,8 @@ const AdminSettings: React.FC = () => {
   }, [health]);
 
   const feedbackItem = health?.items.find((item) => item.key === 'feedback');
+  const localProductionSyncAvailable = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
   return (
     <div>
@@ -137,12 +173,42 @@ const AdminSettings: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="text-right text-xs text-gray-500">
-                <div>Last verified</div>
-                <div className="mt-0.5 font-semibold text-gray-700">{new Date(health.checkedAt).toLocaleString()}</div>
+              <div className="flex flex-col items-end gap-3">
+                <div className="text-right text-xs text-gray-500">
+                  <div>Last verified</div>
+                  <div className="mt-0.5 font-semibold text-gray-700">{new Date(health.checkedAt).toLocaleString()}</div>
+                </div>
+                {!health.migrationMatches && localProductionSyncAvailable ? (
+                  <button
+                    type="button"
+                    onClick={() => void runDeploymentSync()}
+                    disabled={deploymentSyncState === 'syncing'}
+                    className="inline-flex items-center gap-2 rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Rocket size={16} />
+                    {deploymentSyncState === 'syncing' ? 'Syncing production…' : 'Repair drift & deploy'}
+                  </button>
+                ) : !health.migrationMatches ? (
+                  <p className="max-w-xs text-right text-xs leading-5 text-rose-700">
+                    Open this Settings page from the local SwingSphere checkout to run the guarded commit + migration + production deploy flow.
+                  </p>
+                ) : null}
               </div>
             </div>
           </section>
+
+          {deploymentSyncMessage ? (
+            <div
+              className={`mb-6 rounded-xl border p-4 text-sm ${
+                deploymentSyncState === 'error'
+                  ? 'border-red-200 bg-red-50 text-red-800'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              }`}
+              role="status"
+            >
+              {deploymentSyncMessage}
+            </div>
+          ) : null}
 
           <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"><div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Operational</div><div className="mt-2 text-2xl font-bold text-emerald-700">{summary?.Operational ?? 0}</div></div>

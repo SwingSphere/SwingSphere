@@ -7,6 +7,7 @@ import {
   Globe2,
   ListFilter,
   MapPin,
+  Minus,
   Plus,
   UserRound,
   UsersRound,
@@ -30,10 +31,13 @@ type TabletExplorerOverlayProps = {
   onClearSelection: () => void;
   onNavigate: (path: string) => void;
   onRecenter?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
   onFilterChange?: (filter: TabletFilter) => void;
   experienceBasePath: string;
   entityIndex?: EntityIndex;
   isUpdating?: boolean;
+  stats?: { countryCount: number; cityCount: number; eventCount: number };
 };
 
 type NavItem = {
@@ -87,10 +91,13 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
   onClearSelection,
   onNavigate,
   onRecenter,
+  onZoomIn,
+  onZoomOut,
   onFilterChange,
   experienceBasePath,
   entityIndex,
   isUpdating = false,
+  stats = { countryCount: 0, cityCount: 0, eventCount: 0 },
 }) => {
   const [activeFilter, setActiveFilter] = useState<TabletFilter>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -148,15 +155,20 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
       </button>
 
       <div className="pointer-events-auto absolute right-5 top-[max(1.25rem,env(safe-area-inset-top))] flex gap-2">
-        <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="ss-glass ss-glass--liquid relative grid h-12 w-12 place-items-center rounded-[18px] text-gray-100 shadow-xl shadow-black/30" aria-label="Open filters">
-          <ListFilter className="h-[18px] w-[18px]" />
+        <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="ss-glass ss-glass--liquid relative grid h-11 w-11 place-items-center rounded-[16px] text-gray-100 shadow-xl shadow-black/30" aria-label="Open filters">
+          <ListFilter className="h-[17px] w-[17px]" />
           {activeFilter !== 'all' ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-400 ring-2 ring-[#111318]" /> : null}
         </button>
-        <button type="button" onClick={onRecenter} className="ss-glass ss-glass--liquid grid h-12 w-12 place-items-center rounded-[18px] text-gray-100 shadow-xl shadow-black/30" aria-label="Return to world view"><Globe2 className="h-[19px] w-[19px]" /></button>
+        <button type="button" onClick={onRecenter} className="ss-glass ss-glass--liquid grid h-11 w-11 place-items-center rounded-[16px] text-gray-100 shadow-xl shadow-black/30" aria-label="Return to world view"><Globe2 className="h-[18px] w-[18px]" /></button>
+      </div>
+
+      <div className="pointer-events-auto absolute left-5 top-[max(10.35rem,calc(env(safe-area-inset-top)+10.35rem))] flex flex-col gap-1.5">
+        <button type="button" onClick={onZoomIn} className="ss-glass ss-glass--liquid grid h-10 w-10 place-items-center rounded-[14px] text-gray-100 shadow-lg shadow-black/25" aria-label="Zoom in"><Plus className="h-4 w-4" /></button>
+        <button type="button" onClick={onZoomOut} className="ss-glass ss-glass--liquid grid h-10 w-10 place-items-center rounded-[14px] text-gray-100 shadow-lg shadow-black/25" aria-label="Zoom out"><Minus className="h-4 w-4" /></button>
       </div>
 
       {filtersOpen ? (
-        <section className="ss-glass ss-glass--liquid pointer-events-auto absolute left-5 top-[max(10.4rem,calc(env(safe-area-inset-top)+10.4rem))] w-[330px] rounded-[26px] border-white/[0.09] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.52)]" aria-label="Tablet discovery filters">
+        <section className="ss-glass ss-glass--liquid pointer-events-auto absolute left-[4.25rem] top-[max(10.35rem,calc(env(safe-area-inset-top)+10.35rem))] w-[330px] rounded-[26px] border-white/[0.09] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.52)]" aria-label="Tablet discovery filters">
           <div className="flex items-center justify-between gap-3">
             <div><div className="text-[14px] font-semibold text-white">Discover</div><div className="mt-0.5 text-[11px] text-gray-500">Choose what appears on the globe</div></div>
             <button type="button" onClick={() => setFiltersOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.05] text-gray-300" aria-label="Close filters"><X className="h-4 w-4" /></button>
@@ -227,6 +239,16 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
             </button>
           </div>
         </aside>
+      ) : null}
+
+      {!trayVisible && !selectedListing ? (
+        <section className="ss-glass ss-glass--liquid pointer-events-none absolute bottom-[5.35rem] right-5 flex items-center gap-3 rounded-[18px] border-white/[0.08] px-3 py-2 shadow-[0_16px_44px_rgba(0,0,0,0.34)]" aria-label="Globe coverage">
+          <div className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-red-300" /><span className="text-[12px] font-semibold text-white">{stats.countryCount}</span><span className="text-[9px] uppercase tracking-[0.12em] text-gray-500">countries</span></div>
+          <span className="h-4 w-px bg-white/[0.08]" />
+          <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-red-300" /><span className="text-[12px] font-semibold text-white">{stats.cityCount}</span><span className="text-[9px] uppercase tracking-[0.12em] text-gray-500">cities</span></div>
+          <span className="h-4 w-px bg-white/[0.08]" />
+          <div className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-red-300" /><span className="text-[12px] font-semibold text-white">{stats.eventCount}</span><span className="text-[9px] uppercase tracking-[0.12em] text-gray-500">events</span></div>
+        </section>
       ) : null}
 
       {trayVisible ? (

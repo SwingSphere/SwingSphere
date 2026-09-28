@@ -118,7 +118,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
       <div className={`pointer-events-auto absolute top-[max(1.45rem,env(safe-area-inset-top))] ${tabletMode ? 'left-6 w-[min(360px,calc(100%-3rem))]' : 'inset-x-3'}`}>
         <button
           type="button"
-          onClick={() => onNavigate('/home')}
+          onClick={() => onNavigate('/')}
           className={`flex items-center gap-2.5 px-1 text-left ${tabletMode ? 'min-h-12' : 'min-h-11'}`}
           aria-label="SwingSphere home"
         >
@@ -238,7 +238,20 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
                   setSheetOpen(false);
                   return;
                 }
-                if (!devMobileMode && label === 'Saved') return;
+                if (!devMobileMode) {
+                  if (label === 'Saved') {
+                    onNavigate('/account/saved');
+                    return;
+                  }
+                  if (label === 'Nearby') {
+                    openResults();
+                    return;
+                  }
+                  if (label === 'Search') {
+                    onNavigate('/discover');
+                    return;
+                  }
+                }
                 const target = devMobileMode
                   ? getMobileNavTarget(path, experienceBasePath)
                   : label === 'Add'

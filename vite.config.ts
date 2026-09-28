@@ -1175,6 +1175,92 @@ const runProcessCapture = (command: string, args: string[]) =>
     });
   });
 
+const releaseCommand = async (command: string, args: string[], label: string) => {
+  const result = await runProcessCapture(command, args);
+  if (result.code !== 0) {
+    const detail = (result.stderr || result.stdout || `${label} failed.`).trim();
+    throw new Error(`${label} failed: ${detail}`);
+  }
+  return result;
+};
+
+const runLocalProductionSync = async (authorization?: string | null) => {
+  await requireActiveAdmin(authorization);
+
+  const localSchema = loadLocalSchemaVersion();
+  const { supabase } = createAuthenticatedSupabaseServerClient(authorization);
+  const { data: healthData, error: healthError } = await supabase.rpc('admin_platform_health');
+  if (healthError) throw new Error(`Could not verify production migration state: ${healthError.message}`);
+  const remoteSchema = String((healthData as any)?.database?.latestMigration ?? '').trim();
+  if (!localSchema.version || !remoteSchema) {
+    throw new Error('Could not determine both local and production migration heads.');
+  }
+  if (remoteSchema > localSchema.version) {
+    throw new Error(
+      `Production migration ${remoteSchema} is ahead of local ${localSchema.version}. Pull/reconcile the checkout instead of deploying over it.`,
+    );
+  }
+
+  const gitBranch = await releaseCommand('git', ['branch', '--show-current'], 'Git branch check');
+  const branch = gitBranch.stdout.trim();
+  if (branch !== 'main') {
+    throw new Error(`Production sync is only allowed from main. Current branch: ${branch || 'unknown'}.`);
+  }
+
+  const conflicts = await releaseCommand('git', ['diff', '--name-only', '--diff-filter=U'], 'Merge-conflict check');
+  if (conflicts.stdout.trim()) {
+    throw new Error(`Resolve merge conflicts before production sync: ${conflicts.stdout.trim().replace(/\r?\n/g, ', ')}`);
+  }
+
+  const migrationDryRun = await releaseCommand('supabase', ['db', 'push', '--dry-run'], 'Supabase migration dry-run');
+  const dryRunText = `${migrationDryRun.stdout}\n${migrationDryRun.stderr}`;
+  const migrationPending = !/Remote database is up to date\./i.test(dryRunText);
+
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  await releaseCommand(npmCommand, ['run', 'build:cloudflare'], 'Production build');
+
+  await releaseCommand('git', [
+    'add',
+    '-A',
+    '--',
+    '.',
+    ':(exclude)scratch/**',
+    ':(exclude).codex-temp/**',
+    ':(exclude)dist/**',
+    ':(exclude).wrangler/**',
+  ], 'Git staging');
+
+  const staged = await runProcessCapture('git', ['diff', '--cached', '--quiet']);
+  let committed = false;
+  if (staged.code === 1) {
+    const message = localSchema.version
+      ? `chore: sync production ${localSchema.version}`
+      : 'chore: sync production';
+    await releaseCommand('git', ['commit', '-m', message], 'Git commit');
+    committed = true;
+  } else if (staged.code !== 0) {
+    throw new Error('Could not determine whether there are staged changes.');
+  }
+
+  if (migrationPending) {
+    await releaseCommand('supabase', ['db', 'push'], 'Supabase migration deployment');
+  }
+
+  await releaseCommand('git', ['push', 'origin', 'main'], 'GitHub push');
+  const deployment = await releaseCommand(npmCommand, ['run', 'deploy:cloudflare'], 'Cloudflare production deployment');
+  const head = await releaseCommand('git', ['rev-parse', '--short', 'HEAD'], 'Git revision check');
+
+  return {
+    ok: true,
+    branch,
+    commit: head.stdout.trim(),
+    committed,
+    migrationPending,
+    migrationApplied: migrationPending,
+    deploymentTail: `${deployment.stdout}\n${deployment.stderr}`.trim().split(/\r?\n/).slice(-8).join('\n'),
+  };
+};
+
 const isOverpassTimeoutError = (error: unknown) => {
   const message = String((error as Error)?.message || '').toLowerCase();
   const name = String((error as { name?: string })?.name || '').toLowerCase();
@@ -3139,6 +3225,13 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
 
     if (req.method === 'POST' && req.url.startsWith('/api/account/delete')) {
       const payload = await deleteAuthenticatedAccount(req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(payload));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/deployment-sync/run')) {
+      const payload = await runLocalProductionSync(req.headers.authorization);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(payload));
       return;

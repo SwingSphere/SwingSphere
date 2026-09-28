@@ -912,6 +912,64 @@
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4e5f5cdc-d2b9-425e-64c6-9d6268f5b700/logosquare"
   },
   {
+    "id": "event-connect-dance-love-2026-10-17",
+    "location": "Private location, North Oakland, California, United States",
+    "website": "https://www.connectdancelove.com/",
+    "contactEmail": "info@connectdancelove.com",
+    "geopoint": {
+      "latitude": 37.84,
+      "longitude": -122.27,
+      "address": {
+        "city": "Oakland",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ca",
+        "citySlug": "oakland",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "manual",
+      "confidence": 0.7,
+      "normalizedAddress": "North Oakland, Oakland, California, United States",
+      "geocoderLabel": "North Oakland, Oakland, California, United States",
+      "geocoderSource": "manual",
+      "warnings": [
+        "private-location",
+        "approximate-public-location"
+      ],
+      "validatedAt": "2026-09-27T19:36:00-07:00"
+    },
+    "galleryImageUrls": [],
+    "postedByUserId": "user-submission",
+    "status": "approved",
+    "type": "event",
+    "name": "Connect.Dance.Love",
+    "hostName": "connect dance love",
+    "eventSeriesId": "series-connect-dance-love",
+    "occurrenceTitle": "October 17, 2026",
+    "description_full": "Connect. Dance. Love. is a consent-focused North Oakland gathering blending intentional dance, emotional intimacy, sensual connection, and optional sexual play. The October 17 evening begins with a pre-party dance class from 7:00–8:00 PM, followed by a safer-sex and play-party discussion at 8:00 PM, an opening circle at 8:45 PM, and dancing from 9:15 PM. The event includes sultry DJs, midnight sushi and snacks, space for intimate dancing and safer sexy play, and no expectation that guests participate sexually.",
+    "isAddressPrivate": true,
+    "attendancePolicy": "all_genders_welcome",
+    "time": {
+      "start": "2026-10-17T19:00:00-07:00",
+      "end": "2026-10-18T01:45:00-07:00"
+    },
+    "tags": [
+      "Casual",
+      "LGBT Friendly",
+      "Lounge",
+      "Dance Club",
+      "Newbie Friendly",
+      "Showers",
+      "Sauna",
+      "BYOB",
+      "Food Served"
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4e5f5cdc-d2b9-425e-64c6-9d6268f5b700/logosquare"
+  },
+  {
     "id": "club-1782957638814",
     "location": "190, Allen Street, New York, New York, 10002, United States",
     "website": "https://www.topfloorclub.com/",

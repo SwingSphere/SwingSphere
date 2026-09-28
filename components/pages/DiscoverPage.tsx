@@ -527,55 +527,58 @@ const DiscoverPage: React.FC = () => {
         />
 
         <div className="mx-auto max-w-7xl px-4 pt-7 pb-6 sm:px-6 sm:pt-8 sm:pb-7 lg:px-8">
-          {/* Main Hero Grid: Left Content Column vs Right Search Column */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] lg:items-start lg:gap-10">
-            {/* Left Column: Kicker & Modes, Title, Subtitle, Category Tabs, and Filters */}
-            <div className="flex flex-col">
-              {/* Row 1: Directory Explorer Pill + Other Modes (3D Globe & 2D Map) on the Same Row */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-950/30 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-red-200 backdrop-blur-md">
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                  Directory Explorer
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <span className="text-gray-500 text-[11px] font-medium hidden sm:inline">Other modes:</span>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/globe')}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
-                    title="Explore in 3D on the interactive globe"
-                  >
-                    <Globe2 className="h-3.5 w-3.5 text-red-400" />
-                    <span>3D Globe</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/map')}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
-                    title="Explore on the flat map"
-                  >
-                    <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                    <span>2D Map</span>
-                  </button>
-                </div>
+          {/* Top Section: Kicker & Modes, Title, Subtitle */}
+          <div className="flex flex-col">
+            {/* Row 1: Directory Explorer Pill + Other Modes (3D Globe & 2D Map) on the Same Row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-950/30 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-red-200 backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                Directory Explorer
               </div>
 
-              {/* Row 2: Headline */}
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Discover{' '}
-                <span className="font-bold tracking-wider text-white">
-                  <span className="text-red-500">SWING</span>SPHERE
-                </span>
-              </h1>
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <span className="text-gray-500 text-[11px] font-medium hidden sm:inline">Other modes:</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/globe')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
+                  title="Explore in 3D on the interactive globe"
+                >
+                  <Globe2 className="h-3.5 w-3.5 text-red-400" />
+                  <span>3D Globe</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/map')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
+                  title="Explore on the flat map"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-amber-400" />
+                  <span>2D Map</span>
+                </button>
+              </div>
+            </div>
 
-              {/* Row 3: Subtitle Copy */}
-              <p className="mt-2 text-sm leading-relaxed text-gray-400 sm:text-base max-w-2xl">
-                Clubs, curated events, private hosts, and destinations — explore freely without navigating a map.
-              </p>
+            {/* Row 2: Headline */}
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Discover{' '}
+              <span className="font-bold tracking-wider text-white">
+                <span className="text-red-500">SWING</span>SPHERE
+              </span>
+            </h1>
 
+            {/* Row 3: Subtitle Copy */}
+            <p className="mt-2 text-sm leading-relaxed text-gray-400 sm:text-base max-w-2xl">
+              Clubs, curated events, private hosts, and destinations — explore freely without navigating a map.
+            </p>
+          </div>
+
+          {/* Controls Grid: Category Tabs and Filters vs Search Station */}
+          <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] lg:items-start lg:gap-10">
+            {/* Left Column: Category Tabs, and Filters */}
+            <div className="flex flex-col order-2 lg:order-1">
               {/* Row 4: Category Navigation Tabs */}
-              <div className="mt-5 flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none">
+              <div className="flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none">
                 <nav className="inline-flex items-center gap-1.5 rounded-2xl border border-white/10 bg-[#080b11]/80 p-1.5 backdrop-blur-md">
                   {KIND_TABS.map((tab) => {
                     const Icon = tab.icon;
@@ -719,7 +722,7 @@ const DiscoverPage: React.FC = () => {
             </div>
 
             {/* Right Column: Search Station at top right underneath Dev Tools and Admin Panel */}
-            <div ref={searchContainerRef} className="relative w-full lg:w-full self-start lg:mt-0.5">
+            <div ref={searchContainerRef} className="relative w-full lg:w-full self-start lg:mt-0.5 order-1 lg:order-2">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -985,7 +988,7 @@ const DiscoverPage: React.FC = () => {
 
         {/* Loading Skeletons */}
         {isLoading && (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
@@ -1004,7 +1007,7 @@ const DiscoverPage: React.FC = () => {
 
         {/* Results Grid */}
         {!isLoading && !error && visibleCards.length > 0 && (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {visibleCards.map((card) => {
               const image = card.image && !isPlaceholderMediaUrl(card.image) ? card.image : null;
               const locationText = formatCardLocation(card.city, card.region, card.country);
