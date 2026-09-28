@@ -185,8 +185,8 @@ test('event with placeholder flyer + valid hero → hero fallback', () => {
 test('event with placeholder flyer + fallback logo hero → default fallback', () => {
   const event = createMockEvent({
     // @ts-expect-error test alias
-    flyerImageUrl: '/swingsphere-logo.png',
-    headerImageUrl: '/swingsphere-logo.png',
+    flyerImageUrl: '/swingsphere-logo_2.png',
+    headerImageUrl: '/swingsphere-logo_2.png',
   });
 
   assert.equal(getListingCardImageUrl(event), LISTING_IMAGE_FALLBACK);

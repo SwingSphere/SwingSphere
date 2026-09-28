@@ -97,7 +97,6 @@ const SUPPLEMENTAL_CONTEXT_RADIUS_METERS = 220;
 const SUPPLEMENTAL_CONTEXT_MIN_PRIMARY_FOOTPRINTS = 18;
 const AUTHORED_PARTS_SOURCE_ID = 'street-view-authored-provider-parts';
 const AUTHORED_CONTEXT_LAYER_ID = 'street-view-authored-provider-context';
-const AUTHORED_OCCLUDER_LAYER_ID = 'street-view-authored-provider-occluders';
 const AUTHORED_SELECTED_LAYER_ID = 'street-view-authored-selected-buildings';
 const SELECTED_SOURCE_ID = 'street-view-selected-buildings';
 const SELECTED_LAYER_ID = 'street-view-selected-extrusion';
@@ -118,7 +117,21 @@ const MASKED_PROVIDER_HEIGHT_METERS = 0.001;
 const TERRAIN_OCCLUDER_BASE_METERS = 0.001;
 const TERRAIN_MASKED_PROVIDER_COLOR = '#050608';
 const NEAR_FIELD_ATLAS_RADIUS_METERS = 220;
-const NEAR_FIELD_MAX_INDIVIDUAL_LAYERS = 96;
+const NEAR_FIELD_LAYER_ID = 'street-view-near-field-buildings';
+const NEAR_FIELD_FADE_OUT_0_LAYER_ID = 'street-view-near-field-fade-out-0';
+const NEAR_FIELD_FADE_OUT_1_LAYER_ID = 'street-view-near-field-fade-out-1';
+const NEAR_FIELD_FADE_IN_0_LAYER_ID = 'street-view-near-field-fade-in-0';
+const NEAR_FIELD_FADE_IN_1_LAYER_ID = 'street-view-near-field-fade-in-1';
+
+const NEAR_FIELD_FADE_OUT_LAYER_IDS = [
+  NEAR_FIELD_FADE_OUT_0_LAYER_ID,
+  NEAR_FIELD_FADE_OUT_1_LAYER_ID,
+] as const;
+
+const NEAR_FIELD_FADE_IN_LAYER_IDS = [
+  NEAR_FIELD_FADE_IN_0_LAYER_ID,
+  NEAR_FIELD_FADE_IN_1_LAYER_ID,
+] as const;
 
 export const SCENE_POPULATION_CONFIG = {
   nearFieldRadiusMeters: 220,
@@ -131,7 +144,6 @@ export const SCENE_POPULATION_CONFIG = {
   distantCellMeters: 220, // spatial sampling in distant skyline
   distantProminentFootprintArea: 3500, // m²
 };
-const NEAR_FIELD_LAYER_PREFIX = 'street-view-near-field-building-';
 const NEIGHBORHOOD_PULSE_INTERVAL_MS = 6500;
 const NEIGHBORHOOD_PULSE_WAVE_SPEED_MPS = 120;
 const NEIGHBORHOOD_PULSE_ATTACK_MS = 240;
@@ -240,7 +252,7 @@ const DEFAULT_VISUAL: VisualState = {
   lightAzimuth: 225,
   lightPolar: 44,
   venueBloomStrength: 0.34,
-  occlusionMode: 'fade',
+  occlusionMode: 'hide',
   occluderOpacity: 0.12,
   occlusionSensitivity: 82,
   occlusionFadeMs: 200,
@@ -723,42 +735,50 @@ function centerDistanceMeters(first: [number, number], second: [number, number])
 }
 
 // -----------------------------------------------------------------------------
-// Centralized Three-State Occlusion Configuration
+// Centralized Viewing Wedge Occlusion Configuration
 // -----------------------------------------------------------------------------
 export const OCCLUSION_CONFIG = {
-  // Screen-space padding (pixels) around the extruded target venue to form the visibility corridor
-  corridorPaddingPx: 20,
+  // Lateral safety margin (meters) added to both sides of the target building footprint
+  targetSideMarginMeters: 4.5,
 
-  // Opacity applied to GHOSTED buildings (translucent spatial context)
-  ghostOpacity: 0.12,
+  // Lateral width (meters) of the viewing corridor at the camera origin
+  cameraSideWedgeWidthMeters: 3.0,
 
-  // Opacity applied to HIDDEN buildings (0 to eliminate stacked alpha accumulation)
-  hiddenOpacity: 0.0,
+  // Maximum rear depth margin (meters) past the far edge of the target building
+  // Buildings further than targetMinU - targetRearDepthMarginMeters will NOT be hidden
+  targetRearDepthMarginMeters: 2.0,
 
-  // Transition duration (ms) for hardware opacity fades in MapLibre
-  transitionDurationMs: 200,
+  // Maximum distance (meters) along sightline from camera for occlusion consideration
+  maxOcclusionDistanceMeters: 220,
 
-  // Screen-space overlap ratio thresholds for entering/exiting HIDDEN state (hysteresis)
-  // Ratio of candidate's screen-space obstruction over the target venue's screen bounds
-  hiddenEnterOverlap: 0.45,  // Escalate from GHOSTED to HIDDEN if direct coverage exceeds 45%
-  hiddenExitOverlap: 0.28,   // Demote from HIDDEN to GHOSTED once coverage drops below 28%
+  // Hysteresis boundary margin (meters): expands lateral corridor for currently hidden buildings
+  // Prevents boundary chatter/flapping during subtle camera movements
+  wedgeExitMarginMeters: 3.5,
 
-  // Camera distance thresholds (meters) defining close, mid, and far regimes
-  closeDistanceMeters: 90,   // Below this, venue is large; favor GHOSTED for neighbors
-  farDistanceMeters: 190,    // Above this, venue is small; escalate major occluders to HIDDEN
+  // Smooth temporary fade transitions for wedge entry and exit
+  fadeTransitionEnabled: true,
+  fadeOutDurationMs: 300,
+  fadeInDurationMs: 280,
 
-  // Cumulative transmittance threshold: minimum target light throughput (0 to 1)
-  // If accumulated ghosted layers along sightline attenuate target visibility below this,
-  // the nearest/most obstructive occluders escalate to HIDDEN until throughput is restored.
-  minTargetTransmittance: 0.50, // Require at least 50% target visibility (max ~2 ghosted buildings)
-
-  // Distance from venue (meters) within which a building is considered an immediate neighbor.
-  // Immediate neighbors are protected as GHOSTED unless their direct overlap is extreme.
-  immediateNeighborRadiusMeters: 45,
-  immediateNeighborMaxOverlap: 0.85, // Even an immediate neighbor hides if it covers >85% of target
+  // Retain legacy tokens for backward compatibility if referenced
+  disappearanceFlashEnabled: false,
+  disappearanceFlashDurationMs: 180,
+  corridorPaddingPx: 16,
+  corridorLateralToleranceMeters: 14,
+  hiddenEnterOverlap: 0.22,
+  hiddenExitOverlap: 0.12,
+  closeDistanceMeters: 90,
+  farDistanceMeters: 190,
 } as const;
 
 export type OcclusionState = 'normal' | 'ghosted' | 'hidden';
+
+export type NearFieldFadeSlot = {
+  layerId: string;
+  activeIds: Set<string>;
+  timeoutId: number | null;
+  startTime: number;
+};
 
 export type ExtrudedScreenBounds = {
   minX: number;
@@ -769,6 +789,42 @@ export type ExtrudedScreenBounds = {
   groundMaxY: number;
   roofMinY: number;
 };
+
+export function projectedBBoxBounds(
+  map: MapLibreMap,
+  bbox: [number, number, number, number],
+  heightMeters = 12,
+): ExtrudedScreenBounds | null {
+  const [minLng, minLat, maxLng, maxLat] = bbox;
+  const p1 = map.project([minLng, minLat]);
+  const p2 = map.project([maxLng, minLat]);
+  const p3 = map.project([maxLng, maxLat]);
+  const p4 = map.project([minLng, maxLat]);
+
+  const minX = Math.min(p1.x, p2.x, p3.x, p4.x);
+  const maxX = Math.max(p1.x, p2.x, p3.x, p4.x);
+  const groundMinY = Math.min(p1.y, p2.y, p3.y, p4.y);
+  const groundMaxY = Math.max(p1.y, p2.y, p3.y, p4.y);
+
+  if (![minX, groundMinY, maxX, groundMaxY].every(Number.isFinite)) return null;
+
+  const pitchRad = (map.getPitch() * Math.PI) / 180;
+  const zoom = map.getZoom();
+  const centerLat = map.getCenter().lat;
+  const metersPerPx = (40075016.686 * Math.cos((centerLat * Math.PI) / 180)) / (512 * 2 ** zoom);
+  const heightPx = metersPerPx > 0 ? (heightMeters / metersPerPx) * Math.sin(pitchRad) : 0;
+  const roofMinY = groundMinY - heightPx;
+
+  return {
+    minX,
+    maxX,
+    minY: roofMinY,
+    maxY: groundMaxY,
+    groundMinY,
+    groundMaxY,
+    roofMinY,
+  };
+}
 
 export function projectedExtrusionBounds(
   map: MapLibreMap,
@@ -871,6 +927,119 @@ function polygonGeometryAreaMeters(geometry: any, origin: [number, number]): num
   return totalArea;
 }
 
+export function segmentsIntersect(
+  x1: number, y1: number, x2: number, y2: number,
+  x3: number, y3: number, x4: number, y4: number,
+): boolean {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+  if (Math.abs(denom) < 1e-9) return false;
+  const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+  const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+  return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+}
+
+export function pointInUVCoords(x: number, y: number, ptsX: number[], ptsY: number[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ptsX.length - 1; i < ptsX.length; j = i++) {
+    const xi = ptsX[i];
+    const yi = ptsY[i];
+    const xj = ptsX[j];
+    const yj = ptsY[j];
+    const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+export function polygonIntersectsWedge(
+  geometry: any,
+  venueCenter: [number, number],
+  ux: number, uy: number,
+  vx: number, vy: number,
+  farDepthLimit: number,
+  maxEffectiveDepth: number,
+  targetMaxU: number,
+  targetLeftV: number,
+  targetRightV: number,
+  camHalfWidth: number,
+  exitMargin: number,
+): boolean {
+  const parts = polygonParts(geometry);
+  if (!parts.length) return false;
+
+  const backU = farDepthLimit;
+  const backLeftV = targetLeftV - exitMargin;
+  const backRightV = targetRightV + exitMargin;
+
+  const transU = Math.min(targetMaxU, maxEffectiveDepth);
+  const transLeftV = targetLeftV - exitMargin;
+  const transRightV = targetRightV + exitMargin;
+
+  const frontU = maxEffectiveDepth;
+  const frontLeftV = -camHalfWidth - exitMargin;
+  const frontRightV = camHalfWidth + exitMargin;
+
+  for (const part of parts) {
+    const ring = Array.isArray(part) && Array.isArray(part[0]) ? (part[0] as Array<[number, number]>) : (part as any);
+    if (!ring || ring.length < 3) continue;
+
+    const ptsU: number[] = new Array(ring.length);
+    const ptsV: number[] = new Array(ring.length);
+
+    for (let i = 0; i < ring.length; i++) {
+      const [pdx, pdy] = localMeters(ring[i], venueCenter);
+      const pu = pdx * ux + pdy * uy;
+      const pv = pdx * vx + pdy * vy;
+      ptsU[i] = pu;
+      ptsV[i] = pv;
+
+      if (pu >= farDepthLimit && pu <= maxEffectiveDepth) {
+        let left: number;
+        let right: number;
+        if (pu <= targetMaxU) {
+          left = targetLeftV;
+          right = targetRightV;
+        } else {
+          const span = Math.max(5, maxEffectiveDepth - targetMaxU);
+          const t = Math.min(1, Math.max(0, (pu - targetMaxU) / span));
+          left = (1 - t) * targetLeftV + t * (-camHalfWidth);
+          right = (1 - t) * targetRightV + t * camHalfWidth;
+        }
+        if (pv >= left - exitMargin && pv <= right + exitMargin) {
+          return true;
+        }
+      }
+    }
+
+    for (let i = 0; i < ring.length - 1; i++) {
+      const u1 = ptsU[i];
+      const v1 = ptsV[i];
+      const u2 = ptsU[i + 1];
+      const v2 = ptsV[i + 1];
+
+      const edgeMinU = Math.min(u1, u2);
+      const edgeMaxU = Math.max(u1, u2);
+      const edgeMinV = Math.min(v1, v2);
+      const edgeMaxV = Math.max(v1, v2);
+
+      if (edgeMaxU < backU || edgeMinU > frontU) continue;
+      if (edgeMaxV < Math.min(backLeftV, frontLeftV) || edgeMinV > Math.max(backRightV, frontRightV)) continue;
+
+      if (segmentsIntersect(u1, v1, u2, v2, backU, backLeftV, transU, transLeftV)) return true;
+      if (segmentsIntersect(u1, v1, u2, v2, transU, transLeftV, frontU, frontLeftV)) return true;
+      if (segmentsIntersect(u1, v1, u2, v2, backU, backRightV, transU, transRightV)) return true;
+      if (segmentsIntersect(u1, v1, u2, v2, transU, transRightV, frontU, frontRightV)) return true;
+      if (segmentsIntersect(u1, v1, u2, v2, backU, backLeftV, backU, backRightV)) return true;
+      if (segmentsIntersect(u1, v1, u2, v2, frontU, frontLeftV, frontU, frontRightV)) return true;
+    }
+
+    const centerU = (Math.max(farDepthLimit, targetMaxU) + maxEffectiveDepth) * 0.5;
+    if (pointInUVCoords(centerU, 0, ptsU, ptsV)) return true;
+  }
+
+  return false;
+}
+
 function buildPersistentNearFieldAtlas(
   providerFeatures: Array<{ id?: string | number; properties?: Record<string, unknown> | null; geometry?: any }>,
   selectedFeatures: StreetFeature[],
@@ -946,6 +1115,17 @@ function buildPersistentNearFieldAtlas(
     const atlasId = part.nearField ? `near:${nearIndex++}` : `sibling:${siblingIndex++}`;
     const [dx, dy] = part.center ? localMeters(part.center, venueCenter) : [0, 0];
     const coords = geometryCoordinates(part.geometry);
+    let minLng = Infinity;
+    let minLat = Infinity;
+    let maxLng = -Infinity;
+    let maxLat = -Infinity;
+    coords.forEach(([lng, lat]) => {
+      minLng = Math.min(minLng, lng);
+      minLat = Math.min(minLat, lat);
+      maxLng = Math.max(maxLng, lng);
+      maxLat = Math.max(maxLat, lat);
+    });
+    const bbox: [number, number, number, number] = [minLng, minLat, maxLng, maxLat];
     const radiusMetersPart = part.center ? Math.max(...coords.map((point) => centerDistanceMeters(point, part.center!)), 0) : 0;
     const feature = {
       type: 'Feature',
@@ -964,41 +1144,14 @@ function buildPersistentNearFieldAtlas(
         dx,
         dy,
         radiusMeters: radiusMetersPart,
+        bbox,
       },
     };
     features.push(feature);
     if (part.nearField) nearFeatures.push(feature);
   });
 
-  // A per-building layer is what gives MapLibre a true native opacity transition,
-  // but style-layer count can become expensive in exceptionally dense cities.
-  // Keep the closest buildings individually animated and downgrade any overflow
-  // to the shared sibling layer so geometry remains visible without unbounded
-  // draw/style overhead.
   const overflowFeatures: any[] = [];
-  if (nearFeatures.length > NEAR_FIELD_MAX_INDIVIDUAL_LAYERS) {
-    const animatedIds = new Set(
-      [...nearFeatures]
-        .sort((a, b) => {
-          const aCenter = a.meta?.center ?? geometryCentroid(a.geometry);
-          const bCenter = b.meta?.center ?? geometryCentroid(b.geometry);
-          const aDistance = aCenter ? centerDistanceMeters(aCenter, venueCenter) : Number.POSITIVE_INFINITY;
-          const bDistance = bCenter ? centerDistanceMeters(bCenter, venueCenter) : Number.POSITIVE_INFINITY;
-          return aDistance - bDistance;
-        })
-        .slice(0, NEAR_FIELD_MAX_INDIVIDUAL_LAYERS)
-        .map((feature) => String(feature.properties.atlasId)),
-    );
-    nearFeatures.length = 0;
-    features.forEach((feature) => {
-      if (feature.properties?.role !== 'near') return;
-      if (animatedIds.has(String(feature.properties.atlasId))) nearFeatures.push(feature);
-      else {
-        feature.properties.role = 'sibling';
-        overflowFeatures.push(feature);
-      }
-    });
-  }
 
   authored.forEach((feature) => {
     features.push({
@@ -1379,9 +1532,18 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
   const renderTimesRef = useRef<number[]>([]);
   const lastFpsPublishAtRef = useRef(0);
   const landmarkLayersRef = useRef<StreetViewLandmarkLayer[]>([]);
-  const nearFieldLayerIdsRef = useRef<string[]>([]);
+  const settledHiddenIdsRef = useRef<Set<string>>(new Set());
+  const hiddenAtlasIdsRef = settledHiddenIdsRef;
+  const fadeOutSlotsRef = useRef<NearFieldFadeSlot[]>([
+    { layerId: NEAR_FIELD_FADE_OUT_0_LAYER_ID, activeIds: new Set(), timeoutId: null, startTime: 0 },
+    { layerId: NEAR_FIELD_FADE_OUT_1_LAYER_ID, activeIds: new Set(), timeoutId: null, startTime: 0 },
+  ]);
+  const fadeInSlotsRef = useRef<NearFieldFadeSlot[]>([
+    { layerId: NEAR_FIELD_FADE_IN_0_LAYER_ID, activeIds: new Set(), timeoutId: null, startTime: 0 },
+    { layerId: NEAR_FIELD_FADE_IN_1_LAYER_ID, activeIds: new Set(), timeoutId: null, startTime: 0 },
+  ]);
   const suppressClickRef = useRef(false);
-  const refreshOcclusionRef = useRef<(animate?: boolean) => void>(() => {});
+  const refreshOcclusionRef = useRef<() => void>(() => {});
   const setTerrainProviderPlateVisibilityRef = useRef<(terrainEnabled: boolean) => void>(() => {});
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [cameraState, setCameraState] = useState<CameraState>(cameraRef.current);
@@ -1479,7 +1641,6 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       zoom: camera.zoom,
       pitch: camera.pitch,
       bearing: camera.bearing,
-      padding: initialPadding,
       minZoom: 15.5,
       maxZoom: 19,
       minPitch: 45,
@@ -1501,7 +1662,12 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         powerPreference: 'high-performance',
       },
     });
+    map.setPadding(initialPadding);
     mapRef.current = map;
+    if (typeof window !== 'undefined') {
+      (window as any).__map = map;
+      (window as any).__hiddenAtlasIds = hiddenAtlasIdsRef.current;
+    }
 
     const updatePadding = () => {
       if (!mapRef.current) return;
@@ -1558,18 +1724,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     const culledProviderIds = new Set<string>();
     let supplementalContextAttempted = false;
     let nearFieldAtlas: ReturnType<typeof buildPersistentNearFieldAtlas> | null = null;
-    let overflowOccluderIdsKey = '';
-    let overflowOccluderOpacity = visualRef.current.buildingOpacity;
-    const overflowOccluderStates = new Map<string, OcclusionState>();
-    const nearFieldLayers = new Map<string, {
-      layerId: string;
-      targetOpacity: number;
-      targetBase: number;
-      distanceMeters: number;
-      occlusionState: OcclusionState;
-    }>();
     const neighborhoodPulseTimeouts = new Set<number>();
-    let neighborhoodPulseInterval = 0;
     let arrivalStartTimeout = 0;
     let arrivalFinishTimeout = 0;
 
@@ -1723,8 +1878,16 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       });
     };
 
+    let transamericaAttempted = false;
+    let coitTowerAttempted = false;
+
     const installTransamericaLandmark = () => {
-      if (map.getLayer(TRANSAMERICA_LANDMARK_LAYER_ID) || !map.getSource(BUILDING_SOURCE_ID)) return;
+      if (transamericaAttempted || map.getLayer(TRANSAMERICA_LANDMARK_LAYER_ID) || !map.getSource(BUILDING_SOURCE_ID)) return;
+      if (centerDistanceMeters(DEFAULT_CENTER, [-122.40279, 37.79517]) > 1500) {
+        transamericaAttempted = true;
+        return;
+      }
+      transamericaAttempted = true;
       const sourceFeatures = map.querySourceFeatures(BUILDING_SOURCE_ID, { sourceLayer: BUILDING_SOURCE_LAYER });
       const landmark = resolveTransamericaPyramid(sourceFeatures);
       if (!landmark) return;
@@ -1744,7 +1907,12 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     };
 
     const installCoitTowerLandmark = () => {
-      if (map.getLayer(COIT_TOWER_LANDMARK_LAYER_ID) || !map.getSource(BUILDING_SOURCE_ID)) return;
+      if (coitTowerAttempted || map.getLayer(COIT_TOWER_LANDMARK_LAYER_ID) || !map.getSource(BUILDING_SOURCE_ID)) return;
+      if (centerDistanceMeters(DEFAULT_CENTER, [-122.40582, 37.80239]) > 1500) {
+        coitTowerAttempted = true;
+        return;
+      }
+      coitTowerAttempted = true;
       const sourceFeatures = map.querySourceFeatures(BUILDING_SOURCE_ID, { sourceLayer: BUILDING_SOURCE_LAYER });
       const landmark = resolveCoitTower(sourceFeatures);
       if (!landmark) return;
@@ -1766,282 +1934,398 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       installCoitTowerLandmark();
     };
 
-    const refreshNearFieldOcclusion = (animate = revealRef.current) => {
-      if (!nearFieldAtlas) {
-        setOccludingPolygonCount(0);
+    const applyOcclusionFilter = () => {
+      if (disposed) return;
+      const allExcluded = new Set<string>(settledHiddenIdsRef.current);
+      fadeOutSlotsRef.current.forEach((slot) => {
+        slot.activeIds.forEach((id) => allExcluded.add(id));
+      });
+      fadeInSlotsRef.current.forEach((slot) => {
+        slot.activeIds.forEach((id) => allExcluded.add(id));
+      });
+
+      const effectiveHidden = Array.from(allExcluded).sort();
+
+      const nearFilter = effectiveHidden.length
+        ? ['all', ['==', ['get', 'role'], 'near'], ['!', ['in', ['get', 'atlasId'], ['literal', effectiveHidden]]]]
+        : ['==', ['get', 'role'], 'near'];
+
+      if (map.getLayer(NEAR_FIELD_LAYER_ID)) {
+        map.setFilter(NEAR_FIELD_LAYER_ID, nearFilter as any);
+      }
+
+      const siblingFilter = effectiveHidden.length
+        ? ['all', ['==', ['get', 'role'], 'sibling'], ['!', ['in', ['get', 'atlasId'], ['literal', effectiveHidden]]]]
+        : ['==', ['get', 'role'], 'sibling'];
+
+      if (map.getLayer(AUTHORED_CONTEXT_LAYER_ID)) {
+        map.setFilter(AUTHORED_CONTEXT_LAYER_ID, siblingFilter as any);
+      }
+
+      if (!presentationOnly && !cameraMotion.raf) {
+        let fadeOutCount = 0;
+        fadeOutSlotsRef.current.forEach((s) => { fadeOutCount += s.activeIds.size; });
+        setOccludingPolygonCount(settledHiddenIdsRef.current.size + fadeOutCount);
+      }
+    };
+
+    const refreshNearFieldOcclusion = () => {
+      if (disposed || !nearFieldAtlas) {
+        if (!presentationOnly && !cameraMotion.raf) setOccludingPolygonCount(0);
         return;
       }
       const authored = selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset');
       const activeVenueFeatures = authored.length ? authored : selectedFeaturesRef.current;
       const venueCenter = geometryCenter(activeVenueFeatures);
-      const targetBounds = projectedTargetExtrusionBounds(map, activeVenueFeatures);
-      if (!targetBounds || !venueCenter) return;
+      if (!venueCenter) return;
 
-      const targetWidth = Math.max(1, targetBounds.maxX - targetBounds.minX);
-      const targetHeight = Math.max(1, targetBounds.maxY - targetBounds.minY);
-      const targetArea = targetWidth * targetHeight;
+      if (visualRef.current.occlusionMode === 'off') {
+        let hadAny = settledHiddenIdsRef.current.size > 0;
+        fadeOutSlotsRef.current.forEach((s) => {
+          if (s.timeoutId) { window.clearTimeout(s.timeoutId); s.timeoutId = null; }
+          if (s.activeIds.size > 0) hadAny = true;
+          s.activeIds.clear();
+          if (map.getLayer(s.layerId)) {
+            map.setFilter(s.layerId, ['==', ['get', 'atlasId'], '__none__']);
+          }
+        });
+        fadeInSlotsRef.current.forEach((s) => {
+          if (s.timeoutId) { window.clearTimeout(s.timeoutId); s.timeoutId = null; }
+          if (s.activeIds.size > 0) hadAny = true;
+          s.activeIds.clear();
+          if (map.getLayer(s.layerId)) {
+            map.setFilter(s.layerId, ['==', ['get', 'atlasId'], '__none__']);
+          }
+        });
+        if (hadAny) {
+          settledHiddenIdsRef.current.clear();
+          if (!presentationOnly && !cameraMotion.raf) setOccludingPolygonCount(0);
+          if (map.getLayer(NEAR_FIELD_LAYER_ID)) {
+            map.setFilter(NEAR_FIELD_LAYER_ID, ['==', ['get', 'role'], 'near']);
+          }
+          if (map.getLayer(AUTHORED_CONTEXT_LAYER_ID)) {
+            map.setFilter(AUTHORED_CONTEXT_LAYER_ID, ['==', ['get', 'role'], 'sibling']);
+          }
+        }
+        return;
+      }
 
-      const pad = OCCLUSION_CONFIG.corridorPaddingPx;
-      const corridorMinX = targetBounds.minX - pad;
-      const corridorMaxX = targetBounds.maxX + pad;
-      const corridorMinY = targetBounds.minY - pad;
-      const corridorMaxY = targetBounds.maxY + pad;
+      const cameraBearing = map.getBearing();
+      const cameraSideRadians = ((cameraBearing + 180) * Math.PI) / 180;
+      const ux = Math.sin(cameraSideRadians);
+      const uy = Math.cos(cameraSideRadians);
+      const vx = Math.cos(cameraSideRadians);
+      const vy = -Math.sin(cameraSideRadians);
 
-      const cameraSideRadians = ((map.getBearing() + 180) * Math.PI) / 180;
-      const cameraSideX = Math.sin(cameraSideRadians);
-      const cameraSideY = Math.cos(cameraSideRadians);
       const cameraDistance = estimateCameraDistanceMeters(map);
-      const isPulledBack = cameraDistance > OCCLUSION_CONFIG.farDistanceMeters;
-      const isClose = cameraDistance < OCCLUSION_CONFIG.closeDistanceMeters;
+      const maxEffectiveDepth = Math.min(cameraDistance, OCCLUSION_CONFIG.maxOcclusionDistanceMeters);
 
-      type Candidate = {
-        atlasId: string;
-        feature: any;
-        isNearField: boolean;
-        towardCameraMeters: number;
-        coverage: number;
-        isImmediateNeighbor: boolean;
-        previousState: OcclusionState;
-        state: OcclusionState;
-      };
+      // Compute target envelope in (u, v) space
+      const targetCoords = activeVenueFeatures.flatMap((f) => geometryCoordinates(f.geometry));
+      let targetMinU = Infinity;
+      let targetMaxU = -Infinity;
+      let targetMinV = Infinity;
+      let targetMaxV = -Infinity;
 
-      const candidates: Candidate[] = [];
-      const evaluatedStates = new Map<string, OcclusionState>();
+      targetCoords.forEach((pt) => {
+        const [dx, dy] = localMeters(pt, venueCenter);
+        const u = dx * ux + dy * uy;
+        const v = dx * vx + dy * vy;
+        if (u < targetMinU) targetMinU = u;
+        if (u > targetMaxU) targetMaxU = u;
+        if (v < targetMinV) targetMinV = v;
+        if (v > targetMaxV) targetMaxV = v;
+      });
 
-      const evaluateFeature = (feature: any, isNearField: boolean) => {
+      if (!Number.isFinite(targetMinU)) {
+        targetMinU = -15; targetMaxU = 15;
+        targetMinV = -15; targetMaxV = 15;
+      }
+
+      const targetSideMargin = OCCLUSION_CONFIG.targetSideMarginMeters;
+      const targetLeftV = targetMinV - targetSideMargin;
+      const targetRightV = targetMaxV + targetSideMargin;
+      const farDepthLimit = targetMinU - OCCLUSION_CONFIG.targetRearDepthMarginMeters;
+      const camHalfWidth = OCCLUSION_CONFIG.cameraSideWedgeWidthMeters * 0.5;
+
+      const nextHiddenIds: string[] = [];
+
+      const evaluateCandidate = (feature: any) => {
         const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
         if (!atlasId) return;
 
-        const previousState: OcclusionState = isNearField
-          ? (nearFieldLayers.get(atlasId)?.occlusionState ?? 'normal')
-          : (overflowOccluderStates.get(atlasId) ?? 'normal');
-
-        if (visualRef.current.occlusionMode === 'off') {
-          evaluatedStates.set(atlasId, 'normal');
+        // Target protection: Never hide selected venue or authored parts
+        if (feature.properties?.selected || atlasId.startsWith('authored:')) {
           return;
         }
 
         const dx = Number(feature.meta?.dx ?? 0);
         const dy = Number(feature.meta?.dy ?? 0);
         const radiusMeters = Number(feature.meta?.radiusMeters ?? 10);
-        const height = Number(feature.properties?.height ?? 12);
 
-        // Fast scalar rejection: strictly behind venue or behind camera
-        const towardCameraMeters = dx * cameraSideX + dy * cameraSideY;
-        if (towardCameraMeters + radiusMeters <= 0 || (cameraDistance > 0 && towardCameraMeters - radiusMeters >= cameraDistance)) {
-          evaluatedStates.set(atlasId, 'normal');
+        // Stage 1: Coarse Depth Rejection
+        const candCenterU = dx * ux + dy * uy;
+        if (candCenterU + radiusMeters < farDepthLimit) {
+          return; // Behind target
+        }
+        if (candCenterU - radiusMeters > maxEffectiveDepth) {
+          return; // Behind camera or past max depth
+        }
+
+        // Stage 2: Coarse Lateral Rejection
+        const candCenterV = dx * vx + dy * vy;
+        const isCurrentlyOccluded = settledHiddenIdsRef.current.has(atlasId) ||
+          fadeOutSlotsRef.current.some((s) => s.activeIds.has(atlasId));
+        const exitMargin = isCurrentlyOccluded ? OCCLUSION_CONFIG.wedgeExitMarginMeters : 0;
+
+        const globalWedgeMinV = targetLeftV - exitMargin;
+        const globalWedgeMaxV = targetRightV + exitMargin;
+
+        if (candCenterV - radiusMeters > globalWedgeMaxV || candCenterV + radiusMeters < globalWedgeMinV) {
+          return; // Outside lateral span
+        }
+
+        const clampedCenterU = Math.max(farDepthLimit, Math.min(maxEffectiveDepth, candCenterU));
+        let centerLeftV: number;
+        let centerRightV: number;
+        if (clampedCenterU <= targetMaxU) {
+          centerLeftV = targetLeftV - exitMargin;
+          centerRightV = targetRightV + exitMargin;
+        } else {
+          const span = Math.max(5, maxEffectiveDepth - targetMaxU);
+          const t = Math.min(1, Math.max(0, (clampedCenterU - targetMaxU) / span));
+          centerLeftV = (1 - t) * targetLeftV + t * (-camHalfWidth) - exitMargin;
+          centerRightV = (1 - t) * targetRightV + t * camHalfWidth + exitMargin;
+        }
+
+        if (candCenterV - radiusMeters > centerRightV || candCenterV + radiusMeters < centerLeftV) {
           return;
         }
 
-        // Project candidate extrusion
-        const candBounds = projectedExtrusionBounds(map, feature.geometry, height);
-        if (!candBounds) {
-          evaluatedStates.set(atlasId, 'normal');
+        if (candCenterV - radiusMeters >= centerLeftV && candCenterV + radiusMeters <= centerRightV) {
+          nextHiddenIds.push(atlasId);
           return;
         }
 
-        // Check intersection with padded corridor
-        const inCorridor = candBounds.maxX >= corridorMinX
-          && candBounds.minX <= corridorMaxX
-          && candBounds.maxY >= corridorMinY
-          && candBounds.minY <= corridorMaxY;
-
-        if (!inCorridor) {
-          evaluatedStates.set(atlasId, 'normal');
-          return;
+        // Stage 3: Footprint Polygon vs Wedge Intersection
+        if (
+          polygonIntersectsWedge(
+            feature.geometry,
+            venueCenter,
+            ux, uy, vx, vy,
+            farDepthLimit,
+            maxEffectiveDepth,
+            targetMaxU,
+            targetLeftV,
+            targetRightV,
+            camHalfWidth,
+            exitMargin,
+          )
+        ) {
+          nextHiddenIds.push(atlasId);
         }
-
-        // Compute screen-space coverage over target venue
-        const overlapW = Math.max(0, Math.min(candBounds.maxX, targetBounds.maxX) - Math.max(candBounds.minX, targetBounds.minX));
-        const overlapH = Math.max(0, Math.min(candBounds.maxY, targetBounds.maxY) - Math.max(candBounds.minY, targetBounds.minY));
-        const coverage = Math.min(1, (overlapW * overlapH) / targetArea);
-
-        const distanceToVenue = Math.hypot(dx, dy);
-        const isImmediateNeighbor = distanceToVenue <= OCCLUSION_CONFIG.immediateNeighborRadiusMeters;
-
-        candidates.push({
-          atlasId,
-          feature,
-          isNearField,
-          towardCameraMeters,
-          coverage,
-          isImmediateNeighbor,
-          previousState,
-          state: 'ghosted',
-        });
       };
 
-      nearFieldAtlas.nearFeatures.forEach((feat: any) => evaluateFeature(feat, true));
-      nearFieldAtlas.overflowFeatures.forEach((feat: any) => evaluateFeature(feat, false));
+      nearFieldAtlas.nearFeatures.forEach(evaluateCandidate);
+      nearFieldAtlas.overflowFeatures.forEach(evaluateCandidate);
 
-      // Sort candidates in depth order (closest to camera first)
-      candidates.sort((a, b) => b.towardCameraMeters - a.towardCameraMeters);
+      const nextSet = new Set(nextHiddenIds);
+      let changed = false;
 
-      // Initial classification with hysteresis
-      candidates.forEach((cand) => {
-        const enterThreshold = cand.isImmediateNeighbor
-          ? OCCLUSION_CONFIG.immediateNeighborMaxOverlap
-          : isPulledBack
-            ? OCCLUSION_CONFIG.hiddenEnterOverlap * 0.85
-            : isClose
-              ? 0.75
-              : OCCLUSION_CONFIG.hiddenEnterOverlap;
+      // Identify newly entering wedge (target state: hidden)
+      const newlyEntering: string[] = [];
+      nextSet.forEach((id) => {
+        const isSettledHidden = settledHiddenIdsRef.current.has(id);
+        const isFadingOut = fadeOutSlotsRef.current.some((s) => s.activeIds.has(id));
+        if (!isSettledHidden && !isFadingOut) {
+          newlyEntering.push(id);
+        }
+      });
 
-        const exitThreshold = cand.isImmediateNeighbor
-          ? OCCLUSION_CONFIG.immediateNeighborMaxOverlap * 0.8
-          : isPulledBack
-            ? OCCLUSION_CONFIG.hiddenExitOverlap * 0.85
-            : isClose
-              ? 0.55
-              : OCCLUSION_CONFIG.hiddenExitOverlap;
+      // Identify newly exiting wedge (target state: visible)
+      const newlyExiting: string[] = [];
+      settledHiddenIdsRef.current.forEach((id) => {
+        if (!nextSet.has(id)) {
+          newlyExiting.push(id);
+          settledHiddenIdsRef.current.delete(id);
+        }
+      });
+      fadeOutSlotsRef.current.forEach((slot) => {
+        const removedFromSlot: string[] = [];
+        slot.activeIds.forEach((id) => {
+          if (!nextSet.has(id)) {
+            removedFromSlot.push(id);
+          }
+        });
+        if (removedFromSlot.length > 0) {
+          removedFromSlot.forEach((id) => {
+            slot.activeIds.delete(id);
+            newlyExiting.push(id);
+          });
+          if (slot.activeIds.size === 0) {
+            if (slot.timeoutId) {
+              window.clearTimeout(slot.timeoutId);
+              slot.timeoutId = null;
+            }
+            if (map.getLayer(slot.layerId)) {
+              map.setFilter(slot.layerId, ['==', ['get', 'atlasId'], '__none__']);
+            }
+          } else if (map.getLayer(slot.layerId)) {
+            map.setFilter(slot.layerId, ['in', ['get', 'atlasId'], ['literal', Array.from(slot.activeIds)]]);
+          }
+        }
+      });
 
-        if (cand.previousState === 'hidden') {
-          cand.state = cand.coverage >= exitThreshold ? 'hidden' : 'ghosted';
+      // If any newly entering buildings were currently fading in, cancel their fade in
+      if (newlyEntering.length > 0) {
+        newlyEntering.forEach((id) => {
+          fadeInSlotsRef.current.forEach((slot) => {
+            if (slot.activeIds.has(id)) {
+              slot.activeIds.delete(id);
+              if (slot.activeIds.size === 0) {
+                if (slot.timeoutId) {
+                  window.clearTimeout(slot.timeoutId);
+                  slot.timeoutId = null;
+                }
+                if (map.getLayer(slot.layerId)) {
+                  map.setFilter(slot.layerId, ['==', ['get', 'atlasId'], '__none__']);
+                }
+              } else if (map.getLayer(slot.layerId)) {
+                map.setFilter(slot.layerId, ['in', ['get', 'atlasId'], ['literal', Array.from(slot.activeIds)]]);
+              }
+            }
+          });
+        });
+      }
+
+      if (newlyEntering.length > 0) {
+        changed = true;
+        if (OCCLUSION_CONFIG.fadeTransitionEnabled) {
+          const slots = fadeOutSlotsRef.current;
+          let targetSlot = slots.find((s) => s.activeIds.size === 0);
+          const now = performance.now();
+          if (!targetSlot) {
+            targetSlot = slots[0];
+            for (let i = 1; i < slots.length; i++) {
+              if (slots[i].startTime < targetSlot.startTime) {
+                targetSlot = slots[i];
+              }
+            }
+            if (targetSlot.timeoutId) {
+              window.clearTimeout(targetSlot.timeoutId);
+              targetSlot.timeoutId = null;
+            }
+            targetSlot.activeIds.forEach((id) => settledHiddenIdsRef.current.add(id));
+            targetSlot.activeIds.clear();
+          }
+
+          newlyEntering.forEach((id) => targetSlot!.activeIds.add(id));
+          targetSlot.startTime = now;
+
+          const layerId = targetSlot.layerId;
+          if (map.getLayer(layerId)) {
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity', visualRef.current.buildingOpacity);
+            map.setFilter(layerId, ['in', ['get', 'atlasId'], ['literal', Array.from(targetSlot.activeIds)]]);
+            const durationMs = OCCLUSION_CONFIG.fadeOutDurationMs;
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity-transition', { duration: durationMs, delay: 0 } as any);
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity', 0.0);
+
+            const slotRef = targetSlot;
+            targetSlot.timeoutId = window.setTimeout(() => {
+              if (disposed) return;
+              slotRef.timeoutId = null;
+              slotRef.activeIds.forEach((id) => settledHiddenIdsRef.current.add(id));
+              slotRef.activeIds.clear();
+              if (map.getLayer(slotRef.layerId)) {
+                map.setFilter(slotRef.layerId, ['==', ['get', 'atlasId'], '__none__']);
+              }
+              applyOcclusionFilter();
+            }, durationMs);
+          }
         } else {
-          cand.state = cand.coverage >= enterThreshold ? 'hidden' : 'ghosted';
-        }
-      });
-
-      // Cumulative transmittance check along sightline
-      const ghostOpacity = visualRef.current.occluderOpacity;
-      const ghostWallTransmittance = Math.pow(1 - ghostOpacity, 2);
-      const ghostedCandidates = candidates.filter((c) => c.state === 'ghosted');
-      let currentTransmittance = Math.pow(ghostWallTransmittance, ghostedCandidates.length);
-
-      if (currentTransmittance < OCCLUSION_CONFIG.minTargetTransmittance) {
-        const candidatesToEscalate = [...ghostedCandidates]
-          .filter((c) => !c.isImmediateNeighbor)
-          .sort((a, b) => b.coverage - a.coverage);
-
-        for (const cand of candidatesToEscalate) {
-          if (currentTransmittance >= OCCLUSION_CONFIG.minTargetTransmittance) break;
-          cand.state = 'hidden';
-          currentTransmittance /= ghostWallTransmittance;
+          newlyEntering.forEach((id) => settledHiddenIdsRef.current.add(id));
         }
       }
 
-      candidates.forEach((cand) => {
-        evaluatedStates.set(cand.atlasId, cand.state);
-      });
+      if (newlyExiting.length > 0) {
+        changed = true;
+        if (OCCLUSION_CONFIG.fadeTransitionEnabled) {
+          const slots = fadeInSlotsRef.current;
+          let targetSlot = slots.find((s) => s.activeIds.size === 0);
+          const now = performance.now();
+          if (!targetSlot) {
+            targetSlot = slots[0];
+            for (let i = 1; i < slots.length; i++) {
+              if (slots[i].startTime < targetSlot.startTime) {
+                targetSlot = slots[i];
+              }
+            }
+            if (targetSlot.timeoutId) {
+              window.clearTimeout(targetSlot.timeoutId);
+              targetSlot.timeoutId = null;
+            }
+            targetSlot.activeIds.clear();
+          }
 
-      // Apply to nearField individual layers
-      let occluderCount = 0;
-      const transitionDuration = animate
-        ? Math.max(0, Math.min(visualRef.current.occlusionFadeMs, OCCLUSION_CONFIG.transitionDurationMs))
-        : 0;
+          newlyExiting.forEach((id) => targetSlot!.activeIds.add(id));
+          targetSlot.startTime = now;
 
-      nearFieldAtlas.nearFeatures.forEach((feature: any) => {
-        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
-        const entry = nearFieldLayers.get(atlasId);
-        if (!entry) return;
+          const layerId = targetSlot.layerId;
+          if (map.getLayer(layerId)) {
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity-transition', { duration: 0, delay: 0 } as any);
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity', 0.0);
+            map.setFilter(layerId, ['in', ['get', 'atlasId'], ['literal', Array.from(targetSlot.activeIds)]]);
+            const durationMs = OCCLUSION_CONFIG.fadeInDurationMs;
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity-transition', { duration: durationMs, delay: 0 } as any);
+            map.setPaintProperty(layerId, 'fill-extrusion-opacity', visualRef.current.buildingOpacity);
 
-        const state = evaluatedStates.get(atlasId) ?? 'normal';
-        entry.occlusionState = state;
-        if (state !== 'normal') occluderCount += 1;
-
-        const targetOpacity = state === 'hidden'
-          ? OCCLUSION_CONFIG.hiddenOpacity
-          : state === 'ghosted'
-            ? (visualRef.current.occlusionMode === 'hide' ? OCCLUSION_CONFIG.hiddenOpacity : visualRef.current.occluderOpacity)
-            : visualRef.current.buildingOpacity;
-
-        const minHeightValue = Number(feature.properties?.minHeight ?? 0);
-        const minHeight = Number.isFinite(minHeightValue) && minHeightValue >= 0 ? minHeightValue : 0;
-        const targetBase = map.getTerrain() && state !== 'normal' && minHeight <= TERRAIN_OCCLUDER_BASE_METERS
-          ? TERRAIN_OCCLUDER_BASE_METERS
-          : minHeight;
-
-        if (Math.abs(entry.targetBase - targetBase) >= 0.0005) {
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-base', targetBase);
-          entry.targetBase = targetBase;
+            const slotRef = targetSlot;
+            targetSlot.timeoutId = window.setTimeout(() => {
+              if (disposed) return;
+              slotRef.timeoutId = null;
+              slotRef.activeIds.clear();
+              if (map.getLayer(slotRef.layerId)) {
+                map.setFilter(slotRef.layerId, ['==', ['get', 'atlasId'], '__none__']);
+              }
+              applyOcclusionFilter();
+            }, durationMs);
+          }
         }
-
-        if (Math.abs(entry.targetOpacity - targetOpacity) >= 0.002) {
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-opacity-transition', {
-            duration: transitionDuration,
-            delay: 0,
-          } as any);
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-opacity', targetOpacity);
-          entry.targetOpacity = targetOpacity;
-        }
-      });
-
-      // Apply to overflow features via authored layers
-      const overflowGhostedIds: string[] = [];
-      const overflowHiddenIds: string[] = [];
-      nearFieldAtlas.overflowFeatures.forEach((feature: any) => {
-        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
-        const state = evaluatedStates.get(atlasId) ?? 'normal';
-        overflowOccluderStates.set(atlasId, state);
-        if (state === 'ghosted') {
-          overflowGhostedIds.push(atlasId);
-          occluderCount += 1;
-        } else if (state === 'hidden') {
-          overflowHiddenIds.push(atlasId);
-          occluderCount += 1;
-        }
-      });
-
-      const overflowKey = `${overflowGhostedIds.join(',')}|${overflowHiddenIds.join(',')}`;
-      if (overflowKey !== overflowOccluderIdsKey && map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
-        const ghostedMatches = ['in', ['get', 'atlasId'], ['literal', overflowGhostedIds]] as any;
-        const allExcludedMatches = ['in', ['get', 'atlasId'], ['literal', [...overflowGhostedIds, ...overflowHiddenIds]]] as any;
-
-        if (overflowGhostedIds.length || overflowHiddenIds.length) {
-          map.setFilter(AUTHORED_CONTEXT_LAYER_ID, ['all', ['==', ['get', 'role'], 'sibling'], ['!', allExcludedMatches]] as any);
-        } else {
-          map.setFilter(AUTHORED_CONTEXT_LAYER_ID, ['==', ['get', 'role'], 'sibling'] as any);
-        }
-        map.setFilter(AUTHORED_OCCLUDER_LAYER_ID, ghostedMatches);
-        overflowOccluderIdsKey = overflowKey;
       }
 
-      const nextOverflowOpacity = overflowGhostedIds.length
-        ? (visualRef.current.occlusionMode === 'hide' ? OCCLUSION_CONFIG.hiddenOpacity : visualRef.current.occluderOpacity)
-        : visualRef.current.buildingOpacity;
-
-      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID) && Math.abs(nextOverflowOpacity - overflowOccluderOpacity) >= 0.002) {
-        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity', nextOverflowOpacity);
-        overflowOccluderOpacity = nextOverflowOpacity;
+      if (changed) {
+        applyOcclusionFilter();
       }
-
-      setOccludingPolygonCount((current) => current === occluderCount ? current : occluderCount);
     };
 
     const runNeighborhoodPulse = () => {
-      if (disposed || !nearFieldAtlas || !nearFieldLayers.size) return;
+      if (disposed || !nearFieldAtlas || !map.getLayer(NEAR_FIELD_LAYER_ID)) return;
       const pulseColor = mixHexColors(
         visualRef.current.buildingColor,
         visualRef.current.selectedColor,
         NEIGHBORHOOD_PULSE_COLOR_MIX,
       );
 
-      nearFieldLayers.forEach((entry) => {
-        const waveDelay = Math.round((entry.distanceMeters / NEIGHBORHOOD_PULSE_WAVE_SPEED_MPS) * 1000);
-        scheduleNeighborhoodPulseTimeout(() => {
-          if (disposed || !map.getLayer(entry.layerId)) return;
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-color-transition', {
-            duration: NEIGHBORHOOD_PULSE_ATTACK_MS,
-            delay: 0,
-          } as any);
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-color', pulseColor);
-        }, waveDelay);
-        scheduleNeighborhoodPulseTimeout(() => {
-          if (disposed || !map.getLayer(entry.layerId)) return;
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-color-transition', {
-            duration: NEIGHBORHOOD_PULSE_RELEASE_MS,
-            delay: 0,
-          } as any);
-          map.setPaintProperty(entry.layerId, 'fill-extrusion-color', visualRef.current.buildingColor);
-        }, waveDelay + NEIGHBORHOOD_PULSE_ATTACK_MS + NEIGHBORHOOD_PULSE_HOLD_MS);
-      });
+      map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color-transition', {
+        duration: NEIGHBORHOOD_PULSE_ATTACK_MS,
+        delay: 0,
+      } as any);
+      map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', pulseColor);
+      scheduleNeighborhoodPulseTimeout(() => {
+        if (disposed || !map.getLayer(NEAR_FIELD_LAYER_ID)) return;
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color-transition', {
+          duration: NEIGHBORHOOD_PULSE_RELEASE_MS,
+          delay: 0,
+        } as any);
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', visualRef.current.buildingColor);
+      }, NEIGHBORHOOD_PULSE_ATTACK_MS + NEIGHBORHOOD_PULSE_HOLD_MS);
       map.triggerRepaint();
     };
 
-    const startNeighborhoodPulseLoop = () => {
-      if (neighborhoodPulseInterval || disposed) return;
+    const triggerArrivalPulse = () => {
+      if (disposed) return;
       scheduleNeighborhoodPulseTimeout(runNeighborhoodPulse, 850);
-      neighborhoodPulseInterval = window.setInterval(runNeighborhoodPulse, NEIGHBORHOOD_PULSE_INTERVAL_MS);
     };
 
     const installNearFieldAtlas = () => {
@@ -2058,48 +2342,15 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       setOverlappingProviderIds(nearFieldAtlas.overlappingProviderIds);
       setProviderMaskState(nearFieldAtlas.maskedProviderIds, 'nearFieldMasked');
       setProviderContextState(nearFieldAtlas.visibleContextIds, nearFieldAtlas.culledContextIds);
-      const venueCenter = geometryCenter(selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset'))
-        ?? DEFAULT_CENTER;
-
-      nearFieldAtlas.nearFeatures.forEach((feature: any, index: number) => {
-        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? `near:${index}`);
-        const layerId = `${NEAR_FIELD_LAYER_PREFIX}${index}`;
-        map.addLayer({
-          id: layerId,
-          type: 'fill-extrusion',
-          source: AUTHORED_PARTS_SOURCE_ID,
-          filter: ['==', ['get', 'atlasId'], atlasId],
-          paint: {
-            'fill-extrusion-color': visualRef.current.buildingColor,
-            'fill-extrusion-height': ['get', 'height'],
-            'fill-extrusion-base': ['get', 'minHeight'],
-            'fill-extrusion-opacity': visualRef.current.buildingOpacity,
-            'fill-extrusion-opacity-transition': { duration: visualRef.current.occlusionFadeMs, delay: 0 },
-            'fill-extrusion-vertical-gradient': true,
-          },
-        } as any, map.getLayer(STREET_LABEL_LAYER_ID) ? STREET_LABEL_LAYER_ID : undefined);
-        const featureCenter = geometryCentroid(feature.geometry);
-        const distanceMeters = featureCenter ? centerDistanceMeters(featureCenter, venueCenter) : NEAR_FIELD_ATLAS_RADIUS_METERS;
-        const minHeightValue = Number(feature.properties?.minHeight ?? 0);
-        const minHeight = Number.isFinite(minHeightValue) && minHeightValue >= 0 ? minHeightValue : 0;
-        nearFieldLayers.set(atlasId, {
-          layerId,
-          targetOpacity: visualRef.current.buildingOpacity,
-          targetBase: minHeight,
-          distanceMeters,
-          occlusionState: 'normal',
-        });
-        nearFieldLayerIdsRef.current.push(layerId);
-      });
-      refreshNearFieldOcclusion(false);
+      refreshNearFieldOcclusion();
     };
 
-    const updateSelectionSource = (animateOcclusion = revealRef.current) => {
+    const updateSelectionSource = () => {
       const source = map.getSource(SELECTED_SOURCE_ID) as GeoJSONSource | undefined;
       source?.setData(renderSelectionCollection(selectedFeaturesRef.current, 0.16) as any);
       const glowSource = map.getSource(SELECTED_GLOW_SOURCE_ID) as GeoJSONSource | undefined;
       glowSource?.setData(renderSelectionGlowCollection(selectedFeaturesRef.current, 0.34) as any);
-      refreshNearFieldOcclusion(animateOcclusion);
+      refreshNearFieldOcclusion();
     };
     refreshOcclusionRef.current = updateSelectionSource;
 
@@ -2141,14 +2392,19 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
-      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
-        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
-        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
+      if (map.getLayer(NEAR_FIELD_LAYER_ID)) {
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
-      nearFieldLayers.forEach((entry) => {
-        if (!map.getLayer(entry.layerId)) return;
-        map.setPaintProperty(entry.layerId, 'fill-extrusion-color', next.buildingColor);
-        map.setPaintProperty(entry.layerId, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
+      NEAR_FIELD_FADE_OUT_LAYER_IDS.forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, 'fill-extrusion-color', next.buildingColor);
+        }
+      });
+      NEAR_FIELD_FADE_IN_LAYER_IDS.forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, 'fill-extrusion-color', next.buildingColor);
+        }
       });
       if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
         map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-color', next.selectedColor);
@@ -2208,7 +2464,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         refreshVenueScreenPoint();
         setSceneReady(true);
         setLoadDurationMs(performance.now() - loadStartedAtRef.current);
-        startNeighborhoodPulseLoop();
+        triggerArrivalPulse();
         return;
       }
 
@@ -2260,7 +2516,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           map.jumpTo(authoredCamera);
           refreshVenueScreenPoint();
           restoreArrivalLayerTransitions();
-          startNeighborhoodPulseLoop();
+          triggerArrivalPulse();
         }, ARRIVAL_DURATION_MS + 40);
       }, ARRIVAL_HOLD_MS);
     };
@@ -2272,30 +2528,25 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       prewarmStartedRef.current = true;
       setSourceReady(true);
       const authoredCamera = clone(cameraRef.current);
-      const warmBearings = [0, 90, 180, 270].map((offset) => normalizeBearing(authoredCamera.bearing + offset));
 
-      for (let index = 0; index < warmBearings.length; index += 1) {
-        if (disposed) return;
-        setLoadProgress(72 + index * 4);
-        setLoadStage(`Caching 360° neighborhood · ${index + 1}/${warmBearings.length}`);
-        map.jumpTo({ ...authoredCamera, bearing: warmBearings[index] });
-        await waitForMapIdle(map, 1500);
-        cacheVisibleProviderFeatures();
-        installLandmarks();
-      }
+      setLoadProgress(80);
+      setLoadStage('Caching visible neighborhood');
+      cacheVisibleProviderFeatures();
+      installLandmarks();
 
       if (disposed) return;
       setLoadProgress(89);
       setLoadStage('Building persistent venue neighborhood');
       installNearFieldAtlas();
-      await waitForMapIdle(map, 900);
+      await waitForMapIdle(map, 600);
 
       if (disposed) return;
-      setLoadProgress(90);
+      setLoadProgress(92);
       setLoadStage('Restoring authored arrival camera');
       map.jumpTo(authoredCamera);
-      await waitForMapIdle(map, 1200);
+      await waitForMapIdle(map, 600);
       if (disposed) return;
+
       // Reapply the authored atmosphere after tile/style prewarming so the
       // first visible frame always matches the saved Street View profile.
       applyVisuals(visualRef.current);
@@ -2313,27 +2564,29 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         const authoredContextCount = map.getLayer(AUTHORED_CONTEXT_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [AUTHORED_CONTEXT_LAYER_ID] }).length
           : 0;
-        const nearFieldLayersCount = nearFieldLayers.size;
+        const nearFieldCount = map.getLayer(NEAR_FIELD_LAYER_ID)
+          ? map.queryRenderedFeatures({ layers: [NEAR_FIELD_LAYER_ID] }).length
+          : 0;
         const authoredSelectedCount = map.getLayer(AUTHORED_SELECTED_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [AUTHORED_SELECTED_LAYER_ID] }).length
           : 0;
         const selectedCount = map.getLayer(SELECTED_LAYER_ID)
           ? map.queryRenderedFeatures({ layers: [SELECTED_LAYER_ID] }).length
           : 0;
-        const totalContext = contextCount + supplementalContextCount + authoredContextCount + nearFieldLayersCount;
+        const totalContext = contextCount + supplementalContextCount + authoredContextCount + nearFieldCount;
         const totalSelected = authoredSelectedCount + selectedCount;
         return { contextCount: totalContext, selectedCount: totalSelected, total: totalContext + totalSelected };
       };
 
       let renderHealth = countRenderedBuildings();
       if (!renderHealth.total && authoredCamera.pitch > 64) {
-        setLoadProgress(92);
+        setLoadProgress(94);
         setLoadStage('Validating foreground geometry');
         map.jumpTo({ ...authoredCamera, pitch: 60 });
-        await waitForMapIdle(map, 1000);
+        await waitForMapIdle(map, 500);
         renderHealth = countRenderedBuildings();
         map.jumpTo(authoredCamera);
-        await waitForMapIdle(map, 700);
+        await waitForMapIdle(map, 400);
       }
 
       if (disposed) return;
@@ -2347,44 +2600,15 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       }
 
       revealRef.current = true;
-      setLoadProgress(96);
+      setLoadProgress(98);
       setLoadStage('Composing street view');
+      setRenderProbe('ready');
+      setLoadProgress(100);
+      setLoadStage('Arriving');
+      playArrivalAnimation(authoredCamera);
       window.setTimeout(() => {
-        if (disposed) return;
-        const canvas = map.getCanvas();
-        try {
-          const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-          if (gl) {
-            const sampleSize = 48;
-            const pixels = new Uint8Array(sampleSize * sampleSize * 4);
-            gl.readPixels(
-              Math.max(0, Math.floor((canvas.width - sampleSize) / 2)),
-              Math.max(0, Math.floor((canvas.height - sampleSize) / 2)),
-              sampleSize,
-              sampleSize,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              pixels,
-            );
-            let brightPixels = 0;
-            for (let index = 0; index < pixels.length; index += 4) {
-              if (pixels[index] + pixels[index + 1] + pixels[index + 2] > 36) brightPixels += 1;
-            }
-            setRenderProbe(`${brightPixels}/${sampleSize * sampleSize} lit`);
-          } else {
-            setRenderProbe('no WebGL context');
-          }
-        } catch (error) {
-          setRenderProbe('probe failed');
-          console.warn('Street View render probe failed.', error);
-        }
-        setLoadProgress(100);
-        setLoadStage('Arriving');
-        playArrivalAnimation(authoredCamera);
-        window.setTimeout(() => {
-          if (!disposed) setLoadStage('Ready');
-        }, ARRIVAL_HOLD_MS + ARRIVAL_DURATION_MS);
-      }, 180);
+        if (!disposed) setLoadStage('Ready');
+      }, ARRIVAL_HOLD_MS + ARRIVAL_DURATION_MS);
     };
 
     const onLoad = () => {
@@ -2464,6 +2688,19 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         data: { type: 'FeatureCollection', features: [] },
       });
       map.addLayer({
+        id: NEAR_FIELD_LAYER_ID,
+        type: 'fill-extrusion',
+        source: AUTHORED_PARTS_SOURCE_ID,
+        filter: ['==', ['get', 'role'], 'near'],
+        paint: {
+          'fill-extrusion-color': visualRef.current.buildingColor,
+          'fill-extrusion-height': ['get', 'height'],
+          'fill-extrusion-base': ['get', 'minHeight'],
+          'fill-extrusion-opacity': visualRef.current.buildingOpacity,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      } as any);
+      map.addLayer({
         id: AUTHORED_CONTEXT_LAYER_ID,
         type: 'fill-extrusion',
         source: AUTHORED_PARTS_SOURCE_ID,
@@ -2476,20 +2713,36 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
           'fill-extrusion-vertical-gradient': true,
         },
       } as any);
-      map.addLayer({
-        id: AUTHORED_OCCLUDER_LAYER_ID,
-        type: 'fill-extrusion',
-        source: AUTHORED_PARTS_SOURCE_ID,
-        filter: ['in', ['get', 'atlasId'], ['literal', []]],
-        paint: {
-          'fill-extrusion-color': visualRef.current.buildingColor,
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-base': ['get', 'minHeight'],
-          'fill-extrusion-opacity': visualRef.current.buildingOpacity,
-          'fill-extrusion-opacity-transition': { duration: visualRef.current.occlusionFadeMs, delay: 0 },
-          'fill-extrusion-vertical-gradient': true,
-        },
-      } as any);
+      NEAR_FIELD_FADE_OUT_LAYER_IDS.forEach((id) => {
+        map.addLayer({
+          id,
+          type: 'fill-extrusion',
+          source: AUTHORED_PARTS_SOURCE_ID,
+          filter: ['==', ['get', 'atlasId'], '__none__'],
+          paint: {
+            'fill-extrusion-color': visualRef.current.buildingColor,
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'minHeight'],
+            'fill-extrusion-opacity': 0.0,
+            'fill-extrusion-vertical-gradient': true,
+          },
+        } as any);
+      });
+      NEAR_FIELD_FADE_IN_LAYER_IDS.forEach((id) => {
+        map.addLayer({
+          id,
+          type: 'fill-extrusion',
+          source: AUTHORED_PARTS_SOURCE_ID,
+          filter: ['==', ['get', 'atlasId'], '__none__'],
+          paint: {
+            'fill-extrusion-color': visualRef.current.buildingColor,
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'minHeight'],
+            'fill-extrusion-opacity': visualRef.current.buildingOpacity,
+            'fill-extrusion-vertical-gradient': true,
+          },
+        } as any);
+      });
       map.addLayer({
         id: AUTHORED_SELECTED_LAYER_ID,
         type: 'fill-extrusion',
@@ -2603,11 +2856,12 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       }
     };
     const onRender = () => {
+      if (presentationOnly) return;
       const now = performance.now();
       const times = renderTimesRef.current;
       times.push(now);
       while (times.length && now - times[0] > 1000) times.shift();
-      if (times.length > 1 && now - lastFpsPublishAtRef.current >= 250) {
+      if (times.length > 1 && now - lastFpsPublishAtRef.current >= 500) {
         lastFpsPublishAtRef.current = now;
         setFps(Math.min(120, (times.length - 1) * 1000 / Math.max(1, times[times.length - 1] - times[0])));
       }
@@ -2684,6 +2938,9 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         updateSelectionSource();
         refreshLocalStreetLabels();
         refreshVenueScreenPoint();
+        if (!presentationOnly) {
+          setOccludingPolygonCount(hiddenAtlasIdsRef.current.size);
+        }
         cameraMotion.lastTime = 0;
       }
     };
@@ -2825,7 +3082,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         suppressClickRef.current = false;
         return;
       }
-      const hitLayers = [CONTEXT_LAYER_ID, AUTHORED_CONTEXT_LAYER_ID, ...nearFieldLayerIdsRef.current]
+      const hitLayers = [CONTEXT_LAYER_ID, AUTHORED_CONTEXT_LAYER_ID, NEAR_FIELD_LAYER_ID]
         .filter((layerId) => Boolean(map.getLayer(layerId)));
       const hit = map.queryRenderedFeatures(event.point, { layers: hitLayers })[0];
       if (!hit) {
@@ -2855,9 +3112,25 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     canvas.addEventListener('gesturestart', onGesture, { passive: false });
     canvas.addEventListener('gesturechange', onGesture, { passive: false });
+    let lastOcclusionTime = 0;
+    let occlusionTimerId: any = 0;
     const onMapMove = () => {
-      if (revealRef.current) {
-        refreshNearFieldOcclusion(true);
+      if (!revealRef.current) return;
+      const now = performance.now();
+      const elapsed = now - lastOcclusionTime;
+      if (elapsed >= 80) {
+        if (occlusionTimerId) {
+          window.clearTimeout(occlusionTimerId);
+          occlusionTimerId = 0;
+        }
+        lastOcclusionTime = now;
+        refreshNearFieldOcclusion();
+      } else if (!occlusionTimerId) {
+        occlusionTimerId = window.setTimeout(() => {
+          occlusionTimerId = 0;
+          lastOcclusionTime = performance.now();
+          refreshNearFieldOcclusion();
+        }, 80 - elapsed);
       }
     };
     map.on('load', onLoad);
@@ -2873,9 +3146,19 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       refreshOcclusionRef.current = () => {};
       setTerrainProviderPlateVisibilityRef.current = () => {};
       if (cameraMotion.raf) window.cancelAnimationFrame(cameraMotion.raf);
-      if (neighborhoodPulseInterval) window.clearInterval(neighborhoodPulseInterval);
+      if (occlusionTimerId) window.clearTimeout(occlusionTimerId);
       if (arrivalStartTimeout) window.clearTimeout(arrivalStartTimeout);
-      if (arrivalFinishTimeout) window.clearTimeout(arrivalFinishTimeout);
+      fadeOutSlotsRef.current.forEach((slot) => {
+        if (slot.timeoutId) window.clearTimeout(slot.timeoutId);
+        slot.timeoutId = null;
+        slot.activeIds.clear();
+      });
+      fadeInSlotsRef.current.forEach((slot) => {
+        if (slot.timeoutId) window.clearTimeout(slot.timeoutId);
+        slot.timeoutId = null;
+        slot.activeIds.clear();
+      });
+      settledHiddenIdsRef.current.clear();
       neighborhoodPulseTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
       neighborhoodPulseTimeouts.clear();
       canvas.removeEventListener('pointerdown', onPointerDown);
@@ -2899,8 +3182,11 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       if (!presentationOnly) map.off('click', onMapClick);
       map.remove();
       landmarkLayersRef.current = [];
-      nearFieldLayerIdsRef.current = [];
       mapRef.current = null;
+      if (typeof window !== 'undefined') {
+        delete (window as any).__map;
+        delete (window as any).__hiddenAtlasIds;
+      }
     };
   }, [presentationOnly, profileLoaded]);
 
@@ -2934,7 +3220,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     }
     const map = mapRef.current;
     if (map?.getSource(AUTHORED_PARTS_SOURCE_ID)) {
-      refreshOcclusionRef.current(revealRef.current);
+      refreshOcclusionRef.current();
       const center = geometryCenter(selectedFeatures.filter((feature) => feature.properties.source === 'asset')) ?? geometryCenter(selectedFeatures);
       if (center) {
         const point = map.project(center);
@@ -2956,7 +3242,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     map?.jumpTo(next);
     if (map?.getSource(STREET_LABEL_SOURCE_ID)) refreshLocalStreetLabelsForMap(map, DEFAULT_CENTER);
     if (map?.getSource(AUTHORED_PARTS_SOURCE_ID)) {
-      refreshOcclusionRef.current(revealRef.current);
+      refreshOcclusionRef.current();
       const center = geometryCenter(selectedFeaturesRef.current.filter((feature) => feature.properties.source === 'asset')) ?? geometryCenter(selectedFeaturesRef.current);
       if (center) {
         const point = map.project(center);
@@ -2996,14 +3282,19 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
-      if (map.getLayer(AUTHORED_OCCLUDER_LAYER_ID)) {
-        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
-        map.setPaintProperty(AUTHORED_OCCLUDER_LAYER_ID, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
+      if (map.getLayer(NEAR_FIELD_LAYER_ID)) {
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
-      nearFieldLayerIdsRef.current.forEach((layerId) => {
-        if (!map.getLayer(layerId)) return;
-        map.setPaintProperty(layerId, 'fill-extrusion-color', next.buildingColor);
-        map.setPaintProperty(layerId, 'fill-extrusion-opacity-transition', { duration: next.occlusionFadeMs, delay: 0 } as any);
+      NEAR_FIELD_FADE_OUT_LAYER_IDS.forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, 'fill-extrusion-color', next.buildingColor);
+        }
+      });
+      NEAR_FIELD_FADE_IN_LAYER_IDS.forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, 'fill-extrusion-color', next.buildingColor);
+        }
       });
       if (map.getLayer(AUTHORED_SELECTED_LAYER_ID)) {
         map.setPaintProperty(AUTHORED_SELECTED_LAYER_ID, 'fill-extrusion-color', next.selectedColor);
@@ -3023,7 +3314,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         map.setPaintProperty(STREET_LABEL_LAYER_ID, 'text-opacity', next.streetLabelOpacity);
       }
       if ('buildingOpacity' in patch || 'occlusionMode' in patch || 'occluderOpacity' in patch || 'occlusionSensitivity' in patch || 'occlusionFadeMs' in patch) {
-        refreshOcclusionRef.current(revealRef.current);
+        refreshOcclusionRef.current();
       }
       map.setLight({ anchor: 'viewport', color: next.lightColor, intensity: next.lightIntensity, position: [1.15, next.lightAzimuth, next.lightPolar] });
       map.triggerRepaint();
@@ -3042,7 +3333,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     setTerrainEnabled(next);
     setTerrainProviderPlateVisibilityRef.current(next);
     window.requestAnimationFrame(() => {
-      refreshOcclusionRef.current(false);
+      refreshOcclusionRef.current();
       map.triggerRepaint();
     });
     setStatus(next
@@ -3306,7 +3597,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
               {!presentationOnly ? (
                 <div className="mt-3 grid grid-cols-3 gap-1.5">
                   <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Footprints</span><span className="mt-1 block font-mono text-[11px] text-zinc-200">{selectedFeatures.length}</span></div>
-                  <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Sightline</span><span className="mt-1 block text-[10px] text-zinc-200">{occludingPolygonCount ? `${occludingPolygonCount} faded` : 'Clear'}</span></div>
+                  <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">Sightline</span><span className="mt-1 block text-[10px] text-zinc-200">{occludingPolygonCount ? `${occludingPolygonCount} hidden` : 'Clear'}</span></div>
                   <div className="rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2"><span className="block text-[7px] font-bold uppercase tracking-wider text-zinc-600">View</span><span className="mt-1 block text-[10px] text-zinc-200">Fixed orbit</span></div>
                 </div>
               ) : null}
@@ -3405,18 +3696,15 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
                 <div className="rounded-lg border border-white/[0.07] bg-black/20 p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-500">Occlusion assist</span>
-                    <span className="font-mono text-[8px] text-zinc-400">{occludingPolygonCount} active</span>
+                    <span className="font-mono text-[8px] text-zinc-400">{occludingPolygonCount} hidden</span>
                   </div>
-                  <div className="mt-2 grid grid-cols-3 gap-1">
-                    {(['off', 'fade', 'hide'] as const).map((mode) => (
-                      <button key={mode} type="button" onClick={() => applyVisual({ occlusionMode: mode })} className={`rounded-md border px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider ${visualState.occlusionMode === mode ? 'border-red-400/35 bg-red-500/10 text-red-100' : 'border-white/[0.08] bg-black/25 text-zinc-500 hover:text-zinc-300'}`}>{mode}</button>
+                  <div className="mt-2 grid grid-cols-2 gap-1">
+                    {(['hide', 'off'] as const).map((mode) => (
+                      <button key={mode} type="button" onClick={() => applyVisual({ occlusionMode: mode })} className={`rounded-md border px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider ${visualState.occlusionMode === mode ? 'border-red-400/35 bg-red-500/10 text-red-100' : 'border-white/[0.08] bg-black/25 text-zinc-500 hover:text-zinc-300'}`}>{mode === 'hide' ? 'Active (binary hide)' : 'Off'}</button>
                     ))}
                   </div>
-                  <p className="mt-2 text-[8px] leading-3.5 text-zinc-600">Only physical polygons in the current camera-to-venue sightline are split from their provider bucket. Sibling buildings stay solid.</p>
+                  <p className="mt-2 text-[8px] leading-3.5 text-zinc-600">Buildings blocking the line of sight to the venue are hidden via GPU feature exclusion to ensure zero unnecessary draw calls.</p>
                 </div>
-                {visualState.occlusionMode === 'fade' ? <RangeControl label="Occluder opacity" value={visualState.occluderOpacity} min={0.02} max={0.5} step={0.01} onChange={(occluderOpacity) => applyVisual({ occluderOpacity })} /> : null}
-                {visualState.occlusionMode !== 'off' ? <RangeControl label="Occlusion fade" value={visualState.occlusionFadeMs} min={400} max={5000} step={100} suffix="ms" onChange={(occlusionFadeMs) => applyVisual({ occlusionFadeMs })} /> : null}
-                {visualState.occlusionMode !== 'off' ? <RangeControl label="Occlusion sensitivity" value={visualState.occlusionSensitivity} min={20} max={150} step={2} suffix="px" onChange={(occlusionSensitivity) => applyVisual({ occlusionSensitivity })} /> : null}
                 <RangeControl label="Crimson geometry halo" value={visualState.selectedGlowOpacity} min={0} max={0.5} step={0.01} onChange={(selectedGlowOpacity) => applyVisual({ selectedGlowOpacity })} />
                 <RangeControl label="Ground brightness" value={visualState.groundBrightness} min={0.12} max={0.75} step={0.01} onChange={(groundBrightness) => applyVisual({ groundBrightness })} />
                 <RangeControl label="Street-name opacity" value={visualState.streetLabelOpacity} min={0.15} max={1} step={0.01} onChange={(streetLabelOpacity) => applyVisual({ streetLabelOpacity })} />

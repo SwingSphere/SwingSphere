@@ -15,7 +15,7 @@ const ComingSoonPage: React.FC = () => (
 
         <div className="mt-7 flex items-center justify-center gap-2 sm:gap-4 lg:justify-start lg:gap-5">
           <img
-            src="/swingsphere-logo.png"
+            src="/swingsphere-logo_2.png"
             alt=""
             aria-hidden="true"
             className="h-[clamp(2.5rem,11vw,3rem)] w-[clamp(2.5rem,11vw,3rem)] shrink-0 object-contain drop-shadow-[0_0_18px_rgba(239,68,68,0.28)] sm:h-16 sm:w-16 lg:h-20 lg:w-20"

@@ -39,7 +39,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, eyebrow, show
         className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/[0.055] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
         aria-label={showBack ? 'Go back' : 'Explore'}
       >
-        {showBack ? <ArrowLeft className="h-5 w-5" /> : <img src="/swingsphere-logo.png" alt="" className="h-7 w-7 object-contain" />}
+        {showBack ? <ArrowLeft className="h-5 w-5" /> : <img src="/swingsphere-logo_2.png" alt="" className="h-7 w-7 object-contain" />}
       </button>
       <div className="min-w-0 flex-1 px-1">
         {eyebrow ? <div className="truncate text-[9px] font-bold uppercase tracking-[0.2em] text-red-300/80">{eyebrow}</div> : null}

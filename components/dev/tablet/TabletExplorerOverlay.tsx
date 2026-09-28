@@ -136,7 +136,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
     <div className="pointer-events-none absolute inset-0 z-[78]" aria-label="SwingSphere tablet explorer">
       <div className="pointer-events-auto absolute left-5 top-[max(1.25rem,env(safe-area-inset-top))] flex items-center gap-3">
         <button type="button" onClick={() => onNavigate(`${experienceBasePath}/home`)} className="flex min-h-12 items-center gap-2.5 px-1 text-left" aria-label="SwingSphere home">
-          <img src="/swingsphere-logo.png" alt="" className="h-10 w-10 object-contain" />
+          <img src="/swingsphere-logo_2.png" alt="" className="h-10 w-10 object-contain" />
           <span className="text-[18px] font-black uppercase tracking-[0.04em] leading-none"><span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span></span>
         </button>
       </div>

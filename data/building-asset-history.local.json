@@ -1286,5 +1286,174 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-2a2-rio-de-janeiro-1790585198085",
+    "listingId": "club-2a2-rio-de-janeiro",
+    "venueId": null,
+    "action": "replace",
+    "occurredAt": "2026-09-28T08:46:37.588Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-2a2-rio-de-janeiro",
+      "venueId": null,
+      "normalizedAddress": "rua visconde de caravelas 176 rio de janeiro rio de janeiro 22271 041 brazil",
+      "latitude": -22.957343671576922,
+      "longitude": -43.19729268550873,
+      "visibility": "public_exact",
+      "coordinateProvenance": "official-site+google-maps",
+      "coordinateConfidence": 0.99,
+      "validatedAt": "2026-08-16T21:45:00.000Z",
+      "hash": "bvs-4be7cf52"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-2a2-rio-de-janeiro",
+      "listingId": "club-2a2-rio-de-janeiro",
+      "version": 1,
+      "provider": {
+        "source": "SwingSphere Building Asset",
+        "featureIds": [
+          "133124820"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -43.19731950759888,
+              -22.957237471639885
+            ],
+            [
+              -43.19731414318085,
+              -22.957252290246572
+            ],
+            [
+              -43.19727659225464,
+              -22.957242411175628
+            ],
+            [
+              -43.19724977016449,
+              -22.957331322788164
+            ],
+            [
+              -43.19726586341858,
+              -22.95733626232048
+            ],
+            [
+              -43.19722831249237,
+              -22.957425173871343
+            ],
+            [
+              -43.19730341434479,
+              -22.95744987151396
+            ],
+            [
+              -43.197351694107056,
+              -22.957326383255662
+            ],
+            [
+              -43.197335600852966,
+              -22.95732144372299
+            ],
+            [
+              -43.197357058525085,
+              -22.95725722978179
+            ],
+            [
+              -43.19731950759888,
+              -22.957237471639885
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6.48,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-08-16T22:57:37.776Z",
+        "updatedAt": "2026-09-26T03:27:07.552Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 11
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-2a2-rio-de-janeiro",
+      "listingId": "club-2a2-rio-de-janeiro",
+      "version": 1,
+      "provider": {
+        "source": "SwingSphere Building Asset",
+        "featureIds": [
+          "133124820"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -43.19731950759888,
+              -22.957237471639885
+            ],
+            [
+              -43.19731414318085,
+              -22.957252290246572
+            ],
+            [
+              -43.19727659225464,
+              -22.957242411175628
+            ],
+            [
+              -43.19724977016449,
+              -22.957331322788164
+            ],
+            [
+              -43.19726586341858,
+              -22.95733626232048
+            ],
+            [
+              -43.19722831249237,
+              -22.957425173871343
+            ],
+            [
+              -43.19730341434479,
+              -22.95744987151396
+            ],
+            [
+              -43.197351694107056,
+              -22.957326383255662
+            ],
+            [
+              -43.197335600852966,
+              -22.95732144372299
+            ],
+            [
+              -43.197357058525085,
+              -22.95725722978179
+            ],
+            [
+              -43.19731950759888,
+              -22.957237471639885
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6.48,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-08-16T22:57:37.776Z",
+        "updatedAt": "2026-09-28T08:46:37.588Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 11
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

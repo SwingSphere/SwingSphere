@@ -44,6 +44,13 @@ export type LivingLowPolyBackgroundProps = {
   density?: number;
   interactive?: boolean;
   className?: string;
+  palette?: {
+    darkA: Rgb;
+    darkB: Rgb;
+    accentA: Rgb;
+    accentB: Rgb;
+    accentHot: Rgb;
+  };
 };
 
 const VIEW_W = 1200;
@@ -188,7 +195,13 @@ export default function LivingLowPolyBackground({
   density = 100,
   interactive = true,
   className = '',
+  palette,
 }: LivingLowPolyBackgroundProps) {
+  const paletteDarkA = palette?.darkA ?? DARK_A;
+  const paletteDarkB = palette?.darkB ?? DARK_B;
+  const paletteAccentA = palette?.accentA ?? RED_A;
+  const paletteAccentB = palette?.accentB ?? RED_B;
+  const paletteAccentHot = palette?.accentHot ?? RED_HOT;
   const mesh = useMemo(() => buildMesh(density), [density]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const faceRefs = useRef<Array<SVGPolygonElement | null>>([]);
@@ -330,9 +343,9 @@ export default function LivingLowPolyBackground({
             + breathing * settings.colorStrength * (0.28 + triangle.tone * 0.42),
         );
 
-        const darkRgb = mixRgb(DARK_A, DARK_B, 0.13 + triangle.tone * 0.52 + activation * 0.12);
-        const redRgb = mixRgb(RED_A, RED_B, 0.12 + triangle.tone * 0.42 + activation * 0.42);
-        const hotRgb = mixRgb(RED_B, RED_HOT, activation * 0.48);
+        const darkRgb = mixRgb(paletteDarkA, paletteDarkB, 0.13 + triangle.tone * 0.52 + activation * 0.12);
+        const redRgb = mixRgb(paletteAccentA, paletteAccentB, 0.12 + triangle.tone * 0.42 + activation * 0.42);
+        const hotRgb = mixRgb(paletteAccentB, paletteAccentHot, activation * 0.48);
         const baseRgb = redZone < 0.18
           ? darkRgb
           : redZone > 0.72 && triangle.tone > 0.72
@@ -401,7 +414,7 @@ export default function LivingLowPolyBackground({
       cancelAnimationFrame(frame);
       renderFrameRef.current = null;
     };
-  }, [mesh]);
+  }, [mesh, paletteDarkA, paletteDarkB, paletteAccentA, paletteAccentB, paletteAccentHot]);
 
   useEffect(() => {
     if (reducedMotion.current) renderFrameRef.current?.(0);

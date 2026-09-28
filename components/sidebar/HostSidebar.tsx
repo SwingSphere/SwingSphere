@@ -34,8 +34,8 @@ const HostSidebar: React.FC<HostSidebarProps> = ({ organization, events, onClose
     : mode === 'embedded'
       ? 'ss-glass ss-glass--liquid flex h-full min-h-0 w-full flex-col overflow-hidden rounded-l-[24px] text-gray-100'
       : 'ss-glass ss-glass--liquid absolute right-0 top-0 z-20 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-l-[24px] text-gray-100 transition-transform duration-300 ease-in-out sm:w-[400px]';
-  const heroImage = organization.headerImageUrl || organization.logoImageUrl || '/swingsphere-logo.png';
-  const logoImage = organization.logoImageUrl || '/swingsphere-logo.png';
+  const heroImage = organization.headerImageUrl || organization.logoImageUrl || '/swingsphere-logo_2.png';
+  const logoImage = organization.logoImageUrl || '/swingsphere-logo_2.png';
 
   return (
     <div className={shellClass}>

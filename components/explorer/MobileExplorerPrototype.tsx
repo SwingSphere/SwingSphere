@@ -122,7 +122,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
           className={`flex items-center gap-2.5 px-1 text-left ${tabletMode ? 'min-h-12' : 'min-h-11'}`}
           aria-label="SwingSphere home"
         >
-          <img src="/swingsphere-logo.png" alt="" className={`${tabletMode ? 'h-10 w-10' : 'h-9 w-9'} shrink-0 object-contain`} />
+          <img src="/swingsphere-logo_2.png" alt="" className={`${tabletMode ? 'h-10 w-10' : 'h-9 w-9'} shrink-0 object-contain`} />
           <span className={`${tabletMode ? 'text-[19px]' : 'text-[17px]'} font-black uppercase tracking-[0.04em] leading-none`}>
             <span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span>
           </span>

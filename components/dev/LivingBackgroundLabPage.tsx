@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import LivingLowPolyBackground, { getLivingBackgroundMeshStats } from '../LivingLowPolyBackground';
 import {
   readLivingBackgroundStoredState,
@@ -7,6 +7,48 @@ import {
 } from '../../lib/livingBackgroundSettings';
 
 const sliderClass = 'w-full accent-red-500';
+type Rgb = readonly [number, number, number];
+
+const rgbCss = (rgb: Rgb) => `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
+const clampByte = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+const luminance = (rgb: Rgb) => rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+const saturation = (rgb: Rgb) => Math.max(...rgb) - Math.min(...rgb);
+const scaleRgb = (rgb: Rgb, amount: number): Rgb => [clampByte(rgb[0] * amount), clampByte(rgb[1] * amount), clampByte(rgb[2] * amount)];
+const mix = (a: Rgb, b: Rgb, t: number): Rgb => [clampByte(a[0] + (b[0] - a[0]) * t), clampByte(a[1] + (b[1] - a[1]) * t), clampByte(a[2] + (b[2] - a[2]) * t)];
+
+const extractPalette = (image: HTMLImageElement) => {
+  const canvas = document.createElement('canvas');
+  const size = 96;
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0, size, size);
+  const pixels = ctx.getImageData(0, 0, size, size).data;
+  const buckets = new Map<string, { rgb: [number, number, number]; count: number }>();
+  for (let i = 0; i < pixels.length; i += 16) {
+    if (pixels[i + 3] < 180) continue;
+    const rgb: [number, number, number] = [pixels[i], pixels[i + 1], pixels[i + 2]];
+    const key = rgb.map((v) => Math.round(v / 24) * 24).join(',');
+    const entry = buckets.get(key);
+    if (entry) entry.count += 1; else buckets.set(key, { rgb, count: 1 });
+  }
+  const ranked = [...buckets.values()].sort((a, b) => b.count - a.count);
+  const useful = ranked.filter(({ rgb }) => luminance(rgb) > 18 && luminance(rgb) < 238);
+  const accents = [...useful].sort((a, b) => (saturation(b.rgb) * Math.sqrt(b.count)) - (saturation(a.rgb) * Math.sqrt(a.count)));
+  const dominant = useful[0]?.rgb ?? [70, 70, 76];
+  const accent = accents[0]?.rgb ?? dominant;
+  const secondary = accents.find(({ rgb }) => Math.abs(rgb[0] - accent[0]) + Math.abs(rgb[1] - accent[1]) + Math.abs(rgb[2] - accent[2]) > 90)?.rgb ?? mix(accent, dominant, 0.5);
+  return {
+    swatches: useful.slice(0, 8).map(({ rgb }) => rgb as Rgb),
+    palette: {
+      darkA: scaleRgb(dominant, 0.08),
+      darkB: mix(scaleRgb(dominant, 0.35), [42, 44, 50], 0.3),
+      accentA: scaleRgb(accent, 0.28),
+      accentB: mix(scaleRgb(accent, 0.72), secondary, 0.2),
+      accentHot: mix(accent, [255, 255, 255], 0.08),
+    },
+  };
+};
 
 export default function LivingBackgroundLabPage() {
   const [savedState] = useState(readLivingBackgroundStoredState);
@@ -22,6 +64,32 @@ export default function LivingBackgroundLabPage() {
   const [density, setDensity] = useState(savedState.density);
   const [showContent, setShowContent] = useState(savedState.showContent ?? true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [heroUrl, setHeroUrl] = useState<string | null>(null);
+  const [heroName, setHeroName] = useState('');
+  const [extracted, setExtracted] = useState<ReturnType<typeof extractPalette>>(null);
+  const [heroInfluence, setHeroInfluence] = useState(100);
+
+  const activePalette = useMemo(() => {
+    if (!extracted) return undefined;
+    const fallback = {
+      darkA: [4, 5, 7] as Rgb, darkB: [43, 45, 50] as Rgb,
+      accentA: [31, 3, 8] as Rgb, accentB: [130, 8, 24] as Rgb, accentHot: [209, 20, 48] as Rgb,
+    };
+    const t = heroInfluence / 100;
+    return Object.fromEntries(Object.entries(extracted.palette).map(([key, value]) => [key, mix(fallback[key as keyof typeof fallback], value, t)])) as typeof fallback;
+  }, [extracted, heroInfluence]);
+
+  const handleHeroFile = (file?: File) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      setExtracted(extractPalette(image));
+      setHeroUrl((previous) => { if (previous) URL.revokeObjectURL(previous); return url; });
+      setHeroName(file.name);
+    };
+    image.src = url;
+  };
 
   const handleSaveState = () => {
     const state: LivingBackgroundStoredState = {
@@ -59,6 +127,7 @@ export default function LivingBackgroundLabPage() {
         glowStrength={glow / 100}
         blurPx={blur}
         density={density}
+        palette={activePalette}
       />
 
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.34)_0%,rgba(3,4,5,0.10)_42%,transparent_72%)]" />
@@ -86,6 +155,20 @@ export default function LivingBackgroundLabPage() {
       </div>
 
       <aside className="absolute right-5 top-5 z-20 max-h-[calc(100vh-2.5rem)] w-[min(92vw,380px)] overflow-y-auto rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl">
+        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-red-300">Hero palette experiment</p>
+          <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/25 p-3 transition hover:border-red-400/40">
+            {heroUrl ? <img src={heroUrl} alt="" className="h-16 w-24 rounded-lg object-cover" /> : <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-white/5 text-2xl">✦</div>}
+            <span className="min-w-0 text-xs text-gray-300"><strong className="block truncate text-white">{heroName || 'Choose a hero image'}</strong><span className="mt-1 block text-gray-500">PNG, JPG or WebP · analyzed locally</span></span>
+            <input type="file" accept="image/*" className="hidden" onChange={(event) => handleHeroFile(event.target.files?.[0])} />
+          </label>
+          {extracted ? <>
+            <div className="mt-3 flex gap-1.5">{extracted.swatches.map((rgb, index) => <span key={index} title={rgbCss(rgb)} className="h-7 flex-1 rounded-md border border-white/10" style={{ backgroundColor: rgbCss(rgb) }} />)}</div>
+            <div className="mt-2 flex gap-1.5">{activePalette && Object.entries(activePalette).map(([key, rgb]) => <span key={key} title={key} className="h-5 flex-1 rounded border border-white/10" style={{ backgroundColor: rgbCss(rgb) }} />)}</div>
+            <label className="mt-3 block text-xs font-semibold text-gray-300"><span className="mb-2 flex justify-between"><span>Hero color influence</span><span>{heroInfluence}%</span></span><input className={sliderClass} type="range" min="0" max="100" value={heroInfluence} onChange={(e) => setHeroInfluence(Number(e.target.value))} /></label>
+          </> : null}
+        </div>
+
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-red-300">Mesh controls</p>

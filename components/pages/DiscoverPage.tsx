@@ -86,15 +86,6 @@ const attendanceLabel = (policy?: AttendancePolicy): string | null => {
   return labels[policy] ?? policy.replaceAll('_', ' ');
 };
 
-const formatEventDateChip = (value?: string): { weekday: string; date: string } | null => {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return { weekday, date };
-};
-
 const displayDate = (value?: string): string | null => {
   if (!value) return null;
   const date = new Date(value);
@@ -1011,116 +1002,108 @@ const DiscoverPage: React.FC = () => {
             {visibleCards.map((card) => {
               const image = card.image && !isPlaceholderMediaUrl(card.image) ? card.image : null;
               const locationText = formatCardLocation(card.city, card.region, card.country);
-              const eventDateChip = card.date ? formatEventDateChip(card.date) : null;
               const dateText = displayDate(card.date);
               const policyText = attendanceLabel(card.attendance);
 
               return (
                 <article
                   key={card.key}
-                  className="group relative flex flex-col h-full overflow-hidden rounded-2xl border border-white/10 bg-[#090c12] transition-all duration-300 hover:-translate-y-1 hover:border-red-500/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.65)]"
+                  className="group relative min-h-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#090c12] transition-all duration-300 hover:-translate-y-1 hover:border-red-500/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.65)]"
                 >
-                  <Link to={card.href} className="flex flex-col flex-1 block focus:outline-none">
-                    {/* Media Container */}
-                    <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#121620] to-[#06080d]">
-                      {image ? (
-                        <img
-                          src={image}
-                          alt=""
-                          onError={handleListingImageError}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  <Link
+                    to={card.href}
+                    className="relative block min-h-[360px] h-full focus:outline-none"
+                    aria-label={`Open ${card.name}`}
+                  >
+                    {image ? (
+                      <img
+                        src={image}
+                        alt=""
+                        onError={handleListingImageError}
+                        loading="lazy"
+                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] ${
+                          card.kind === 'event' ? 'object-top' : 'object-center'
+                        }`}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#121620] to-[#06080d]">
+                        <div
+                          className="absolute inset-0 opacity-40"
+                          style={{
+                            background:
+                              card.kind === 'event'
+                                ? 'radial-gradient(circle at center, rgba(245, 158, 11, 0.2), transparent 70%)'
+                                : card.kind === 'host'
+                                ? 'radial-gradient(circle at center, rgba(6, 182, 212, 0.2), transparent 70%)'
+                                : 'radial-gradient(circle at center, rgba(197, 29, 52, 0.25), transparent 70%)',
+                          }}
                         />
-                      ) : (
-                        /* Branded Architectural Fallback */
-                        <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-                          <div
-                            className="absolute inset-0 opacity-40"
-                            style={{
-                              background:
-                                card.kind === 'event'
-                                  ? 'radial-gradient(circle at center, rgba(245, 158, 11, 0.2), transparent 70%)'
-                                  : card.kind === 'host'
-                                  ? 'radial-gradient(circle at center, rgba(6, 182, 212, 0.2), transparent 70%)'
-                                  : 'radial-gradient(circle at center, rgba(197, 29, 52, 0.25), transparent 70%)',
-                            }}
-                          />
-                          {card.kind === 'event' ? (
-                            <CalendarDays className="h-10 w-10 text-amber-400/25" />
-                          ) : card.kind === 'host' ? (
-                            <UsersRound className="h-10 w-10 text-cyan-400/25" />
-                          ) : (
-                            <Building2 className="h-10 w-10 text-red-400/25" />
-                          )}
-                        </div>
-                      )}
-
-                      {/* Scrim Gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#090c12] via-transparent to-black/25 pointer-events-none" />
-
-                      {/* Top Badges */}
-                      <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2 pointer-events-none">
-                        <EntityTypePill tone={card.kind} className="shadow-md">
-                          {card.kind}
-                        </EntityTypePill>
-
-                        {/* Event Date Chip */}
-                        {eventDateChip && (
-                          <div className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/75 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur-md">
-                            <span className="text-amber-400">{eventDateChip.weekday}</span>
-                            <span className="text-white/40">•</span>
-                            <span>{eventDateChip.date}</span>
-                          </div>
+                        {card.kind === 'event' ? (
+                          <CalendarDays className="h-10 w-10 text-amber-400/25" />
+                        ) : card.kind === 'host' ? (
+                          <UsersRound className="h-10 w-10 text-cyan-400/25" />
+                        ) : (
+                          <Building2 className="h-10 w-10 text-red-400/25" />
                         )}
                       </div>
+                    )}
 
-                      {/* Club / Host / Venue Logo Avatar Badge */}
-                      {card.logoUrl && !isPlaceholderMediaUrl(card.logoUrl) && (
-                        <div className="absolute left-3 bottom-3 h-[54px] w-[54px] rounded-xl border border-white/20 bg-black/80 p-1 shadow-lg shadow-black/60 backdrop-blur-md overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                          <img
-                            src={card.logoUrl}
-                            alt=""
-                            onError={handleListingImageError}
-                            className="h-full w-full object-cover rounded-lg"
-                          />
-                        </div>
-                      )}
+                    {/* Full-card scrim: preserve the flyer/hero while keeping metadata readable. */}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/[0.02] via-45% to-[#090c12] to-88%" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-[#090c12] via-[#090c12]/90 to-transparent" />
+
+                    {/* Top Badges */}
+                    <div className="absolute left-3 top-3 pointer-events-none">
+                      <EntityTypePill tone={card.kind} className="shadow-md">
+                        {card.kind}
+                      </EntityTypePill>
                     </div>
 
-                    {/* Card Body */}
-                    <div className="flex flex-col flex-1 p-4">
+                    {/* Identity badge remains useful over full-bleed imagery. */}
+                    {card.logoUrl && !isPlaceholderMediaUrl(card.logoUrl) && (
+                      <div className="absolute bottom-[118px] left-3 h-[50px] w-[50px] overflow-hidden rounded-xl border border-white/20 bg-black/80 p-1 shadow-lg shadow-black/60 backdrop-blur-md transition-transform duration-300 group-hover:scale-105">
+                        <img
+                          src={card.logoUrl}
+                          alt=""
+                          onError={handleListingImageError}
+                          className="h-full w-full rounded-lg object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Metadata overlays the lower portion of the image instead of using a separate body/footer. */}
+                    <div className="absolute inset-x-0 bottom-0 p-4 pr-14">
                       <h2
-                        className="text-base font-bold text-white tracking-tight line-clamp-1 group-hover:text-red-200 transition-colors"
+                        className="line-clamp-2 text-base font-bold tracking-tight text-white drop-shadow-sm transition-colors group-hover:text-red-200"
                         title={card.name}
                       >
                         {card.name}
                       </h2>
 
-                      {/* Metadata Rows */}
                       <div className="mt-2 space-y-1.5">
                         {locationText && (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
                             <MapPin className="h-3.5 w-3.5 shrink-0 text-red-400" />
                             <span className="truncate">{locationText}</span>
                           </p>
                         )}
 
                         {card.kind === 'event' && dateText && (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-200">
                             <CalendarDays className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                             <span className="truncate">{dateText}</span>
                           </p>
                         )}
 
                         {policyText && (
-                          <p className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <UsersRound className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+                          <p className="flex items-center gap-1.5 text-xs text-gray-300">
+                            <UsersRound className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                             <span className="truncate">{policyText}</span>
                           </p>
                         )}
 
                         {card.description && card.kind !== 'event' && (
-                          <p className="line-clamp-2 pt-1 text-xs leading-relaxed text-gray-500">
+                          <p className="line-clamp-2 pt-1 text-xs leading-relaxed text-gray-400">
                             {card.description}
                           </p>
                         )}
@@ -1128,40 +1111,21 @@ const DiscoverPage: React.FC = () => {
                     </div>
                   </Link>
 
-                  {/* Card Action Footer */}
-                  <div className="mt-auto flex items-center justify-between border-t border-white/[0.06] px-4 py-3 bg-white/[0.015]">
-                    <Link
-                      to={card.href}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-300 transition-colors group-hover:text-white"
+                  {card.globeListing && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/globe?listing=${encodeURIComponent(card.globeListing!.id)}`);
+                      }}
+                      className="absolute bottom-3 right-3 z-20 rounded-xl border border-white/15 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur-md transition-colors hover:border-red-400/40 hover:bg-red-500/15 hover:text-white"
+                      title="Show on 3D Globe"
+                      aria-label={`Show ${card.name} on 3D Globe`}
                     >
-                      <span>
-                        {card.kind === 'event'
-                          ? 'View Event'
-                          : card.kind === 'host'
-                          ? 'View Host'
-                          : 'View Club'}
-                      </span>
-                      <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">
-                        →
-                      </span>
-                    </Link>
-
-                    {card.globeListing && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate(`/globe?listing=${encodeURIComponent(card.globeListing!.id)}`);
-                        }}
-                        className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-gray-400 transition-colors hover:border-red-400/40 hover:bg-red-500/10 hover:text-white"
-                        title="Show on 3D Globe"
-                        aria-label={`Show ${card.name} on 3D Globe`}
-                      >
-                        <Globe2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                      <Globe2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </article>
               );
             })}

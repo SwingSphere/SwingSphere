@@ -217,13 +217,40 @@ body,
   animation-delay: 85ms;
 }
 
-/* Homepage signature CTA ----------------------------------------------------
-   Crimson liquid glass at rest with randomized radiating fragments on hover
-   and keyboard focus. Kept intentionally homepage-only. */
+/* Homepage signature CTA pair -----------------------------------------------
+   Coordinated primary (Globe) and secondary (Directory) discovery CTAs.
+   Shared height, border-radius, typography, icon sizing, and interaction language;
+   distinct visual hierarchy (crimson primary vs. dark liquid graphite secondary). */
+
+.ss-hero-cta-pair {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .ss-hero-cta-pair {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.875rem;
+  }
+}
+
+/* Primary CTA: Explore the Globe */
 .ss-explore-globe-cta {
   position: relative;
   isolation: isolate;
   display: inline-flex;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .ss-explore-globe-cta {
+    width: auto;
+  }
 }
 
 .ss-explore-globe-cta::before {
@@ -243,13 +270,16 @@ body,
   position: relative;
   z-index: 2;
   display: inline-flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: 56px;
   min-height: 56px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid rgba(255, 82, 111, 0.58);
   border-radius: 16px;
-  padding: 0 27px;
+  padding: 0 26px;
   color: #fff;
   background:
     radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.14), transparent 32%),
@@ -262,7 +292,15 @@ body,
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
   cursor: pointer;
+  user-select: none;
   transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1), border-color 170ms ease, box-shadow 170ms ease, background 170ms ease;
+}
+
+@media (min-width: 640px) {
+  .ss-explore-globe-cta__button {
+    width: auto;
+    min-width: 232px;
+  }
 }
 
 .ss-explore-globe-cta__button::after {
@@ -290,20 +328,30 @@ body,
   z-index: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   font-size: 1rem;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: -0.015em;
+  line-height: 1;
+  white-space: nowrap;
   text-shadow: 0 1px 10px rgba(46, 0, 9, 0.72);
 }
 
 .ss-explore-globe-cta__icon {
   color: rgba(255, 225, 231, 0.98);
+  flex-shrink: 0;
   filter: drop-shadow(0 0 7px rgba(255, 43, 79, 0.45));
+}
+
+.ss-explore-globe-cta__label {
+  display: inline-block;
+  line-height: 1;
 }
 
 .ss-explore-globe-cta__arrow {
   color: rgba(255, 220, 226, 0.9);
+  flex-shrink: 0;
   transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -356,13 +404,150 @@ body,
   clip-path: polygon(22% 4%, 73% 8%, 100% 46%, 79% 91%, 29% 100%, 0 58%);
 }
 
-.ss-explore-globe-cta:hover::before,
+/* Secondary CTA: Browse the Directory */
+.ss-browse-directory-cta {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 0 19px;
+  color: #f3f4f6;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(28, 31, 40, 0.74), rgba(12, 14, 19, 0.80));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 12px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1), border-color 170ms ease, box-shadow 170ms ease, background 170ms ease, color 170ms ease;
+}
+
+@media (min-width: 640px) {
+  .ss-browse-directory-cta {
+    width: auto;
+    min-width: 232px;
+  }
+}
+
+.ss-browse-directory-cta__glass {
+  position: absolute;
+  inset: 1px;
+  border-radius: 15px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 36%),
+    radial-gradient(circle at 82% 108%, rgba(220, 20, 52, 0.08), transparent 42%);
+  transition: background 170ms ease, opacity 170ms ease;
+}
+
+.ss-browse-directory-cta__content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ss-browse-directory-cta__icon {
+  color: rgba(255, 145, 165, 0.85);
+  flex-shrink: 0;
+  transition: color 170ms ease, filter 170ms ease;
+}
+
+.ss-browse-directory-cta__label {
+  display: inline-block;
+  line-height: 1;
+}
+
+.ss-browse-directory-cta__arrow {
+  color: rgba(156, 163, 175, 0.85);
+  flex-shrink: 0;
+  transition: color 170ms ease, transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hover interactions -------------------------------------------------------- */
+@media (hover: hover) {
+  .ss-explore-globe-cta:hover::before {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  .ss-explore-globe-cta:hover .ss-explore-globe-cta__button {
+    transform: translateY(-2px);
+    border-color: rgba(255, 112, 135, 0.9);
+    background:
+      radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.19), transparent 34%),
+      linear-gradient(145deg, rgba(161, 15, 44, 0.82), rgba(69, 4, 19, 0.76));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.27),
+      inset 0 -2px 0 rgba(70, 0, 14, 0.58),
+      0 18px 42px rgba(129, 6, 31, 0.42),
+      0 0 24px rgba(255, 28, 66, 0.16);
+  }
+
+  .ss-explore-globe-cta:hover .ss-explore-globe-cta__button::after {
+    opacity: 1;
+  }
+
+  .ss-explore-globe-cta:hover .ss-explore-globe-cta__arrow {
+    transform: translateX(3px);
+  }
+
+  .ss-browse-directory-cta:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 115, 138, 0.40);
+    color: #ffffff;
+    background:
+      radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.13), transparent 36%),
+      linear-gradient(145deg, rgba(38, 42, 54, 0.84), rgba(18, 21, 28, 0.88));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(61, 0, 12, 0.45),
+      0 16px 36px rgba(0, 0, 0, 0.38),
+      0 0 20px rgba(220, 20, 52, 0.16);
+  }
+
+  .ss-browse-directory-cta:hover .ss-browse-directory-cta__glass {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 36%),
+      radial-gradient(circle at 82% 108%, rgba(255, 35, 75, 0.16), transparent 42%);
+  }
+
+  .ss-browse-directory-cta:hover .ss-browse-directory-cta__icon {
+    color: #ff9fb1;
+    filter: drop-shadow(0 0 6px rgba(255, 43, 79, 0.45));
+  }
+
+  .ss-browse-directory-cta:hover .ss-browse-directory-cta__arrow {
+    color: #ffffff;
+    transform: translateX(3px);
+  }
+}
+
+/* Keyboard focus-within / focus-visible states ------------------------------- */
 .ss-explore-globe-cta:focus-within::before {
   opacity: 1;
   transform: scale(1.08);
 }
 
-.ss-explore-globe-cta:hover .ss-explore-globe-cta__button,
 .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__button {
   transform: translateY(-2px);
   border-color: rgba(255, 112, 135, 0.9);
@@ -376,29 +561,57 @@ body,
     0 0 24px rgba(255, 28, 66, 0.16);
 }
 
-.ss-explore-globe-cta:hover .ss-explore-globe-cta__button::after,
 .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__button::after {
   opacity: 1;
 }
 
-.ss-explore-globe-cta:hover .ss-explore-globe-cta__arrow,
 .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__arrow {
   transform: translateX(3px);
 }
 
 .ss-explore-globe-cta__button:focus-visible {
   outline: 2px solid rgba(255, 155, 171, 0.96);
-  outline-offset: 5px;
+  outline-offset: 4px;
 }
 
+.ss-browse-directory-cta:focus-visible {
+  outline: 2px solid rgba(255, 155, 171, 0.96);
+  outline-offset: 4px;
+}
+
+/* Active / pressed tactile response ----------------------------------------- */
+.ss-explore-globe-cta__button:active {
+  transform: translateY(0px) scale(0.985);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 6px 18px rgba(98, 5, 24, 0.35);
+}
+
+.ss-browse-directory-cta:active {
+  transform: translateY(0px) scale(0.985);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Reduced transparency support ---------------------------------------------- */
 @media (prefers-reduced-transparency: reduce) {
   .ss-explore-globe-cta__button {
     background: linear-gradient(145deg, rgba(132, 11, 35, 0.96), rgba(49, 4, 15, 0.96));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
+
+  .ss-browse-directory-cta {
+    background: linear-gradient(145deg, rgba(28, 31, 40, 0.96), rgba(12, 14, 19, 0.96));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
+/* Reduced motion support ---------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .ss-explore-globe-cta__radiation {
     display: none;
@@ -406,18 +619,25 @@ body,
 
   .ss-explore-globe-cta__button,
   .ss-explore-globe-cta__arrow,
-  .ss-explore-globe-cta::before {
+  .ss-explore-globe-cta::before,
+  .ss-browse-directory-cta,
+  .ss-browse-directory-cta__arrow,
+  .ss-browse-directory-cta__icon {
     transition: none !important;
   }
 
   .ss-explore-globe-cta:hover .ss-explore-globe-cta__button,
-  .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__button {
-    transform: none;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      inset 0 -2px 0 rgba(70, 0, 14, 0.6),
-      0 0 0 2px rgba(255, 71, 102, 0.2),
-      0 15px 34px rgba(110, 5, 27, 0.38);
+  .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__button,
+  .ss-explore-globe-cta__button:active,
+  .ss-browse-directory-cta:hover,
+  .ss-browse-directory-cta:active {
+    transform: none !important;
+  }
+
+  .ss-explore-globe-cta:hover .ss-explore-globe-cta__arrow,
+  .ss-explore-globe-cta:focus-within .ss-explore-globe-cta__arrow,
+  .ss-browse-directory-cta:hover .ss-browse-directory-cta__arrow {
+    transform: none !important;
   }
 }
 

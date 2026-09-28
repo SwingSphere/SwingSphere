@@ -336,8 +336,8 @@ const ExplorerHostCard: React.FC<{
   onSelect: () => void;
 }> = ({ organization, selected, onSelect }) => {
   const primaryRegion = organization.globePresence?.regions.find((region) => region.status !== 'inactive');
-  const heroImage = organization.headerImageUrl || organization.logoImageUrl || '/swingsphere-logo.png';
-  const logoImage = organization.logoImageUrl || '/swingsphere-logo.png';
+  const heroImage = organization.headerImageUrl || organization.logoImageUrl || '/swingsphere-logo_2.png';
+  const logoImage = organization.logoImageUrl || '/swingsphere-logo_2.png';
 
   return (
     <button

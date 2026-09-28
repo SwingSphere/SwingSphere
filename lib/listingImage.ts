@@ -2,7 +2,7 @@ import type { SyntheticEvent } from 'react';
 import type { Listing } from '../types';
 import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
 
-export const LISTING_IMAGE_FALLBACK = '/swingsphere-logo.png';
+export const LISTING_IMAGE_FALLBACK = '/swingsphere-logo_2.png';
 
 export const isPlaceholderMediaUrl = (url?: string | null): boolean => {
   if (!url) return false;

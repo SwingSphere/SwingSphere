@@ -19,7 +19,7 @@ const RIPPLE_OUTER_RADIUS = 0.018;
 const RIPPLE_SEGMENTS = 28;
 const RIPPLE_MAX_VISUAL_RADIUS = RIPPLE_OUTER_RADIUS * RIPPLE_END_SCALE;
 const PIN_VISIBLE_HEIGHT_BIAS = 0.1;
-const LISTING_LOGO_FALLBACK = "/swingsphere-logo.png";
+const LISTING_LOGO_FALLBACK = "/swingsphere-logo_2.png";
 
 export const DEFAULT_MARKER_STYLE = Object.freeze({
   surfaceOffset: 0.005,

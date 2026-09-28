@@ -49,8 +49,8 @@ export const Header: React.FC<HeaderProps> = ({
     >
       <div className="container mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-6">
         <div onClick={onHomeClick} className="flex items-center gap-2 sm:gap-3 cursor-pointer justify-self-start shrink-0">
-          <img src="/swingsphere-logo.png" alt="SwingSphere Logo" className="h-8 w-auto sm:h-10" />
-          <span className="hidden font-bold text-lg sm:text-xl tracking-wider text-white sm:inline">
+          <img src="/swingsphere-logo_2.png" alt="SwingSphere Logo" className="h-8 w-auto sm:h-10" />
+          <span className={`${isLanding ? 'inline' : 'hidden sm:inline'} font-bold text-[15px] min-[390px]:text-base sm:text-xl tracking-wider text-white`}>
             <span className="text-red-500">SWING</span>SPHERE
           </span>
         </div>

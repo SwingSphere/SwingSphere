@@ -12,7 +12,7 @@ const AgeGate: React.FC<AgeGateProps> = ({ onConfirm }) => {
     <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center font-sans p-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.95)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
       <div className="ss-glass-surface rounded-lg p-8 sm:p-10 text-center max-w-lg w-full">
         <div className="flex justify-center mb-4">
-            <img src={LOGO_B64} alt="SwingSphere Logo" className="h-16" />
+            <img src="/swingsphere-logo_2.png" alt="SwingSphere Logo" className="h-16" />
         </div>
         <p className="text-gray-400 mb-8">
           Are you 21 years of age or older?

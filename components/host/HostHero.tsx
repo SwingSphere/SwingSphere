@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, ExternalLink, MapPin, Pencil, ShieldCheck, Ship } from 'lucide-react';
+import { ExternalLink, MapPin, Pencil } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
 import BadgeShelf from '../badges/BadgeShelf';
@@ -39,17 +39,12 @@ const HostHero: React.FC<HostHeroProps> = ({
   organizationId,
   hostName,
   cadenceText,
-  themePills,
   logoImageUrl,
   headerImageUrl,
-  description,
   operatorName,
   displayLabel = 'Promoter',
   regions = [],
   website,
-  eventsListed = 0,
-  cruisesListed = 0,
-  hostingSince,
   badges = [],
   onQuickEdit,
 }) => {
@@ -64,60 +59,104 @@ const HostHero: React.FC<HostHeroProps> = ({
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(185,28,28,0.28),transparent_34%),linear-gradient(135deg,#17191f,#07090d_62%,#14070a)]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/48 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20" />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-black/78 via-black/24 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-transparent to-black/18" />
+
         {showQuickControls ? (
-          <div className="absolute right-4 top-4 z-20 flex flex-wrap gap-2">
-            <button type="button" onClick={() => onQuickEdit?.('hero')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Hero</button>
-            <button type="button" onClick={() => onQuickEdit?.('profile')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Profile</button>
+          <div className="absolute right-4 top-4 z-30 flex flex-wrap gap-2 sm:right-6 sm:top-6">
+            <button
+              type="button"
+              onClick={() => onQuickEdit?.('hero')}
+              className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+            >
+              <Pencil size={14} /> Hero
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickEdit?.('profile')}
+              className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+            >
+              <Pencil size={14} /> Profile
+            </button>
           </div>
         ) : null}
 
-        <div className="relative flex min-h-[360px] items-end p-4 sm:min-h-[420px] sm:p-7">
-          <div className="w-full max-w-3xl">
-            <div className="ss-glass ss-glass--liquid rounded-[26px] p-4 sm:p-5">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="shrink-0">
-                  <div className="ss-glass ss-glass--liquid relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-[22px] text-3xl font-black text-white sm:h-28 sm:w-28">
-                    {logoImageUrl ? <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" /> : <><span className="font-serif text-4xl tracking-[-0.12em] text-white sm:text-5xl">{toInitials(hostName)}</span><span className="absolute bottom-3 h-0.5 w-9 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" /></>}
+        <div className="absolute left-4 top-4 z-20 sm:left-6 sm:top-6">
+          <div className="ss-glass ss-glass--liquid relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl text-2xl font-black text-white sm:h-24 sm:w-24">
+            {logoImageUrl ? (
+              <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" />
+            ) : (
+              <>
+                <span className="font-serif text-3xl tracking-[-0.12em] text-white sm:text-4xl">{toInitials(hostName)}</span>
+                <span className="absolute bottom-3 h-0.5 w-8 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" />
+              </>
+            )}
+          </div>
+          {showQuickControls ? (
+            <button
+              type="button"
+              onClick={() => onQuickEdit?.('logo')}
+              className="mt-2 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+            >
+              <Pencil size={14} /> Logo
+            </button>
+          ) : null}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-6">
+          <div className="ss-glass ss-glass--liquid max-w-4xl rounded-2xl p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <EntityTypePill tone="host">{displayLabel}</EntityTypePill>
+              {operatorName ? (
+                <span className="text-xs font-medium text-gray-400">
+                  Operated by <span className="text-gray-200">{operatorName}</span>
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{hostName}</h1>
+                {regions.length ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-300">
+                    <MapPin size={14} className="text-red-300" />
+                    {regions.slice(0, 4).map((region, index) => (
+                      <React.Fragment key={region}>
+                        <span>{region}</span>
+                        {index < Math.min(regions.length, 4) - 1 ? <span className="text-gray-600">•</span> : null}
+                      </React.Fragment>
+                    ))}
                   </div>
-                  {showQuickControls ? <button type="button" onClick={() => onQuickEdit?.('logo')} className="mt-2 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Logo</button> : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{hostName}</h1>
-                    <EntityTypePill tone="host">{displayLabel}</EntityTypePill>
-                  </div>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-200 sm:text-base">{description || cadenceText}</p>
-                  {operatorName ? <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Operated by <span className="normal-case tracking-normal text-gray-200">{operatorName}</span></p> : null}
-                  {regions.length ? (
-                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-gray-300">
-                      <MapPin size={14} className="text-red-300" />
-                      {regions.slice(0, 4).map((region, index) => <React.Fragment key={region}><span>{region}</span>{index < Math.min(regions.length, 4) - 1 ? <span className="text-gray-600">•</span> : null}</React.Fragment>)}
-                    </div>
-                  ) : null}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button type="button" className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive rounded-xl px-5 py-2.5 text-sm font-bold text-white">+ Follow</button>
-                    {website ? (
-                      <TrackedExternalLink
-                        href={website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        tracking={{
-                          entityType: organizationId ? 'organization' : 'profile',
-                          entityId: organizationId ?? hostSlug,
-                          organizationId,
-                          destinationType: 'website',
-                          placement: 'host_hero_website_cta',
-                          surface: 'entity_page',
-                        }}
-                        className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-gray-100"
-                      >
-                        Visit website <ExternalLink size={14} />
-                      </TrackedExternalLink>
-                    ) : null}
-                  </div>
-                </div>
+                ) : null}
+                {cadenceText ? <p className="mt-1 text-sm text-gray-400">{cadenceText}</p> : null}
+              </div>
+
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive rounded-xl px-4 py-2.5 text-sm font-bold text-white"
+                >
+                  + Follow
+                </button>
+                {website ? (
+                  <TrackedExternalLink
+                    href={website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    tracking={{
+                      entityType: organizationId ? 'organization' : 'profile',
+                      entityId: organizationId ?? hostSlug,
+                      organizationId,
+                      destinationType: 'website',
+                      placement: 'host_hero_website_cta',
+                      surface: 'entity_page',
+                    }}
+                    className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-100"
+                  >
+                    Website <ExternalLink size={14} />
+                  </TrackedExternalLink>
+                ) : null}
               </div>
             </div>
 
@@ -127,28 +166,12 @@ const HostHero: React.FC<HostHeroProps> = ({
                 limit={4}
                 compact
                 heading="Organizer achievements"
-                className="ss-glass ss-glass--ambient mt-3 rounded-2xl p-3"
+                className="mt-3 border-t border-white/10 pt-3"
               />
             ) : null}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><CalendarDays size={18} className="text-red-300" /><div><div className="font-bold text-white">{eventsListed}</div><div className="text-[11px] text-gray-400">events listed</div></div></div>
-              {cruisesListed > 0 ? <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><Ship size={18} className="text-cyan-300" /><div><div className="font-bold text-white">{cruisesListed}</div><div className="text-[11px] text-gray-400">cruise series</div></div></div> : null}
-              <div className="ss-glass ss-glass--ambient flex items-center gap-3 rounded-2xl px-4 py-3"><ShieldCheck size={18} className="text-red-300" /><div><div className="font-bold text-white">Profile</div><div className="text-[11px] text-gray-400">promoter identity</div></div></div>
-              {hostingSince ? <div className="ss-glass ss-glass--ambient rounded-2xl px-4 py-3"><div className="font-bold text-white">Since {hostingSince}</div><div className="text-[11px] text-gray-400">on SwingSphere</div></div> : null}
-            </div>
           </div>
         </div>
       </div>
-
-      {themePills.length ? (
-        <details className="border-t border-white/10 bg-black/20 px-5 py-3">
-          <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.16em] text-gray-300">Styles & audience</summary>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {themePills.slice(0, 8).map((pill) => <span key={pill} className="ss-glass ss-glass--ambient rounded-full px-3 py-1 text-xs text-gray-200">{pill}</span>)}
-          </div>
-        </details>
-      ) : null}
     </section>
   );
 };

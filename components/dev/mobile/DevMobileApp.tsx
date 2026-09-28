@@ -58,7 +58,7 @@ const MobileHomeScreen: React.FC = () => {
         <div className="relative z-10 px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))]">
           <section className="flex min-h-[430px] flex-col justify-end pb-8 pt-8">
             <div className="flex items-center gap-3">
-              <img src="/swingsphere-logo.png" alt="" className="h-12 w-12 object-contain drop-shadow-[0_14px_30px_rgba(0,0,0,0.45)]" />
+              <img src="/swingsphere-logo_2.png" alt="" className="h-12 w-12 object-contain drop-shadow-[0_14px_30px_rgba(0,0,0,0.45)]" />
               <div className="text-[18px] font-extrabold uppercase tracking-[0.04em]"><span className="text-red-500">Swing</span><span className="text-white">Sphere</span></div>
             </div>
             <h1 className="mt-6 max-w-[330px] text-[38px] font-semibold leading-[0.98] tracking-[-0.045em] text-white">Explore the lifestyle. Around the corner or around the world.</h1>
@@ -92,7 +92,7 @@ const MobileHomeScreen: React.FC = () => {
           </section>
 
           <footer className="px-2 pb-2 pt-7 text-center">
-            <img src="/swingsphere-logo.png" alt="" className="mx-auto h-8 w-8 object-contain opacity-80" />
+            <img src="/swingsphere-logo_2.png" alt="" className="mx-auto h-8 w-8 object-contain opacity-80" />
             <p className="mt-3 text-[10px] leading-5 text-gray-600">SwingSphere is built for adult discovery, privacy, and intentional exploration.</p>
           </footer>
         </div>

@@ -82,7 +82,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setView, pendi
   return (
     <aside className="flex w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-white p-4">
       <div className="mb-7 flex items-center gap-2.5 px-1">
-        <img src="/swingsphere-logo.png" alt="SwingSphere" className="h-8 w-8 rounded-lg object-contain" />
+        <img src="/swingsphere-logo_2.png" alt="SwingSphere" className="h-8 w-8 rounded-lg object-contain" />
         <div>
           <div className="text-base font-black tracking-wide text-slate-900">Admin Panel</div>
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">SwingSphere</div>

@@ -3,6 +3,7 @@ import { ArrowRight, Globe2 } from 'lucide-react';
 
 type ExploreGlobeButtonProps = {
   onActivate: () => void;
+  className?: string;
 };
 
 type EdgePlacement = {
@@ -54,7 +55,7 @@ const getRandomEdgePlacement = (): EdgePlacement => {
   };
 };
 
-const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate }) => {
+const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate, className = '' }) => {
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const particleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const animationsRef = useRef<Array<Animation | null>>([]);
@@ -153,12 +154,14 @@ const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate }) =
   return (
     <span
       ref={rootRef}
-      className="ss-explore-globe-cta"
-      onPointerEnter={() => {
+      className={`ss-explore-globe-cta ${className}`.trim()}
+      onPointerEnter={(event) => {
+        if (event.pointerType === 'touch') return;
         hoverRef.current = true;
         syncRadiation();
       }}
-      onPointerLeave={() => {
+      onPointerLeave={(event) => {
+        if (event.pointerType === 'touch') return;
         hoverRef.current = false;
         syncRadiation();
       }}
@@ -195,7 +198,7 @@ const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate }) =
         <span className="ss-explore-globe-cta__glass" aria-hidden="true" />
         <span className="ss-explore-globe-cta__content">
           <Globe2 className="ss-explore-globe-cta__icon" size={20} strokeWidth={1.9} aria-hidden="true" />
-          <span>Explore the Globe</span>
+          <span className="ss-explore-globe-cta__label">Explore the Globe</span>
           <ArrowRight className="ss-explore-globe-cta__arrow" size={18} strokeWidth={2} aria-hidden="true" />
         </span>
       </button>

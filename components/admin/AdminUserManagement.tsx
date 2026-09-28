@@ -20,7 +20,7 @@ import {
 } from '../../lib/admin/userManagement';
 import AdminUserBadgeManager from './AdminUserBadgeManager';
 
-const fallbackAvatar = '/swingsphere-logo.png';
+const fallbackAvatar = '/swingsphere-logo_2.png';
 
 type RoleFilter = 'All' | AdminManagedUser['role'];
 type StatusFilter = 'All' | AdminManagedUser['status'];
