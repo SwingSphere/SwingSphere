@@ -119,6 +119,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
 
   return (
     <ClubPageLayout
+      backgroundImageUrl={coverImage}
       contextNav={
         <DetailContextNav
           breadcrumbs={[
@@ -128,6 +129,8 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           ]}
           listingId={club.id}
           streetViewAvailable={!isApproximateVenue && hasStreetViewForListing(club.id)}
+          showSpatialActions={false}
+          className="hidden sm:flex"
         />
       }
       hero={
@@ -135,12 +138,10 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           clubId={club.id}
           clubName={club.name}
           locationLine={locationLine}
-          availabilityLine={scheduleSummary}
           tags={club.generalAmenities ?? []}
           backgroundImageUrl={coverImage}
           logoImageUrl={extended.logoImageUrl}
           mediaPresentation={club.mediaPresentation}
-          thumbnails={thumbnails}
           onQuickEdit={onQuickEdit}
           onEditLocation={onEditLocation}
         />
@@ -148,6 +149,25 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
       main={
         <>
           <WhatHappensHere clubName={club.name} description={club.description_short} onQuickEdit={() => onQuickEdit?.('description')} />
+          {thumbnails.length > 1 ? (
+            <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-5">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">Gallery</div>
+                  <h2 className="mt-1 text-lg font-bold text-white">Photos</h2>
+                </div>
+                {showQuickControls ? <button type="button" onClick={() => onQuickEdit?.('gallery')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/60 px-3 py-2 text-xs font-black text-white"><Pencil size={13} /> Edit gallery</button> : null}
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                {thumbnails.slice(0, 6).map((image, index) => (
+                  <a key={`${image}-${index}`} href={image} target="_blank" rel="noopener noreferrer" className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                    <img src={image} alt={`${club.name} photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                    {index === 5 && thumbnails.length > 6 ? <span className="absolute inset-0 grid place-items-center bg-black/55 text-sm font-bold text-white">+{thumbnails.length - 6}</span> : null}
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
           <ClubRhythmSection schedule={club.schedule ?? []} summary={scheduleSummary} specialScheduleNotes={club.specialScheduleNotes} attendancePolicy={club.attendancePolicy} entryRequirements={club.entryRequirements} calendarHref={`/events?clubId=${encodeURIComponent(club.id)}`} onQuickEdit={() => onQuickEdit?.('schedule')} />
           <ClubHouseRulesSection content={extended.houseRules} />
           <ClubEventsPreview

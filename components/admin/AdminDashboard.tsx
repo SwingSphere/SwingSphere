@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type {
+    BuildingAsset,
     ClubData,
     CruiseSailingData,
     CruiseSeriesData,
@@ -15,6 +16,7 @@ import { useAppStore } from '../../store/appStore';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
 import { buildingVerificationNeedsReview } from '../../lib/buildingVerification';
 import { getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import { getBuildingAssetForListing, getBuildingAssetForVenue } from '../../lib/entityCompatibility';
 
 const Icon: React.FC<{ path: string }> = ({ path }) => (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -48,6 +50,8 @@ type DashboardData = {
     clubBrands: Awaited<ReturnType<typeof api.getClubBrands>>;
     eventSeries: Awaited<ReturnType<typeof api.getEventSeries>>;
     organizations: Awaited<ReturnType<typeof api.getOrganizations>>;
+    buildingAssets: BuildingAsset[];
+    venueRelationships: Awaited<ReturnType<typeof api.getOrganizationVenueRelationships>>;
 };
 
 const Surface: React.FC<{ title: string; subtitle?: string; children: React.ReactNode; className?: string }> = ({ title, subtitle, children, className = '' }) => (
@@ -96,7 +100,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
     useEffect(() => {
         const load = async () => {
             try {
-                const [listings, flagged, venues, resorts, cruiseSeries, cruiseSailings, clubBrands, eventSeries, organizations] = await Promise.all([
+                const [listings, flagged, venues, resorts, cruiseSeries, cruiseSailings, clubBrands, eventSeries, organizations, buildingAssets, venueRelationships] = await Promise.all([
                     api.getListings(),
                     api.getFlaggedContent(),
                     api.getVenues(),
@@ -106,8 +110,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
                     api.getClubBrands(),
                     api.getEventSeries(),
                     api.getOrganizations(),
+                    api.getBuildingAssets(),
+                    api.getOrganizationVenueRelationships(),
                 ]);
-                setData({ listings, flagged, venues, resorts, cruiseSeries, cruiseSailings, clubBrands, eventSeries, organizations });
+                setData({ listings, flagged, venues, resorts, cruiseSeries, cruiseSailings, clubBrands, eventSeries, organizations, buildingAssets, venueRelationships });
             } catch {
                 addToast({ message: 'Failed to load dashboard data.', type: 'error' });
             } finally {
@@ -133,12 +139,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             + data.cruiseSeries.filter((item) => !item.logoImageUrl).length;
         const missingFlyers = upcomingEvents.filter((event) => !event.mediaAssets?.some((asset) => asset.role === 'flyer')).length;
         const clubsMissingSchedules = clubs.filter((club) => !club.schedule?.length && !club.specialScheduleNotes?.trim()).length;
-        const venuesMissingBuildings = data.venues.filter((venue) => !venue.buildingAssetId).length;
+        const venuesMissingBuildings = data.venues.filter((venue) => !getBuildingAssetForVenue(venue, data.buildingAssets, {
+            listings: data.listings,
+            venues: data.venues,
+            organizations: data.organizations,
+            relationships: data.venueRelationships,
+        })).length;
         const organizationsMissingContact = data.organizations.filter((organization) => !organization.contactEmail && !organization.website).length;
         const pending = data.listings.filter((item) => item.status === 'pending_approval').length;
+        const entityCollections = {
+            listings: data.listings,
+            venues: data.venues,
+            organizations: data.organizations,
+            relationships: data.venueRelationships,
+        };
         const buildingVerificationFlags = [
             ...data.venues
-                .filter((venue) => buildingVerificationNeedsReview(venue.locationMeta?.buildingVerification))
+                .filter((venue) => (
+                    buildingVerificationNeedsReview(venue.locationMeta?.buildingVerification)
+                    && !getBuildingAssetForVenue(venue, data.buildingAssets, entityCollections)
+                ))
                 .map((venue) => ({
                     id: `venue:${venue.id}`,
                     name: venue.name,
@@ -147,7 +167,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
                         : 'Nearby building address could not be confirmed',
                 })),
             ...data.listings
-                .filter((listing) => buildingVerificationNeedsReview(listing.locationMeta?.buildingVerification))
+                .filter((listing) => (
+                    buildingVerificationNeedsReview(listing.locationMeta?.buildingVerification)
+                    && !getBuildingAssetForListing(listing, data.buildingAssets, entityCollections)
+                ))
                 .map((listing) => ({
                     id: `listing:${listing.id}`,
                     name: listing.name,
@@ -247,7 +270,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             key: 'missing-buildings',
             label: 'Venues without verified buildings',
             value: computed.venuesMissingBuildings,
-            items: data.venues.filter((venue) => !venue.buildingAssetId).map((venue) => ({
+            items: data.venues.filter((venue) => !getBuildingAssetForVenue(venue, data.buildingAssets, {
+                listings: data.listings,
+                venues: data.venues,
+                organizations: data.organizations,
+                relationships: data.venueRelationships,
+            })).map((venue) => ({
                 id: venue.id,
                 name: venue.name,
                 detail: [venue.address.city, venue.address.region, venue.address.country].filter(Boolean).join(', '),

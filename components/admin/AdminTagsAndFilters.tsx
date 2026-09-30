@@ -15,7 +15,8 @@ const AdminTagsAndFilters: React.FC = () => {
     const [categories, setCategories] = useState<TagCategory[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({ 'cat-1': true });
+    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+    const [showLegacyTags, setShowLegacyTags] = useState(false);
     const { addToast } = useAppStore();
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -93,36 +94,63 @@ const AdminTagsAndFilters: React.FC = () => {
             {isCategoryModalOpen && <AdminCategoryModal category={editingCategory} onClose={() => setIsCategoryModalOpen(false)} onSave={handleSaveCategory}/>}
             {isTagModalOpen && activeCategoryId && <AdminTagModal tag={editingTag} categoryId={activeCategoryId} onClose={() => setIsTagModalOpen(false)} onSave={handleSaveTag}/>}
 
-            <h1 className="text-4xl font-bold text-gray-800 mb-8">Tags & Filters</h1>
-            <div className="mb-6"><button onClick={handleAddCategory} className="flex items-center bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-sm px-4 py-2 text-sm"><AddIcon /> Add New Tag Category</button></div>
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Tags & Filters</h1>
+                    <p className="mt-1 max-w-2xl text-sm text-gray-500">Active taxonomy stays focused on discovery. Historical values remain available for compatibility, but are hidden by default.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setShowLegacyTags((value) => !value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                        {showLegacyTags ? 'Hide' : 'Show'} legacy / hidden ({stats.hiddenCount})
+                    </button>
+                    <button onClick={handleAddCategory} className="flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"><AddIcon /> Add category</button>
+                </div>
+            </div>
 
             <div className="space-y-4">
                 {categories.sort((a,b) => a.order - b.order).map(cat => {
-                    const categoryTags = tags.filter(t => t.categoryId === cat.id);
+                    const allCategoryTags = tags.filter(t => t.categoryId === cat.id);
+                    const activeCategoryTags = allCategoryTags.filter(t => t.isVisible && !t.isDeprecated);
+                    const legacyCategoryTags = allCategoryTags.filter(t => !t.isVisible || t.isDeprecated);
+                    const categoryTags = showLegacyTags ? allCategoryTags : activeCategoryTags;
+                    const isStructuredAudienceCategory = cat.slug === 'audience-access' || cat.id === 'cat-audience';
                     return (
                         <div key={cat.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50" onClick={() => handleToggleCategory(cat.id)}>
-                                <div className="flex items-center gap-4"><DragIcon /><h2 className="text-xl font-bold text-gray-800">{cat.name}</h2><span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{categoryTags.length} Tags</span></div>
+                                <div className="flex min-w-0 items-center gap-3"><DragIcon /><h2 className="truncate text-base font-bold text-gray-800">{cat.name}</h2><span className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{activeCategoryTags.length} active</span>{legacyCategoryTags.length > 0 && <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{legacyCategoryTags.length} legacy</span>}</div>
                                 <div className="flex items-center gap-4">
                                     <button onClick={(e) => { e.stopPropagation(); handleAddTag(cat.id); }} className="bg-blue-50 text-blue-700 font-semibold rounded-lg hover:bg-blue-100 px-3 py-1.5 text-xs flex items-center"><AddIcon /> Add Tag</button>
                                     <ChevronDownIcon className={`${openCategories[cat.id] ? 'rotate-180' : ''}`} />
                                 </div>
                             </div>
                             {openCategories[cat.id] && (
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Label</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applies To</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visible</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deprecated</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {categoryTags.map(tag => (
-                                            <tr key={tag.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tag.label}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tag.usageCount}</td>
-                                                <td className="px-6 py-4 text-xs text-gray-500">{(tag.appliesTo ?? ['club', 'event']).join(', ')}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">{tag.isVisible ? '✅' : '❌'}</td><td className="px-6 py-4 whitespace-nowrap text-sm">{tag.isDeprecated ? '✅' : '❌'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><div className="flex items-center gap-3"><button title="Edit tag" onClick={() => handleEditTag(tag)} className="text-blue-600 hover:text-blue-800"><EditIcon /></button><button title="Deprecate tag" disabled={tag.isDeprecated} onClick={() => handleDeleteTag(tag.id)} className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-300"><DeleteIcon /></button></div></td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div className="border-t border-gray-200">
+                                    {isStructuredAudienceCategory && (
+                                        <div className="border-b border-gray-200 bg-blue-50/60 px-4 py-3 text-xs leading-5 text-blue-800">
+                                            Audience and access are now modeled with structured attendance policies and entry requirements. Legacy tags remain here only so older listings continue to resolve correctly.
+                                        </div>
+                                    )}
+                                    {categoryTags.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50"><tr><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 w-1/3">Label</th><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Usage</th><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Applies to</th><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Status</th><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Actions</th></tr></thead>
+                                                <tbody className="divide-y divide-gray-100 bg-white">
+                                                    {categoryTags.map(tag => (
+                                                        <tr key={tag.id} className={!tag.isVisible || tag.isDeprecated ? 'bg-gray-50/60' : undefined}>
+                                                            <td className="px-4 py-3 text-xs font-semibold text-gray-900">{tag.label}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{tag.usageCount}</td>
+                                                            <td className="px-4 py-3 text-xs text-gray-500">{(tag.appliesTo ?? ['club', 'event']).join(', ')}</td>
+                                                            <td className="px-4 py-3 text-xs">{tag.isDeprecated ? <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">Legacy</span> : tag.isVisible ? <span className="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">Active</span> : <span className="rounded-full bg-gray-100 px-2 py-1 font-semibold text-gray-600">Hidden</span>}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-xs font-medium"><div className="flex items-center gap-3"><button title="Edit tag" onClick={() => handleEditTag(tag)} className="text-blue-600 hover:text-blue-800"><EditIcon /></button><button title="Deprecate tag" disabled={tag.isDeprecated} onClick={() => handleDeleteTag(tag.id)} className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-300"><DeleteIcon /></button></div></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="px-4 py-4 text-xs text-gray-500">{showLegacyTags ? 'No tags in this category.' : 'No active tags in this category.'}</div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     );

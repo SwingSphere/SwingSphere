@@ -13,6 +13,7 @@ export type DetailContextNavProps = {
   breadcrumbs: BreadcrumbItem[];
   listingId?: string;
   streetViewAvailable?: boolean;
+  showSpatialActions?: boolean;
   className?: string;
 };
 
@@ -22,6 +23,7 @@ export const DetailContextNav: React.FC<DetailContextNavProps> = ({
   breadcrumbs,
   listingId,
   streetViewAvailable = false,
+  showSpatialActions = true,
   className = '',
 }) => {
   const navigate = useNavigate();
@@ -89,7 +91,7 @@ export const DetailContextNav: React.FC<DetailContextNavProps> = ({
       </div>
 
       {/* Right: Direct Spatial Discovery Jump Actions */}
-      <div className="flex items-center gap-1.5 text-xs">
+      {showSpatialActions ? <div className="flex items-center gap-1.5 text-xs">
         <Link
           to={globeHref}
           className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.035] px-2.5 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-white"
@@ -120,7 +122,7 @@ export const DetailContextNav: React.FC<DetailContextNavProps> = ({
             <span className="hidden sm:inline">Street View</span>
           </Link>
         ) : null}
-      </div>
+      </div> : null}
     </nav>
   );
 };

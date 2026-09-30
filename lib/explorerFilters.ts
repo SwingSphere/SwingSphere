@@ -1,14 +1,14 @@
 import type { Listing, TimeLens } from '../types';
 
 export const EXPLORER_ACCESS_FILTERS = [
-  { id: 'couples-focused', label: 'Couples-Focused' },
-  { id: 'couples-only', label: 'Couples Only' },
-  { id: 'single-men', label: 'Single Men Welcome' },
-  { id: 'single-women', label: 'Single Women Welcome' },
-  { id: 'lgbtq', label: 'LGBTQ+ Friendly' },
-  { id: 'trans-nonbinary', label: 'Trans & Non-Binary Inclusive' },
-  { id: 'bipoc', label: 'BIPOC-Friendly' },
-  { id: 'newbie', label: 'Newbie Friendly' },
+  { id: 'couples-focused', label: 'Couples' },
+  { id: 'couples-only', label: 'Couples only' },
+  { id: 'single-men', label: 'Solo men' },
+  { id: 'single-women', label: 'Solo women' },
+  { id: 'lgbtq', label: 'LGBTQ+' },
+  { id: 'trans-nonbinary', label: 'Trans / NB' },
+  { id: 'bipoc', label: 'BIPOC' },
+  { id: 'newbie', label: 'Newcomers' },
 ] as const;
 
 const normalize = (value: string) => value.trim().toLowerCase();

@@ -7626,5 +7626,89 @@
     "rejectionReasons": [
       "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
     ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-cupids-swinton",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-bcef20c3",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-cupids-swinton:2026-09-30T00:51:46.173Z",
+    "listingName": "Cupid's Swingers Club",
+    "normalizedAddress": "13 17 sutherland street swinton greater manchester m27 6at united kingdom",
+    "canonicalCoordinate": {
+      "lat": 53.5152148798457,
+      "lng": -2.3433963098707453
+    },
+    "coordinateProvenance": "postcodes.io+official-site+salford-licensing",
+    "coordinateConfidence": 0.94,
+    "evaluatedAt": "2026-09-30T00:51:46.173Z",
+    "providerSnapshot": {
+      "source": "Saved · Ordnance Survey OpenMap Local",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 10,
+      "individualFootprintCount": 8
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-nu72h8-1-8",
+      "providerFeatureIds": [
+        "os-openmap-local:OML_Building3300000v1"
+      ],
+      "providerSource": "os-openmap-local-buildings",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Rutland Street, Newtown, Swinton, Salford, Greater Manchester, England, M27 6AU, United Kingdom",
+      "addressComponents": {
+        "road": "Rutland Street",
+        "city": "Salford",
+        "region": "England",
+        "postalCode": "M27 6AU",
+        "country": "United Kingdom",
+        "countryCode": "GB"
+      },
+      "pinIntersects": true,
+      "minimumPinToFootprintMeters": 0,
+      "pinToCentroidMeters": 0,
+      "score": 28,
+      "confidence": 0.28,
+      "reasons": [
+        "candidate has no mapped house number",
+        "pin intersects footprint",
+        "stored coordinate falls inside this individual footprint"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-1crazyn-1-4",
+      "providerFeatureIds": [
+        "331152550"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "Westover Street, Newtown, Swinton, Salford, Greater Manchester, England, M27 6GF, United Kingdom",
+      "addressComponents": {
+        "road": "Westover Street",
+        "city": "Salford",
+        "region": "England",
+        "postalCode": "M27 6GF",
+        "country": "United Kingdom",
+        "countryCode": "GB"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 130.93233907020252,
+      "pinToCentroidMeters": 153.48574441017576,
+      "score": 0,
+      "confidence": 0,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 28,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
   }
 ]

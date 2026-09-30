@@ -207,6 +207,9 @@ const EventPage: React.FC = () => {
   const eventHeroAsset = event.mediaAssets?.find((asset) => asset.role === 'hero') ?? null;
   const eventFlyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer') ?? null;
   const eventGalleryAssets = event.mediaAssets?.filter((asset) => asset.role === 'gallery') ?? [];
+  const eventFlyerHeroImage = eventFlyerAsset
+    ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'flyerpage' }) ?? undefined
+    : undefined;
   const eventCoverImage = eventHeroAsset
     ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event)
     : getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event);
@@ -262,6 +265,7 @@ const EventPage: React.FC = () => {
         />
       ) : null}
       <EventPageLayout
+        backgroundImageUrl={eventFlyerHeroImage || eventCoverImage}
         contextNav={
           <DetailContextNav
             breadcrumbs={[
@@ -271,6 +275,8 @@ const EventPage: React.FC = () => {
             ]}
             listingId={event.id}
             streetViewAvailable={Boolean(streetViewListingId)}
+            showSpatialActions={false}
+            className="hidden sm:flex"
           />
         }
         hero={
@@ -279,13 +285,11 @@ const EventPage: React.FC = () => {
             eventId={event.id}
             title={event.name}
             backgroundImageUrl={eventCoverImage}
+            mobileFlyerImageUrl={eventFlyerHeroImage}
             eventLogoUrl={eventLogoImage}
             clubLogoUrl={venueLogoImage}
             hostLogoUrl={presenterLogoUrl}
-            hostName={presenterName}
-            hostPath={hostPath}
-            venueName={venue?.name}
-            venuePath={venuePath}
+            locationText={heroLocationText}
             tags={event.tags}
             mediaImages={heroMediaImages}
             onQuickEdit={setQuickEditField}
@@ -294,6 +298,7 @@ const EventPage: React.FC = () => {
             timeText={timeRange}
             locationText={heroLocationText}
             venueName={venue?.name}
+            venuePath={venuePath}
             attendanceText={attendanceText}
             calendarActions={
               <EventCalendarCard
@@ -377,7 +382,9 @@ const EventPage: React.FC = () => {
             </section>
           ) : null}
           <div className="space-y-6 lg:hidden">
-            <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} onQuickEdit={() => setQuickEditField('flyer')} />
+            <div className="hidden sm:block">
+              <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} onQuickEdit={() => setQuickEditField('flyer')} />
+            </div>
             <EventMapCard
               eventId={event.id}
               eventName={event.name}

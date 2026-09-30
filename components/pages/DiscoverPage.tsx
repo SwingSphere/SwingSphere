@@ -53,16 +53,24 @@ const KIND_TABS: { value: Kind; label: string; icon: React.ComponentType<{ class
 
 const AUDIENCE_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'All audiences' },
-  { value: 'mixed_open', label: 'Mixed / open' },
-  { value: 'couples_and_single_women', label: 'Couples + single women' },
+  { value: 'mixed_open', label: 'Open' },
+  { value: 'couples_focused', label: 'Couples' },
   { value: 'couples_only', label: 'Couples only' },
-  { value: 'couples_focused', label: 'Couples focused' },
-  { value: 'all_genders_welcome', label: 'All genders welcome' },
-  { value: 'application_required', label: 'Application required' },
-  { value: 'open_to_approved_guests', label: 'Approved guests' },
-  { value: 'members_only', label: 'Members only' },
+  { value: 'couples_and_single_women', label: 'Couples + solo women' },
+  { value: 'couples_and_select_single_men', label: 'Couples + select men' },
+  { value: 'women_only', label: 'Women only' },
   { value: 'men_only', label: 'Men only' },
+  { value: 'lgbtq_centered', label: 'LGBTQ+ centered' },
+  { value: 'varies_by_night', label: 'Varies by night' },
 ];
+
+const matchesAudienceFilter = (attendance: string | undefined, filter: string): boolean => {
+  if (filter === 'all') return true;
+  if (!attendance) return false;
+  if (filter === 'mixed_open') return ['mixed_open', 'all_genders_welcome'].includes(attendance);
+  if (filter === 'varies_by_night') return ['varies_by_night', 'varies_by_event'].includes(attendance);
+  return attendance === filter;
+};
 
 const attendanceLabel = (policy?: AttendancePolicy): string | null => {
   if (!policy) return null;
@@ -365,8 +373,7 @@ const DiscoverPage: React.FC = () => {
         return inDateWindow(card.date, dateFilter);
       })
       .filter((card) => {
-        if (audienceFilter === 'all') return true;
-        return card.attendance === audienceFilter;
+        return matchesAudienceFilter(card.attendance, audienceFilter);
       })
       .filter((card) => {
         if (!q) return true;

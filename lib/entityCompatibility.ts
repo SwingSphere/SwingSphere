@@ -167,6 +167,35 @@ export const getBuildingAssetVenueId = (
   return listing ? getVenueForListing(listing, collections)?.id : undefined;
 };
 
+export const getBuildingAssetForVenue = (
+  venue: VenueData | null,
+  assets: BuildingAsset[],
+  collections: EntityCollections = {},
+): BuildingAsset | null => {
+  if (!venue) return null;
+
+  if (venue.buildingAssetId) {
+    const explicitVenueAsset = assets.find((asset) => asset.id === venue.buildingAssetId);
+    if (explicitVenueAsset) return explicitVenueAsset;
+  }
+
+  const directVenueAsset = assets.find((asset) => asset.venueId === venue.id);
+  if (directVenueAsset) return directVenueAsset;
+
+  // Older verified club buildings may still be listing-owned. Resolve their
+  // physical Venue identity so the canonical Venue can reuse that geometry
+  // instead of being incorrectly reported as unverified. Prefer club-authored
+  // geometry when several legacy assets resolve to the same Venue.
+  const { listings } = defaultCollections(collections);
+  const clubAuthoredAsset = assets.find((asset) => {
+    if (getBuildingAssetVenueId(asset, collections) !== venue.id) return false;
+    return listings.find((candidate) => candidate.id === asset.listingId)?.type === 'club';
+  });
+  if (clubAuthoredAsset) return clubAuthoredAsset;
+
+  return assets.find((asset) => getBuildingAssetVenueId(asset, collections) === venue.id) ?? null;
+};
+
 export const getBuildingAssetForListing = (
   listing: Listing | null,
   assets: BuildingAsset[],
@@ -174,30 +203,10 @@ export const getBuildingAssetForListing = (
 ): BuildingAsset | null => {
   if (!listing) return null;
   const venue = getVenueForListing(listing, collections);
-  const venueId = venue?.id;
-  const { listings } = defaultCollections(collections);
-
   // Physical building geometry belongs to the Venue, not to each event that
-  // happens there. Prefer the Venue's explicit asset pointer when one exists.
-  if (venue?.buildingAssetId) {
-    const explicitVenueAsset = assets.find((asset) => asset.id === venue.buildingAssetId);
-    if (explicitVenueAsset) return explicitVenueAsset;
-  }
-
-  if (venueId) {
-    // Older canonical club assets predate venueId on BuildingAsset. Infer their
-    // venue through the source listing so every event at that Venue can reuse
-    // the same geometry instead of creating a duplicate event-owned asset.
-    const canonicalVenueAsset = assets.find((asset) => {
-      if (getBuildingAssetVenueId(asset, collections) !== venueId) return false;
-      const sourceListing = listings.find((candidate) => candidate.id === asset.listingId);
-      return sourceListing?.type === 'club';
-    });
-    if (canonicalVenueAsset) return canonicalVenueAsset;
-
-    const venueMatch = assets.find((asset) => getBuildingAssetVenueId(asset, collections) === venueId);
-    if (venueMatch) return venueMatch;
-  }
+  // happens there. Prefer any canonical or legacy asset resolved for the Venue.
+  const venueAsset = getBuildingAssetForVenue(venue, assets, collections);
+  if (venueAsset) return venueAsset;
 
   const authoredAssetId = listing.buildingAssetId;
   if (authoredAssetId) {

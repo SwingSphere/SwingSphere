@@ -5,6 +5,7 @@ import AdminEntityIdentity from './AdminEntityIdentity';
 import { brandMediaSourceLabel, resolveBrandLogo, type BrandMediaCatalog } from '../../lib/entityBrandMedia';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
+import { getBuildingAssetForVenue } from '../../lib/entityCompatibility';
 
 type AdminManageVenuesProps = {
   venues: VenueData[];
@@ -27,19 +28,10 @@ const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({ venues, listings,
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { addToast } = useAppStore();
-  const listingById = useMemo(() => new Map(listings.map((listing) => [listing.id, listing])), [listings]);
-  const buildingByVenueId = useMemo(() => new Map(buildingAssets.filter((asset) => asset.venueId).map((asset) => [asset.venueId as string, asset])), [buildingAssets]);
-  const buildingByListingId = useMemo(() => new Map(buildingAssets.map((asset) => [asset.listingId, asset])), [buildingAssets]);
-
-  const getBuildingAsset = (venue: VenueData) => {
-    if (venue.buildingAssetId) return buildingAssets.find((asset) => asset.id === venue.buildingAssetId) ?? null;
-    const direct = buildingByVenueId.get(venue.id);
-    if (direct) return direct;
-    const sourceListingId = venue.id.startsWith('venue-') ? venue.id.slice('venue-'.length) : venue.id;
-    const sourceListing = listingById.get(sourceListingId);
-    if (sourceListing?.buildingAssetId) return buildingAssets.find((asset) => asset.id === sourceListing.buildingAssetId) ?? null;
-    return buildingByListingId.get(sourceListingId) ?? null;
-  };
+  const getBuildingAsset = (venue: VenueData) => getBuildingAssetForVenue(venue, buildingAssets, {
+    listings,
+    venues,
+  });
 
   const filteredVenues = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();

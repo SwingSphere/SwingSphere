@@ -441,6 +441,7 @@ const HostPage: React.FC = () => {
       canEdit={canEditHostPage}
     />
     <HostPageLayout
+      backgroundImageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
       contextNav={
         <DetailContextNav
           breadcrumbs={[

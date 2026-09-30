@@ -46,11 +46,11 @@ const HeroTagRow: React.FC<{
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/25 px-2.5 py-1 text-xs font-semibold text-gray-300 transition hover:border-white/25 hover:text-white"
+            className="inline-flex shrink-0 items-center rounded-full border border-white/15 bg-black/25 px-2.5 py-1 text-xs font-semibold text-gray-200 transition hover:border-white/25 hover:text-white"
             aria-expanded="false"
             aria-label={`Show ${mobileOverflow} more tags`}
           >
-            … {mobileOverflow} more <ChevronDown size={12} aria-hidden="true" />
+            +{mobileOverflow}
           </button>
         ) : null}
       </div>

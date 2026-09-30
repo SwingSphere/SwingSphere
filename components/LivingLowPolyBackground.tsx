@@ -68,6 +68,10 @@ const BLACK = [0, 0, 0] as const;
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const smoothstep = (edge0: number, edge1: number, value: number) => {
+  const t = clamp((value - edge0) / (edge1 - edge0));
+  return t * t * (3 - 2 * t);
+};
 
 const createSeededRandom = (seed = 0x5f3759df) => {
   let state = seed >>> 0;
@@ -87,6 +91,7 @@ const mixRgb = (from: Rgb, to: Rgb, amount: number): Rgb => {
 };
 
 const rgba = (rgb: Rgb, alpha: number) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+const luminance = (rgb: Rgb) => rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
 
 export const getLivingBackgroundMeshStats = (density = 100) => {
   const normalizedDensity = clamp(density, 50, 200);
@@ -202,12 +207,28 @@ export default function LivingLowPolyBackground({
   const paletteAccentA = palette?.accentA ?? RED_A;
   const paletteAccentB = palette?.accentB ?? RED_B;
   const paletteAccentHot = palette?.accentHot ?? RED_HOT;
+  const paletteRef = useRef({
+    darkA: paletteDarkA,
+    darkB: paletteDarkB,
+    accentA: paletteAccentA,
+    accentB: paletteAccentB,
+    accentHot: paletteAccentHot,
+  });
+  paletteRef.current = {
+    darkA: paletteDarkA,
+    darkB: paletteDarkB,
+    accentA: paletteAccentA,
+    accentB: paletteAccentB,
+    accentHot: paletteAccentHot,
+  };
+
   const mesh = useMemo(() => buildMesh(density), [density]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const faceRefs = useRef<Array<SVGPolygonElement | null>>([]);
   const glowRefs = useRef<Array<SVGPolygonElement | null>>([]);
   const glowGroupRef = useRef<SVGGElement | null>(null);
   const glowBlurRef = useRef<SVGFEGaussianBlurElement | null>(null);
+  const lastGlowApplied = useRef<number | null>(null);
   const pointer = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const reducedMotion = useRef(false);
   const visible = useRef(true);
@@ -290,6 +311,7 @@ export default function LivingLowPolyBackground({
     const renderFrame = (time: number) => {
       const settings = settingsRef.current;
       const isReduced = reducedMotion.current;
+      const currentPalette = paletteRef.current;
 
       if (!isReduced) {
         pointer.current.x = lerp(pointer.current.x, pointer.current.tx, 0.055);
@@ -315,11 +337,32 @@ export default function LivingLowPolyBackground({
       }
 
       const glowStrengthNow = settings.glowStrength;
-      if (glowGroupRef.current) {
-        glowGroupRef.current.setAttribute('opacity', String(glowStrengthNow > 0 ? 0.28 + glowStrengthNow * 0.72 : 0));
+      if (lastGlowApplied.current !== glowStrengthNow) {
+        lastGlowApplied.current = glowStrengthNow;
+        if (glowGroupRef.current) {
+          glowGroupRef.current.setAttribute('opacity', String(glowStrengthNow > 0 ? 0.28 + glowStrengthNow * 0.72 : 0));
+        }
+        if (glowBlurRef.current) {
+          glowBlurRef.current.setAttribute('stdDeviation', String(1.2 + glowStrengthNow * 2.6));
+        }
       }
-      if (glowBlurRef.current) {
-        glowBlurRef.current.setAttribute('stdDeviation', String(1.2 + glowStrengthNow * 2.6));
+
+      const pDarkA = currentPalette.darkA;
+      const pDarkB = currentPalette.darkB;
+      const pAccentA = currentPalette.accentA;
+      const pAccentB = currentPalette.accentB;
+      const pAccentHot = currentPalette.accentHot;
+
+      // Low Poly glow follows the brightest color in the active palette instead of
+      // using SwingSphere red. This keeps hero-derived palettes visually coherent.
+      let glowRgb = pDarkA;
+      let glowLuminance = luminance(glowRgb);
+      for (const candidate of [pDarkB, pAccentA, pAccentB, pAccentHot]) {
+        const candidateLuminance = luminance(candidate);
+        if (candidateLuminance > glowLuminance) {
+          glowRgb = candidate;
+          glowLuminance = candidateLuminance;
+        }
       }
 
       for (let index = 0; index < mesh.triangles.length; index += 1) {
@@ -330,10 +373,21 @@ export default function LivingLowPolyBackground({
         const by = animatedY[triangle.b];
         const cx = animatedX[triangle.c];
         const cy = animatedY[triangle.c];
-        const points = `${ax},${ay} ${bx},${by} ${cx},${cy}`;
+        // 1-decimal formatting reduces coordinate string size by >50% and avoids GC string churn
+        const points = `${ax.toFixed(1)},${ay.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)}`;
 
         const avgY = (ay + by + cy) / 3 / VIEW_H;
-        const redZone = clamp((avgY - 0.34) / 0.66);
+
+        // Full-height palette progression. The old renderer kept the upper field in
+        // a dark-only branch and activated color mostly in the lower field, which
+        // read as two stacked halves on tall screens. A warped smooth ramp keeps
+        // the whole mesh participating in one continuous gradient.
+        const verticalRamp = smoothstep(0.02, 0.98, avgY);
+        const rampWarp =
+          (triangle.tone - 0.5) * 0.12
+          + Math.sin(triangle.phase + avgY * 7) * 0.035;
+        const gradientPosition = clamp(verticalRamp + rampWarp);
+
         const breathing = isReduced
           ? 0.45
           : 0.5 + 0.5 * Math.sin(time * 0.24 * settings.colorSpeed + triangle.phase);
@@ -343,55 +397,86 @@ export default function LivingLowPolyBackground({
             + breathing * settings.colorStrength * (0.28 + triangle.tone * 0.42),
         );
 
-        const darkRgb = mixRgb(paletteDarkA, paletteDarkB, 0.13 + triangle.tone * 0.52 + activation * 0.12);
-        const redRgb = mixRgb(paletteAccentA, paletteAccentB, 0.12 + triangle.tone * 0.42 + activation * 0.42);
-        const hotRgb = mixRgb(paletteAccentB, paletteAccentHot, activation * 0.48);
-        const baseRgb = redZone < 0.18
-          ? darkRgb
-          : redZone > 0.72 && triangle.tone > 0.72
-            ? hotRgb
-            : mixRgb(darkRgb, redRgb, redZone);
+        // Zero-allocation scalar RGB blending for the dark and accent ends of the ramp.
+        const darkT = clamp(0.10 + triangle.tone * 0.48 + activation * 0.14);
+        const darkR = Math.round(pDarkA[0] + (pDarkB[0] - pDarkA[0]) * darkT);
+        const darkG = Math.round(pDarkA[1] + (pDarkB[1] - pDarkA[1]) * darkT);
+        const darkB = Math.round(pDarkA[2] + (pDarkB[2] - pDarkA[2]) * darkT);
+
+        const accentT = clamp(0.10 + triangle.tone * 0.34 + activation * 0.34);
+        const accentR = Math.round(pAccentA[0] + (pAccentB[0] - pAccentA[0]) * accentT);
+        const accentG = Math.round(pAccentA[1] + (pAccentB[1] - pAccentA[1]) * accentT);
+        const accentB = Math.round(pAccentA[2] + (pAccentB[2] - pAccentA[2]) * accentT);
+
+        const gradientMix = smoothstep(0.14, 0.90, gradientPosition);
+
+        let baseR = Math.round(darkR + (accentR - darkR) * gradientMix);
+        let baseG = Math.round(darkG + (accentG - darkG) * gradientMix);
+        let baseB = Math.round(darkB + (accentB - darkB) * gradientMix);
+
+        // Keep the hottest palette color sparse and late in the ramp so it reads as
+        // a highlight rather than a separate bottom section.
+        const hotMix =
+          smoothstep(0.80, 1.00, gradientPosition)
+          * smoothstep(0.62, 1.00, triangle.tone)
+          * (0.35 + activation * 0.65);
+
+        if (hotMix > 0) {
+          const hotAmount = clamp(hotMix * 0.55);
+          baseR = Math.round(baseR + (pAccentHot[0] - baseR) * hotAmount);
+          baseG = Math.round(baseG + (pAccentHot[1] - baseG) * hotAmount);
+          baseB = Math.round(baseB + (pAccentHot[2] - baseB) * hotAmount);
+        }
+
         const flickerAmount = getPanelFlickerAmount(time, triangle, settings.panelFlicker, isReduced);
-        const fillRgb = flickerAmount > 0 ? mixRgb(baseRgb, BLACK, flickerAmount) : baseRgb;
+        let finalR = baseR;
+        let finalG = baseG;
+        let finalB = baseB;
+        if (flickerAmount > 0) {
+          const fInv = 1 - flickerAmount;
+          finalR = Math.round(baseR * fInv);
+          finalG = Math.round(baseG * fInv);
+          finalB = Math.round(baseB * fInv);
+        }
         const fillAlpha = Math.max(0.02, 0.97 - flickerAmount * 0.96);
         const edgeAlpha = settings.lineStrength
           * (0.18 + activation * 0.82)
-          * (0.58 + redZone * 0.42)
+          * (0.52 + gradientMix * 0.48)
           * (1 - flickerAmount * 0.98);
 
         const face = faceRefs.current[index];
         if (face) {
           face.setAttribute('points', points);
-          face.setAttribute('fill', rgba(fillRgb, fillAlpha));
+          face.setAttribute('fill', `rgba(${finalR},${finalG},${finalB},${fillAlpha.toFixed(2)})`);
+          const edgeTint = 0.28 + gradientMix * 0.72;
           face.setAttribute(
             'stroke',
             settings.lineStrength <= 0
               ? 'none'
-              : redZone > 0.35
-                ? `rgba(238, 35, 67, ${edgeAlpha})`
-                : `rgba(191, 198, 208, ${edgeAlpha * 0.34})`,
+              : rgba(glowRgb, Number((edgeAlpha * edgeTint).toFixed(2))),
           );
         }
 
-        const glow = glowRefs.current[index];
-        if (glow) {
-          const glowRedZone = clamp((avgY - 0.30) / 0.70);
-          const pulse = isReduced
-            ? 0.45
-            : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(time * 0.19 * settings.colorSpeed + triangle.phase));
-          const glowAlpha = glowStrengthNow
-            * (0.08 + glowRedZone * 0.42)
-            * (0.45 + pulse * 0.55)
-            * (1 - flickerAmount * 0.99);
+        // Only update glow attributes when glow is visibly active
+        if (glowStrengthNow > 0) {
+          const glow = glowRefs.current[index];
+          if (glow) {
+            const glowGradient = smoothstep(0.08, 0.96, gradientPosition);
+            const pulse = isReduced
+              ? 0.45
+              : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(time * 0.19 * settings.colorSpeed + triangle.phase));
+            const glowAlpha = glowStrengthNow
+              * (0.05 + glowGradient * 0.24)
+              * (0.45 + pulse * 0.55)
+              * (1 - flickerAmount * 0.99);
 
-          glow.setAttribute('points', points);
-          glow.setAttribute(
-            'stroke',
-            glowRedZone > 0.28
-              ? `rgba(255, 39, 74, ${glowAlpha})`
-              : `rgba(178, 188, 204, ${glowAlpha * 0.18})`,
-          );
-          glow.setAttribute('stroke-width', String(1.2 + glowStrengthNow * 1.8));
+            glow.setAttribute('points', points);
+            glow.setAttribute(
+              'stroke',
+              rgba(glowRgb, Number((glowAlpha * (0.28 + glowGradient * 0.72)).toFixed(2))),
+            );
+            glow.setAttribute('stroke-width', (1.2 + glowStrengthNow * 1.8).toFixed(1));
+          }
         }
       }
     };
@@ -402,23 +487,35 @@ export default function LivingLowPolyBackground({
     let frame = 0;
     let last = 0;
     const animate = (now: number) => {
-      if (!document.hidden && visible.current && !reducedMotion.current && now - last >= FRAME_MS) {
-        renderFrame(now / 1000);
-        last = now;
+      if (!document.hidden && visible.current && !reducedMotion.current) {
+        if (now - last >= FRAME_MS) {
+          renderFrame(now / 1000);
+          last = now;
+        }
+        frame = requestAnimationFrame(animate);
+      } else if (!reducedMotion.current) {
+        // Sleep idle check when hidden or off-screen, check again in 200ms
+        frame = requestAnimationFrame(() => {
+          setTimeout(() => {
+            frame = requestAnimationFrame(animate);
+          }, 200);
+        });
       }
-      frame = requestAnimationFrame(animate);
     };
 
-    frame = requestAnimationFrame(animate);
+    if (!reducedMotion.current) {
+      frame = requestAnimationFrame(animate);
+    }
+
     return () => {
       cancelAnimationFrame(frame);
       renderFrameRef.current = null;
     };
-  }, [mesh, paletteDarkA, paletteDarkB, paletteAccentA, paletteAccentB, paletteAccentHot]);
+  }, [mesh]);
 
   useEffect(() => {
     if (reducedMotion.current) renderFrameRef.current?.(0);
-  }, [morphStrength, morphSpeed, colorSpeed, colorStrength, panelFlicker, lineStrength, glowStrength]);
+  }, [morphStrength, morphSpeed, colorSpeed, colorStrength, panelFlicker, lineStrength, glowStrength, paletteDarkA, paletteDarkB, paletteAccentA, paletteAccentB, paletteAccentHot]);
 
   return (
     <div
@@ -429,10 +526,10 @@ export default function LivingLowPolyBackground({
     >
       <svg className="h-full w-full" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none">
         <defs>
-          <linearGradient id="living-low-poly-red-floor" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(70,0,12,0)" />
-            <stop offset="58%" stopColor="rgba(85,2,16,0.04)" />
-            <stop offset="100%" stopColor="rgba(178,8,31,0.18)" />
+          <linearGradient id="living-low-poly-floor-wash" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="58%" stopColor="rgba(255,255,255,0.008)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.035)" />
           </linearGradient>
           <radialGradient id="living-low-poly-vignette" cx="50%" cy="45%" r="72%">
             <stop offset="35%" stopColor="rgba(0,0,0,0)" />
@@ -475,7 +572,7 @@ export default function LivingLowPolyBackground({
           ))}
         </g>
 
-        <rect width={VIEW_W} height={VIEW_H} fill="url(#living-low-poly-red-floor)" />
+        <rect width={VIEW_W} height={VIEW_H} fill="url(#living-low-poly-floor-wash)" />
         <rect width={VIEW_W} height={VIEW_H} fill="url(#living-low-poly-vignette)" />
       </svg>
     </div>
