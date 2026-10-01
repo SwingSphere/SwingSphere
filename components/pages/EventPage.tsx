@@ -29,6 +29,7 @@ import { isPastEvent } from '../../lib/eventLifecycle';
 import { resolveStreetViewSourceListingId } from '../../lib/streetViewAvailability';
 import { isApproximateLocation } from '../../lib/publicLocation';
 import { getVenueForListing } from '../../lib/entityCompatibility';
+import Seo from '../Seo';
 
 const MOCK_EVENT_SLUG = 'dev-mock-event';
 
@@ -253,6 +254,14 @@ const EventPage: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title={`${event.name} | Lifestyle Event | SwingSphere`}
+        description={event.description_full || `Explore ${event.name} on SwingSphere. See date, location, host, access details, tickets, and event information.`}
+        canonicalPath={window.location.pathname}
+        imageUrl={eventFlyerHeroImage || eventCoverImage}
+        imageAlt={`${event.name} event`}
+        noIndex={isMockRoute}
+      />
       <EventPageAdminEditor event={event} isMockRoute={isMockRoute} />
       {!isMockRoute ? (
         <EventQuickEditPanel

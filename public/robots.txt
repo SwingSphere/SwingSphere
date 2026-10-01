@@ -1,2 +1,12 @@
 User-agent: *
+Allow: /
+
+# Prevent crawl exploration of non-production dev environments
+Disallow: /dev/
 Disallow: /preview/
+
+# Prevent crawl loops on interactive explorer query facets
+Disallow: /*?*query=
+Disallow: /*?*activityRegion=
+
+Sitemap: https://swingsphere.co/sitemap.xml

@@ -4,7 +4,7 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath } from '../../lib/entityUtils';
-import { getEventCardImageUrl, getListingPrimaryLogoUrl, isPlaceholderMediaUrl } from '../../lib/listingImage';
+import { getEventCardImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl, isPlaceholderMediaUrl } from '../../lib/listingImage';
 import { resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import ClubDetailTemplate from '../club/ClubDetailTemplate';
@@ -12,6 +12,7 @@ import ClubPageAdminEditor from '../admin-edit/ClubPageAdminEditor';
 import ClubQuickEditPanel, { type ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
+import Seo from '../Seo';
 
 const ClubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -104,6 +105,13 @@ const ClubPage: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title={`${club.name} | Lifestyle Club | SwingSphere`}
+        description={`Explore ${club.name} on SwingSphere. View club details, schedule, upcoming events, access information, and location details.`}
+        canonicalPath={window.location.pathname}
+        imageUrl={getListingPrimaryHeroUrl(club)}
+        imageAlt={`${club.name} on SwingSphere`}
+      />
       <ClubQuickEditPanel
         key={`${club.id}-${quickEditField ?? 'closed'}`}
         club={club}

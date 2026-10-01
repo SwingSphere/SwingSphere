@@ -6,6 +6,8 @@ import { ToastContainer } from './components/Toast';
 import DebugBadge from './components/DebugBadge';
 import { DEV_TOOLS_ENABLED } from './lib/devTools';
 import { AdminEditModeProvider } from './components/admin-edit/AdminEditModeContext';
+import Seo from './components/Seo';
+import { resolvePageSeo } from './lib/staticSeo';
 
 const AdminEditBar = React.lazy(() => import('./components/admin-edit/AdminEditBar'));
 
@@ -35,9 +37,28 @@ const App: React.FC = () => {
   const isScrollablePage = !isGlobeExperienceRoute;
   const explorerScopeSearch = new URLSearchParams(location.search).has('activityRegion') ? location.search : '';
   const showDebugBadge = DEV_TOOLS_ENABLED && location.pathname.startsWith('/dev/');
+  const hasDedicatedEntitySeo = /^\/(clubs|hosts|resorts|cruises|venues)\/[^/]+$/.test(location.pathname)
+    || /^\/events\/[^/]+$/.test(location.pathname)
+    || /^\/(swinger-clubs|lifestyle-clubs|swinger-parties|lifestyle-events|play-parties)\/[^/]+$/.test(location.pathname);
+  const isPrivateOrUtilityRoute = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(location.pathname);
+  const seo = resolvePageSeo(location.pathname);
 
   return (
     <AdminEditModeProvider>
+    {!hasDedicatedEntitySeo ? (
+      <Seo
+        title={seo.title}
+        description={seo.description}
+        canonicalPath={seo.canonicalUrl}
+        imageUrl={seo.imageUrl}
+        imageAlt={seo.imageAlt}
+        imageWidth={seo.imageWidth}
+        imageHeight={seo.imageHeight}
+        ogType={seo.ogType}
+        noIndex={seo.noIndex || isPrivateOrUtilityRoute}
+        structuredData={seo.structuredData}
+      />
+    ) : null}
     <div className="ss-bg-base relative min-h-screen font-sans text-gray-100 flex flex-col">
        {showDebugBadge ? <DebugBadge /> : null}
        <ToastContainer />

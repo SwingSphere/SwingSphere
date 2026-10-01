@@ -11,6 +11,7 @@ import EntityPageShell from '../entity/EntityPageShell';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
+import Seo from '../Seo';
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -66,6 +67,14 @@ const CruisePage: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title={`${series.name} | Adults-Only Lifestyle Cruise | SwingSphere`}
+        description={`${series.descriptionShort} Discover luxury adults-only swinger cruises, theme sailings, destinations, and entertainment on SwingSphere.`}
+        canonicalPath={`/cruises/${series.slug}`}
+        imageUrl={series.headerImageUrl}
+        imageAlt={`${series.name} cruise`}
+        noIndex={series.status !== 'approved'}
+      />
       <TravelPageAdminEditor entity={series} organizations={organizations} cruiseSeries={allSeries} sailings={sailings} canEdit={canEdit} />
       <EntityPageShell
         contextNav={

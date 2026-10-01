@@ -33,6 +33,7 @@ import ListingClaimCard from '../claims/ListingClaimCard';
 import { getPublicOrganizationBadges } from '../../lib/badges/badgeService';
 import * as api from '../../lib/api';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
+import Seo from '../Seo';
 
 const inferThemes = (events: EventData[]): string[] => {
   const counts = new Map<string, number>();
@@ -424,6 +425,13 @@ const HostPage: React.FC = () => {
 
   return (
     <>
+    <Seo
+      title={`${hostProfile.name} | Lifestyle Host & Promoter | SwingSphere`}
+      description={hostProfile.organization?.descriptionShort || `Explore ${hostProfile.name} on SwingSphere. See upcoming events, venues, destinations, and host information.`}
+      canonicalPath={window.location.pathname}
+      imageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+      imageAlt={`${hostProfile.name} on SwingSphere`}
+    />
     {hostProfile.organization ? (
       <HostQuickEditPanel
         key={`${hostProfile.organization.id}-${quickEditField ?? 'closed'}`}

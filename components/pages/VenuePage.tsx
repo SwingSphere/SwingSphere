@@ -10,6 +10,7 @@ import DescriptionSection from '../entity/DescriptionSection';
 import VenuePageAdminEditor from '../admin-edit/VenuePageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
+import Seo from '../Seo';
 
 const VenuePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -72,6 +73,14 @@ const VenuePage: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title={`${venue.name} | Lifestyle Venue | SwingSphere`}
+        description={venue.description || `Explore ${venue.name} on SwingSphere. Location, amenities, and hosted lifestyle events.`}
+        canonicalPath={`/venues/${venue.slug}`}
+        imageUrl={venue.headerImageUrl || venue.logoImageUrl}
+        imageAlt={`${venue.name} venue`}
+        noIndex={true}
+      />
       <VenuePageAdminEditor
         venue={venue}
         venues={venues}

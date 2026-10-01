@@ -11,6 +11,7 @@ import EntityPageShell from '../entity/EntityPageShell';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
+import Seo from '../Seo';
 
 const ResortPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -57,6 +58,14 @@ const ResortPage: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title={`${resort.name} | Adults-Only Lifestyle Resort in ${location} | SwingSphere`}
+        description={`${resort.name} in ${location}. ${resort.descriptionShort} Explore all-inclusive clothing-optional lifestyle amenities, play spaces, and accommodations on SwingSphere.`}
+        canonicalPath={`/resorts/${resort.slug}`}
+        imageUrl={resort.headerImageUrl}
+        imageAlt={`${resort.name} resort`}
+        noIndex={resort.status !== 'approved'}
+      />
       <TravelPageAdminEditor entity={resort} organizations={organizations} cruiseSeries={cruiseSeries} sailings={sailings} canEdit={canEdit} />
       <EntityPageShell
         contextNav={

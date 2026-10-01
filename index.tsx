@@ -39,6 +39,7 @@ const TravelIndexPage = React.lazy(() => import('./components/pages/TravelIndexP
 const ResortPage = React.lazy(() => import('./components/pages/ResortPage'));
 const CruisePage = React.lazy(() => import('./components/pages/CruisePage'));
 const ListingRedirectPage = React.lazy(() => import('./components/pages/ListingRedirectPage'));
+const CityDiscoveryPage = React.lazy(() => import('./components/pages/CityDiscoveryPage'));
 
 const DevSitemapPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevSitemapPage')) : null;
 const DevClubTemplatePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevClubTemplatePage')) : null;
@@ -211,6 +212,11 @@ root.render(
               <Route path="travel" element={<TravelIndexPage />} />
               <Route path="resorts/:slug" element={<ResortPage />} />
               <Route path="cruises/:slug" element={<CruisePage />} />
+              <Route path="swinger-clubs/:city" element={<CityDiscoveryPage intent="clubs" />} />
+              <Route path="lifestyle-clubs/:city" element={<CityDiscoveryPage intent="clubs" />} />
+              <Route path="swinger-parties/:city" element={<CityDiscoveryPage intent="parties" />} />
+              <Route path="lifestyle-events/:city" element={<CityDiscoveryPage intent="parties" />} />
+              <Route path="play-parties/:city" element={<CityDiscoveryPage intent="play-parties" />} />
               {/* SEMv2 infrastructure route: keep routable, but do not promote from public discovery surfaces yet. */}
               <Route path="venues/:slug" element={<VenuePage />} />
               <Route
