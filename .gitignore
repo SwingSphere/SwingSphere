@@ -33,6 +33,8 @@ Resend/api key.txt
 # Generated / temp
 .codex-temp/
 .wrangler/
+_worker.bundle/
+scratch/
 tmp/
 *.tmp
 
