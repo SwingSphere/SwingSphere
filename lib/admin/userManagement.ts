@@ -20,6 +20,7 @@ export type AdminManagedUser = {
   avatarUrl?: string;
   joinDate: string;
   emailVerifiedAt?: string;
+  lastSignInAt?: string;
   founderNumber?: number;
   profileVisibility: 'private' | 'visible';
   badgeCount: number;
@@ -71,6 +72,7 @@ type AdminManagedUserRow = {
   avatar_url: string | null;
   created_at: string;
   email_verified_at: string | null;
+  last_sign_in_at: string | null;
   founder_number: number | null;
   profile_visibility: 'private' | 'visible';
   badge_count: number | string | null;
@@ -129,6 +131,7 @@ export const getAdminManagedUsers = async (): Promise<AdminManagedUser[]> => {
       avatarUrl: row.avatar_url ?? undefined,
       joinDate: row.created_at,
       emailVerifiedAt: row.email_verified_at ?? undefined,
+      lastSignInAt: row.last_sign_in_at ?? undefined,
       founderNumber: row.founder_number ?? undefined,
       profileVisibility: row.profile_visibility ?? 'private',
       badgeCount: toCount(row.badge_count),

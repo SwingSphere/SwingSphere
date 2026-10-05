@@ -24,7 +24,7 @@ const fallbackAvatar = '/swingsphere-logo_2.png';
 
 type RoleFilter = 'All' | AdminManagedUser['role'];
 type StatusFilter = 'All' | AdminManagedUser['status'];
-type SortOption = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'badges-desc' | 'founders-first';
+type SortOption = 'newest' | 'oldest' | 'recent-active' | 'name-asc' | 'name-desc' | 'badges-desc' | 'founders-first';
 
 const roleClass: Record<AdminManagedUser['role'], string> = {
   Admin: 'border-violet-200 bg-violet-50 text-violet-700',
@@ -74,6 +74,11 @@ const AdminUserManagement: React.FC<{
       switch (sortOption) {
         case 'oldest':
           return new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime();
+        case 'recent-active': {
+          const aLast = a.lastSignInAt ? new Date(a.lastSignInAt).getTime() : 0;
+          const bLast = b.lastSignInAt ? new Date(b.lastSignInAt).getTime() : 0;
+          return bLast - aLast || new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime();
+        }
         case 'name-asc':
           return a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' });
         case 'name-desc':
@@ -170,6 +175,7 @@ const AdminUserManagement: React.FC<{
           <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-11 rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
+            <option value="recent-active">Recently active</option>
             <option value="name-asc">Name A–Z</option>
             <option value="name-desc">Name Z–A</option>
             <option value="badges-desc">Most badges</option>
@@ -185,10 +191,10 @@ const AdminUserManagement: React.FC<{
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="min-w-[1080px] w-full divide-y divide-gray-200">
+        <table className="min-w-[1190px] w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {['Member', 'Role', 'Joined', 'Verification', 'Achievements', 'Activity', 'Profile', ''].map((label) => (
+              {['Member', 'Role', 'Joined', 'Last Sign-in', 'Verification', 'Achievements', 'Activity', 'Profile', ''].map((label) => (
                 <th key={label || 'actions'} className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-gray-500">{label}</th>
               ))}
             </tr>
@@ -214,6 +220,16 @@ const AdminUserManagement: React.FC<{
                   <div className={`mt-1.5 text-xs font-semibold ${user.status === 'Active' ? 'text-emerald-700' : 'text-red-700'}`}>{user.status}</div>
                 </td>
                 <td className="px-5 py-4 text-sm text-gray-600">{new Date(user.joinDate).toLocaleDateString()}</td>
+                <td className="px-5 py-4 text-sm text-gray-600">
+                  {user.adminMetadataAvailable ? (
+                    user.lastSignInAt ? (
+                      <div className="whitespace-nowrap">
+                        <div>{new Date(user.lastSignInAt).toLocaleDateString()}</div>
+                        <div className="mt-0.5 text-xs text-gray-400">{new Date(user.lastSignInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>
+                      </div>
+                    ) : <span className="font-semibold text-gray-400">Never</span>
+                  ) : <span className="text-xs font-semibold text-gray-400">Pending deploy</span>}
+                </td>
                 <td className="px-5 py-4">
                   {user.adminMetadataAvailable ? (
                     <div className={`inline-flex items-center gap-1.5 text-sm font-semibold ${user.emailVerifiedAt ? 'text-emerald-700' : 'text-amber-700'}`}>
