@@ -45,12 +45,12 @@ const LandingStatsBar: React.FC<LandingStatsBarProps> = ({ listings }) => {
   ];
 
   return (
-    <div className="relative z-10 container mx-auto max-w-6xl px-6 pb-8 lg:px-8">
-      <div className="ss-glass ss-glass--liquid grid grid-cols-2 overflow-hidden rounded-[22px] sm:grid-cols-4">
+    <div className="relative z-10 container mx-auto max-w-5xl px-6 pb-8 lg:px-8">
+      <div className="ss-glass ss-glass--liquid grid grid-cols-2 overflow-hidden rounded-[18px] sm:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (
           <div
             key={label}
-            className="flex min-h-24 items-center justify-center gap-3 border-white/10 px-4 py-3 border-r last:border-r-0"
+            className="flex min-h-20 items-center justify-center gap-2.5 border-white/10 px-3 py-2 border-r last:border-r-0"
           >
             <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-red-500/35 bg-red-500/10 text-red-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
               <Icon className="h-5 w-5" aria-hidden="true" />
