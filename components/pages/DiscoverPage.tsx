@@ -324,7 +324,7 @@ const DiscoverPage: React.FC = () => {
         kind: item.type,
         name: item.name,
         href: getListingCanonicalPath(item, index),
-        image: inheritedHeader || getListingCardImageUrl(item),
+        image: item.type === 'event' ? getListingCardImageUrl(item) : inheritedHeader || getListingCardImageUrl(item),
         logoUrl: inheritedLogo
           || (item.type === 'event' ? getEventHostingLogoUrl(item, index, listings) : getListingLogoUrl(item)),
         city: item.geopoint?.address?.city,
