@@ -21,6 +21,7 @@ type MediaUploaderProps = {
   onError?: (message: string) => void;
   managedEntityId?: string;
   externalFile?: File | null;
+  onExternalImageUrl?: (url: string) => void;
 };
 
 type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
@@ -61,12 +62,15 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   onError,
   managedEntityId,
   externalFile,
+  onExternalImageUrl,
 }) => {
   const rule = getMediaRule(role);
   const [asset, setAsset] = useState<MediaAsset | null>(existingAsset ?? null);
   const [state, setState] = useState<UploadState>('idle');
   const [error, setError] = useState<string>('');
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -182,6 +186,38 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
     void uploadFile(file);
   };
 
+  const acceptExternalUrl = (candidate: string) => {
+    try {
+      const url = new URL(candidate.trim());
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Invalid protocol');
+      if (url.username || url.password) throw new Error('Embedded credentials are not allowed');
+      if (!onExternalImageUrl) throw new Error('Linking external images is unavailable here.');
+      onExternalImageUrl(url.href);
+      setImageUrl(url.href);
+      setError('');
+    } catch {
+      reportError('Enter or drop a valid public HTTP(S) image URL.');
+    }
+  };
+
+  const onDropImage = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    if (isBusy) return;
+    const file = Array.from(event.dataTransfer.files).find((candidate) => candidate.type.startsWith('image/'));
+    if (file) {
+      handleFile(file);
+      return;
+    }
+    const uri = event.dataTransfer.getData('text/uri-list').split(/\r?\n/).find((line) => line && !line.startsWith('#'));
+    const html = event.dataTransfer.getData('text/html');
+    const src = html.match(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
+    const text = event.dataTransfer.getData('text/plain');
+    const candidate = src || uri || text;
+    if (candidate) acceptExternalUrl(candidate);
+    else reportError('Drop an image file or drag an image directly from a webpage.');
+  };
+
   useEffect(() => {
     if (!externalFile) return;
     handleFile(externalFile);
@@ -226,7 +262,13 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   }
 
   return (
-    <div className={isLight ? 'rounded-xl border border-gray-200 bg-gray-50 p-4' : 'rounded-2xl border border-white/10 bg-black/25 p-4'}>
+    <div
+      onDragOver={(event) => { event.preventDefault(); if (!isBusy) setDragActive(true); }}
+      onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragActive(false); }}
+      onDrop={onDropImage}
+      className={[isLight ? 'rounded-xl border bg-gray-50 p-4' : 'rounded-2xl border bg-black/25 p-4', dragActive ? 'border-red-400 ring-2 ring-red-400/50' : isLight ? 'border-gray-200' : 'border-white/10'].join(' ')}
+    >
+      <p className={isLight ? 'mb-3 text-xs text-gray-600' : 'mb-3 text-xs text-gray-300'}>Drag an image here from your computer or another website.</p>
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="min-w-0 flex-1">
           <label className="block">
@@ -242,6 +284,12 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
             />
           </label>
           <p className={isLight ? 'mt-2 text-xs leading-5 text-gray-500' : 'mt-2 text-xs leading-5 text-gray-400'}>{helperText ?? rule.helperText}</p>
+          {onExternalImageUrl ? (
+            <form className="mt-3 flex min-w-0 gap-2" onSubmit={(event) => { event.preventDefault(); acceptExternalUrl(imageUrl); }}>
+              <input type="url" aria-label="Direct image URL" placeholder="Paste image URL (https://…)" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-white/20 bg-black/30 px-2 py-2 text-xs text-white" />
+              <button type="submit" disabled={isBusy || !imageUrl.trim()} className="rounded-lg bg-red-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Link image</button>
+            </form>
+          ) : null}
           {isBusy && (
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-red-200">
               {state === 'creating' ? 'Preparing upload' : state === 'uploading' ? 'Uploading image' : 'Saving media'}

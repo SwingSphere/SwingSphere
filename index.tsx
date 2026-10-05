@@ -21,6 +21,8 @@ const ContactUs = React.lazy(() => import('./components/ContactUs'));
 const TermsOfService = React.lazy(() => import('./components/TermsOfService'));
 const LogIn = React.lazy(() => import('./components/LogIn'));
 const SignUp = React.lazy(() => import('./components/SignUp'));
+const GoogleAuthCallback = React.lazy(() => import('./components/auth/GoogleAuthCallback'));
+const GoogleAccountSetup = React.lazy(() => import('./components/auth/GoogleAccountSetup'));
 const AccountPage = React.lazy(() => import('./components/AccountPage'));
 const PublicProfilePage = React.lazy(() => import('./components/PublicProfilePage'));
 const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
@@ -195,6 +197,8 @@ root.render(
               <Route path="tos" element={<TermsOfService />} />
               <Route path="login" element={<LogIn />} />
               <Route path="signup" element={<SignUp />} />
+              <Route path="auth/callback" element={<GoogleAuthCallback />} />
+              <Route path="signup/google" element={<GoogleAccountSetup />} />
               <Route path="account/*" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
               <Route path="host-dashboard" element={<ProtectedRoute><HostDashboard /></ProtectedRoute>} />
               <Route path="users/:handle" element={<PublicProfilePage />} />

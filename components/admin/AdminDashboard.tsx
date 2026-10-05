@@ -15,7 +15,7 @@ import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
 import { buildingVerificationNeedsReview } from '../../lib/buildingVerification';
-import { getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import { resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getBuildingAssetForListing, getBuildingAssetForVenue } from '../../lib/entityCompatibility';
 
 const Icon: React.FC<{ path: string }> = ({ path }) => (
@@ -134,9 +134,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             .filter((sailing) => Date.parse(sailing.startsAt) > Date.now())
             .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
 
-        const missingLogos = data.listings.filter((item) => !getListingPrimaryLogoUrl(item)).length
-            + data.resorts.filter((item) => !item.logoImageUrl).length
-            + data.cruiseSeries.filter((item) => !item.logoImageUrl).length;
+        const mediaCatalog = {
+            listings: data.listings,
+            venues: data.venues,
+            organizations: data.organizations,
+            relationships: data.venueRelationships,
+            eventSeries: data.eventSeries,
+            clubBrands: data.clubBrands,
+            resorts: data.resorts,
+            cruiseSeries: data.cruiseSeries,
+            cruiseSailings: data.cruiseSailings,
+        };
+        const listingMissingLogo = (item: Listing) => !resolveBrandLogo(item.type, item.id, mediaCatalog).url;
+        const resortMissingLogo = (item: ResortData) => !resolveBrandLogo('resort', item.id, mediaCatalog).url;
+        const cruiseSeriesMissingLogo = (item: CruiseSeriesData) => !resolveBrandLogo('cruise_series', item.id, mediaCatalog).url;
+        const missingLogos = data.listings.filter(listingMissingLogo).length
+            + data.resorts.filter(resortMissingLogo).length
+            + data.cruiseSeries.filter(cruiseSeriesMissingLogo).length;
         const missingFlyers = upcomingEvents.filter((event) => !event.mediaAssets?.some((asset) => asset.role === 'flyer')).length;
         const clubsMissingSchedules = clubs.filter((club) => !club.schedule?.length && !club.specialScheduleNotes?.trim()).length;
         const venuesMissingBuildings = data.venues.filter((venue) => !getBuildingAssetForVenue(venue, data.buildingAssets, {
@@ -225,14 +239,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             label: 'Listings missing logos',
             value: computed.missingLogos,
             items: [
-                ...data.listings.filter((item) => !getListingPrimaryLogoUrl(item)).map((item) => ({
+                ...data.listings.filter((item) => !resolveBrandLogo(item.type, item.id, {
+                    listings: data.listings,
+                    venues: data.venues,
+                    organizations: data.organizations,
+                    relationships: data.venueRelationships,
+                    eventSeries: data.eventSeries,
+                    clubBrands: data.clubBrands,
+                    resorts: data.resorts,
+                    cruiseSeries: data.cruiseSeries,
+                    cruiseSailings: data.cruiseSailings,
+                }).url).map((item) => ({
                     id: item.id,
                     name: item.name,
                     detail: item.type === 'club' ? 'Club location' : 'Event occurrence',
                     onClick: () => setView(item.type === 'club' ? { view: 'edit-club', clubId: item.id } : { view: 'edit-event', eventId: item.id }),
                 })),
-                ...data.resorts.filter((item) => !item.logoImageUrl).map((item) => ({ id: item.id, name: item.name, detail: 'Resort', onClick: () => setView({ view: 'edit-resort', resortId: item.id }) })),
-                ...data.cruiseSeries.filter((item) => !item.logoImageUrl).map((item) => ({ id: item.id, name: item.name, detail: 'Cruise series', onClick: () => setView({ view: 'edit-cruise-series', cruiseSeriesId: item.id }) })),
+                ...data.resorts.filter((item) => !resolveBrandLogo('resort', item.id, {
+                    listings: data.listings,
+                    venues: data.venues,
+                    organizations: data.organizations,
+                    relationships: data.venueRelationships,
+                    eventSeries: data.eventSeries,
+                    clubBrands: data.clubBrands,
+                    resorts: data.resorts,
+                    cruiseSeries: data.cruiseSeries,
+                    cruiseSailings: data.cruiseSailings,
+                }).url).map((item) => ({ id: item.id, name: item.name, detail: 'Resort', onClick: () => setView({ view: 'edit-resort', resortId: item.id }) })),
+                ...data.cruiseSeries.filter((item) => !resolveBrandLogo('cruise_series', item.id, {
+                    listings: data.listings,
+                    venues: data.venues,
+                    organizations: data.organizations,
+                    relationships: data.venueRelationships,
+                    eventSeries: data.eventSeries,
+                    clubBrands: data.clubBrands,
+                    resorts: data.resorts,
+                    cruiseSeries: data.cruiseSeries,
+                    cruiseSailings: data.cruiseSailings,
+                }).url).map((item) => ({ id: item.id, name: item.name, detail: 'Cruise series', onClick: () => setView({ view: 'edit-cruise-series', cruiseSeriesId: item.id }) })),
             ],
         },
         {

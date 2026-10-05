@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Footer from './Footer';
 import Button from './Button';
 import { useAppStore } from '../store/appStore';
+import GoogleSignInButton from './auth/GoogleSignInButton';
+
+const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +16,18 @@ const SignUp: React.FC = () => {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signUp, addToast } = useAppStore();
+  const { signUp, signInWithGoogle, addToast } = useAppStore();
+
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await signInWithGoogle('/account');
+    } catch (err: any) {
+      setError(err.message || 'Google sign-up could not be started.');
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +55,19 @@ const SignUp: React.FC = () => {
             <p className="text-gray-400 text-center mb-8">Choose how you plan to use SWINGSPHERE. We’ll email you a confirmation link.</p>
 
             {error && <p className="text-red-400 bg-red-900/50 p-3 rounded-md text-sm text-center mb-6">{error}</p>}
+
+            {GOOGLE_AUTH_ENABLED && (
+              <>
+                <GoogleSignInButton onClick={handleGoogleSignUp} disabled={isLoading} label="Sign up with Google" />
+                <p className="mt-3 text-center text-xs leading-5 text-gray-500">New Google accounts finish setup on SwingSphere, where you choose a public screen name and confirm the 21+ requirement.</p>
+
+                <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-gray-600">
+                  <span className="h-px flex-1 bg-white/10" />
+                  <span>or use email</span>
+                  <span className="h-px flex-1 bg-white/10" />
+                </div>
+              </>
+            )}
 
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>

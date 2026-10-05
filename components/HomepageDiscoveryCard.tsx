@@ -7,6 +7,7 @@ import EntityTypePill from './entity/EntityTypePill';
 type HomepageDiscoveryCardProps = {
   listing: Listing;
   onClick: () => void;
+  resolvedLogoUrl?: string;
 };
 
 const normalizeCountry = (country: string) => {
@@ -28,10 +29,10 @@ const formatCardLocation = (listing: Listing) => {
   return cleanCountry ? `${cleanCity}, ${cleanCountry}` : cleanCity;
 };
 
-const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, onClick }) => {
+const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, onClick, resolvedLogoUrl }) => {
   const tags = (listing.type === 'club' ? listing.generalAmenities ?? [] : listing.tags ?? []).slice(0, 2);
   const location = formatCardLocation(listing);
-  const logoUrl = getListingLogoUrl(listing);
+  const logoUrl = resolvedLogoUrl || getListingLogoUrl(listing);
   const backgroundUrl = getListingCardImageUrl(listing);
   const monochrome = listing.type === 'club' && (listing.mediaPresentation === 'monochrome' || listing.id === 'club-epicure-cape-town');
 

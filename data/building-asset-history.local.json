@@ -1455,5 +1455,1129 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-b1-club-escape-cleveland-1791181452825",
+    "listingId": "club-b1-club-escape-cleveland",
+    "venueId": "venue-b1-club-escape-cleveland",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:24:12.379Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-b1-club-escape-cleveland",
+      "venueId": "venue-b1-club-escape-cleveland",
+      "normalizedAddress": "3901 lakeside avenue east cleveland ohio 44114 united states",
+      "latitude": 41.5185371267171,
+      "longitude": -81.6668218374252,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap exact street address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-17e4e2d3"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-b1-club-escape-cleveland",
+      "listingId": "club-b1-club-escape-cleveland",
+      "venueId": "venue-b1-club-escape-cleveland",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "58483350"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -81.66732609272003,
+              41.518494953616994
+            ],
+            [
+              -81.66655361652374,
+              41.51886045990477
+            ],
+            [
+              -81.66631758213043,
+              41.51857930140508
+            ],
+            [
+              -81.66655361652374,
+              41.51846282109739
+            ],
+            [
+              -81.66669309139252,
+              41.51863151664739
+            ],
+            [
+              -81.66698813438416,
+              41.51849093705292
+            ],
+            [
+              -81.66695058345795,
+              41.51844675483159
+            ],
+            [
+              -81.66693449020386,
+              41.51845478796497
+            ],
+            [
+              -81.66683256626129,
+              41.51833429085937
+            ],
+            [
+              -81.66709005832672,
+              41.51821379352941
+            ],
+            [
+              -81.66732609272003,
+              41.518494953616994
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:24:11.928Z",
+        "updatedAt": "2026-10-05T06:24:12.379Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 11
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday-1791181514479",
+    "listingId": "event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday",
+    "venueId": "venue-b1-sameplace-amsterdam",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:25:14.082Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday",
+      "venueId": "venue-b1-sameplace-amsterdam",
+      "normalizedAddress": "nassaukade 120 amsterdam north holland 1052 ec netherlands",
+      "latitude": 52.3740476,
+      "longitude": 4.8747651,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap exact street address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-b019d966"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday",
+      "listingId": "event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday",
+      "venueId": "venue-b1-sameplace-amsterdam",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "36743480"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.874829053878784,
+              52.37406650460369
+            ],
+            [
+              4.874834418296814,
+              52.37397480458924
+            ],
+            [
+              4.874603748321533,
+              52.37397152958519
+            ],
+            [
+              4.8746949434280396,
+              52.37410907954569
+            ],
+            [
+              4.874812960624695,
+              52.37407960459021
+            ],
+            [
+              4.874829053878784,
+              52.37406650460369
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 19,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:25:13.360Z",
+        "updatedAt": "2026-10-05T06:25:14.082Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 6
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-b1-club-nv-muncie-1791181695816",
+    "listingId": "club-b1-club-nv-muncie",
+    "venueId": "venue-b1-club-nv-muncie",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:28:15.355Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-b1-club-nv-muncie",
+      "venueId": "venue-b1-club-nv-muncie",
+      "normalizedAddress": "400 s lincoln street muncie indiana 47302 united states",
+      "latitude": 40.191408,
+      "longitude": -85.368487,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap exact street address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-9867bde7"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-b1-club-nv-muncie",
+      "listingId": "club-b1-club-nv-muncie",
+      "venueId": "venue-b1-club-nv-muncie",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "139012950"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ],
+            [
+              -85.3679484128952,
+              40.19137698340802
+            ],
+            [
+              -85.36795377731323,
+              40.191290928666234
+            ],
+            [
+              -85.3680557012558,
+              40.19129502651353
+            ],
+            [
+              -85.36806106567383,
+              40.19123765662846
+            ],
+            [
+              -85.36847412586212,
+              40.19125814587872
+            ],
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:28:15.004Z",
+        "updatedAt": "2026-10-05T06:28:15.355Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 7
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-b1-club-nv-muncie-1791181698847",
+    "listingId": "club-b1-club-nv-muncie",
+    "venueId": "venue-b1-club-nv-muncie",
+    "action": "replace",
+    "occurredAt": "2026-10-05T06:28:18.474Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-b1-club-nv-muncie",
+      "venueId": "venue-b1-club-nv-muncie",
+      "normalizedAddress": "400 s lincoln street muncie indiana 47302 united states",
+      "latitude": 40.1913196135428,
+      "longitude": -85.3682112693787,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap exact street address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-9d3f6dc0"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-b1-club-nv-muncie",
+      "listingId": "club-b1-club-nv-muncie",
+      "venueId": "venue-b1-club-nv-muncie",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "139012950"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ],
+            [
+              -85.3679484128952,
+              40.19137698340802
+            ],
+            [
+              -85.36795377731323,
+              40.191290928666234
+            ],
+            [
+              -85.3680557012558,
+              40.19129502651353
+            ],
+            [
+              -85.36806106567383,
+              40.19123765662846
+            ],
+            [
+              -85.36847412586212,
+              40.19125814587872
+            ],
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:28:15.004Z",
+        "updatedAt": "2026-10-05T06:28:15.355Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 7
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-b1-club-nv-muncie",
+      "listingId": "club-b1-club-nv-muncie",
+      "venueId": "venue-b1-club-nv-muncie",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "139012950"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ],
+            [
+              -85.3679484128952,
+              40.19137698340802
+            ],
+            [
+              -85.36795377731323,
+              40.191290928666234
+            ],
+            [
+              -85.3680557012558,
+              40.19129502651353
+            ],
+            [
+              -85.36806106567383,
+              40.19123765662846
+            ],
+            [
+              -85.36847412586212,
+              40.19125814587872
+            ],
+            [
+              -85.36846339702606,
+              40.19140157045706
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:28:15.004Z",
+        "updatedAt": "2026-10-05T06:28:18.474Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 7
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-b1-club-traumpalais-ingelheim-1791181809322",
+    "listingId": "club-b1-club-traumpalais-ingelheim",
+    "venueId": "venue-b1-club-traumpalais-ingelheim",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:30:08.842Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-b1-club-traumpalais-ingelheim",
+      "venueId": "venue-b1-club-traumpalais-ingelheim",
+      "normalizedAddress": "budenheimer weg 73 ingelheim am rhein rhineland palatinate 55262 germany",
+      "latitude": 50.0015811594848,
+      "longitude": 8.12800526618958,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Official business imprint",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-f5a12ebe"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-b1-club-traumpalais-ingelheim",
+      "listingId": "club-b1-club-traumpalais-ingelheim",
+      "venueId": "venue-b1-club-traumpalais-ingelheim",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "709586540"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              8.12812864780426,
+              50.00157426341363
+            ],
+            [
+              8.128010630607605,
+              50.00150185391993
+            ],
+            [
+              8.12788188457489,
+              50.00159150375319
+            ],
+            [
+              8.127994537353516,
+              50.00166046504967
+            ],
+            [
+              8.12812864780426,
+              50.00157426341363
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:30:08.241Z",
+        "updatedAt": "2026-10-05T06:30:08.842Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-b1-wasteland-2026-10-31-wasteland-halloween-ball-1791182021753",
+    "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+    "venueId": "venue-b1-radion-amsterdam",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:33:41.248Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "venueId": "venue-b1-radion-amsterdam",
+      "normalizedAddress": "louwesweg 1 amsterdam north holland 1066 ea netherlands",
+      "latitude": 52.3456292,
+      "longitude": 4.8255446,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap named venue/address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-b981185c"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "venueId": "venue-b1-radion-amsterdam",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "5453274532"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.825937747955322,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579095814294
+            ],
+            [
+              4.826200604438782,
+              52.34579095814294
+            ],
+            [
+              4.826195240020752,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34586633122808
+            ],
+            [
+              4.826195240020752,
+              52.34586633122808
+            ],
+            [
+              4.826179146766663,
+              52.346338229362175
+            ],
+            [
+              4.826216697692871,
+              52.346338229362175
+            ],
+            [
+              4.826211333274841,
+              52.34642998674778
+            ],
+            [
+              4.82648491859436,
+              52.34643326379373
+            ],
+            [
+              4.82648491859436,
+              52.346341506414944
+            ],
+            [
+              4.826554656028748,
+              52.346341506414944
+            ],
+            [
+              4.8265814781188965,
+              52.34554517545078
+            ],
+            [
+              4.826511740684509,
+              52.34554517545078
+            ],
+            [
+              4.826517105102539,
+              52.34549274163294
+            ],
+            [
+              4.82623815536499,
+              52.34548946451727
+            ],
+            [
+              4.82623815536499,
+              52.34551895854966
+            ],
+            [
+              4.8262810707092285,
+              52.34552223566314
+            ],
+            [
+              4.8262810707092285,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34556156100612
+            ],
+            [
+              4.826087951660156,
+              52.34556156100612
+            ],
+            [
+              4.826093316078186,
+              52.34547635605213
+            ],
+            [
+              4.825401306152344,
+              52.3454698018181
+            ],
+            [
+              4.825395941734314,
+              52.34569919943101
+            ],
+            [
+              4.825476408004761,
+              52.34569919943101
+            ],
+            [
+              4.825460314750671,
+              52.34592204168669
+            ],
+            [
+              4.825776815414429,
+              52.34592859585371
+            ],
+            [
+              4.825776815414429,
+              52.345902379179904
+            ],
+            [
+              4.825851917266846,
+              52.34590565626499
+            ],
+            [
+              4.8258572816848755,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34578768104936
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 43,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:33:40.740Z",
+        "updatedAt": "2026-10-05T06:33:41.248Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 35
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-b1-wasteland-2026-10-31-wasteland-halloween-ball-1791182026935",
+    "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+    "venueId": "venue-b1-radion-amsterdam",
+    "action": "replace",
+    "occurredAt": "2026-10-05T06:33:46.526Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "venueId": "venue-b1-radion-amsterdam",
+      "normalizedAddress": "louwesweg 1 amsterdam north holland 1066 ea netherlands",
+      "latitude": 52.3459515328059,
+      "longitude": 4.82598870992661,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap named venue/address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-419bd780"
+    },
+    "previousAsset": {
+      "id": "building-asset-event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "venueId": "venue-b1-radion-amsterdam",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "5453274532"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.825937747955322,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579095814294
+            ],
+            [
+              4.826200604438782,
+              52.34579095814294
+            ],
+            [
+              4.826195240020752,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34586633122808
+            ],
+            [
+              4.826195240020752,
+              52.34586633122808
+            ],
+            [
+              4.826179146766663,
+              52.346338229362175
+            ],
+            [
+              4.826216697692871,
+              52.346338229362175
+            ],
+            [
+              4.826211333274841,
+              52.34642998674778
+            ],
+            [
+              4.82648491859436,
+              52.34643326379373
+            ],
+            [
+              4.82648491859436,
+              52.346341506414944
+            ],
+            [
+              4.826554656028748,
+              52.346341506414944
+            ],
+            [
+              4.8265814781188965,
+              52.34554517545078
+            ],
+            [
+              4.826511740684509,
+              52.34554517545078
+            ],
+            [
+              4.826517105102539,
+              52.34549274163294
+            ],
+            [
+              4.82623815536499,
+              52.34548946451727
+            ],
+            [
+              4.82623815536499,
+              52.34551895854966
+            ],
+            [
+              4.8262810707092285,
+              52.34552223566314
+            ],
+            [
+              4.8262810707092285,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34556156100612
+            ],
+            [
+              4.826087951660156,
+              52.34556156100612
+            ],
+            [
+              4.826093316078186,
+              52.34547635605213
+            ],
+            [
+              4.825401306152344,
+              52.3454698018181
+            ],
+            [
+              4.825395941734314,
+              52.34569919943101
+            ],
+            [
+              4.825476408004761,
+              52.34569919943101
+            ],
+            [
+              4.825460314750671,
+              52.34592204168669
+            ],
+            [
+              4.825776815414429,
+              52.34592859585371
+            ],
+            [
+              4.825776815414429,
+              52.345902379179904
+            ],
+            [
+              4.825851917266846,
+              52.34590565626499
+            ],
+            [
+              4.8258572816848755,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34578768104936
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 43,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:33:40.740Z",
+        "updatedAt": "2026-10-05T06:33:41.248Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 35
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "listingId": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+      "venueId": "venue-b1-radion-amsterdam",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "5453274532"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.825937747955322,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579751232934
+            ],
+            [
+              4.826034307479858,
+              52.34579095814294
+            ],
+            [
+              4.826200604438782,
+              52.34579095814294
+            ],
+            [
+              4.826195240020752,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34582045197416
+            ],
+            [
+              4.826152324676514,
+              52.34586633122808
+            ],
+            [
+              4.826195240020752,
+              52.34586633122808
+            ],
+            [
+              4.826179146766663,
+              52.346338229362175
+            ],
+            [
+              4.826216697692871,
+              52.346338229362175
+            ],
+            [
+              4.826211333274841,
+              52.34642998674778
+            ],
+            [
+              4.82648491859436,
+              52.34643326379373
+            ],
+            [
+              4.82648491859436,
+              52.346341506414944
+            ],
+            [
+              4.826554656028748,
+              52.346341506414944
+            ],
+            [
+              4.8265814781188965,
+              52.34554517545078
+            ],
+            [
+              4.826511740684509,
+              52.34554517545078
+            ],
+            [
+              4.826517105102539,
+              52.34549274163294
+            ],
+            [
+              4.82623815536499,
+              52.34548946451727
+            ],
+            [
+              4.82623815536499,
+              52.34551895854966
+            ],
+            [
+              4.8262810707092285,
+              52.34552223566314
+            ],
+            [
+              4.8262810707092285,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34554189833901
+            ],
+            [
+              4.8262059688568115,
+              52.34556156100612
+            ],
+            [
+              4.826087951660156,
+              52.34556156100612
+            ],
+            [
+              4.826093316078186,
+              52.34547635605213
+            ],
+            [
+              4.825401306152344,
+              52.3454698018181
+            ],
+            [
+              4.825395941734314,
+              52.34569919943101
+            ],
+            [
+              4.825476408004761,
+              52.34569919943101
+            ],
+            [
+              4.825460314750671,
+              52.34592204168669
+            ],
+            [
+              4.825776815414429,
+              52.34592859585371
+            ],
+            [
+              4.825776815414429,
+              52.345902379179904
+            ],
+            [
+              4.825851917266846,
+              52.34590565626499
+            ],
+            [
+              4.8258572816848755,
+              52.34578768104936
+            ],
+            [
+              4.825937747955322,
+              52.34578768104936
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 43,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:33:40.740Z",
+        "updatedAt": "2026-10-05T06:33:46.526Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 35
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-b1-wasteland-2026-11-28-wasteland-amsterdam-1791182042712",
+    "listingId": "event-b1-wasteland-2026-11-28-wasteland-amsterdam",
+    "venueId": "venue-b1-north-sea-venue-zaandam",
+    "action": "create",
+    "occurredAt": "2026-10-05T06:34:02.312Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-b1-wasteland-2026-11-28-wasteland-amsterdam",
+      "venueId": "venue-b1-north-sea-venue-zaandam",
+      "normalizedAddress": "hemkade 48 zaandam north holland 1506 ps netherlands",
+      "latitude": 52.4221861,
+      "longitude": 4.8196378,
+      "visibility": "public_exact",
+      "coordinateProvenance": "Nominatim/OpenStreetMap named events venue/address",
+      "coordinateConfidence": null,
+      "validatedAt": null,
+      "hash": "bvs-cd44b3bc"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-event-b1-wasteland-2026-11-28-wasteland-amsterdam",
+      "listingId": "event-b1-wasteland-2026-11-28-wasteland-amsterdam",
+      "venueId": "venue-b1-north-sea-venue-zaandam",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "465176610"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              4.818980097770691,
+              52.42245752613604
+            ],
+            [
+              4.820417761802673,
+              52.422267784088206
+            ],
+            [
+              4.820310473442078,
+              52.42197008371227
+            ],
+            [
+              4.818878173828125,
+              52.42215655561154
+            ],
+            [
+              4.818899631500244,
+              52.42221544131061
+            ],
+            [
+              4.818835258483887,
+              52.42222525558614
+            ],
+            [
+              4.818899631500244,
+              52.42240191217215
+            ],
+            [
+              4.818958640098572,
+              52.42239536934824
+            ],
+            [
+              4.818980097770691,
+              52.42245752613604
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-05T06:34:02.061Z",
+        "updatedAt": "2026-10-05T06:34:02.312Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 9
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

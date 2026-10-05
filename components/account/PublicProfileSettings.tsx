@@ -5,16 +5,10 @@ import type { User } from '../../data/mockUsers';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import type { MediaAsset } from '../../lib/media/types';
 import type { ProfilePrivacySettings } from '../../lib/profile/profileTypes';
+import { isReservedProfileHandle, isValidProfileHandle, normalizeProfileHandle } from '../../lib/profileHandles';
 import { useAppStore } from '../../store/appStore';
 import Button from '../Button';
 import MediaUploader from '../media/MediaUploader';
-
-const normalizeHandle = (value: string) => value
-  .toLowerCase()
-  .trim()
-  .replace(/[^a-z0-9-]+/g, '-')
-  .replace(/^-+|-+$/g, '')
-  .slice(0, 40);
 
 const visibilityMeta = {
   private: { icon: LockKeyhole, label: 'Private', copy: 'Only your review attribution is visible; the member page stays unavailable.' },
@@ -59,15 +53,15 @@ const PublicProfileSettings: React.FC<{
   const saveIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
     const nextDisplayName = displayName.trim();
-    const nextHandle = normalizeHandle(handle);
+    const nextHandle = normalizeProfileHandle(handle);
     const nextBio = bio.trim();
 
     if (!nextDisplayName) {
       addToast({ message: 'Display name is required.', type: 'error' });
       return;
     }
-    if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(nextHandle)) {
-      addToast({ message: 'Username must be 3–40 characters using letters, numbers, or hyphens.', type: 'error' });
+    if (!isValidProfileHandle(nextHandle)) {
+      addToast({ message: isReservedProfileHandle(nextHandle) ? 'That username is reserved by SwingSphere.' : 'Username must be 2–40 characters using letters, numbers, or hyphens.', type: 'error' });
       return;
     }
     if (nextBio.length > 280) {
@@ -239,7 +233,7 @@ const PublicProfileSettings: React.FC<{
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <ProfileInput label="Display name" value={displayName} onChange={(value) => { setDisplayName(value); setIsIdentityDirty(true); }} maxLength={80} helper="Shown as your author name on reviews." />
-          <ProfileInput label="Username" value={handle} onChange={(value) => { setHandle(normalizeHandle(value)); setIsIdentityDirty(true); }} maxLength={40} prefix="@" helper="Used for contribution links and your member-profile URL." />
+          <ProfileInput label="Username" value={handle} onChange={(value) => { setHandle(normalizeProfileHandle(value)); setIsIdentityDirty(true); }} maxLength={40} prefix="@" helper="Used for contribution links and your member-profile URL. Two-character usernames are allowed; system names such as @admin and @support are reserved." />
         </div>
 
         <div className="mt-5">

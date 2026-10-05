@@ -277,7 +277,7 @@ const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCatalog): S
   const canonicalUrl = `${SITE_ORIGIN}${cleanPath === '/' ? '/' : cleanPath}`;
 
   // 1. Private and utility routes -> noindex, nofollow
-  const isPrivate = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(cleanPath);
+  const isPrivate = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/auth|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(cleanPath);
   if (isPrivate) {
     return {
       title: 'SwingSphere | Account & Administration',

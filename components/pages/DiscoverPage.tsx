@@ -18,7 +18,7 @@ import {
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getHostCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
 import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
-import { isPlaceholderMediaUrl } from '../../lib/entityBrandMedia';
+import { isPlaceholderMediaUrl, resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { isActiveDiscoveryListing } from '../../lib/eventLifecycle';
 import EntityTypePill from '../entity/EntityTypePill';
 import type { AttendancePolicy, ClubData, Listing, OrganizationData } from '../../types';
@@ -208,7 +208,7 @@ const getEventHostingLogoUrl = (
 const DiscoverPage: React.FC = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { listings, organizations, index, isLoading, error } = useEntityIndex();
+  const { listings, venues, organizations, organizationVenueRelationships, eventSeries, index, isLoading, error } = useEntityIndex();
 
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -309,26 +309,33 @@ const DiscoverPage: React.FC = () => {
   // Map database listings & active hosts to unified Card shape
   const allCards = useMemo<Card[]>(() => {
     if (!index) return [];
-    const listingCards: Card[] = approvedListings.map((item) => ({
-      key: `${item.type}:${item.id}`,
-      kind: item.type,
-      name: item.name,
-      href: getListingCanonicalPath(item, index),
-      image: getListingCardImageUrl(item),
-      logoUrl:
-        item.type === 'club'
-          ? getListingLogoUrl(item)
-          : item.type === 'event'
-          ? getEventHostingLogoUrl(item, index, listings)
-          : null,
-      city: item.geopoint?.address?.city,
-      region: item.geopoint?.address?.region,
-      country: item.geopoint?.address?.country,
-      date: item.type === 'event' ? item.time?.start : undefined,
-      attendance: item.attendancePolicy,
-      description: item.type === 'club' ? item.description_short : item.hostName,
-      globeListing: item,
-    }));
+    const mediaCatalog = {
+      listings,
+      venues,
+      organizations,
+      relationships: organizationVenueRelationships,
+      eventSeries,
+    };
+    const listingCards: Card[] = approvedListings.map((item) => {
+      const inheritedLogo = resolveBrandLogo(item.type, item.id, mediaCatalog).url;
+      const inheritedHeader = resolveBrandHeader(item.type, item.id, mediaCatalog).url;
+      return {
+        key: `${item.type}:${item.id}`,
+        kind: item.type,
+        name: item.name,
+        href: getListingCanonicalPath(item, index),
+        image: inheritedHeader || getListingCardImageUrl(item),
+        logoUrl: inheritedLogo
+          || (item.type === 'event' ? getEventHostingLogoUrl(item, index, listings) : getListingLogoUrl(item)),
+        city: item.geopoint?.address?.city,
+        region: item.geopoint?.address?.region,
+        country: item.geopoint?.address?.country,
+        date: item.type === 'event' ? item.time?.start : undefined,
+        attendance: item.attendancePolicy,
+        description: item.type === 'club' ? item.description_short : item.hostName,
+        globeListing: item,
+      };
+    });
 
     const hostCards: Card[] = organizations
       .filter((org): org is OrganizationData => org.status === 'active' || org.status === 'approved')
@@ -338,14 +345,14 @@ const DiscoverPage: React.FC = () => {
         kind: 'host',
         name: org.name,
         href: getHostCanonicalPath(org.slug),
-        image: org.headerImageUrl || org.logoImageUrl,
-        logoUrl: org.logoImageUrl,
+        image: resolveBrandHeader('organization', org.id, mediaCatalog).url || org.headerImageUrl || org.logoImageUrl,
+        logoUrl: resolveBrandLogo('organization', org.id, mediaCatalog).url || org.logoImageUrl,
         description: org.descriptionShort,
         region: org.operatingRegions?.[0],
       }));
 
     return [...listingCards, ...hostCards];
-  }, [approvedListings, index, organizations]);
+  }, [approvedListings, eventSeries, index, listings, organizationVenueRelationships, organizations, venues]);
 
   // Category counts
   const categoryCounts = useMemo(() => {

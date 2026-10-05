@@ -7710,5 +7710,169 @@
     "rejectionReasons": [
       "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
     ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-da343bcb",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-ice-lounge-wichita:2026-10-05T06:30:22.765Z",
+    "listingName": "Ice Lounge - Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-10-05T06:30:22.765Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 7,
+      "individualFootprintCount": 15
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
+  },
+  {
+    "version": 1,
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "inputSnapshotHash": "bvs-da343bcb",
+    "verificationEngineVersion": "building-persistence-v1",
+    "runId": "club-ice-lounge-wichita:2026-10-05T06:34:16.306Z",
+    "listingName": "Ice Lounge - Wichita",
+    "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+    "canonicalCoordinate": {
+      "lat": 37.478,
+      "lng": -97.366
+    },
+    "coordinateProvenance": "official_venue_page",
+    "coordinateConfidence": 0.9,
+    "evaluatedAt": "2026-10-05T06:34:16.306Z",
+    "providerSnapshot": {
+      "source": "OSM · OpenFreeMap",
+      "status": "completed",
+      "searchRadiusMeters": 250,
+      "tileFeatureCount": 7,
+      "individualFootprintCount": 15
+    },
+    "outcome": "needs_location_review",
+    "autoAccept": false,
+    "autoAcceptMethod": null,
+    "bestCandidate": {
+      "footprintFingerprint": "footprint-v2-bhuyll-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 10.011023754428082,
+      "pinToCentroidMeters": 20.315105775724387,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "runnerUp": {
+      "footprintFingerprint": "footprint-v2-qv25hq-1-4",
+      "providerFeatureIds": [
+        "14877552880"
+      ],
+      "providerSource": "OpenFreeMap",
+      "reverseAddressStatus": "resolved",
+      "candidateAddress": "2240, West 119th Street South, Salem Township, Sedgwick County, Kansas, 67120, United States",
+      "addressComponents": {
+        "houseNumber": "2240",
+        "road": "West 119th Street South",
+        "city": "Salem Township",
+        "region": "Kansas",
+        "postalCode": "67120",
+        "country": "United States"
+      },
+      "pinIntersects": false,
+      "minimumPinToFootprintMeters": 18.959437053161995,
+      "pinToCentroidMeters": 24.506804534795958,
+      "score": 5,
+      "confidence": 0.05,
+      "reasons": [
+        "candidate has no mapped house number"
+      ]
+    },
+    "scoreMargin": 0,
+    "acceptanceReasons": [],
+    "rejectionReasons": [
+      "reverse geocoder returned a nearby object whose address has not been tied to this footprint; it cannot confirm or contradict the building address"
+    ]
   }
 ]

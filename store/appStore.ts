@@ -194,6 +194,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return profile;
   }, []);
 
+  const signInWithGoogle: AppState['signInWithGoogle'] = useCallback(async (nextPath = '/account') => {
+    const safeNextPath = nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
+    window.sessionStorage.setItem('swingsphere:oauth-next', safeNextPath);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
+  }, []);
+
   const logout: AppState['logout'] = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -287,6 +299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearTimeLens,
     setDebugInfo,
     login,
+    signInWithGoogle,
     logout,
     signUp,
     requestPasswordReset,
@@ -294,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast,
     removeToast,
     fetchTags,
-  }), [currentUser, isAuthLoading, tags, tagCategories, toasts, debugInfo, timeLens, setTimeLens, clearTimeLens, setDebugInfo, login, logout, signUp, requestPasswordReset, updateUserProfile, addToast, removeToast, fetchTags]);
+  }), [currentUser, isAuthLoading, tags, tagCategories, toasts, debugInfo, timeLens, setTimeLens, clearTimeLens, setDebugInfo, login, signInWithGoogle, logout, signUp, requestPasswordReset, updateUserProfile, addToast, removeToast, fetchTags]);
 
   return React.createElement(AppContext.Provider, { value }, children);
 };

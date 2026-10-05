@@ -9,6 +9,7 @@ import Footer from './Footer';
 import SavedLivingLowPolyBackground from './SavedLivingLowPolyBackground';
 import { useEntityIndex } from '../hooks/useEntityIndex';
 import { getListingCanonicalPath } from '../lib/entityUtils';
+import { resolveBrandLogo } from '../lib/entityBrandMedia';
 import { isActiveDiscoveryListing } from '../lib/eventLifecycle';
 import type { Listing } from '../types';
 
@@ -67,7 +68,7 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeDiscoveryTab, setActiveDiscoveryTab] = useState<DiscoveryTab>('featured');
   const [isReturningLandingVisit] = useState(() => hasPlayedLandingHeroIntro);
-  const { index: entityIndex, listings, isLoading } = useEntityIndex();
+  const { index: entityIndex, listings, venues, organizations, organizationVenueRelationships, eventSeries, isLoading } = useEntityIndex();
   const featuredListings = useMemo(() => buildFeaturedListings(listings), [listings]);
   const recentlyAddedListings = useMemo(() => buildRecentlyAddedListings(listings), [listings]);
   const discoveryListings = activeDiscoveryTab === 'featured' ? featuredListings : recentlyAddedListings;
@@ -144,13 +145,23 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
-                  {!isLoading && discoveryListings.map(listing => (
-                    <HomepageDiscoveryCard
-                      key={listing.id}
-                      listing={listing}
-                      onClick={() => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
-                    />
-                  ))}
+                  {!isLoading && discoveryListings.map((listing) => {
+                    const resolvedLogoUrl = resolveBrandLogo(listing.type, listing.id, {
+                      listings,
+                      venues,
+                      organizations,
+                      relationships: organizationVenueRelationships,
+                      eventSeries,
+                    }).url;
+                    return (
+                      <HomepageDiscoveryCard
+                        key={listing.id}
+                        listing={listing}
+                        resolvedLogoUrl={resolvedLogoUrl}
+                        onClick={() => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
+                      />
+                    );
+                  })}
               </div>
           </div>
       </section>

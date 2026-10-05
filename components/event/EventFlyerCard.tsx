@@ -8,10 +8,11 @@ import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 type EventFlyerCardProps = {
   eventName: string;
   flyerAsset?: MediaAsset | null;
+  flyerUrl?: string | null;
   onQuickEdit?: () => void;
 };
 
-const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, onQuickEdit }) => {
+const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, flyerUrl, onQuickEdit }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControl = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -46,7 +47,7 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
       </div>
 
       <div className="flex min-h-[420px] items-center justify-center overflow-hidden rounded-xl border border-gray-800 bg-black/35 p-2">
-        {flyerAsset ? (
+        {flyerAsset || flyerUrl ? (
           <button
             ref={flyerButtonRef}
             type="button"
@@ -54,12 +55,12 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
             className="group relative flex w-full cursor-zoom-in items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/80"
             aria-label={`Enlarge ${eventName} flyer`}
           >
-            <MediaImage
+            {flyerAsset ? <MediaImage
               asset={flyerAsset}
               variant="flyerpage"
               alt={flyerAsset.alt_text ?? `${eventName} flyer`}
               className="max-h-[680px] w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]"
-            />
+            /> : <img src={flyerUrl ?? undefined} alt={`${eventName} flyer`} className="max-h-[680px] w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]" />}
             <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
               <Expand size={14} /> Enlarge
             </span>
@@ -73,7 +74,7 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
         )}
       </div>
 
-      {flyerAsset && isExpanded && typeof document !== 'undefined'
+      {(flyerAsset || flyerUrl) && isExpanded && typeof document !== 'undefined'
         ? createPortal(
             <div
               className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm sm:p-6"
@@ -99,12 +100,12 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
                   if (event.target === event.currentTarget) setIsExpanded(false);
                 }}
               >
-                <MediaImage
+                {flyerAsset ? <MediaImage
                   asset={flyerAsset}
                   variant="flyerpage"
                   alt={flyerAsset.alt_text ?? `${eventName} flyer`}
                   className="h-auto max-h-[calc(100vh-3rem)] w-auto max-w-[calc(100vw-3rem)] select-none object-contain shadow-2xl"
-                />
+                /> : <img src={flyerUrl ?? undefined} alt={`${eventName} flyer`} className="h-auto max-h-[calc(100vh-3rem)] w-auto max-w-[calc(100vw-3rem)] select-none object-contain shadow-2xl" />}
               </div>
             </div>,
             document.body,

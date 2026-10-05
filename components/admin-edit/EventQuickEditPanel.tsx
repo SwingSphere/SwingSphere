@@ -4,6 +4,7 @@ import type { EventData } from '../../types';
 import type { MediaAsset, MediaRole } from '../../lib/media/types';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
 import MediaUploader from '../media/MediaUploader';
+import { getListingPrimaryFlyerUrl } from '../../lib/listingImage';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { useAdminEditMode } from './AdminEditModeContext';
@@ -56,7 +57,12 @@ const EventQuickEditPanel: React.FC<Props> = ({ event, field, onClose, onPreview
     const mediaAssets = role === 'gallery'
       ? [...currentAssets, asset]
       : [...currentAssets.filter((item) => item.role !== role), asset];
-    updateDraft({ ...draft, mediaAssets });
+    updateDraft({ ...draft, mediaAssets, ...(role === 'flyer' ? { flyerImageUrl: undefined } : {}) });
+  };
+
+  const handleLinkedFlyer = (url: string) => {
+    // Keep the Cloudflare asset in storage; unlinking it from this listing is reversible.
+    updateDraft({ ...draft, flyerImageUrl: url, mediaAssets: (draft.mediaAssets ?? []).filter((asset) => asset.role !== 'flyer') } as EventData);
   };
 
   const save = async () => {
@@ -115,8 +121,15 @@ const EventQuickEditPanel: React.FC<Props> = ({ event, field, onClose, onPreview
             onUploaded={handleUploaded}
             label={`Upload ${fieldLabels[field].toLowerCase()}`}
             tone="dark"
+            onExternalImageUrl={field === 'flyer' ? handleLinkedFlyer : undefined}
             cropAspectRatioOverride={field === 'logo' ? 1 : undefined}
           />
+        ) : null}
+        {field === 'flyer' && !existingAsset && getListingPrimaryFlyerUrl(draft) ? (
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-3">
+            <img src={getListingPrimaryFlyerUrl(draft)!} alt="Linked event flyer preview" className="h-20 w-24 rounded-lg object-contain" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+            <p className="min-w-0 break-words text-xs text-gray-300">Linked image selected. Save changes to publish. External links can disappear if the source site changes.</p>
+          </div>
         ) : null}
       </div>
 

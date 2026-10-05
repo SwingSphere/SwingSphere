@@ -7240,6 +7240,408 @@
     "buildingAssetId": "building-asset-club-cupids-swinton"
   },
   {
+    "id": "event-krystal-vicenza-2026-10-02",
+    "type": "event",
+    "name": "LOVE — Friday for Couples and Gentlemen",
+    "occurrenceTitle": "LOVE — Friday for Couples and Gentlemen",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "LOVE — Friday for Couples and Gentlemen at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19088",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19088",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-02T22:30:00+02:00",
+      "end": "2026-10-03T03:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-03",
+    "type": "event",
+    "name": "II for Couples Only",
+    "occurrenceTitle": "II for Couples Only",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "II for Couples Only at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Krystal Club Privè's couples-only Saturday event. Membership and the club dress code apply; confirm reservations with the organizer.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19090",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19090",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "couples_only",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-03T22:30:00+02:00",
+      "end": "2026-10-04T04:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Couples Only",
+      "Members Only"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-09",
+    "type": "event",
+    "name": "LOVE — Friday for Couples and Gentlemen",
+    "occurrenceTitle": "LOVE — Friday for Couples and Gentlemen",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "LOVE — Friday for Couples and Gentlemen at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19102",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19102",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-09T22:30:00+02:00",
+      "end": "2026-10-10T03:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-10",
+    "type": "event",
+    "name": "LUXE",
+    "occurrenceTitle": "LUXE",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "LUXE at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19112",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19112",
+    "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/10ottobre-700x316.jpg",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-10T22:30:00+02:00",
+      "end": "2026-10-11T04:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-16",
+    "type": "event",
+    "name": "LOVE — Friday for Couples and Gentlemen",
+    "occurrenceTitle": "LOVE — Friday for Couples and Gentlemen",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "LOVE — Friday for Couples and Gentlemen at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19125",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19125",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-16T22:30:00+02:00",
+      "end": "2026-10-17T03:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-17",
+    "type": "event",
+    "name": "DISCO 90/2000",
+    "occurrenceTitle": "DISCO 90/2000",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "DISCO 90/2000 at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19127",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19127",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-17T22:30:00+02:00",
+      "end": "2026-10-18T04:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-23",
+    "type": "event",
+    "name": "FREEDOM PARTY vol6",
+    "occurrenceTitle": "FREEDOM PARTY vol6",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "FREEDOM PARTY vol6 at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19139",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19139",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-23T22:30:00+02:00",
+      "end": "2026-10-24T03:00:00+02:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-24",
+    "type": "event",
+    "name": "LUXE",
+    "occurrenceTitle": "LUXE",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "LUXE at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19148",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19148",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-24T22:30:00+02:00",
+      "end": "2026-10-25T04:00:00+01:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-30",
+    "type": "event",
+    "name": "Halloween Warm Up Party",
+    "occurrenceTitle": "Halloween Warm Up Party",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "Halloween Warm Up Party at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19156",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19156",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-30T22:30:00+01:00",
+      "end": "2026-10-31T03:00:00+01:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
+    "id": "event-krystal-vicenza-2026-10-31",
+    "type": "event",
+    "name": "Halloween Party",
+    "occurrenceTitle": "Halloween Party",
+    "hostName": "Krystal Club Privè",
+    "venueId": "club-krystal-vicenza",
+    "description_short": "Halloween Party at Krystal Club Privè in Vicenza, Italy. Check the official organizer page for reservations and admission rules.",
+    "description_full": "Official Krystal Club Privè event in Vicenza. Membership and event-specific admission rules apply; contact the club for reservations and details.",
+    "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
+    "website": "https://www.krystal-club.it/en/?p=19160",
+    "sourceEventUrl": "https://www.krystal-club.it/en/?p=19160",
+    "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/HALLOWEEN-700x316.png",
+    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "attendancePolicy": "varies_by_event",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-31T21:30:00+01:00",
+      "end": "2026-11-01T04:00:00+01:00"
+    },
+    "geopoint": {
+      "latitude": 45.5244629,
+      "longitude": 11.5894139,
+      "address": {
+        "addressLine1": "Via Ludovico Lazzaro Zamenhof 432-442",
+        "city": "Vicenza",
+        "region": "Veneto",
+        "postalCode": "36100",
+        "country": "Italy"
+      }
+    },
+    "tags": [
+      "Members Only",
+      "Couples Welcome"
+    ],
+    "status": "approved",
+    "postedByUserId": "user1",
+    "contactEmail": "info@krystal-club.it"
+  },
+  {
     "id": "club-krystal-vicenza",
     "type": "club",
     "name": "Krystal Club Privè",
@@ -8942,5 +9344,579 @@
     "locationVisibility": "exact_public",
     "specialScheduleNotes": "Attendance rules vary by event. The club runs mixed nights, couples-focused nights, Rainbow Night and themed events. Online registration is for members; non-members can arrange a visit by contacting the club by phone or email. Membership is optional for a one-night visit.",
     "buildingAssetId": "building-asset-club-tucan-club-almind"
+  },
+  {
+    "id": "club-b1-club-escape-cleveland",
+    "name": "Club Escape",
+    "type": "club",
+    "status": "approved",
+    "website": "https://www.clubescapecleveland.com/",
+    "geopoint": {
+      "address": {
+        "city": "Cleveland",
+        "region": "Ohio",
+        "country": "United States",
+        "citySlug": "cleveland",
+        "admin1Slug": "oh",
+        "postalCode": "44114",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "3901 Lakeside Avenue East"
+      },
+      "latitude": 41.51853712671709,
+      "longitude": -81.66682183742523
+    },
+    "location": "3901 Lakeside Avenue East, Cleveland, Ohio, 44114, United States",
+    "schedule": [
+      {
+        "day": "Wednesday",
+        "open": "19:30",
+        "close": "00:00",
+        "isClosed": false,
+        "occurrence": "selected_events",
+        "entryConditions": "21+; approved membership required. Annual 0, six months 5, one week 5.",
+        "attendancePolicy": "couples_and_select_single_men"
+      },
+      {
+        "day": "Friday",
+        "open": "20:00",
+        "close": "02:00",
+        "isClosed": false,
+        "occurrence": "selected_events",
+        "entryConditions": "21+; approved membership required. Annual 0, six months 5, one week 5.",
+        "attendancePolicy": "couples_and_select_single_men"
+      },
+      {
+        "day": "Saturday",
+        "open": "20:00",
+        "close": "02:00",
+        "isClosed": false,
+        "occurrence": "selected_events",
+        "entryConditions": "21+; approved membership required. Annual 0, six months 5, one week 5.",
+        "attendancePolicy": "couples_and_select_single_men"
+      }
+    ],
+    "createdAt": "2026-10-05T03:30:12.532868+00:00",
+    "updatedAt": "2026-10-05T06:24:10.471601+00:00",
+    "contactEmail": "Info@ClubEscapeCleveland.com",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.96,
+      "geocoderLabel": "3901 Lakeside Avenue East, Cleveland, Ohio, 44114, United States",
+      "geocoderSource": "Nominatim/OpenStreetMap exact street address"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "primaryVenueId": "venue-b1-club-escape-cleveland",
+    "attendancePolicy": "couples_and_select_single_men",
+    "generalAmenities": [
+      "Showers",
+      "Lockers",
+      "Parking",
+      "Food Served",
+      "BYOB"
+    ],
+    "description_short": "A members-only lifestyle club in Cleveland with themed rooms, social areas, showers and a buffet. It opens Wednesday, Friday and Saturday evenings, with advance approval required for single men.",
+    "entryRequirements": [
+      "members_only",
+      "screening_approval_required"
+    ],
+    "locationVisibility": "exact_public",
+    "ownerOrganizationId": "org-b1-club-escape-cleveland",
+    "specialScheduleNotes": "Schedule times summarize individually confirmed October 7/9/10 events; special events may differ (October 24 opens 19:00). Reservations require member login. CCM Productions footer is not treated as proof of operator identity. Couples and single women; single men must apply online and receive advance approval. Sponsor attendance and waitlist rules apply. 21+; approved membership required. Annual 0, six months 5, one week 5.",
+    "buildingAssetId": "building-asset-club-b1-club-escape-cleveland"
+  },
+  {
+    "id": "event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday",
+    "name": "BDSM The Game on Friday",
+    "tags": [],
+    "time": {
+      "end": "2026-10-10T03:00:00+02:00",
+      "start": "2026-10-09T21:00:00+02:00"
+    },
+    "type": "event",
+    "status": "approved",
+    "venueId": "venue-b1-sameplace-amsterdam",
+    "website": "https://sameplace.nl/events/the-game-on-friday-679/",
+    "geopoint": {
+      "address": {
+        "city": "Amsterdam",
+        "region": "North Holland",
+        "country": "Netherlands",
+        "citySlug": "amsterdam",
+        "admin1Slug": "north-holland",
+        "postalCode": "1052 EC",
+        "countrySlug": "nl",
+        "isCityState": false,
+        "addressLine1": "Nassaukade 120"
+      },
+      "latitude": 52.3740476,
+      "longitude": 4.8747651
+    },
+    "hostName": "sameplace",
+    "location": "Nassaukade 120, Amsterdam, North Holland, 1052 EC, Netherlands",
+    "createdAt": "2026-10-05T03:31:50.014257+00:00",
+    "updatedAt": "2026-10-05T03:58:32.453039+00:00",
+    "mediaAssets": [
+      {
+        "id": "3bf7f803-33ae-4ff1-9167-b3e878eba282",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "BDSM_ The Game — Amsterdam Nightlife Flyer",
+        "owner_id": "ba75ead9-848d-4357-ab9d-a061f390e8bf",
+        "created_at": "2026-10-05T03:58:30.268367+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T03:58:30.268367+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2f2f5af6-6bda-495a-9ce5-4dc42e1b1400",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@sameplace.nl",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.96,
+      "geocoderLabel": "Nassaukade 120, Amsterdam, North Holland, 1052 EC, Netherlands",
+      "geocoderSource": "Nominatim/OpenStreetMap exact street address"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "attendancePolicy": "couples_and_select_single_men",
+    "description_full": "BDSM The Game on Friday is an individually dated event advertised by Sameplace at Sameplace. See the official booking source for current admission details.",
+    "isAddressPrivate": false,
+    "entryRequirements": [],
+    "organizerOrganizationId": "org-b1-sameplace-amsterdam",
+    "buildingAssetId": "building-asset-event-b1-sameplace-amsterdam-2026-10-09-bdsm-the-game-on-friday"
+  },
+  {
+    "id": "club-b1-club-nv-muncie",
+    "name": "Club NV",
+    "type": "club",
+    "status": "approved",
+    "website": "https://www.clubnv.net/",
+    "geopoint": {
+      "address": {
+        "city": "Muncie",
+        "region": "Indiana",
+        "country": "United States",
+        "citySlug": "muncie",
+        "admin1Slug": "in",
+        "postalCode": "47302",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "400 S Lincoln Street"
+      },
+      "latitude": 40.19131961354276,
+      "longitude": -85.36821126937866
+    },
+    "location": "400 S Lincoln Street, Muncie, Indiana, 47302, United States",
+    "schedule": [
+      {
+        "day": "Saturday",
+        "open": "19:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "21+; photo ID; membership agreement;  annual membership.",
+        "attendancePolicy": "couples_focused"
+      },
+      {
+        "day": "Monday",
+        "isClosed": true
+      },
+      {
+        "day": "Tuesday",
+        "isClosed": true
+      },
+      {
+        "day": "Wednesday",
+        "isClosed": true
+      },
+      {
+        "day": "Thursday",
+        "isClosed": true
+      },
+      {
+        "day": "Friday",
+        "isClosed": true
+      },
+      {
+        "day": "Sunday",
+        "isClosed": true
+      }
+    ],
+    "createdAt": "2026-10-05T03:29:51.551483+00:00",
+    "updatedAt": "2026-10-05T06:28:17.722987+00:00",
+    "mediaAssets": [
+      {
+        "id": "f2b9a963-d4c4-4c2d-93df-2056eb4d4a93",
+        "role": "logo",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 4, 2026, 09_55_43 PM-1-cropped",
+        "owner_id": "6013f409-d769-41c7-a66d-1f31ff0cd1af",
+        "created_at": "2026-10-05T04:55:50.683394+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T04:55:50.683394+00:00",
+        "aspect_mode": "contain",
+        "external_id": "98868e4e-0358-432d-bc6c-abbbaf9d5100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "727c1e75-057f-4996-aeee-0948baf1c8a6",
+        "role": "hero",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 4, 2026, 09_55_43 PM-2-cropped",
+        "owner_id": "6013f409-d769-41c7-a66d-1f31ff0cd1af",
+        "created_at": "2026-10-05T04:56:06.02746+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T04:56:06.02746+00:00",
+        "aspect_mode": "cover",
+        "external_id": "900d462f-a804-4b4b-7e70-4780be14fe00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "emailus@clubnv.net",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.96,
+      "geocoderLabel": "400 S Lincoln Street, Muncie, Indiana, 47302, United States",
+      "geocoderSource": "Nominatim/OpenStreetMap exact street address"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "primaryVenueId": "venue-b1-club-nv-muncie",
+    "buildingAssetId": "building-asset-club-b1-club-nv-muncie",
+    "attendancePolicy": "couples_focused",
+    "generalAmenities": [
+      "Dance Club",
+      "Lockers",
+      "Parking",
+      "Food Served",
+      "BYOB"
+    ],
+    "description_short": "A private lifestyle club in Muncie with Saturday parties, a dance floor, lockers and a fenced outdoor patio. Membership and photo ID are required; guests may bring their own alcohol.",
+    "entryRequirements": [
+      "members_only"
+    ],
+    "locationVisibility": "exact_public",
+    "ownerOrganizationId": "org-b1-club-nv-muncie",
+    "specialScheduleNotes": "No entry after midnight; downstairs areas close at 02:30; no overnight stays. Couples and singles may join; club describes a predominantly couples membership. 21+; photo ID; membership agreement;  annual membership."
+  },
+  {
+    "id": "club-b1-club-traumpalais-ingelheim",
+    "name": "Club TraumPalais",
+    "type": "club",
+    "status": "approved",
+    "website": "https://www.swingerclub-traumpalais.com/en",
+    "geopoint": {
+      "address": {
+        "city": "Ingelheim am Rhein",
+        "region": "Rhineland-Palatinate",
+        "country": "Germany",
+        "citySlug": "ingelheim-am-rhein",
+        "admin1Slug": "rhineland-palatinate",
+        "postalCode": "55262",
+        "countrySlug": "de",
+        "isCityState": false,
+        "addressLine1": "Budenheimer Weg 73"
+      },
+      "latitude": 50.0015811594848,
+      "longitude": 8.128005266189575
+    },
+    "location": "Budenheimer Weg 73, Ingelheim am Rhein, Rhineland-Palatinate, 55262, Germany",
+    "schedule": [
+      {
+        "day": "Monday",
+        "open": "16:00",
+        "close": "01:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Tuesday",
+        "open": "10:00",
+        "close": "01:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Wednesday",
+        "open": "10:00",
+        "close": "01:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Thursday",
+        "open": "10:00",
+        "close": "01:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Friday",
+        "open": "12:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Saturday",
+        "open": "12:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      },
+      {
+        "day": "Sunday",
+        "open": "12:00",
+        "close": "01:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+        "attendancePolicy": "varies_by_night"
+      }
+    ],
+    "createdAt": "2026-10-05T03:30:34.553014+00:00",
+    "updatedAt": "2026-10-05T06:30:07.737319+00:00",
+    "mediaAssets": [
+      {
+        "id": "bcaeac05-6f93-4869-adff-029b596749cc",
+        "role": "hero",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 4, 2026, 10_03_02 PM-2-cropped",
+        "owner_id": "7bd2e9a7-1659-4bad-aa20-465fe5b88fa5",
+        "created_at": "2026-10-05T05:03:19.571306+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T05:03:19.571306+00:00",
+        "aspect_mode": "cover",
+        "external_id": "1db2efbc-e193-4ef9-027a-03ba98b07600",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "7c0f6056-6689-483f-a941-14ee110b10d4",
+        "role": "logo",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 4, 2026, 10_03_01 PM-1-cropped",
+        "owner_id": "7bd2e9a7-1659-4bad-aa20-465fe5b88fa5",
+        "created_at": "2026-10-05T05:03:34.518909+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T05:03:34.518909+00:00",
+        "aspect_mode": "contain",
+        "external_id": "0b7a3e0b-5b4f-445b-ebc7-7049081e0c00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@traumpalais.com",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.9,
+      "geocoderLabel": "Budenheimer Weg 73, Ingelheim am Rhein, Rhineland-Palatinate, 55262, Germany",
+      "geocoderSource": "Official business imprint"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "primaryVenueId": "venue-b1-club-traumpalais-ingelheim",
+    "attendancePolicy": "varies_by_night",
+    "generalAmenities": [
+      "Showers",
+      "Lockers",
+      "Food Served",
+      "Alcohol Available",
+      "Safer Sex Supplies",
+      "Kink / BDSM Friendly",
+      "Parking"
+    ],
+    "description_short": "A lifestyle club in Heidesheim, a district of Ingelheim am Rhein, with a bar, sauna, play rooms and an outdoor area. The club welcomes singles and couples subject to event-specific rules and advance registration.",
+    "entryRequirements": [],
+    "locationVisibility": "exact_public",
+    "ownerOrganizationId": "org-b1-club-traumpalais-ingelheim",
+    "specialScheduleNotes": "Heidesheim is a geographic alias/district, not a business alias. No separate operator organization for an individual proprietor. Published coordinates retained with needs_review location validation. Singles and couples generally welcome, with special-event exceptions. Official rules define discounted couples and permit case-by-case admission. Adults-only; exact numerical minimum not confirmed in reviewed official rules. Advance registration required/strongly advised; capacity limits and selection apply.",
+    "buildingAssetId": "building-asset-club-b1-club-traumpalais-ingelheim"
+  },
+  {
+    "id": "event-b1-wasteland-2026-10-31-wasteland-halloween-ball",
+    "name": "Wasteland Halloween Ball",
+    "tags": [],
+    "time": {
+      "end": "2026-11-01T05:00:00+01:00",
+      "start": "2026-10-31T21:00:00+01:00"
+    },
+    "type": "event",
+    "status": "approved",
+    "venueId": "venue-b1-radion-amsterdam",
+    "website": "https://www.wasteland.nl/wasteland-halloween/",
+    "geopoint": {
+      "address": {
+        "city": "Amsterdam",
+        "region": "North Holland",
+        "country": "Netherlands",
+        "citySlug": "amsterdam",
+        "admin1Slug": "north-holland",
+        "postalCode": "1066 EA",
+        "countrySlug": "nl",
+        "isCityState": false,
+        "addressLine1": "Louwesweg 1"
+      },
+      "latitude": 52.3456292,
+      "longitude": 4.8255446
+    },
+    "hostName": "wasteland",
+    "location": "Louwesweg 1, Amsterdam, North Holland, 1066 EA, Netherlands",
+    "createdAt": "2026-10-05T03:31:54.803202+00:00",
+    "updatedAt": "2026-10-05T03:54:45.765706+00:00",
+    "mediaAssets": [
+      {
+        "id": "2034e96e-168e-4abc-957f-84c4bec7bae3",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "WL-HW-BALL-2026-FLYER-SOCIALS-DIGITAL-Klein-ro6jhele2mlrphkoq1g3nw47z9c9ehc03tal8i0x8k",
+        "owner_id": "fb964079-fb1c-4dab-a889-5471cde43f43",
+        "created_at": "2026-10-05T03:54:44.631368+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T03:54:44.631368+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c6ae11dc-0099-4bf7-9100-d010d156bb00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@wasteland.nl",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.96,
+      "geocoderLabel": "Louwesweg 1, Amsterdam, North Holland, 1066 EA, Netherlands",
+      "geocoderSource": "Nominatim/OpenStreetMap named venue/address"
+    },
+    "eventSeriesId": "series-b1-wasteland",
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "attendancePolicy": "mixed_open",
+    "description_full": "Wasteland Halloween Ball is an individually dated event advertised by Wasteland at RADION. See the official booking source for current admission details.",
+    "isAddressPrivate": false,
+    "entryRequirements": [],
+    "organizerOrganizationId": "org-b1-wasteland",
+    "buildingAssetId": "building-asset-event-b1-wasteland-2026-10-31-wasteland-halloween-ball"
+  },
+  {
+    "id": "event-b1-wasteland-2026-11-28-wasteland-amsterdam",
+    "name": "Wasteland Amsterdam",
+    "tags": [],
+    "time": {
+      "end": "2026-11-29T06:00:00+01:00",
+      "start": "2026-11-28T22:00:00+01:00"
+    },
+    "type": "event",
+    "status": "approved",
+    "venueId": "venue-b1-north-sea-venue-zaandam",
+    "website": "https://www.wasteland.nl/wasteland-amsterdam/",
+    "geopoint": {
+      "address": {
+        "city": "Zaandam",
+        "region": "North Holland",
+        "country": "Netherlands",
+        "citySlug": "zaandam",
+        "admin1Slug": "north-holland",
+        "postalCode": "1506 PS",
+        "countrySlug": "nl",
+        "isCityState": false,
+        "addressLine1": "Hemkade 48"
+      },
+      "latitude": 52.4221861,
+      "longitude": 4.8196378
+    },
+    "hostName": "wasteland",
+    "location": "Hemkade 48, Zaandam, North Holland, 1506 PS, Netherlands",
+    "createdAt": "2026-10-05T03:31:59.371207+00:00",
+    "updatedAt": "2026-10-05T03:54:36.921311+00:00",
+    "mediaAssets": [
+      {
+        "id": "08130b8a-cb12-4230-ab81-b86772a4e8ae",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "WL-ANIMALIA-NOV-2026--rt81zrq261o17swxjch5jstuqfo1ai7qlexqe3tr9g",
+        "owner_id": "a2017289-1466-4a07-aed8-1c2141e66b5f",
+        "created_at": "2026-10-05T03:54:34.271135+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-05T03:54:34.271135+00:00",
+        "aspect_mode": "contain",
+        "external_id": "52978373-8d27-4134-b164-6822bd279600",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "info@wasteland.nl",
+    "locationMeta": {
+      "status": "needs_review",
+      "warnings": [
+        "Public address resolved; building footprint can be verified separately."
+      ],
+      "confidence": 0.96,
+      "geocoderLabel": "Hemkade 48, Zaandam, North Holland, 1506 PS, Netherlands",
+      "geocoderSource": "Nominatim/OpenStreetMap named events venue/address"
+    },
+    "eventSeriesId": "series-b1-wasteland",
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "attendancePolicy": "mixed_open",
+    "description_full": "Wasteland Amsterdam is an individually dated event advertised by Wasteland at North Sea Venue. See the official booking source for current admission details.",
+    "isAddressPrivate": false,
+    "entryRequirements": [],
+    "organizerOrganizationId": "org-b1-wasteland",
+    "buildingAssetId": "building-asset-event-b1-wasteland-2026-11-28-wasteland-amsterdam"
   }
 ]

@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
-import { getEventCanonicalPath } from '../../lib/entityUtils';
-import { resolveBrandLogo } from '../../lib/entityBrandMedia';
+import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUtils';
+import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getListingFlyerUrl, getListingImageUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
 import type { CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
@@ -196,6 +196,17 @@ const HostPage: React.FC = () => {
     const organizationId = hostProfile?.organization?.id;
     if (!organizationId) return undefined;
     return resolveBrandLogo('organization', organizationId, {
+      listings,
+      venues,
+      organizations,
+      relationships: organizationVenueRelationships,
+      eventSeries,
+    }).url;
+  }, [eventSeries, hostProfile?.organization?.id, listings, organizationVenueRelationships, organizations, venues]);
+  const resolvedHostHeader = useMemo(() => {
+    const organizationId = hostProfile?.organization?.id;
+    if (!organizationId) return undefined;
+    return resolveBrandHeader('organization', organizationId, {
       listings,
       venues,
       organizations,
@@ -429,7 +440,7 @@ const HostPage: React.FC = () => {
       title={`${hostProfile.name} | Lifestyle Host & Promoter | SwingSphere`}
       description={hostProfile.organization?.descriptionShort || `Explore ${hostProfile.name} on SwingSphere. See upcoming events, venues, destinations, and host information.`}
       canonicalPath={window.location.pathname}
-      imageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+      imageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
       imageAlt={`${hostProfile.name} on SwingSphere`}
     />
     {hostProfile.organization ? (
@@ -449,7 +460,7 @@ const HostPage: React.FC = () => {
       canEdit={canEditHostPage}
     />
     <HostPageLayout
-      backgroundImageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+      backgroundImageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
       contextNav={
         <DetailContextNav
           breadcrumbs={[
@@ -468,7 +479,7 @@ const HostPage: React.FC = () => {
           cadenceText={cadenceText}
           themePills={themePills}
           logoImageUrl={resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined)}
-          headerImageUrl={hostProfile.organization?.headerImageUrl || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+          headerImageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
           description={hostProfile.organization?.descriptionShort}
           operatorName={operatorOrganization?.name}
           displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.includes('producer') ? 'Producer' : hostProfile.organization?.displayTypes?.includes('community') ? 'Community' : 'Host'}
@@ -708,14 +719,32 @@ const HostPage: React.FC = () => {
             <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100"><Building2 size={16} className="text-red-300" />Regular venues</h2>
               <ul className="mt-3 divide-y divide-white/10">
-                {venueRelationships.map(({ relationship, venue }) => venue ? (
-                  <li key={relationship.id} className="py-3 first:pt-1">
+                {venueRelationships.map(({ relationship, venue }) => {
+                  if (!venue) return null;
+                  const linkedClub = listings.find((listing) => (
+                    listing.type === 'club'
+                    && listing.ownerOrganizationId === hostProfile.organization?.id
+                    && listing.primaryVenueId === venue.id
+                  ));
+                  const content = (
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0"><p className="truncate text-sm font-semibold text-gray-200">{venue.name}</p><p className="mt-0.5 text-[11px] text-gray-500">{venue.visibility === 'private' ? 'Exact location protected' : [venue.address.city, venue.address.region].filter(Boolean).join(', ')}</p></div>
                       <span className="ss-glass ss-glass--ambient shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold text-red-200">{relationship.label || relationshipLabel[relationship.relationshipType]}</span>
                     </div>
-                  </li>
-                ) : null)}
+                  );
+                  return (
+                    <li key={relationship.id} className="py-3 first:pt-1">
+                      {linkedClub ? (
+                        <Link
+                          to={getClubCanonicalPath(linkedClub, index)}
+                          className="block rounded-xl transition hover:bg-white/[0.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
+                        >
+                          {content}
+                        </Link>
+                      ) : content}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ) : null}

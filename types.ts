@@ -554,6 +554,7 @@ export type AppState = {
   clearTimeLens: () => void;
   setDebugInfo: (info: { label: string; extra?: string }, duration?: number) => void;
   login: (email: string, pass: string) => Promise<UserType | null>;
+  signInWithGoogle: (nextPath?: string) => Promise<void>;
   logout: () => Promise<void>;
   signUp: (credentials: { displayName: string; email: string; password: string; accountIntent: 'explore' | 'promote' }) => Promise<UserType>;
   requestPasswordReset: (email: string) => Promise<void>;

@@ -210,7 +210,7 @@ const EventPage: React.FC = () => {
   const eventGalleryAssets = event.mediaAssets?.filter((asset) => asset.role === 'gallery') ?? [];
   const eventFlyerHeroImage = eventFlyerAsset
     ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'flyerpage' }) ?? undefined
-    : undefined;
+    : (event as EventData & { flyerImageUrl?: string }).flyerImageUrl;
   const eventCoverImage = eventHeroAsset
     ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event)
     : getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event);
@@ -392,7 +392,7 @@ const EventPage: React.FC = () => {
           ) : null}
           <div className="space-y-6 lg:hidden">
             <div className="hidden sm:block">
-              <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} onQuickEdit={() => setQuickEditField('flyer')} />
+              <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} flyerUrl={eventFlyerHeroImage} onQuickEdit={() => setQuickEditField('flyer')} />
             </div>
             <EventMapCard
               eventId={event.id}
@@ -431,7 +431,7 @@ const EventPage: React.FC = () => {
       }
       rail={
         <>
-          <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} onQuickEdit={() => setQuickEditField('flyer')} />
+          <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} flyerUrl={eventFlyerHeroImage} onQuickEdit={() => setQuickEditField('flyer')} />
           <EventMapCard
             eventId={event.id}
             eventName={event.name}

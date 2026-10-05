@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
-import { getEventCanonicalPath } from '../../lib/entityUtils';
+import { getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
 import { getEventCardImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl, isPlaceholderMediaUrl } from '../../lib/listingImage';
 import { resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
@@ -55,6 +55,9 @@ const ClubPage: React.FC = () => {
     return resolvedLogo && resolvedLogo !== club.logoImageUrl ? { ...club, logoImageUrl: resolvedLogo } : club;
   }, [club, listings, organizationVenueRelationships, organizations, venues]);
   const clubKey = club && index?.clubKeyById.get(club.id) ? index.clubKeyById.get(club.id)! : key;
+  const ownerOrganization = club?.ownerOrganizationId
+    ? index?.organizationsById.get(club.ownerOrganizationId) ?? null
+    : null;
 
   const upcomingEvents = useMemo(() => {
     if (!club || !index) return [];
@@ -124,6 +127,11 @@ const ClubPage: React.FC = () => {
         club={presentationClub ?? club}
         clubKey={clubKey}
         upcomingEvents={upcomingEvents}
+        ownerOrganization={ownerOrganization ? {
+          name: ownerOrganization.name,
+          href: getHostCanonicalPath(ownerOrganization.slug),
+          displayLabel: ownerOrganization.displayTypes.includes('promoter') ? 'Promoter' : 'Host',
+        } : undefined}
         onQuickEdit={setQuickEditField}
         onEditLocation={() => navigate(`/submission/${encodeURIComponent(club.id)}?section=location&returnTo=${encodeURIComponent(window.location.pathname)}`)}
       />

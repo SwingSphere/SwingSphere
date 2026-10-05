@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ExternalLink, Globe, Link2, Mail, Pencil } from 'lucide-react';
 import { formatClockTime, resolveCountryFlagEmoji } from '../../lib/formatting';
 import type { ClubData } from '../../types';
@@ -26,6 +27,11 @@ type ClubDetailTemplateProps = {
   club: ClubData;
   clubKey: string;
   upcomingEvents: ClubEventPreviewItem[];
+  ownerOrganization?: {
+    name: string;
+    href: string;
+    displayLabel: string;
+  };
   onQuickEdit?: (field: ClubQuickEditField) => void;
   onEditLocation?: () => void;
 };
@@ -72,7 +78,7 @@ const ExternalLinkRow: React.FC<{
   </TrackedExternalLink>
 );
 
-const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, upcomingEvents, onQuickEdit, onEditLocation }) => {
+const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, upcomingEvents, ownerOrganization, onQuickEdit, onEditLocation }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
   const extended = club as ClubData & {
@@ -192,6 +198,21 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             showDirections={!isApproximateVenue}
             onEditLocation={onEditLocation}
           />
+          {ownerOrganization ? (
+            <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">Host / promoter</p>
+              <Link
+                to={ownerOrganization.href}
+                className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3 text-gray-200 transition hover:border-red-300/35 hover:bg-white/[0.045] hover:text-white"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{ownerOrganization.name}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-500">View {ownerOrganization.displayLabel.toLowerCase()} profile</p>
+                </div>
+                <ExternalLink size={14} className="shrink-0 text-red-300" />
+              </Link>
+            </section>
+          ) : null}
           <ListingClaimCard
             entityType="club"
             entityId={club.id}

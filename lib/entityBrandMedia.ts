@@ -1,3 +1,4 @@
+import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
 import type {
   ClubBrandData,
   ClubData,
@@ -52,6 +53,29 @@ type MediaNode = EntityRef & {
   headerImageUrl?: string;
 };
 
+type MediaBearingEntity = {
+  logoImageUrl?: string;
+  headerImageUrl?: string;
+  mediaAssets?: Array<{
+    role?: string;
+    external_id?: string;
+  }>;
+};
+
+const resolveUploadedMediaUrl = (entity: MediaBearingEntity, role: 'logo' | 'hero'): string | undefined => {
+  const asset = entity.mediaAssets?.find((item) => item.role === role && item.external_id?.trim());
+  if (!asset?.external_id) return undefined;
+  return getCloudflareImageUrl({
+    externalId: asset.external_id.trim(),
+    variant: role === 'logo' ? 'logosquare' : 'herocard',
+  }) ?? undefined;
+};
+
+const mediaNodeFields = (entity: MediaBearingEntity) => ({
+  logoImageUrl: resolveUploadedMediaUrl(entity, 'logo') ?? entity.logoImageUrl,
+  headerImageUrl: resolveUploadedMediaUrl(entity, 'hero') ?? entity.headerImageUrl,
+});
+
 const refKey = (ref: EntityRef) => `${ref.type}:${ref.id}`;
 
 export const isPlaceholderMediaUrl = (url?: string | null): boolean => {
@@ -101,17 +125,16 @@ const buildNodeMaps = (catalog: BrandMediaCatalog) => {
       type: listing.type,
       id: listing.id,
       name: listing.name,
-      logoImageUrl: listing.logoImageUrl,
-      headerImageUrl: listing.headerImageUrl,
+      ...mediaNodeFields(listing),
     });
   }
-  for (const venue of venues) add({ type: 'venue', id: venue.id, name: venue.name, logoImageUrl: venue.logoImageUrl, headerImageUrl: venue.headerImageUrl });
-  for (const organization of organizations) add({ type: 'organization', id: organization.id, name: organization.name, logoImageUrl: organization.logoImageUrl, headerImageUrl: organization.headerImageUrl });
-  for (const series of eventSeries) add({ type: 'event_series', id: series.id, name: series.name, logoImageUrl: series.logoImageUrl, headerImageUrl: series.headerImageUrl });
-  for (const brand of clubBrands) add({ type: 'club_brand', id: brand.id, name: brand.name, logoImageUrl: brand.logoImageUrl, headerImageUrl: brand.headerImageUrl });
-  for (const resort of resorts) add({ type: 'resort', id: resort.id, name: resort.name, logoImageUrl: resort.logoImageUrl, headerImageUrl: resort.headerImageUrl });
-  for (const series of cruiseSeries) add({ type: 'cruise_series', id: series.id, name: series.name, logoImageUrl: series.logoImageUrl, headerImageUrl: series.headerImageUrl });
-  for (const sailing of cruiseSailings) add({ type: 'cruise_sailing', id: sailing.id, name: sailing.name, logoImageUrl: sailing.logoImageUrl, headerImageUrl: sailing.headerImageUrl });
+  for (const venue of venues) add({ type: 'venue', id: venue.id, name: venue.name, ...mediaNodeFields(venue) });
+  for (const organization of organizations) add({ type: 'organization', id: organization.id, name: organization.name, ...mediaNodeFields(organization) });
+  for (const series of eventSeries) add({ type: 'event_series', id: series.id, name: series.name, ...mediaNodeFields(series) });
+  for (const brand of clubBrands) add({ type: 'club_brand', id: brand.id, name: brand.name, ...mediaNodeFields(brand) });
+  for (const resort of resorts) add({ type: 'resort', id: resort.id, name: resort.name, ...mediaNodeFields(resort) });
+  for (const series of cruiseSeries) add({ type: 'cruise_series', id: series.id, name: series.name, ...mediaNodeFields(series) });
+  for (const sailing of cruiseSailings) add({ type: 'cruise_sailing', id: sailing.id, name: sailing.name, ...mediaNodeFields(sailing) });
 
   return {
     nodeByKey,
