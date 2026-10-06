@@ -9978,7 +9978,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "6790c0b9-77e2-4c55-ad66-e7cb6e5b4ffd",
+        "id": "4fbb033a-8cb6-4772-9ba2-426d2d264850",
         "owner_type": "event",
         "owner_id": "event-halloween-party-los-angeles-2026-10-10",
         "role": "logo",
@@ -9992,16 +9992,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "1c268ba9-6d27-44bd-9917-f457acee67a9",
+        "id": "69e6c7da-c42e-4c66-9d7e-6903ebdb6301",
         "owner_type": "event",
         "owner_id": "event-halloween-party-los-angeles-2026-10-10",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "5e25d4d4-1121-4c52-4e64-83f409105200",
+        "external_id": "0f68b6c4-51d6-40a7-0194-c441781ffb00",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10010,13 +10010,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e25d4d4-1121-4c52-4e64-83f409105200/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e25d4d4-1121-4c52-4e64-83f409105200/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f68b6c4-51d6-40a7-0194-c441781ffb00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f68b6c4-51d6-40a7-0194-c441781ffb00/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-los-angeles-ca-10-10-26/"
   },
   {
@@ -10078,7 +10078,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "626aa02e-8066-4e70-8991-bedf8134899b",
+        "id": "b2bfb0a4-0bc9-4840-bc85-ef71ea329c28",
         "owner_type": "event",
         "owner_id": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
         "role": "logo",
@@ -10092,16 +10092,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "4678ac88-5104-4e20-8e93-b95a55e4fa67",
+        "id": "a45e0111-a811-4fdb-b9e6-c5d0661d043e",
         "owner_type": "event",
         "owner_id": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "69305560-69e3-48a0-e5ea-76466ea1a200",
+        "external_id": "775fc9c3-aaed-4329-9f82-0945b0691800",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10110,13 +10110,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/69305560-69e3-48a0-e5ea-76466ea1a200/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/69305560-69e3-48a0-e5ea-76466ea1a200/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/775fc9c3-aaed-4329-9f82-0945b0691800/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/775fc9c3-aaed-4329-9f82-0945b0691800/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/enchanted-darkness-san-diego-ca-10-10-26/"
   },
   {
@@ -10178,7 +10178,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "b9025f35-1e32-4eac-8a4c-33304595215a",
+        "id": "de47deca-8ff9-42d2-b746-1e7ab3b7d0d6",
         "owner_type": "event",
         "owner_id": "event-halloween-party-denver-2026-10-10",
         "role": "logo",
@@ -10192,16 +10192,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "4ac45fca-9f9c-4f84-91d8-b1acbef03466",
+        "id": "4549f3dd-e90b-4196-a3a5-578e193c0a94",
         "owner_type": "event",
         "owner_id": "event-halloween-party-denver-2026-10-10",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "177c0f0c-861a-43ea-ea43-df6b674c6800",
+        "external_id": "05835f4e-78e1-4f37-9cc6-03d2b7bd4600",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10210,13 +10210,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/177c0f0c-861a-43ea-ea43-df6b674c6800/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/177c0f0c-861a-43ea-ea43-df6b674c6800/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/05835f4e-78e1-4f37-9cc6-03d2b7bd4600/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/05835f4e-78e1-4f37-9cc6-03d2b7bd4600/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-denver-co-10-10-26/"
   },
   {
@@ -10277,7 +10277,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "58365df9-d950-4eef-a372-31089ac01297",
+        "id": "9244f976-f81b-4fb1-96d4-56354440a308",
         "owner_type": "event",
         "owner_id": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
         "role": "logo",
@@ -10291,16 +10291,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "c5abe1a7-274c-4ee4-93ee-29c0b2c78392",
+        "id": "b16ac38c-f22e-4bb2-a5da-ddbf562f540d",
         "owner_type": "event",
         "owner_id": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "38056fb2-ca8f-442b-f979-13a09aa43e00",
+        "external_id": "1e7b6d38-f130-4204-193f-9c1a96a2ff00",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10309,13 +10309,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/38056fb2-ca8f-442b-f979-13a09aa43e00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/38056fb2-ca8f-442b-f979-13a09aa43e00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/1e7b6d38-f130-4204-193f-9c1a96a2ff00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/1e7b6d38-f130-4204-193f-9c1a96a2ff00/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/tease-cocktail-mixer-las-vegas-nv-10-16-26/"
   },
   {
@@ -10377,7 +10377,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "328b1208-a21b-43bb-85fc-d2791d164409",
+        "id": "5cff64a7-81eb-4c2e-b938-d90f9b221990",
         "owner_type": "event",
         "owner_id": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
         "role": "logo",
@@ -10391,16 +10391,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "8a4b12ab-dff0-4fa2-8e14-ff5929154222",
+        "id": "fa862f4b-6a1e-40be-8ea1-338c797fd058",
         "owner_type": "event",
         "owner_id": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "f8f86726-4008-460f-c498-635405953e00",
+        "external_id": "cd86a3b4-9ce0-4596-1104-8403803bb900",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10409,13 +10409,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f8f86726-4008-460f-c498-635405953e00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f8f86726-4008-460f-c498-635405953e00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/cd86a3b4-9ce0-4596-1104-8403803bb900/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/cd86a3b4-9ce0-4596-1104-8403803bb900/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/haunted-circus-halloween-party-las-vegas-nv-10-17-26/"
   },
   {
@@ -10477,7 +10477,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "cef05634-63b5-498e-981d-a9d04e817922",
+        "id": "6371932b-409a-4ab3-bd0c-26d807819472",
         "owner_type": "event",
         "owner_id": "event-halloween-party-phoenix-2026-10-17",
         "role": "logo",
@@ -10491,16 +10491,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "1601e148-4036-4993-9406-da20723f8882",
+        "id": "237cc46a-4089-4807-a210-723fccac4e82",
         "owner_type": "event",
         "owner_id": "event-halloween-party-phoenix-2026-10-17",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "fd7e460b-3d2c-4da3-ff2d-7d1443481900",
+        "external_id": "ddd88865-ad6c-4e18-4b80-678f0ef01e00",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10509,13 +10509,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fd7e460b-3d2c-4da3-ff2d-7d1443481900/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fd7e460b-3d2c-4da3-ff2d-7d1443481900/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ddd88865-ad6c-4e18-4b80-678f0ef01e00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ddd88865-ad6c-4e18-4b80-678f0ef01e00/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-phoenix-az-10-17-26/"
   },
   {
@@ -10577,7 +10577,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "f11d2997-16dc-45af-8c3b-0654ed5718cd",
+        "id": "25ae608a-956e-4aa6-83bd-1d326a332983",
         "owner_type": "event",
         "owner_id": "event-halloween-party-austin-2026-10-17",
         "role": "logo",
@@ -10591,16 +10591,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "286645dc-df91-4132-8817-3f41d61e2a7d",
+        "id": "4169c37e-06d3-40f6-a226-43181f783fb8",
         "owner_type": "event",
         "owner_id": "event-halloween-party-austin-2026-10-17",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "5e920284-8b64-4d0e-c0bc-686255248e00",
+        "external_id": "42024911-0363-44d2-3236-0523b5e96500",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10609,13 +10609,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e920284-8b64-4d0e-c0bc-686255248e00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e920284-8b64-4d0e-c0bc-686255248e00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/42024911-0363-44d2-3236-0523b5e96500/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/42024911-0363-44d2-3236-0523b5e96500/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-austin-tx-10-17-26/"
   },
   {
@@ -10677,7 +10677,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "ac41cac5-0133-4030-9dc7-f4380cb0b806",
+        "id": "17752bc3-8063-4552-8227-b929c0d37b94",
         "owner_type": "event",
         "owner_id": "event-halloween-party-raleigh-2026-10-17",
         "role": "logo",
@@ -10691,16 +10691,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "9c1c2968-5e75-4ded-ab18-51625456b4f4",
+        "id": "ae972cbe-75d2-435e-8ef4-7926fb83a2f2",
         "owner_type": "event",
         "owner_id": "event-halloween-party-raleigh-2026-10-17",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "32a62daa-fe67-4935-fd5e-515a7b4ef800",
+        "external_id": "831f6506-7af0-4096-697b-51be2fb79c00",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10709,13 +10709,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/32a62daa-fe67-4935-fd5e-515a7b4ef800/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/32a62daa-fe67-4935-fd5e-515a7b4ef800/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/831f6506-7af0-4096-697b-51be2fb79c00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/831f6506-7af0-4096-697b-51be2fb79c00/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-raleigh-nc-10-17-26/"
   },
   {
@@ -10779,7 +10779,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "3a7d6082-302a-4012-8fa1-29fced02b193",
+        "id": "5effd593-7bb0-4072-9958-be03795fd2f0",
         "owner_type": "event",
         "owner_id": "event-halloween-cruise-san-pedro-2026-10-24",
         "role": "logo",
@@ -10793,16 +10793,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "5f4b9428-8309-42bd-b4f7-d3b295411295",
+        "id": "00c9ed6c-266f-4863-bf53-b7a8c598db43",
         "owner_type": "event",
         "owner_id": "event-halloween-cruise-san-pedro-2026-10-24",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "062d30fa-4d28-498a-61b1-cdde472bbd00",
+        "external_id": "bf75497f-bd78-44c0-883b-fc0b71d7a600",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10811,13 +10811,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/062d30fa-4d28-498a-61b1-cdde472bbd00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/062d30fa-4d28-498a-61b1-cdde472bbd00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bf75497f-bd78-44c0-883b-fc0b71d7a600/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bf75497f-bd78-44c0-883b-fc0b71d7a600/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-cruise-la-to-ensenada-oct-24-29-2026/"
   },
   {
@@ -10879,7 +10879,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "b7376ef3-16bb-4e2a-b636-2cde168f0c38",
+        "id": "39798ae4-9c74-4b43-ba1e-cdd09b7e41d2",
         "owner_type": "event",
         "owner_id": "event-halloween-party-san-jose-2026-10-31",
         "role": "logo",
@@ -10893,16 +10893,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "4664cc78-38a2-44d7-b09e-13f50f66c1f0",
+        "id": "4cfb5f07-c9c2-4917-848d-dd82f51ed6a8",
         "owner_type": "event",
         "owner_id": "event-halloween-party-san-jose-2026-10-31",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "3b099373-4d71-41df-5c0b-70b6670d1000",
+        "external_id": "ca52dc1b-0be8-4ae0-8a6d-56a89ba30a00",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -10911,13 +10911,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b099373-4d71-41df-5c0b-70b6670d1000/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b099373-4d71-41df-5c0b-70b6670d1000/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ca52dc1b-0be8-4ae0-8a6d-56a89ba30a00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ca52dc1b-0be8-4ae0-8a6d-56a89ba30a00/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-san-jose-ca-10-31-26/"
   },
   {
@@ -10979,7 +10979,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "cebbb3eb-3b14-46e9-99e5-ffd22fe72e59",
+        "id": "0b365e74-0259-482f-8ed5-61fbd3001861",
         "owner_type": "event",
         "owner_id": "event-halloween-party-san-diego-2026-10-31",
         "role": "logo",
@@ -10993,16 +10993,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "41cae47b-0648-4a3e-a5c4-a92a574c29b9",
+        "id": "72e2cc42-2292-4ef1-8909-0af87a5fe2ce",
         "owner_type": "event",
         "owner_id": "event-halloween-party-san-diego-2026-10-31",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "3d916525-aabe-448b-b5f0-20c2cf8d9e00",
+        "external_id": "a041102b-847e-4b09-42c2-e0f9f09b5900",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -11011,13 +11011,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3d916525-aabe-448b-b5f0-20c2cf8d9e00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3d916525-aabe-448b-b5f0-20c2cf8d9e00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a041102b-847e-4b09-42c2-e0f9f09b5900/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a041102b-847e-4b09-42c2-e0f9f09b5900/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/halloween-party-san-diego-ca-10-31-26/"
   },
   {
@@ -11079,7 +11079,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "3a1516ec-d96e-457e-82cc-f8d86284a02c",
+        "id": "c71f45d2-330f-4834-a7cc-783c61ca775d",
         "owner_type": "event",
         "owner_id": "event-pajama-party-seattle-2026-11-07",
         "role": "logo",
@@ -11093,16 +11093,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "78f0ef44-cd86-4cff-a970-e3c5acb091e1",
+        "id": "68bcf97a-197e-48da-814c-84791bd5e6a7",
         "owner_type": "event",
         "owner_id": "event-pajama-party-seattle-2026-11-07",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "8ea5337a-5e9b-4702-9efb-ece4c822d700",
+        "external_id": "501310a9-9342-4255-bd17-09aded1ac400",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -11111,13 +11111,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8ea5337a-5e9b-4702-9efb-ece4c822d700/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8ea5337a-5e9b-4702-9efb-ece4c822d700/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/501310a9-9342-4255-bd17-09aded1ac400/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/501310a9-9342-4255-bd17-09aded1ac400/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/pajama-party-seattle-wa-11-7-26/"
   },
   {
@@ -11179,7 +11179,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "2633b75a-e90b-4dcf-99f6-b5fec60f7d5f",
+        "id": "925d1977-2449-489f-83d7-1606b6bf1d60",
         "owner_type": "event",
         "owner_id": "event-pajama-party-san-diego-2026-11-14",
         "role": "logo",
@@ -11193,16 +11193,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "5f824e8e-7c17-4dc8-acde-8d0e7a122d23",
+        "id": "23f7a097-9aae-4fb0-a41b-7542a13af231",
         "owner_type": "event",
         "owner_id": "event-pajama-party-san-diego-2026-11-14",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "060e18f1-7d57-4579-8a5e-ceb2c0e5c300",
+        "external_id": "3b787e42-5f34-454f-2818-84a294e39100",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -11211,13 +11211,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/060e18f1-7d57-4579-8a5e-ceb2c0e5c300/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/060e18f1-7d57-4579-8a5e-ceb2c0e5c300/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b787e42-5f34-454f-2818-84a294e39100/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b787e42-5f34-454f-2818-84a294e39100/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/pajama-party-san-diego-ca-11-14-26/"
   },
   {
@@ -11279,7 +11279,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "c4aceb22-0dca-477f-b4b4-1fef347cf089",
+        "id": "e8467342-d79b-4f2a-916c-3c305cdfc787",
         "owner_type": "event",
         "owner_id": "event-masquerade-party-brooklyn-2026-11-21",
         "role": "logo",
@@ -11293,16 +11293,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "39c6bef3-4dab-4611-b886-f23c41cbf746",
+        "id": "4bebdc8c-9044-44d8-a67c-326c7dfb35ae",
         "owner_type": "event",
         "owner_id": "event-masquerade-party-brooklyn-2026-11-21",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "761968d1-641d-4c84-c75d-aff6a1786000",
+        "external_id": "95a29452-76c4-492e-6d91-78acbcb72500",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -11311,13 +11311,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/761968d1-641d-4c84-c75d-aff6a1786000/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/761968d1-641d-4c84-c75d-aff6a1786000/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/95a29452-76c4-492e-6d91-78acbcb72500/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/95a29452-76c4-492e-6d91-78acbcb72500/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/masquerade-party-brooklyn-ny-11-21-26/"
   },
   {
@@ -11379,7 +11379,7 @@
     ],
     "mediaAssets": [
       {
-        "id": "1c787ab4-bd20-4d13-95da-d7b25b6b5d2e",
+        "id": "514fd0db-63a2-4f77-a342-f976bcfd5829",
         "owner_type": "event",
         "owner_id": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
         "role": "logo",
@@ -11393,16 +11393,16 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       },
       {
-        "id": "18394edd-1cd2-4bb9-9514-009fc7f60dac",
+        "id": "bb198855-4187-4720-a2b8-4afd34f8f0e3",
         "owner_type": "event",
         "owner_id": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
         "role": "flyer",
         "storage_provider": "cloudflare_images",
-        "external_id": "24575391-dfa6-4165-aedd-9cb734721d00",
+        "external_id": "10cabcf9-639b-4aeb-afa3-01ccff712300",
         "status": "approved",
         "aspect_mode": "contain",
         "target_ratio": "4:5",
@@ -11411,13 +11411,13 @@
         "focal_point_x": null,
         "focal_point_y": null,
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-10-06T12:56:04.577Z",
-        "updated_at": "2026-10-06T12:56:04.577Z"
+        "created_at": "2026-10-06T14:32:22.724Z",
+        "updated_at": "2026-10-06T14:32:22.724Z"
       }
     ],
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/24575391-dfa6-4165-aedd-9cb734721d00/flyerpage",
-    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/24575391-dfa6-4165-aedd-9cb734721d00/flyerpage",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/10cabcf9-639b-4aeb-afa3-01ccff712300/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/10cabcf9-639b-4aeb-afa3-01ccff712300/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/spring-cruise-miami-to-key-west-and-bimini-beach-club-mar-18-22-2027/"
   }
 ]

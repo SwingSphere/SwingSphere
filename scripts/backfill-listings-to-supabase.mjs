@@ -59,18 +59,16 @@ select public.admin_import_legacy_listings(
 DO $verify$
 declare
   v_count integer;
-  v_imported integer;
 begin
   select count(*)::integer into v_count
   from public.listings
-  where provenance = 'legacy';
+  where id in (
+    select value ->> 'id'
+    from jsonb_array_elements(${dollarTag}${payload}${dollarTag}::jsonb)
+  );
 
-  select legacy_import_count into v_imported
-  from public.listing_store_settings
-  where singleton = true;
-
-  if v_count < ${expectedCount} or v_imported < ${expectedCount} then
-    raise exception 'Legacy listing backfill verification failed. Expected at least %, found %.', ${expectedCount}, v_count;
+  if v_count < ${expectedCount} then
+    raise exception 'Legacy listing backfill verification failed. Expected % source IDs to exist, found %.', ${expectedCount}, v_count;
   end if;
 end;
 $verify$;
