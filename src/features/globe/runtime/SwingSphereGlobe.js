@@ -1320,23 +1320,31 @@ export class SwingSphereGlobe {
         }
       }
 
+      const representedListingIds = new Set(
+        this.activityRegions.flatMap((region) => (region.listingIds ?? []).map(String))
+      );
       this.adaptiveClusteredRegionIds = clusteredRegionIds;
       this.clusterRegions = this.activityRegions.filter((region) => clusteredRegionIds.has(region.id));
-      this.countryOverviewEvents = this.events.filter((event) =>
-        directListingIds.has(String(event.listingId ?? event.id))
-      );
+      this.countryOverviewEvents = this.events.filter((event) => {
+        const eventId = String(event.listingId ?? event.id);
+        return directListingIds.has(eventId) || !representedListingIds.has(eventId);
+      });
       return;
     }
 
     this.clusterRegions = this.activityRegions.filter((region) => (region.listingIds?.length ?? 0) > 1);
+    const representedListingIds = new Set(
+      this.activityRegions.flatMap((region) => (region.listingIds ?? []).map(String))
+    );
     const singletonListingIds = new Set(
       this.activityRegions
         .filter((region) => region.listingIds?.length === 1)
         .flatMap((region) => region.listingIds.map(String))
     );
-    this.countryOverviewEvents = this.events.filter((event) =>
-      singletonListingIds.has(String(event.listingId ?? event.id))
-    );
+    this.countryOverviewEvents = this.events.filter((event) => {
+      const eventId = String(event.listingId ?? event.id);
+      return singletonListingIds.has(eventId) || !representedListingIds.has(eventId);
+    });
   }
 
   #getMinimumEventScreenDistance(events) {
