@@ -709,20 +709,24 @@ function createListingPulseSprite(variant) {
   context.lineJoin = "round";
   context.shadowColor = "#FFFFFF";
   context.shadowBlur = 10;
-  context.beginPath();
-  if (variant === "club") {
-    context.moveTo(center, center - radius);
-    context.lineTo(center + radius, center);
-    context.lineTo(center, center + radius);
-    context.lineTo(center - radius, center);
-    context.closePath();
-  } else if (variant === "promoter") {
-    const size = radius * 1.72;
-    context.rect(center - size / 2, center - size / 2, size, size);
+  if (variant === "cruise") {
+    drawCruiseMarkerGlyph(context, center, radius, { fill: false, stroke: true });
   } else {
-    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.beginPath();
+    if (variant === "club") {
+      context.moveTo(center, center - radius);
+      context.lineTo(center + radius, center);
+      context.lineTo(center, center + radius);
+      context.lineTo(center - radius, center);
+      context.closePath();
+    } else if (variant === "promoter") {
+      const size = radius * 1.72;
+      context.rect(center - size / 2, center - size / 2, size, size);
+    } else {
+      context.arc(center, center, radius, 0, Math.PI * 2);
+    }
+    context.stroke();
   }
-  context.stroke();
   context.restore();
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -761,24 +765,30 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   context.lineWidth = mobileVisibilityBoost ? 6 : 4;
   context.lineJoin = "round";
 
-  context.beginPath();
-  if (variant === "club") {
-    context.moveTo(center, center - radius - 2);
-    context.lineTo(center + radius + 2, center);
-    context.lineTo(center, center + radius + 2);
-    context.lineTo(center - radius - 2, center);
-    context.closePath();
-  } else if (variant === "promoter") {
-    const size = radius * 1.75;
-    const x = center - size / 2;
-    const y = center - size / 2;
-    context.rect(x, y, size, size);
+  if (variant === "cruise") {
+    drawCruiseMarkerGlyph(context, center, radius, { fill: true, stroke: false });
+    context.shadowBlur = 0;
+    drawCruiseMarkerGlyph(context, center, radius, { fill: false, stroke: true });
   } else {
-    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.beginPath();
+    if (variant === "club") {
+      context.moveTo(center, center - radius - 2);
+      context.lineTo(center + radius + 2, center);
+      context.lineTo(center, center + radius + 2);
+      context.lineTo(center - radius - 2, center);
+      context.closePath();
+    } else if (variant === "promoter") {
+      const size = radius * 1.75;
+      const x = center - size / 2;
+      const y = center - size / 2;
+      context.rect(x, y, size, size);
+    } else {
+      context.arc(center, center, radius, 0, Math.PI * 2);
+    }
+    context.fill();
+    context.shadowBlur = 0;
+    context.stroke();
   }
-  context.fill();
-  context.shadowBlur = 0;
-  context.stroke();
   context.restore();
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -800,6 +810,46 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   sprite.scale.set(baseScale, baseScale, 1);
   sprite.userData.baseFlatScale = baseScale;
   return sprite;
+}
+
+function drawCruiseMarkerGlyph(context, center, radius, { fill = true, stroke = true } = {}) {
+  const unit = radius / 38;
+  const drawPath = (pathBuilder) => {
+    context.beginPath();
+    pathBuilder();
+    if (fill) context.fill();
+    if (stroke) context.stroke();
+  };
+
+  // Hull: broad, low silhouette with a pointed bow so it remains readable
+  // as a ship even when the globe marker is only a few pixels wide.
+  drawPath(() => {
+    context.moveTo(center - 34 * unit, center + 8 * unit);
+    context.lineTo(center + 36 * unit, center + 8 * unit);
+    context.lineTo(center + 24 * unit, center + 24 * unit);
+    context.quadraticCurveTo(center + 5 * unit, center + 32 * unit, center - 16 * unit, center + 24 * unit);
+    context.lineTo(center - 29 * unit, center + 17 * unit);
+    context.closePath();
+  });
+
+  // Main deck / cabin.
+  drawPath(() => {
+    context.moveTo(center - 18 * unit, center + 6 * unit);
+    context.lineTo(center - 12 * unit, center - 14 * unit);
+    context.lineTo(center + 14 * unit, center - 14 * unit);
+    context.lineTo(center + 20 * unit, center + 6 * unit);
+    context.closePath();
+  });
+
+  // Bridge.
+  drawPath(() => {
+    context.rect(center - 6 * unit, center - 25 * unit, 15 * unit, 11 * unit);
+  });
+
+  // Funnel.
+  drawPath(() => {
+    context.rect(center - 1 * unit, center - 33 * unit, 8 * unit, 8 * unit);
+  });
 }
 
 function isCoarsePointerDevice() {
