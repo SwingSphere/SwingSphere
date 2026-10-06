@@ -66,7 +66,8 @@ export const eventKey = (
   const startIso = event.time?.start ?? '';
   const host = normalizeHostName(hostName);
   const venue = event.venueKey ?? '';
-  const identity = [name, startIso, venue, host].filter(Boolean).join('|');
+  const city = normalizeIdentityString(event.geopoint?.address?.city ?? '');
+  const identity = [name, startIso, venue, host, city].filter(Boolean).join('|');
   return stableHash(identity);
 };
 

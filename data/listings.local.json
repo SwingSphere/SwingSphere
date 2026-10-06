@@ -9918,5 +9918,1506 @@
     "entryRequirements": [],
     "organizerOrganizationId": "org-b1-wasteland",
     "buildingAssetId": "building-asset-event-b1-wasteland-2026-11-28-wasteland-amsterdam"
+  },
+  {
+    "id": "event-halloween-party-los-angeles-2026-10-10",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Beverly Hills Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed a private estate in Beverly Hills into an erotic escape with multiple play areas, dungeon, pool & spa, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\n*This venue has some nice outdoor spaces. We encourage you to bring something warm if it’s a cold night.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.",
+    "location": "Los Angeles, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-los-angeles-ca-10-10-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-10T20:00",
+      "end": "2026-10-11T02:00"
+    },
+    "geopoint": {
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "address": {
+        "city": "Los Angeles",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "los-angeles",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Los Angeles, California, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.782Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "6790c0b9-77e2-4c55-ad66-e7cb6e5b4ffd",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-los-angeles-2026-10-10",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "1c268ba9-6d27-44bd-9917-f457acee67a9",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-los-angeles-2026-10-10",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "5e25d4d4-1121-4c52-4e64-83f409105200",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e25d4d4-1121-4c52-4e64-83f409105200/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e25d4d4-1121-4c52-4e64-83f409105200/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-los-angeles-ca-10-10-26/"
+  },
+  {
+    "id": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
+    "type": "event",
+    "name": "Enchanted Darkness Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Encinitas Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nWhen the veil thins and the night deepens, the fairytales turn a little naughty…\n\nThis Halloween, Illuminaughty invites you to Enchanted Darkness, a night of sensual magic. Inside, flickering candlelight illuminates curious and open-minded company, while spellbinding music fills the air with intrigue. You’re dressed in a daring ensemble, part seductress, part illusion. Villains in velvet and Queens with a dark touch of desire welcome you and the line between fantasy and reality blurs under the October moon.\n\nWe’ve transformed a private home in Encinitas into a lush, intimate setting with multiple play areas, pool & spa, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nThis is a night for couples and select singles who know how to bring good energy, honor consent, and move with intention. Whether it’s your first party or your fiftieth, you’ll be welcomed with warmth and respect. Here, wrapped in trust and mutual desire, you feel completely safe to be naughty…to let go.",
+    "location": "San Diego, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/enchanted-darkness-san-diego-ca-10-10-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-10T20:00",
+      "end": "2026-10-11T02:00"
+    },
+    "geopoint": {
+      "latitude": 32.7157,
+      "longitude": -117.1611,
+      "address": {
+        "city": "San Diego",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "san-diego",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "San Diego, California, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "626aa02e-8066-4e70-8991-bedf8134899b",
+        "owner_type": "event",
+        "owner_id": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "4678ac88-5104-4e20-8e93-b95a55e4fa67",
+        "owner_type": "event",
+        "owner_id": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "69305560-69e3-48a0-e5ea-76466ea1a200",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Enchanted Darkness Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/69305560-69e3-48a0-e5ea-76466ea1a200/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/69305560-69e3-48a0-e5ea-76466ea1a200/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/enchanted-darkness-san-diego-ca-10-10-26/"
+  },
+  {
+    "id": "event-halloween-party-denver-2026-10-10",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private near the airport, Watkins Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed a luxurious private estate into an erotic escape with multiple play areas, spa, massage tables, and sensual music & lighting. A place where fantasies are brought to life in a exclusive, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "Denver, Colorado, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-denver-co-10-10-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-10T20:00",
+      "end": "2026-10-11T02:00"
+    },
+    "geopoint": {
+      "latitude": 39.7392,
+      "longitude": -104.9903,
+      "address": {
+        "city": "Denver",
+        "region": "Colorado",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "denver",
+        "admin1Slug": "colorado"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Denver, Colorado, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "b9025f35-1e32-4eac-8a4c-33304595215a",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-denver-2026-10-10",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "4ac45fca-9f9c-4f84-91d8-b1acbef03466",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-denver-2026-10-10",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "177c0f0c-861a-43ea-ea43-df6b674c6800",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/177c0f0c-861a-43ea-ea43-df6b674c6800/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/177c0f0c-861a-43ea-ea43-df6b674c6800/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-denver-co-10-10-26/"
+  },
+  {
+    "id": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
+    "type": "event",
+    "name": "Tease Cocktail Mixer",
+    "hostName": "illuminaughty",
+    "venue": "Arts District Lounge",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nCome together with your fellow community members for a Tease of excitement at this exclusive cocktail mixer. Dress up a little and come out to flirt, chat, and build friendships with passionate, fascinating, and sexy friends. Tease is a wonderful time to learn what our community is all about and meet other friends in a casual environment. See what fires ignite and enjoy the tease before the next party.\n\nThis event is open to couples, single women, non-binary, and a small number of single men. Our single men are carefully selected to be intelligent, self-aware, respectful, confident, and gym fit. The number of single man tickets is limited and will be adjusted as single woman tickets are sold to gender balance the event. Tease will be held at stylish local bar/restaurant in the Arts District. It starts at 8pm and officially ends at 10pm but people often stay later and you’re welcome to continue the night afterwards as you like. See you there 💋\n\nDress code is classy/casual. Dress in a way that makes you feel comfortable, confident and sexy.\n\nIlluminaughty is a curated community that is known for the caliber of our members and the unique welcoming and playful environment we create. There are no expectations and our focus is on safety and consent to ensure everyone feels comfortable. Most of our members are in their 30s, and we don’t hire any models, performers, or influencers to be at our events. All of the beautiful, kind, and inspiring people who show up are members who are there connect with like-minded souls.",
+    "location": "Arts District Lounge, 1025 S 1st St, Las Vegas, Nevada, United States",
+    "website": "https://weareilluminaughty.com/eventpages/tease-cocktail-mixer-las-vegas-nv-10-16-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": false,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-16T20:00",
+      "end": "2026-10-16T22:00"
+    },
+    "geopoint": {
+      "latitude": 36.1558,
+      "longitude": -115.1528,
+      "address": {
+        "line1": "1025 S 1st St",
+        "postalCode": "89101",
+        "city": "Las Vegas",
+        "region": "Nevada",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "las-vegas",
+        "admin1Slug": "nevada"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "normalizedAddress": "1025 S 1st St, Las Vegas, Nevada, United States",
+      "geocoderSource": "verified-public-terminal-or-venue",
+      "warnings": [],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Cocktail Mixer",
+      "Social Lounge"
+    ],
+    "mediaAssets": [
+      {
+        "id": "58365df9-d950-4eef-a372-31089ac01297",
+        "owner_type": "event",
+        "owner_id": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "c5abe1a7-274c-4ee4-93ee-29c0b2c78392",
+        "owner_type": "event",
+        "owner_id": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "38056fb2-ca8f-442b-f979-13a09aa43e00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Tease Cocktail Mixer Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/38056fb2-ca8f-442b-f979-13a09aa43e00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/38056fb2-ca8f-442b-f979-13a09aa43e00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/tease-cocktail-mixer-las-vegas-nv-10-16-26/"
+  },
+  {
+    "id": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
+    "type": "event",
+    "name": "Haunted Circus Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Spring Valley Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed this luxurious home into an erotic escape with pool and spa, multiple play areas, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration. This is Halloween in Vegas the way it was meant to be, sinister and sexy.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a sexy Halloween Swinger party in Sin City. Unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a seductive harlequin, a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant. We only ask that you keep it PG between the car and the house before and after the event. Men are expected to dress to theme or wear a suit.\n\nYou are welcome to bring a change of clothes for later in the evening.",
+    "location": "Las Vegas, Nevada, United States",
+    "website": "https://weareilluminaughty.com/eventpages/haunted-circus-halloween-party-las-vegas-nv-10-17-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-17T20:00",
+      "end": "2026-10-18T02:00"
+    },
+    "geopoint": {
+      "latitude": 36.1716,
+      "longitude": -115.1391,
+      "address": {
+        "city": "Las Vegas",
+        "region": "Nevada",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "las-vegas",
+        "admin1Slug": "nevada"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Las Vegas, Nevada, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "328b1208-a21b-43bb-85fc-d2791d164409",
+        "owner_type": "event",
+        "owner_id": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "8a4b12ab-dff0-4fa2-8e14-ff5929154222",
+        "owner_type": "event",
+        "owner_id": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "f8f86726-4008-460f-c498-635405953e00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Haunted Circus Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f8f86726-4008-460f-c498-635405953e00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f8f86726-4008-460f-c498-635405953e00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/haunted-circus-halloween-party-las-vegas-nv-10-17-26/"
+  },
+  {
+    "id": "event-halloween-party-phoenix-2026-10-17",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Goodyear Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed a beautiful home in Goodyear into an erotic escape with multiple play areas, dungeon, pool & spa, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "Phoenix, Arizona, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-phoenix-az-10-17-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-17T20:00",
+      "end": "2026-10-18T02:00"
+    },
+    "geopoint": {
+      "latitude": 33.4484,
+      "longitude": -112.074,
+      "address": {
+        "city": "Phoenix",
+        "region": "Arizona",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "phoenix",
+        "admin1Slug": "arizona"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Phoenix, Arizona, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "cef05634-63b5-498e-981d-a9d04e817922",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-phoenix-2026-10-17",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "1601e148-4036-4993-9406-da20723f8882",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-phoenix-2026-10-17",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "fd7e460b-3d2c-4da3-ff2d-7d1443481900",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fd7e460b-3d2c-4da3-ff2d-7d1443481900/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fd7e460b-3d2c-4da3-ff2d-7d1443481900/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-phoenix-az-10-17-26/"
+  },
+  {
+    "id": "event-halloween-party-austin-2026-10-17",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Westlake Highlands Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed a beautiful home in Austin near Westlake Highlands into an erotic escape with multiple play areas, massage tables, pool & spa. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "Austin, Texas, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-austin-tx-10-17-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-17T20:00",
+      "end": "2026-10-18T02:00"
+    },
+    "geopoint": {
+      "latitude": 30.2672,
+      "longitude": -97.7431,
+      "address": {
+        "city": "Austin",
+        "region": "Texas",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "austin",
+        "admin1Slug": "texas"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Austin, Texas, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "f11d2997-16dc-45af-8c3b-0654ed5718cd",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-austin-2026-10-17",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "286645dc-df91-4132-8817-3f41d61e2a7d",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-austin-2026-10-17",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "5e920284-8b64-4d0e-c0bc-686255248e00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e920284-8b64-4d0e-c0bc-686255248e00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5e920284-8b64-4d0e-c0bc-686255248e00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-austin-tx-10-17-26/"
+  },
+  {
+    "id": "event-halloween-party-raleigh-2026-10-17",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Cary Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed an stylish home in Cary into an erotic escape with multiple play areas, massage tables, and sensual music & lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "Raleigh, North Carolina, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-raleigh-nc-10-17-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-17T20:00",
+      "end": "2026-10-18T02:00"
+    },
+    "geopoint": {
+      "latitude": 35.7796,
+      "longitude": -78.6382,
+      "address": {
+        "city": "Raleigh",
+        "region": "North Carolina",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "raleigh",
+        "admin1Slug": "north-carolina"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Raleigh, North Carolina, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "ac41cac5-0133-4030-9dc7-f4380cb0b806",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-raleigh-2026-10-17",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "9c1c2968-5e75-4ded-ab18-51625456b4f4",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-raleigh-2026-10-17",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "32a62daa-fe67-4935-fd5e-515a7b4ef800",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/32a62daa-fe67-4935-fd5e-515a7b4ef800/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/32a62daa-fe67-4935-fd5e-515a7b4ef800/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-raleigh-nc-10-17-26/"
+  },
+  {
+    "id": "event-halloween-cruise-san-pedro-2026-10-24",
+    "type": "event",
+    "name": "Halloween Cruise",
+    "hostName": "illuminaughty",
+    "venue": "Port of Los Angeles - World Cruise Center (Virgin Voyages)",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin your fellow Illuminaughty members for an unforgettable, adults-only, 5 night Halloween cruise on Virgin’s Brilliant Lady in October 2026 departing from Los Angeles! This is not a complete take-over. Illuminaughty will have a large group on the ship and you will have the freedom to join the Illuminaughty festivities as much or as little as you like.\n\nWe will have a group hotel reservation available Friday night near the port and will host a Friday night Cocktail Mixer where everyone can grab drinks and meet your fellow sailors. The ship departs on Saturday, October 24 at 5:00pm and returns to LA on October 29th.\n\nVirgin is famous for it’s adult-only, stylish, playful, sexy, and sometimes raunchy vibes aboard the ship. It’s an experience unlike any other cruise line. Their all-inclusive format avoids the annoying nickel & diming of other cruise ships and everything except alcohol (and specialty drinks like espresso or Red Bull) is included in the ticket price and paid up-front. The dining experiences are elevated, activities and shows are exciting and targeted at adults, crew is fun and curtious, and they have themed evening parties (like Pajama Party, 80s night, Y2K party, etc.) on most nights plus the wild Scarlet Night party that takes over the entire rooftop pool deck.\n\nThis Halloween theme cruise will also feature a Halloween night where all 2000+ sailors are decked out in costume. You don’t want to miss this!",
+    "location": "Port of Los Angeles - World Cruise Center (Virgin Voyages), 100 Swinford St, San Pedro, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-cruise-la-to-ensenada-oct-24-29-2026/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": false,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-24T17:00",
+      "end": "2026-10-29T10:00"
+    },
+    "geopoint": {
+      "latitude": 33.7483,
+      "longitude": -118.2758,
+      "address": {
+        "line1": "100 Swinford St",
+        "postalCode": "90731",
+        "city": "San Pedro",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "san-pedro",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "normalizedAddress": "100 Swinford St, San Pedro, California, United States",
+      "geocoderSource": "verified-public-terminal-or-venue",
+      "warnings": [],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party",
+      "Cruise",
+      "Virgin Voyages",
+      "Multi-Day Event"
+    ],
+    "mediaAssets": [
+      {
+        "id": "3a7d6082-302a-4012-8fa1-29fced02b193",
+        "owner_type": "event",
+        "owner_id": "event-halloween-cruise-san-pedro-2026-10-24",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "5f4b9428-8309-42bd-b4f7-d3b295411295",
+        "owner_type": "event",
+        "owner_id": "event-halloween-cruise-san-pedro-2026-10-24",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "062d30fa-4d28-498a-61b1-cdde472bbd00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Cruise Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/062d30fa-4d28-498a-61b1-cdde472bbd00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/062d30fa-4d28-498a-61b1-cdde472bbd00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-cruise-la-to-ensenada-oct-24-29-2026/"
+  },
+  {
+    "id": "event-halloween-party-san-jose-2026-10-31",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Evergreen Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble, part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed this expansive and luxurious estate in Evergreen into an erotic escape with multiple play areas, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "San Jose, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-san-jose-ca-10-31-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-31T20:00",
+      "end": "2026-11-01T02:00"
+    },
+    "geopoint": {
+      "latitude": 37.3382,
+      "longitude": -121.8863,
+      "address": {
+        "city": "San Jose",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "san-jose",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "San Jose, California, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "b7376ef3-16bb-4e2a-b636-2cde168f0c38",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-san-jose-2026-10-31",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "4664cc78-38a2-44d7-b09e-13f50f66c1f0",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-san-jose-2026-10-31",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "3b099373-4d71-41df-5c0b-70b6670d1000",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b099373-4d71-41df-5c0b-70b6670d1000/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3b099373-4d71-41df-5c0b-70b6670d1000/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-san-jose-ca-10-31-26/"
+  },
+  {
+    "id": "event-halloween-party-san-diego-2026-10-31",
+    "type": "event",
+    "name": "Halloween Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Encinitas Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nJoin us for the Illuminaughty Halloween Party. The night is alive with mystery and playful mischief as you step through the door. You’re dressed in a daring ensemble—part seductress, part illusion. The music pulses through the room as friends and strangers wear their most provocative and creative costumes, each embodying a different fantasy. The dim lights dance across flirtatious glances as excitement fills the room. We’ve transformed a private home in Encinitas into a sexy, intimate setting with multiple play areas, pool & spa, massage tables, and sensual lighting. A place where fantasies are brought to life in a private, curated space built for connection, and exploration.\n\nWhether you’re there to flirt, connect, watch, or more, consent is the foundation. Every guest is hand-selected to create a space where energy flows freely, but always with respect. You’ll mix and mingle with couples and select singles who understand that the sexiest thing in the room is trust.\n\nThis is a Halloween lifestyle party, unleash your creativity and come dressed in your sexiest and most captivating costumes. Whether you’re a sultry witch, a dashing pirate, or a classic vampire, make sure your outfit is as enchanting as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "San Diego, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/halloween-party-san-diego-ca-10-31-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-10-31T20:00",
+      "end": "2026-11-01T02:00"
+    },
+    "geopoint": {
+      "latitude": 32.7157,
+      "longitude": -117.1611,
+      "address": {
+        "city": "San Diego",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "san-diego",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "San Diego, California, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Halloween",
+      "Costume Party"
+    ],
+    "mediaAssets": [
+      {
+        "id": "cebbb3eb-3b14-46e9-99e5-ffd22fe72e59",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-san-diego-2026-10-31",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "41cae47b-0648-4a3e-a5c4-a92a574c29b9",
+        "owner_type": "event",
+        "owner_id": "event-halloween-party-san-diego-2026-10-31",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "3d916525-aabe-448b-b5f0-20c2cf8d9e00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Halloween Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3d916525-aabe-448b-b5f0-20c2cf8d9e00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3d916525-aabe-448b-b5f0-20c2cf8d9e00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/halloween-party-san-diego-ca-10-31-26/"
+  },
+  {
+    "id": "event-pajama-party-seattle-2026-11-07",
+    "type": "event",
+    "name": "Pajama Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Burien Estate",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nStep into a world of comfort, playfulness, and sensuality at a sexy, private home in Burien for Illuminaughty’s Pajama Party. Enjoy multiple play areas, massage tables, stunning lighting and enticing music. Start a pillow fight or cozy up with new or old friends for some spin the bottle and truth or dare.\n\nThis is a night for couples and singles who know how to bring good energy and honor consent. Whether it’s your first party or your fiftieth, you’ll be welcomed with warmth and respect.\n\nThis is a lifestyle pajama party, embrace the theme! Don your coziest or sexiest pajamas and let the night’s adventures begin. Feel free to bring a few pajamas and outfit change throughout the evening. Make sure your outfit is as sensual as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "Seattle, Washington, United States",
+    "website": "https://weareilluminaughty.com/eventpages/pajama-party-seattle-wa-11-7-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-11-07T20:00",
+      "end": "2026-11-08T02:00"
+    },
+    "geopoint": {
+      "latitude": 47.6062,
+      "longitude": -122.3321,
+      "address": {
+        "city": "Seattle",
+        "region": "Washington",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "seattle",
+        "admin1Slug": "washington"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Seattle, Washington, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Pajama Party",
+      "Themed Attire"
+    ],
+    "mediaAssets": [
+      {
+        "id": "3a1516ec-d96e-457e-82cc-f8d86284a02c",
+        "owner_type": "event",
+        "owner_id": "event-pajama-party-seattle-2026-11-07",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "78f0ef44-cd86-4cff-a970-e3c5acb091e1",
+        "owner_type": "event",
+        "owner_id": "event-pajama-party-seattle-2026-11-07",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "8ea5337a-5e9b-4702-9efb-ece4c822d700",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Pajama Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8ea5337a-5e9b-4702-9efb-ece4c822d700/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8ea5337a-5e9b-4702-9efb-ece4c822d700/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/pajama-party-seattle-wa-11-7-26/"
+  },
+  {
+    "id": "event-pajama-party-san-diego-2026-11-14",
+    "type": "event",
+    "name": "Pajama Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Little Italy Penthouse",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nStep into a world of comfort, playfulness, and sensuality at a stunning Little Italy penthouse overlooking the San Diego skyline for Illuminaughty’s Pajama Party. Enjoy multiple play areas, massage tables, sexy lighting and enticing music. Start a pillow fight or cozy up with new or old friends for some spin the bottle and truth or dare.\n\nThis is a night for couples and singles who know how to bring good energy and honor consent. Whether it’s your first party or your fiftieth, you’ll be welcomed with warmth and respect.\n\nThis is a lifestyle pajama party, embrace the theme! Don your coziest or sexiest pajamas and let the night’s adventures begin. Feel free to bring a few pajamas and outfit change throughout the evening. Make sure your outfit is as sensual as the night itself. Wear as much or as little as you like, nothing is too sexy or too extravagant.\n\nWe only ask that you keep it PG between the car and the house before and after the event.",
+    "location": "San Diego, California, United States",
+    "website": "https://weareilluminaughty.com/eventpages/pajama-party-san-diego-ca-11-14-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-11-14T20:00",
+      "end": "2026-11-15T02:00"
+    },
+    "geopoint": {
+      "latitude": 32.7157,
+      "longitude": -117.1611,
+      "address": {
+        "city": "San Diego",
+        "region": "California",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "san-diego",
+        "admin1Slug": "california"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "San Diego, California, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Pajama Party",
+      "Themed Attire"
+    ],
+    "mediaAssets": [
+      {
+        "id": "2633b75a-e90b-4dcf-99f6-b5fec60f7d5f",
+        "owner_type": "event",
+        "owner_id": "event-pajama-party-san-diego-2026-11-14",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "5f824e8e-7c17-4dc8-acde-8d0e7a122d23",
+        "owner_type": "event",
+        "owner_id": "event-pajama-party-san-diego-2026-11-14",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "060e18f1-7d57-4579-8a5e-ceb2c0e5c300",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Pajama Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/060e18f1-7d57-4579-8a5e-ceb2c0e5c300/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/060e18f1-7d57-4579-8a5e-ceb2c0e5c300/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/pajama-party-san-diego-ca-11-14-26/"
+  },
+  {
+    "id": "event-masquerade-party-brooklyn-2026-11-21",
+    "type": "event",
+    "name": "Masquerade Party",
+    "hostName": "illuminaughty",
+    "venue": "Private Williamsburg Loft",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nStep behind the mask and into the shadows of desire…\n\nAs twilight falls over the city and the heat lingers on your skin, New York reveals its most seductive secret, the Illuminaughty Masquerade, a party unlike anything you’ve ever experienced.\n\nThis is a night for the bold, the beautiful, and the unapologetically curious. Velvet and lace, suits and lingerie, corsets and cuffs…every guest cloaked in mystery, their identities hidden but intentions unmistakable.\n\nFrom the moment you arrive, the energy pulses like a heartbeat. This seductive home will be your palace for the night, filled with intoxicating music and lightning that will wrap around you like a lover’s whisper. Your favorite cocktail in hand as you brush shoulders with elegant strangers, and lock eyes from across the room. You take a step closer as a smile curls on your face. Who is it behind that feathery mask? Or, would you rather not know tonight, and let your fantasies guide you.",
+    "location": "Brooklyn, New York, United States",
+    "website": "https://weareilluminaughty.com/eventpages/masquerade-party-brooklyn-ny-11-21-26/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": true,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2026-11-21T20:00",
+      "end": "2026-11-22T02:00"
+    },
+    "geopoint": {
+      "latitude": 40.6782,
+      "longitude": -73.9442,
+      "address": {
+        "city": "Brooklyn",
+        "region": "New York",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "brooklyn",
+        "admin1Slug": "new-york"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.95,
+      "normalizedAddress": "Brooklyn, New York, United States",
+      "geocoderSource": "official-promoter-tour-calendar",
+      "warnings": [
+        "private-venue-city-level-location",
+        "exact-address-released-to-ticket-holders"
+      ],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Masquerade",
+      "Formal Masked"
+    ],
+    "mediaAssets": [
+      {
+        "id": "c4aceb22-0dca-477f-b4b4-1fef347cf089",
+        "owner_type": "event",
+        "owner_id": "event-masquerade-party-brooklyn-2026-11-21",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "39c6bef3-4dab-4611-b886-f23c41cbf746",
+        "owner_type": "event",
+        "owner_id": "event-masquerade-party-brooklyn-2026-11-21",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "761968d1-641d-4c84-c75d-aff6a1786000",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Masquerade Party Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/761968d1-641d-4c84-c75d-aff6a1786000/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/761968d1-641d-4c84-c75d-aff6a1786000/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/masquerade-party-brooklyn-ny-11-21-26/"
+  },
+  {
+    "id": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
+    "type": "event",
+    "name": "Spring Cruise to Key West & Bimini Beach Club",
+    "hostName": "illuminaughty",
+    "venue": "PortMiami - Terminal V (Virgin Voyages)",
+    "description_full": "Couples, Single Ladies, Non-binary, & Limited Single Men\n\nVirgin is famous for it’s adult-only, stylish, playful, sexy, and sometimes raunchy vibes aboard the ship. It’s an experience unlike any other cruise line. Their all-inclusive format avoids the annoying nickel & diming of other cruise ships and everything except alcohol (and specialty drinks like espresso or Red Bull) and gratuities are included in the ticket price and paid up-front. The dining experiences are elevated, activities and shows are exciting and targeted at adults, crew is fun and courteous, and they have themed evening parties (like Pajama Party, 80s night, Y2K party, etc.) on most nights, plus the wild Scarlet Night party that takes over the entire rooftop pool deck!\n\nThe Brilliant Lady ship is packed with delicious food and beverage options, from 5 course fine dining, to tapas or pasta. There are 20 something bars, several coffee shops, 5 unique restaurants plus a pizza shop and the massive galley that is always full of a huge variety of options including sushi, deserts, breakfast, burgers, tacos, salads, and noodles.\n\nVirgin has the most stylish, modern, and sexy cabins and suites of any cruise line. Even their solo inside cabins are beautiful designed and decorated. There are inexpensive Insider rooms, Sea Terrace balcony rooms, ADA rooms, and stunning Rockstar and Mega Rockstar suites, some with their own massive balconies and even a private hot tub. The balcony rooms are amazing, but with so much to do on the ship, you may hardly be in your room and an inside cabin is also a great choice.\n\n*To have your cabin booked near the rest of our group, you must book a Central Sea Terrace or regular Sea Terrace cabin, not a Small Balcony Sea Terrace.",
+    "location": "PortMiami - Terminal V (Virgin Voyages), 718 N Cruise Blvd, Miami, Florida, United States",
+    "website": "https://weareilluminaughty.com/eventpages/spring-cruise-miami-to-key-west-and-bimini-beach-club-mar-18-22-2027/",
+    "contactEmail": "support@weareilluminaughty.com",
+    "isAddressPrivate": false,
+    "attendancePolicy": "application_required",
+    "entryRequirements": [
+      "screening_approval_required",
+      "members_only"
+    ],
+    "time": {
+      "start": "2027-03-18T17:00",
+      "end": "2027-03-22T10:00"
+    },
+    "geopoint": {
+      "latitude": 25.7788,
+      "longitude": -80.1705,
+      "address": {
+        "line1": "718 N Cruise Blvd",
+        "postalCode": "33132",
+        "city": "Miami",
+        "region": "Florida",
+        "country": "United States",
+        "countrySlug": "us",
+        "isCityState": false,
+        "citySlug": "miami",
+        "admin1Slug": "florida"
+      }
+    },
+    "locationMeta": {
+      "status": "validated",
+      "confidence": 0.99,
+      "normalizedAddress": "718 N Cruise Blvd, Miami, Florida, United States",
+      "geocoderSource": "verified-public-terminal-or-venue",
+      "warnings": [],
+      "validatedAt": "2026-10-06T12:53:16.783Z"
+    },
+    "organizerOrganizationId": "org-promoter-illuminaughty",
+    "status": "approved",
+    "postedByUserId": "user1",
+    "tags": [
+      "Lifestyle",
+      "Couples & Select Singles",
+      "Members Only",
+      "Screening Required",
+      "Illuminaughty Tour",
+      "Consent Focused",
+      "Cruise",
+      "Virgin Voyages",
+      "Multi-Day Event"
+    ],
+    "mediaAssets": [
+      {
+        "id": "1c787ab4-bd20-4d13-95da-d7b25b6b5d2e",
+        "owner_type": "event",
+        "owner_id": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
+        "role": "logo",
+        "storage_provider": "cloudflare_images",
+        "external_id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "1:1",
+        "alt_text": "Illuminaughty Logo",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      },
+      {
+        "id": "18394edd-1cd2-4bb9-9514-009fc7f60dac",
+        "owner_type": "event",
+        "owner_id": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
+        "role": "flyer",
+        "storage_provider": "cloudflare_images",
+        "external_id": "24575391-dfa6-4165-aedd-9cb734721d00",
+        "status": "approved",
+        "aspect_mode": "contain",
+        "target_ratio": "4:5",
+        "alt_text": "Spring Cruise to Key West & Bimini Beach Club Official Presentation Flyer",
+        "sort_order": 0,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "created_at": "2026-10-06T12:56:04.577Z",
+        "updated_at": "2026-10-06T12:56:04.577Z"
+      }
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/24575391-dfa6-4165-aedd-9cb734721d00/flyerpage",
+    "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/24575391-dfa6-4165-aedd-9cb734721d00/flyerpage",
+    "ticketUrl": "https://luminasocialclub.com/events/spring-cruise-miami-to-key-west-and-bimini-beach-club-mar-18-22-2027/"
   }
 ]
