@@ -363,7 +363,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 );
             }
             case 'moderation':
-                return <AdminModerationQueue onDataChange={fetchData} />;
+                return <AdminModerationQueue onDataChange={fetchData} mediaCatalog={brandMediaCatalog} />;
             case 'listing-claims':
                 return <AdminListingClaims listings={listings} organizations={organizations} />;
             case 'outbound-analytics':
