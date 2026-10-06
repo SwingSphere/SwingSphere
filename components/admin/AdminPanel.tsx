@@ -48,7 +48,7 @@ import type {
     VenueData,
 } from '../../types';
 import type { User } from '../../data/mockUsers';
-import type { FlaggedContent } from '../../data/mockFlaggedContent';
+import { getOpenSiteIssueCount } from '../../lib/issueReports';
 
 export type AdminView = 
     | 'dashboard' 
@@ -107,7 +107,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
     const [organizationRelationships, setOrganizationRelationships] = useState<OrganizationRelationship[]>([]);
     const [organizationVenueRelationships, setOrganizationVenueRelationships] = useState<OrganizationVenueRelationship[]>([]);
     const [buildingAssets, setBuildingAssets] = useState<BuildingAsset[]>([]);
-    const [flaggedContent, setFlaggedContent] = useState<FlaggedContent[]>([]);
+    const [issueCount, setIssueCount] = useState<number | null>(null);
     const brandMediaCatalog = React.useMemo<BrandMediaCatalog>(() => ({
         listings,
         venues,
@@ -144,7 +144,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             ] = await Promise.all([
                 api.getListings(),
                 api.getUsers(),
-                api.getFlaggedContent(),
+                getOpenSiteIssueCount(),
                 api.getVenues(),
                 api.getOrganizations(),
                 api.getOrganizationRelationships(),
@@ -158,7 +158,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             ]);
             setListings(listingsData);
             setUsers(usersData);
-            setFlaggedContent(flaggedContentData);
+            setIssueCount(flaggedContentData);
             setVenues(venuesData);
             setOrganizations(organizationsData);
             setOrganizationRelationships(organizationRelationshipsData);
@@ -363,7 +363,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 );
             }
             case 'moderation':
-                return <AdminModerationQueue onDataChange={fetchData} setView={setView} />;
+                return <AdminModerationQueue onDataChange={fetchData} />;
             case 'listing-claims':
                 return <AdminListingClaims listings={listings} organizations={organizations} />;
             case 'outbound-analytics':
@@ -577,7 +577,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 currentView={currentViewName} 
                 setView={setView} 
                 pendingSubmissions={listings.filter(l => l.status === 'pending_approval').length}
-                pendingFlags={flaggedContent.length}
+                pendingFlags={issueCount ?? 0}
             />
             <main className={currentViewName === 'building-inspector' ? 'flex-1 overflow-hidden p-3 md:p-4' : 'flex-1 p-6 md:p-8 overflow-y-auto'}>
                 {renderContent()}
