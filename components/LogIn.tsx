@@ -5,7 +5,10 @@ import Button from './Button';
 import { useAppStore } from '../store/appStore';
 import GoogleSignInButton from './auth/GoogleSignInButton';
 
-const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+// Google auth is a production feature. Keep an explicit `false` override as an
+// emergency kill switch, but do not require a deployment-specific flag just to
+// render the sign-in option.
+const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_GOOGLE_AUTH_ENABLED !== 'false';
 
 const LogIn: React.FC = () => {
   const navigate = useNavigate();
