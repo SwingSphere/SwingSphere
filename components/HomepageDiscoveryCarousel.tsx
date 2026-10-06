@@ -15,7 +15,7 @@ type HomepageDiscoveryCarouselProps = {
   resetKey: string;
 };
 
-const GAP = 16;
+const STACK_SPACING_RATIO = 0.56;
 
 const HomepageDiscoveryCarousel: React.FC<HomepageDiscoveryCarouselProps> = ({ items, onOpen, resetKey }) => {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -43,9 +43,12 @@ const HomepageDiscoveryCarousel: React.FC<HomepageDiscoveryCarouselProps> = ({ i
     return Math.min(286, Math.max(236, viewportWidth * 0.72));
   }, [viewportWidth]);
 
+  const stackSpacing = cardWidth * STACK_SPACING_RATIO;
+  const cardOverlap = cardWidth - stackSpacing;
+
   const xFor = (index: number) => {
     if (!viewportWidth) return 0;
-    return viewportWidth / 2 - cardWidth / 2 - index * (cardWidth + GAP);
+    return viewportWidth / 2 - cardWidth / 2 - index * stackSpacing;
   };
 
   useEffect(() => {
@@ -76,7 +79,7 @@ const HomepageDiscoveryCarousel: React.FC<HomepageDiscoveryCarouselProps> = ({ i
 
   return (
     <div className="lg:hidden">
-      <div ref={viewportRef} className="relative overflow-hidden px-0 py-5">
+      <div ref={viewportRef} className="relative overflow-hidden px-0 py-7" style={{ perspective: 1200 }}>
         <motion.div
           className="flex cursor-grab select-none items-center active:cursor-grabbing"
           animate={controls}
@@ -85,19 +88,27 @@ const HomepageDiscoveryCarousel: React.FC<HomepageDiscoveryCarouselProps> = ({ i
           dragMomentum={false}
           onDragStart={() => setDragging(true)}
           onDragEnd={onDragEnd}
-          style={{ gap: GAP }}
         >
           {items.map((item, index) => {
             const distance = Math.abs(index - activeIndex);
-            const scale = distance === 0 ? 1 : distance === 1 ? 0.92 : 0.84;
-            const opacity = distance === 0 ? 1 : distance === 1 ? 0.72 : 0.42;
+            const direction = index < activeIndex ? -1 : index > activeIndex ? 1 : 0;
+            const scale = distance === 0 ? 1 : distance === 1 ? 0.91 : 0.82;
+            const opacity = distance === 0 ? 1 : distance === 1 ? 0.78 : 0.42;
+            const y = distance === 0 ? 0 : distance === 1 ? 9 : 17;
+            const rotateY = direction * (distance === 1 ? -3.5 : -6);
             return (
               <motion.div
                 key={item.listing.id}
-                animate={{ scale, opacity }}
+                animate={{ scale, opacity, y, rotateY }}
                 transition={{ type: 'spring', stiffness: 320, damping: 27, mass: 0.68 }}
-                style={{ width: cardWidth, flex: `0 0 ${cardWidth}px`, zIndex: 10 - distance }}
-                className="origin-center"
+                style={{
+                  width: cardWidth,
+                  flex: `0 0 ${cardWidth}px`,
+                  marginRight: -cardOverlap,
+                  zIndex: 30 - distance,
+                  position: 'relative',
+                  transformOrigin: direction < 0 ? 'right center' : direction > 0 ? 'left center' : 'center center',
+                }}
               >
                 <HomepageDiscoveryCard
                   listing={item.listing}
