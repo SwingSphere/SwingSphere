@@ -8,6 +8,7 @@ type HomepageDiscoveryCardProps = {
   listing: Listing;
   onClick: () => void;
   resolvedLogoUrl?: string;
+  className?: string;
 };
 
 const normalizeCountry = (country: string) => {
@@ -29,7 +30,7 @@ const formatCardLocation = (listing: Listing) => {
   return cleanCountry ? `${cleanCity}, ${cleanCountry}` : cleanCity;
 };
 
-const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, onClick, resolvedLogoUrl }) => {
+const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, onClick, resolvedLogoUrl, className = '' }) => {
   const tags = (listing.type === 'club' ? listing.generalAmenities ?? [] : listing.tags ?? []).slice(0, 2);
   const location = formatCardLocation(listing);
   const logoUrl = resolvedLogoUrl || getListingLogoUrl(listing);
@@ -40,7 +41,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = ({ listing, 
     <button
       type="button"
       onClick={onClick}
-      className="group relative h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_30%,#461920,#090b10_70%)] text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full"
+      className={`group relative h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_30%,#461920,#090b10_70%)] text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full ${className}`}
     >
       {backgroundUrl ? <img
         src={backgroundUrl}

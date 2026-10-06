@@ -4,6 +4,7 @@ import BrowseDirectoryButton from './BrowseDirectoryButton';
 import LandingHeroGlobe from './LandingHeroGlobe';
 import LandingStatsBar from './LandingStatsBar';
 import HomepageDiscoveryCard from './HomepageDiscoveryCard';
+import HomepageDiscoveryCarousel from './HomepageDiscoveryCarousel';
 import ExploreGlobeButton from './ExploreGlobeButton';
 import Footer from './Footer';
 import SavedLivingLowPolyBackground from './SavedLivingLowPolyBackground';
@@ -72,6 +73,16 @@ const LandingPage: React.FC = () => {
   const featuredListings = useMemo(() => buildFeaturedListings(listings), [listings]);
   const recentlyAddedListings = useMemo(() => buildRecentlyAddedListings(listings), [listings]);
   const discoveryListings = activeDiscoveryTab === 'featured' ? featuredListings : recentlyAddedListings;
+  const discoveryCarouselItems = useMemo(() => discoveryListings.map((listing) => ({
+    listing,
+    logoUrl: resolveBrandLogo(listing.type, listing.id, {
+      listings,
+      venues,
+      organizations,
+      relationships: organizationVenueRelationships,
+      eventSeries,
+    }).url,
+  })), [discoveryListings, listings, venues, organizations, organizationVenueRelationships, eventSeries]);
   const openGlobeExperience = () => {
     navigate('/globe');
   };
@@ -144,25 +155,25 @@ const LandingPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className="flex gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
-                  {!isLoading && discoveryListings.map((listing) => {
-                    const resolvedLogoUrl = resolveBrandLogo(listing.type, listing.id, {
-                      listings,
-                      venues,
-                      organizations,
-                      relationships: organizationVenueRelationships,
-                      eventSeries,
-                    }).url;
-                    return (
+              {!isLoading ? (
+                <>
+                  <HomepageDiscoveryCarousel
+                    items={discoveryCarouselItems}
+                    resetKey={activeDiscoveryTab}
+                    onOpen={(listing) => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
+                  />
+                  <div className="hidden gap-4 lg:grid lg:grid-cols-5">
+                    {discoveryCarouselItems.map(({ listing, logoUrl }) => (
                       <HomepageDiscoveryCard
                         key={listing.id}
                         listing={listing}
-                        resolvedLogoUrl={resolvedLogoUrl}
+                        resolvedLogoUrl={logoUrl}
                         onClick={() => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
                       />
-                    );
-                  })}
-              </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
           </div>
       </section>
 
