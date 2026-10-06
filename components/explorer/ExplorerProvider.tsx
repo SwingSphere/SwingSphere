@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { DEFAULT_EXPLORER_CAMERA, type ExplorerCameraPose, type ExplorerSurfaceMode } from '../../lib/explorerCamera';
 
-export type ExplorerListingType = 'club' | 'event' | 'promoter';
+export type ExplorerListingType = 'club' | 'event' | 'promoter' | 'resort' | 'cruise';
 
 type ExplorerState = {
   selectedListingId: string | null;

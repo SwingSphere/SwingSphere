@@ -8,7 +8,7 @@ const makeTimeRange = (daysFromNow: number, startHourUtc: number, durationHours:
   return { start: start.toISOString(), end: end.toISOString() };
 };
 
-export type GlobeV1EntityType = 'event' | 'club' | 'promoter';
+export type GlobeV1EntityType = 'event' | 'club' | 'promoter' | 'resort' | 'cruise';
 
 export type GlobeV1RuntimeEvent = {
   id: string;
@@ -24,6 +24,8 @@ export type GlobeV1RuntimeEvent = {
   organizationSlug?: string;
   organization?: OrganizationData;
   hostRegionLabel?: string;
+  travelSlug?: string;
+  travelSubtitle?: string;
 };
 
 export type GlobeV1CountrySelection = {

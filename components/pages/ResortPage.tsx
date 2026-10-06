@@ -95,11 +95,11 @@ const ResortPage: React.FC = () => {
           </TravelSection>
 
           <TravelSection eyebrow="On property" title="Resort experience">
-            <TravelChipList items={resort.amenities} tone="violet" />
+            <TravelChipList items={resort.amenities} tone="emerald" />
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {resort.experienceHighlights.map((highlight) => (
                 <div key={highlight} className="flex items-start gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-gray-200">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-200" />
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200" />
                   {highlight}
                 </div>
               ))}
@@ -148,7 +148,7 @@ const ResortPage: React.FC = () => {
                   placement: 'resort_page_booking_cta',
                   surface: 'entity_page',
                 }}
-                className="ss-glass ss-glass--liquid ss-glass--interactive mt-4 flex min-h-12 items-center justify-center rounded-2xl border border-violet-300/30 bg-violet-400/10 px-4 text-sm font-black text-white"
+                className="ss-glass ss-glass--liquid ss-glass--interactive mt-4 flex min-h-12 items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 text-sm font-black text-white"
               >
                 Check availability
               </TrackedExternalLink>

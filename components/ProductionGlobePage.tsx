@@ -30,6 +30,7 @@ import { aggregateEventsForSpatialDisplay } from '../lib/spatialEventAggregation
 import { shouldShowDevTools } from '../lib/devTools';
 import { adaptListingsToDiscoveryPoints } from '../lib/discoveryPointAdapter';
 import { adaptOrganizationsToDiscoveryPoints, adaptOrganizationsToGlobeEvents } from '../lib/hostGlobeAdapter';
+import { adaptTravelToGlobeEvents } from '../lib/travelGlobeAdapter';
 import { getListingDisplayCoords } from '../lib/explorerMarkers';
 import { isApproximateLocation } from '../lib/publicLocation';
 import { applyDevMobileListingSafetyToAll } from '../lib/devMobileListingSafety';
@@ -50,7 +51,7 @@ import {
   type ExplorerCameraPose,
 } from '../lib/explorerCamera';
 import { ExplorerTransitionController } from '../lib/explorerTransition';
-import type { BuildingAsset, Listing } from '../types';
+import type { BuildingAsset, CruiseSailingData, CruiseSeriesData, Listing, ResortData } from '../types';
 import { getBuildingAssetForListing, getListingPhysicalAddress } from '../lib/entityCompatibility';
 import { getListingCanonicalPath } from '../lib/entityUtils';
 import { getDiscoveryContextBoundaryUrls, getListingCityBoundaryUrl } from '../lib/discoveryMapBoundaries';
@@ -1183,6 +1184,22 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   };
   const { setDebugInfo } = useAppStore();
   const { listings, organizations, index: entityIndex } = useEntityIndex();
+  const [travelResorts, setTravelResorts] = useState<ResortData[]>([]);
+  const [travelCruiseSeries, setTravelCruiseSeries] = useState<CruiseSeriesData[]>([]);
+  const [travelCruiseSailings, setTravelCruiseSailings] = useState<CruiseSailingData[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.getResorts(), api.getCruiseSeries(), api.getCruiseSailings()])
+      .then(([resortRows, seriesRows, sailingRows]) => {
+        if (!active) return;
+        setTravelResorts(resortRows);
+        setTravelCruiseSeries(seriesRows);
+        setTravelCruiseSailings(sailingRows);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const mobileSafeListings = useMemo(
     () => mobilePrototype ? applyDevMobileListingSafetyToAll(listings) : listings,
     [listings, mobilePrototype],
@@ -1448,6 +1465,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     listingId ? spatialEventAggregation.representativeByListingId.get(listingId) ?? listingId : null;
   const showHostMarkers = !performanceFixtureEnabled
     && (!activeListingTypes.length || activeListingTypes.includes('promoter'));
+  const showResortMarkers = !performanceFixtureEnabled
+    && (!activeListingTypes.length || activeListingTypes.includes('resort'));
+  const showCruiseMarkers = !performanceFixtureEnabled
+    && (!activeListingTypes.length || activeListingTypes.includes('cruise'));
   const hostRuntimeEvents = useMemo(
     () => showHostMarkers ? adaptOrganizationsToGlobeEvents(organizations) : [],
     [organizations, showHostMarkers],
@@ -1455,6 +1476,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const hostDiscoveryPoints = useMemo(
     () => showHostMarkers ? adaptOrganizationsToDiscoveryPoints(organizations) : [],
     [organizations, showHostMarkers],
+  );
+  const travelRuntimeEvents = useMemo(
+    () => adaptTravelToGlobeEvents(
+      showResortMarkers ? travelResorts : [],
+      showCruiseMarkers ? travelCruiseSeries : [],
+      showCruiseMarkers ? travelCruiseSailings : [],
+    ),
+    [showCruiseMarkers, showResortMarkers, travelCruiseSailings, travelCruiseSeries, travelResorts],
   );
   const hostMapPins = useMemo(() => hostRuntimeEvents.flatMap((event) => {
     const organization = event.organization;
@@ -1489,8 +1518,8 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       ? adaptListingsToGlobeEvents(spatialGlobeListings)
       : fixtureModeEnabled
         ? buildGlobeScaleFixtureEvents(scaleFixtureId)
-        : [...adaptListingsToGlobeEvents(spatialGlobeListings), ...hostRuntimeEvents],
-    [denseUsPinPrototype, fixtureModeEnabled, hostRuntimeEvents, performanceFixtureEnabled, scaleFixtureId, spatialGlobeListings],
+        : [...adaptListingsToGlobeEvents(spatialGlobeListings), ...hostRuntimeEvents, ...travelRuntimeEvents],
+    [denseUsPinPrototype, fixtureModeEnabled, hostRuntimeEvents, performanceFixtureEnabled, scaleFixtureId, spatialGlobeListings, travelRuntimeEvents],
   );
   const activeCountryIso3s = useMemo(
     () => [...new Set(globeRuntimeEvents
@@ -1636,7 +1665,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   });
   useEffect(() => {
     if (!mobilePrototype || activeListingTypes.length) return;
-    setListingTypes(['club', 'event']);
+    setListingTypes(['club', 'event', 'promoter', 'resort', 'cruise']);
   }, [activeListingTypes.length, mobilePrototype, setListingTypes]);
   const activeRegionHostItems = useMemo<DiscoveryRotaryHostItem[]>(() => {
     if (!activeActivityRegion) return [];
@@ -1829,7 +1858,11 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         ? `${geoContextCount} event${geoContextCount === 1 ? '' : 's'}`
         : activeListingTypes[0] === 'promoter'
           ? `${geoContextCount} host${geoContextCount === 1 ? '' : 's'}`
-          : `${geoContextCount} nearby`
+          : activeListingTypes[0] === 'resort'
+            ? `${geoContextCount} resort${geoContextCount === 1 ? '' : 's'}`
+            : activeListingTypes[0] === 'cruise'
+              ? `${geoContextCount} cruise${geoContextCount === 1 ? '' : 's'}`
+              : `${geoContextCount} nearby`
     : `${geoContextCount} nearby`;
   const discoveryRailIsUpdating = surfaceMode === 'map' && isMapViewportDiscoveryPending;
   const hasExplorerDetails = Boolean(detailListingId || selectedOrganizationId);
@@ -3225,6 +3258,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           onEventHover: () => undefined,
           onEventSelect: (event) => {
             if (isHero) return;
+            if ((event.entityType === 'resort' || event.entityType === 'cruise') && event.travelSlug) {
+              navigateInCurrentExperience(event.entityType === 'resort'
+                ? `/resorts/${event.travelSlug}`
+                : `/cruises/${event.travelSlug}`);
+              return false;
+            }
             if (event.entityType === 'promoter' && event.organizationId) {
               clearPlannedTravelTimers();
               setSelectedCountry(null);
@@ -3268,6 +3307,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           },
           onEventLabelActivate: (event) => {
             if (isHero || !event.listingId) return;
+            if ((event.entityType === 'resort' || event.entityType === 'cruise') && event.travelSlug) {
+              navigateInCurrentExperience(event.entityType === 'resort'
+                ? `/resorts/${event.travelSlug}`
+                : `/cruises/${event.travelSlug}`);
+              return;
+            }
             const listing = listingsRef.current.find((candidate) => candidate.id === event.listingId) ?? event.listing;
             if (!listing) return;
             const canonicalPath = getListingCanonicalPath(listing, entityIndexRef.current ?? undefined);
@@ -4038,7 +4083,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                 zoomIntent: Math.max(0, snapshot.zoomIntent - 0.12),
               });
             }}
-            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter])}
+            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter])}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}
             isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
@@ -4057,7 +4102,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             onSelectListing={selectListingFromRail}
             onNavigate={navigateInCurrentExperience}
             onRecenter={returnToWorld}
-            onFilterChange={mobilePrototype ? (filter) => setListingTypes(filter === 'all' ? ['club', 'event'] : [filter]) : undefined}
+            onFilterChange={mobilePrototype ? (filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter]) : undefined}
             devMobileMode={mobilePrototype}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}

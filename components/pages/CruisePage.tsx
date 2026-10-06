@@ -102,7 +102,7 @@ const CruisePage: React.FC = () => {
         <>
           <TravelSection eyebrow="At sea" title="The cruise experience">
             <p className="text-sm leading-7 text-gray-300 sm:text-base">{series.descriptionFull}</p>
-            <div className="mt-5"><TravelChipList items={series.experienceHighlights} /></div>
+            <div className="mt-5"><TravelChipList items={series.experienceHighlights} tone="violet" /></div>
           </TravelSection>
 
           {nextSailing ? (
@@ -114,7 +114,7 @@ const CruisePage: React.FC = () => {
                 <TravelFact icon={<MapPin className="h-5 w-5" />} label="Embarkation" value={departure} />
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                {nextSailing.theme ? <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-100">{nextSailing.theme}</span> : null}
+                {nextSailing.theme ? <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-100">{nextSailing.theme}</span> : null}
                 {nextSailing.bookingStatus ? <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold capitalize text-gray-200">{nextSailing.bookingStatus.replaceAll('_', ' ')}</span> : null}
               </div>
             </TravelSection>
@@ -122,11 +122,11 @@ const CruisePage: React.FC = () => {
 
           {nextSailing ? (
             <TravelSection eyebrow="Route" title="Itinerary">
-              <div className="relative space-y-0 pl-4 before:absolute before:bottom-4 before:left-[1.45rem] before:top-4 before:w-px before:bg-gradient-to-b before:from-cyan-300/60 before:via-cyan-300/20 before:to-transparent">
+              <div className="relative space-y-0 pl-4 before:absolute before:bottom-4 before:left-[1.45rem] before:top-4 before:w-px before:bg-gradient-to-b before:from-violet-300/60 before:via-violet-300/20 before:to-transparent">
                 {nextSailing.itinerary.map((port, index) => (
                   <div key={port.id} className="relative flex gap-4 py-3">
-                    <div className="relative z-10 mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-cyan-200/35 bg-[#071118]">
-                      <div className="h-1.5 w-1.5 rounded-full bg-cyan-200" />
+                    <div className="relative z-10 mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-violet-200/35 bg-[#0d0818]">
+                      <div className="h-1.5 w-1.5 rounded-full bg-violet-200" />
                     </div>
                     <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-3 flex-1">
                       <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Stop {index + 1}</div>

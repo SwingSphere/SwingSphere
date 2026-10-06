@@ -51,6 +51,20 @@ const discoveryModes: Array<{
     activeClass: 'border-blue-400/85 bg-blue-500/[0.18] text-blue-50',
     idleClass: 'border-blue-400/38 bg-blue-500/[0.08] text-blue-200/95 hover:border-blue-400/62 hover:bg-blue-500/[0.13] hover:text-blue-50',
   },
+  {
+    type: 'resort',
+    label: 'Resorts',
+    icon: Palmtree,
+    activeClass: 'border-emerald-300/85 bg-emerald-400/[0.18] text-emerald-50',
+    idleClass: 'border-emerald-300/34 bg-emerald-400/[0.07] text-emerald-200/90 hover:border-emerald-300/58 hover:bg-emerald-400/[0.12] hover:text-emerald-50',
+  },
+  {
+    type: 'cruise',
+    label: 'Cruises',
+    icon: Ship,
+    activeClass: 'border-violet-300/85 bg-violet-400/[0.18] text-violet-50',
+    idleClass: 'border-violet-300/34 bg-violet-400/[0.07] text-violet-200/90 hover:border-violet-300/58 hover:bg-violet-400/[0.12] hover:text-violet-50',
+  },
 ];
 
 const regions = ['North America', 'South America', 'Europe', 'Africa', 'Asia', 'Oceania'];
@@ -230,24 +244,7 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
                 })}
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled
-                  className="flex items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-2.5 text-[11px] font-semibold text-gray-600"
-                  title="Resort discovery is coming soon"
-                >
-                  <Palmtree className="h-4 w-4" aria-hidden="true" /> Resorts <span className="text-[9px] uppercase">Soon</span>
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="flex items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-2.5 text-[11px] font-semibold text-gray-600"
-                  title="Cruise discovery is coming soon"
-                >
-                  <Ship className="h-4 w-4" aria-hidden="true" /> Cruises <span className="text-[9px] uppercase">Soon</span>
-                </button>
-              </div>
+
             </section>
 
             {showEventTime ? (

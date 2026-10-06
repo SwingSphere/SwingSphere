@@ -24,6 +24,8 @@ const categoryMeta = {
   event: { label: 'Events', color: 'bg-amber-400', text: 'text-amber-300', border: 'border-amber-300/55', shape: 'rounded-full' },
   club: { label: 'Clubs', color: 'bg-red-500', text: 'text-red-300', border: 'border-red-400/55', shape: 'rotate-45 rounded-[2px]' },
   promoter: { label: 'Hosts', color: 'bg-cyan-400', text: 'text-cyan-300', border: 'border-cyan-300/55', shape: 'rounded-[2px]' },
+  resort: { label: 'Resorts', color: 'bg-emerald-400', text: 'text-emerald-300', border: 'border-emerald-300/55', shape: 'rounded-full' },
+  cruise: { label: 'Cruises', color: 'bg-violet-400', text: 'text-violet-300', border: 'border-violet-300/55', shape: 'rounded-full' },
 } as const;
 
 const CategoryGlyph: React.FC<{ type: ExplorerListingType; selected?: boolean }> = ({ type, selected = false }) => {
@@ -222,7 +224,7 @@ const ExplorerDiscoveryRail: React.FC<ExplorerDiscoveryRailProps> = ({
                 <div className="mt-3">
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Category</div>
                   <div className="grid grid-cols-3 gap-1.5">
-                    {(['club', 'event', 'promoter'] as const).map((type) => {
+                    {(['club', 'event', 'promoter', 'resort', 'cruise'] as const).map((type) => {
                       const active = listingTypes.includes(type);
                       return (
                         <button

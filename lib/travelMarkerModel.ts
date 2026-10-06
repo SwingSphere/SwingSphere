@@ -7,8 +7,8 @@ export type TravelMarker = {
   subtitle: string;
   latitude: number;
   longitude: number;
-  color: 'violet' | 'cyan';
-  geometry: 'pavilion' | 'ship';
+  color: 'emerald' | 'violet';
+  geometry: 'palm' | 'ship';
   resort?: ResortData;
   cruiseSeries?: CruiseSeriesData;
   sailing?: CruiseSailingData;
@@ -23,8 +23,8 @@ export const buildResortMarkers = (resorts: ResortData[]): TravelMarker[] => res
     subtitle: resort.accommodationSummary,
     latitude: resort.geopoint.latitude,
     longitude: resort.geopoint.longitude,
-    color: 'violet',
-    geometry: 'pavilion',
+    color: 'emerald',
+    geometry: 'palm',
     resort,
   }));
 
@@ -48,14 +48,27 @@ export const buildCruiseMarkers = (
     const latitude = sailing.departurePort.latitude;
     const longitude = sailing.departurePort.longitude;
     if (!cruiseSeries || latitude === undefined || longitude === undefined) return [];
+
+    const nextPort = sailing.itinerary.find((port) =>
+      port.id !== sailing.departurePort.id
+      && Number.isFinite(port.latitude)
+      && Number.isFinite(port.longitude),
+    );
+    const deltaLat = nextPort ? (nextPort.latitude! - latitude) : 0;
+    const deltaLon = nextPort ? (nextPort.longitude! - longitude) : 1;
+    const vectorLength = Math.hypot(deltaLat, deltaLon) || 1;
+    const offshoreDistanceDeg = 0.085;
+    const markerLatitude = latitude + (deltaLat / vectorLength) * offshoreDistanceDeg;
+    const markerLongitude = longitude + (deltaLon / vectorLength) * offshoreDistanceDeg;
+
     return [{
       id: sailing.id,
       entityType: 'cruise' as const,
       name: cruiseSeries.name,
       subtitle: `${sailing.durationNights} nights · ${sailing.departurePort.city ?? sailing.departurePort.portName}`,
-      latitude,
-      longitude,
-      color: 'cyan' as const,
+      latitude: markerLatitude,
+      longitude: markerLongitude,
+      color: 'violet' as const,
       geometry: 'ship' as const,
       cruiseSeries,
       sailing,

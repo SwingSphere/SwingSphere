@@ -33,7 +33,7 @@ export type MobileExplorerPrototypeProps = {
   isUpdating?: boolean;
 };
 
-type MobileFilter = 'all' | 'event' | 'club';
+type MobileFilter = 'all' | 'event' | 'club' | 'resort' | 'cruise';
 
 const formatEventDate = (listing: Listing): string => {
   if (listing.type !== 'event') return 'Club';
@@ -281,9 +281,11 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               {([
-                ['all', 'Clubs & events'],
+                ['all', 'All'],
                 ['event', 'Events'],
                 ['club', 'Clubs'],
+                ['resort', 'Resorts'],
+                ['cruise', 'Cruises'],
               ] as const).map(([value, label]) => (
                 <button
                   key={value}

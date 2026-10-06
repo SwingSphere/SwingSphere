@@ -19,7 +19,7 @@ import { getListingCanonicalPath } from '../../../lib/entityUtils';
 import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../../lib/listingImage';
 import type { Listing } from '../../../types';
 
-type TabletFilter = 'all' | 'event' | 'club';
+type TabletFilter = 'all' | 'event' | 'club' | 'resort' | 'cruise';
 
 type TabletExplorerOverlayProps = {
   surfaceMode: 'globe' | 'map';
@@ -150,7 +150,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-red-500/10 text-red-200"><ListFilter className="h-4 w-4" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-red-300/80">Explore</span>
-          <span className="mt-1 block truncate text-[15px] font-semibold text-white">{activeFilter === 'all' ? 'Clubs & events' : activeFilter === 'club' ? 'Clubs' : 'Events'} · {destinationName}</span>
+          <span className="mt-1 block truncate text-[15px] font-semibold text-white">{activeFilter === 'all' ? 'All' : activeFilter === 'club' ? 'Clubs' : activeFilter === 'event' ? 'Events' : activeFilter === 'resort' ? 'Resorts' : 'Cruises'} · {destinationName}</span>
         </span>
       </button>
 
@@ -175,9 +175,11 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             {([
-              ['all', 'Both'],
+              ['all', 'All'],
               ['club', 'Clubs'],
               ['event', 'Events'],
+              ['resort', 'Resorts'],
+              ['cruise', 'Cruises'],
             ] as const).map(([value, label]) => (
               <button
                 key={value}

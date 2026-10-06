@@ -89,11 +89,11 @@ export class PinManager {
         rippleColor: this.config.colors.lightText
       }, this.renderer.globeRadius);
       const displayCoordinate = displayCoordinates.get(String(event.id ?? event.name)) ?? event;
-      const spreadAnchor = this.#resolveLandSurfaceAnchor(displayCoordinate.lon, displayCoordinate.lat);
+      const spreadAnchor = this.#resolveLandSurfaceAnchor(displayCoordinate.lon, displayCoordinate.lat, entityType !== 'cruise');
       estimatedSurfaceRaycastCount += 1;
       const usesSpreadCoordinate = displayCoordinate !== event;
       const trueAnchor = usesSpreadCoordinate
-        ? this.#resolveLandSurfaceAnchor(event.lon, event.lat)
+        ? this.#resolveLandSurfaceAnchor(event.lon, event.lat, entityType !== 'cruise')
         : spreadAnchor;
       if (usesSpreadCoordinate) estimatedSurfaceRaycastCount += 1;
       const spreadSurfaceNormal = spreadAnchor.surfaceNormal ?? spreadAnchor.radialDirection;
@@ -596,7 +596,7 @@ export class PinManager {
     this.group.updateWorldMatrix(true, false);
   }
 
-  #resolveLandSurfaceAnchor(lonDeg, latDeg) {
+  #resolveLandSurfaceAnchor(lonDeg, latDeg, snapFallbackToLandGeometry = true) {
     return resolveRenderedGlobeLandSurfaceAnchor({
       lng: lonDeg,
       lat: latDeg,
@@ -616,7 +616,7 @@ export class PinManager {
       // may omit a coastal sliver (Manhattan/Miami are common examples). If the
       // exact ray misses land, visually attach the pin to the nearest land
       // vertex instead of leaving it floating over water.
-      snapFallbackToLandGeometry: true
+      snapFallbackToLandGeometry
     });
   }
 
@@ -713,11 +713,17 @@ function getEntityMarkerPalette(entityType, config, pin) {
   if (entityType === "promoter") {
     return { base: "#20B8C7", active: "#67E8F9" };
   }
+  if (entityType === "resort") {
+    return { base: "#22C55E", active: "#86EFAC" };
+  }
+  if (entityType === "cruise") {
+    return { base: "#8B5CF6", active: "#C4B5FD" };
+  }
   return { base: "#D6A62E", active: "#F4C95D" };
 }
 
 function formatLocationSubtitle(event) {
-  return event?.listing?.geopoint?.address?.city ?? event?.city ?? "";
+  return event?.travelSubtitle ?? event?.listing?.geopoint?.address?.city ?? event?.city ?? "";
 }
 
 function resolveCountryIso2(event) {
