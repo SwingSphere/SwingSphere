@@ -226,16 +226,21 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
                 </div>
               ) : null}
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-6 gap-2">
                 {discoveryModes.map(({ type, label, icon: Icon, activeClass, idleClass }) => {
                   const active = activeMode === type;
+                  const layoutClass = type === 'resort'
+                    ? 'col-span-2 col-start-2 row-start-2'
+                    : type === 'cruise'
+                      ? 'col-span-2 col-start-4 row-start-2'
+                      : 'col-span-2';
                   return (
                     <button
                       key={type}
                       type="button"
                       aria-pressed={active}
                       onClick={() => selectMode(type)}
-                      className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition ${active ? activeClass : idleClass}`}
+                      className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition ${layoutClass} ${active ? activeClass : idleClass}`}
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {label}

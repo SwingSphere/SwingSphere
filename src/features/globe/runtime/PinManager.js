@@ -88,7 +88,12 @@ export class PinManager {
         glowColor: palette.active,
         rippleColor: this.config.colors.lightText
       }, this.renderer.globeRadius);
-      const displayCoordinate = displayCoordinates.get(String(event.id ?? event.name)) ?? event;
+      // Resorts are fixed destination properties: keep them on their exact
+      // authored latitude/longitude instead of applying regional pin spreading.
+      // Cruises remain eligible for their intentional offshore offset.
+      const displayCoordinate = entityType === 'resort'
+        ? event
+        : (displayCoordinates.get(String(event.id ?? event.name)) ?? event);
       const spreadAnchor = this.#resolveLandSurfaceAnchor(displayCoordinate.lon, displayCoordinate.lat, entityType !== 'cruise');
       estimatedSurfaceRaycastCount += 1;
       const usesSpreadCoordinate = displayCoordinate !== event;
