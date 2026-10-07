@@ -586,7 +586,8 @@ export class GlobeMarker {
     if (!camera || !domElement) return 1;
 
     const viewportHeight = Math.max(1, Number(domElement.clientHeight) || 1);
-    const targetPixels = Math.max(4, Number(this.config?.pinPlacement?.constantScreenSizePx) || 15);
+    const travelScale = this.variant === "cruise" || this.variant === "resort" ? 1.28 : 1;
+    const targetPixels = Math.max(4, Number(this.config?.pinPlacement?.constantScreenSizePx) || 15) * travelScale;
     const baseScale = this.flatIdleMarker?.userData?.baseFlatScale ?? this.style.tipRadius * 3.6;
 
     this.group.getWorldPosition(this.tmpMarkerWorldPosition);
@@ -709,8 +710,8 @@ function createListingPulseSprite(variant) {
   context.lineJoin = "round";
   context.shadowColor = "#FFFFFF";
   context.shadowBlur = 10;
-  if (variant === "cruise") {
-    drawCruiseMarkerGlyph(context, center, radius, { fill: false, stroke: true });
+  if (variant === "cruise" || variant === "resort") {
+    drawTravelMarkerGlyph(context, center, radius, variant);
   } else {
     context.beginPath();
     if (variant === "club") {
@@ -765,10 +766,12 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   context.lineWidth = mobileVisibilityBoost ? 6 : 4;
   context.lineJoin = "round";
 
-  if (variant === "cruise") {
-    drawCruiseMarkerGlyph(context, center, radius, { fill: true, stroke: false });
+  if (variant === "cruise" || variant === "resort") {
+    context.strokeStyle = fill;
+    context.shadowColor = mobileVisibilityBoost ? "#FFFFFF" : fill;
+    context.shadowBlur = mobileVisibilityBoost ? 18 : 11;
+    drawTravelMarkerGlyph(context, center, radius + 1, variant);
     context.shadowBlur = 0;
-    drawCruiseMarkerGlyph(context, center, radius, { fill: false, stroke: true });
   } else {
     context.beginPath();
     if (variant === "club") {
@@ -812,44 +815,37 @@ function createFlatIdleMarkerSprite(style, variant, experiment = {}) {
   return sprite;
 }
 
-function drawCruiseMarkerGlyph(context, center, radius, { fill = true, stroke = true } = {}) {
-  const unit = radius / 38;
-  const drawPath = (pathBuilder) => {
-    context.beginPath();
-    pathBuilder();
-    if (fill) context.fill();
-    if (stroke) context.stroke();
-  };
+const TRAVEL_MARKER_PATHS = Object.freeze({
+  cruise: [
+    "M12 10.189V14",
+    "M12 2v3",
+    "M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6",
+    "M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76",
+    "M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"
+  ],
+  resort: [
+    "M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4",
+    "M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3",
+    "M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35",
+    "M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"
+  ]
+});
 
-  // Hull: broad, low silhouette with a pointed bow so it remains readable
-  // as a ship even when the globe marker is only a few pixels wide.
-  drawPath(() => {
-    context.moveTo(center - 34 * unit, center + 8 * unit);
-    context.lineTo(center + 36 * unit, center + 8 * unit);
-    context.lineTo(center + 24 * unit, center + 24 * unit);
-    context.quadraticCurveTo(center + 5 * unit, center + 32 * unit, center - 16 * unit, center + 24 * unit);
-    context.lineTo(center - 29 * unit, center + 17 * unit);
-    context.closePath();
-  });
+function drawTravelMarkerGlyph(context, center, radius, variant) {
+  const paths = TRAVEL_MARKER_PATHS[variant];
+  if (!paths) return;
+  const scale = (radius * 2) / 24;
 
-  // Main deck / cabin.
-  drawPath(() => {
-    context.moveTo(center - 18 * unit, center + 6 * unit);
-    context.lineTo(center - 12 * unit, center - 14 * unit);
-    context.lineTo(center + 14 * unit, center - 14 * unit);
-    context.lineTo(center + 20 * unit, center + 6 * unit);
-    context.closePath();
-  });
-
-  // Bridge.
-  drawPath(() => {
-    context.rect(center - 6 * unit, center - 25 * unit, 15 * unit, 11 * unit);
-  });
-
-  // Funnel.
-  drawPath(() => {
-    context.rect(center - 1 * unit, center - 33 * unit, 8 * unit, 8 * unit);
-  });
+  context.save();
+  context.translate(center - radius, center - radius);
+  context.scale(scale, scale);
+  context.lineWidth = 2;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const pathData of paths) {
+    context.stroke(new Path2D(pathData));
+  }
+  context.restore();
 }
 
 function isCoarsePointerDevice() {
