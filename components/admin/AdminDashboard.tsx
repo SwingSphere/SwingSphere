@@ -12,6 +12,7 @@ import type {
 } from '../../types';
 import { AdminView } from './AdminPanel';
 import * as api from '../../lib/api';
+import { getOpenSiteIssueCount } from '../../lib/issueReports';
 import { useAppStore } from '../../store/appStore';
 import { resolveCountryFlagEmoji } from '../../lib/formatting';
 import { buildingVerificationNeedsReview } from '../../lib/buildingVerification';
@@ -42,7 +43,7 @@ type AdminDashboardProps = {
 
 type DashboardData = {
     listings: Listing[];
-    flagged: any[];
+    flagged: number | null;
     venues: VenueData[];
     resorts: ResortData[];
     cruiseSeries: CruiseSeriesData[];
@@ -66,7 +67,7 @@ const Surface: React.FC<{ title: string; subtitle?: string; children: React.Reac
 
 const ActionCard: React.FC<{
     label: string;
-    value: number;
+    value: number | string;
     description: string;
     icon: React.ReactNode;
     tone: 'neutral' | 'warning' | 'danger';
@@ -102,7 +103,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
             try {
                 const [listings, flagged, venues, resorts, cruiseSeries, cruiseSailings, clubBrands, eventSeries, organizations, buildingAssets, venueRelationships] = await Promise.all([
                     api.getListings(),
-                    api.getFlaggedContent(),
+                    getOpenSiteIssueCount(),
                     api.getVenues(),
                     api.getResorts(),
                     api.getCruiseSeries(),
@@ -362,7 +363,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setView, allTags }) => 
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <ActionCard label="Pending submissions" value={computed.pending} description="Listings waiting for review and approval." icon={<Icon path={icons.inbox} />} tone={computed.pending ? 'warning' : 'neutral'} onClick={() => setView('submissions')} />
-                <ActionCard label="Flagged content" value={data.flagged.length} description="Reports and moderation items awaiting action." icon={<Icon path={icons.flag} />} tone={data.flagged.length ? 'danger' : 'neutral'} onClick={() => setView('moderation')} />
+                <ActionCard label="Open reports" value={data.flagged ?? '—'} description={data.flagged === null ? 'Issue inbox unavailable; open the queue for details.' : 'Visitor reports awaiting review.'} icon={<Icon path={icons.flag} />} tone={data.flagged ? 'danger' : 'neutral'} onClick={() => setView('moderation')} />
                 <ActionCard label="Missing media" value={computed.missingLogos + computed.missingFlyers} description="Content missing a logo, banner, or event image." icon={<Icon path={icons.image} />} tone={computed.missingLogos + computed.missingFlyers ? 'warning' : 'neutral'} onClick={() => setView('manage-clubs')} />
                 <ActionCard label="Building review" value={computed.venuesMissingBuildings + computed.buildingVerificationFlags.length} description="Missing building links plus address matches the resolver could not confirm." icon={<Icon path={icons.map} />} tone={computed.venuesMissingBuildings + computed.buildingVerificationFlags.length ? 'warning' : 'neutral'} onClick={() => setView('building-inspector')} />
             </div>

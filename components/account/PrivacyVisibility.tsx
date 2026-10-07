@@ -120,8 +120,8 @@ const PrivacyVisibility: React.FC<{
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-500">Private regardless of profile state</p>
         <h3 className="mt-2 text-xl font-bold text-white">Your discovery activity stays yours</h3>
         <div className="mt-5 divide-y divide-white/[0.07] rounded-2xl border border-white/[0.08] bg-black/20 px-4 sm:px-5">
-          <PrivacyRow icon={LockKeyhole} title="Saved places and events" value="Only you" copy="Collections remain private unless a future collection is deliberately shared." />
-          <PrivacyRow icon={Eye} title="Recently viewed" value="Only you" copy="Not displayed on your member profile." />
+          <PrivacyRow icon={LockKeyhole} title="Saved places and events" value="Private by default" copy="Current saves are visible to administrators only while you enable optional activity sharing. Private notes and collections stay private." />
+          <PrivacyRow icon={Eye} title="Recently viewed" value="Private by default" copy="Not displayed on your member profile. Optional activity sharing allows administrators to view recorded discovery visits." />
           <PrivacyRow icon={MapPin} title="Attendance and location" value="Only you" copy="Precise location and attendance are never inferred as visible profile fields." />
           <PrivacyRow icon={UsersRound} title="Relationships and associations" value="Participants only" copy="Future account links remain private unless every participant explicitly publishes a shared label." />
         </div>

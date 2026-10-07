@@ -19,6 +19,7 @@ import {
   type AdminManagedUser,
 } from '../../lib/admin/userManagement';
 import AdminUserBadgeManager from './AdminUserBadgeManager';
+import AdminMemberActivity from './AdminMemberActivity';
 
 const fallbackAvatar = '/swingsphere-logo_2.png';
 
@@ -42,6 +43,7 @@ const AdminUserManagement: React.FC<{
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [selectedUser, setSelectedUser] = useState<AdminManagedUser | null>(null);
+  const [activityUser, setActivityUser] = useState<AdminManagedUser | null>(null);
   const [selectedAccountUser, setSelectedAccountUser] = useState<AdminManagedUser | null>(null);
   const { addToast, currentUser } = useAppStore();
 
@@ -245,6 +247,7 @@ const AdminUserManagement: React.FC<{
                   </button>
                 </td>
                 <td className="px-5 py-4 text-xs leading-5 text-gray-500">
+                  <button type="button" onClick={() => setActivityUser(user)} className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100">View activity</button>
                   {user.adminMetadataAvailable ? (
                     <>
                       <div>{user.approvedReviewCount} approved review{user.approvedReviewCount === 1 ? '' : 's'}</div>
@@ -297,6 +300,8 @@ const AdminUserManagement: React.FC<{
       <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
         <strong>Account mutations are protected and audited.</strong> Role and account-state changes require an active administrator, a confirmation, and a written reason. Marking an account Deleted locks it at the SwingSphere authorization layer; permanent privacy deletion remains a separate account-deletion workflow.
       </div>
+
+      {activityUser ? <AdminMemberActivity key={activityUser.id} user={activityUser} onClose={() => setActivityUser(null)} /> : null}
 
       {selectedUser ? (
         <AdminUserBadgeManager

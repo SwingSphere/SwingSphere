@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { recordMemberActivity } from '../analytics/memberActivity';
 import type {
   ProfilePrivacySettings,
   ProfileVisibility,
@@ -214,16 +215,20 @@ export const saveEntity = async (
     .single<SavedEntityRow>();
 
   if (error) throw error;
+  if (typeof window !== 'undefined') void recordMemberActivity('save', window.location.pathname, entityType, entityId);
   return mapSavedEntity(data);
 };
 
 export const removeSavedEntity = async (userId: string, savedEntityId: string): Promise<void> => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('saved_entities')
     .delete()
     .eq('id', savedEntityId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('entity_type, entity_id');
   if (error) throw error;
+  const removed = data?.[0];
+  if (removed && typeof window !== 'undefined') void recordMemberActivity('unsave', window.location.pathname, removed.entity_type, removed.entity_id);
 };
 
 export const listSavedCollections = async (userId: string): Promise<SavedCollection[]> => {

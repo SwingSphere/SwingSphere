@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, ChevronRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BarChart3, ChevronDown, ChevronRight, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import {
   getOutboundAnalyticsDetail,
   getOutboundAnalyticsSummary,
@@ -8,6 +8,7 @@ import {
   type OutboundAnalyticsSummary,
 } from '../../lib/analytics/outboundReports';
 import type { OutboundEntityType } from '../../lib/analytics/outboundTracking';
+import AdminDetailDialog from './AdminDetailDialog';
 import { useAppStore } from '../../store/appStore';
 import * as api from '../../lib/api';
 
@@ -40,6 +41,7 @@ const destinationHref = (domain: string, path?: string | null): string | null =>
 };
 
 type DetailSelection = {
+  key: string;
   title: string;
   description: string;
   filter: Omit<OutboundAnalyticsDetailFilter, 'from' | 'to'>;
@@ -60,6 +62,15 @@ const AdminOutboundAnalytics: React.FC = () => {
   const [detailSelection, setDetailSelection] = useState<DetailSelection | null>(null);
   const [detail, setDetail] = useState<OutboundAnalyticsDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const detailRequest = useRef(0);
+  const closeDetail = () => {
+    detailRequest.current += 1;
+    setDetailSelection(null);
+    setDetail(null);
+    setDetailError(null);
+    setIsDetailLoading(false);
+  };
   const [entityNames, setEntityNames] = useState<Record<string, string>>({});
 
   const load = async () => {
@@ -67,6 +78,7 @@ const AdminOutboundAnalytics: React.FC = () => {
       addToast({ message: 'Choose a valid analytics date range.', type: 'error' });
       return;
     }
+    closeDetail();
     setIsLoading(true);
     try {
       const next = await getOutboundAnalyticsSummary({
@@ -114,19 +126,28 @@ const AdminOutboundAnalytics: React.FC = () => {
   }, []);
 
   const openDetail = async (selection: DetailSelection) => {
+    if (detailSelection?.key === selection.key) {
+      closeDetail();
+      return;
+    }
+    const request = ++detailRequest.current;
+    setDetailError(null);
     setDetailSelection(selection);
     setDetail(null);
     setIsDetailLoading(true);
     try {
-      setDetail(await getOutboundAnalyticsDetail({
+      const result = await getOutboundAnalyticsDetail({
         from: summary?.from ?? from,
         to: summary?.to ?? to,
         ...selection.filter,
-      }));
+      });
+      if (request === detailRequest.current) setDetail(result);
     } catch (error) {
-      addToast({ message: error instanceof Error ? error.message : 'Unable to load outbound click detail.', type: 'error' });
+      if (request === detailRequest.current) {
+        setDetailError(error instanceof Error ? error.message : 'Unable to load details. Try collapsing and reopening this row.');
+      }
     } finally {
-      setIsDetailLoading(false);
+      if (request === detailRequest.current) setIsDetailLoading(false);
     }
   };
 
@@ -135,6 +156,7 @@ const AdminOutboundAnalytics: React.FC = () => {
   const qualifiedRate = summary?.totalClicks
     ? Math.round((summary.qualifiedClicks / summary.totalClicks) * 1000) / 10
     : 0;
+
 
   return (
     <div className="space-y-6">
@@ -199,16 +221,25 @@ const AdminOutboundAnalytics: React.FC = () => {
             </div>
           ) : null}
 
+          {detailSelection ? (
+            <AdminDetailDialog title={detailSelection.title} onClose={closeDetail}>
+              {detailError ? <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800">{detailError}<span className="ml-2">Close and reopen the details to retry.</span></div> : <OutboundDetailPanel selection={detailSelection} detail={detail} isLoading={isDetailLoading} entityName={getEntityName} onClose={closeDetail} />}
+            </AdminDetailDialog>
+          ) : null}
+
           <div className="grid gap-6 xl:grid-cols-2">
             <BreakdownTable
               title="By destination"
               empty="No outbound destination activity in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.byDestination ?? []).map((row) => ({
+                key: 'byDestination:' + JSON.stringify(row),
                 primary: row.destinationType?.replaceAll('_', ' ') || 'Unknown',
-                secondary: 'External action type · tap for detail',
+                secondary: 'External action type · view details',
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
                 onClick: () => void openDetail({
+                  key: 'byDestination:' + JSON.stringify(row),
                   title: `${row.destinationType?.replaceAll('_', ' ') || 'Unknown'} clicks`,
                   description: 'Shows which entities, placements, and exact sanitized destinations produced this outbound action.',
                   filter: { destinationType: row.destinationType ?? null },
@@ -218,12 +249,15 @@ const AdminOutboundAnalytics: React.FC = () => {
             <BreakdownTable
               title="By placement"
               empty="No placement activity in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.byPlacement ?? []).map((row) => ({
+                key: 'byPlacement:' + JSON.stringify(row),
                 primary: row.placement || 'Unknown placement',
-                secondary: `${row.surface?.replaceAll('_', ' ') || 'Unknown surface'} · tap for detail`,
+                secondary: `${row.surface?.replaceAll('_', ' ') || 'Unknown surface'} · view details`,
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
                 onClick: () => void openDetail({
+                  key: 'byPlacement:' + JSON.stringify(row),
                   title: row.placement || 'Unknown placement',
                   description: 'Shows the outbound destinations and entities clicked from this SwingSphere placement.',
                   filter: { placement: row.placement ?? null, surface: row.surface ?? null },
@@ -233,13 +267,16 @@ const AdminOutboundAnalytics: React.FC = () => {
             <BreakdownTable
               title="Exact outbound links"
               empty="No exact outbound link detail in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.byLink ?? []).map((row) => ({
+                key: 'byLink:' + JSON.stringify(row),
                 primary: formatDestination(row.destinationDomain, row.destinationPath),
                 secondary: `${row.destinationType.replaceAll('_', ' ')}${row.destinationPath ? '' : ' · domain only / legacy'}`,
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
                 href: destinationHref(row.destinationDomain, row.destinationPath),
                 onClick: () => void openDetail({
+                  key: 'byLink:' + JSON.stringify(row),
                   title: formatDestination(row.destinationDomain, row.destinationPath),
                   description: 'Shows which SwingSphere entities and placements sent traffic to this destination.',
                   filter: {
@@ -253,12 +290,15 @@ const AdminOutboundAnalytics: React.FC = () => {
             <BreakdownTable
               title="By entity"
               empty="No entity-level outbound traffic in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.byEntity ?? []).map((row) => ({
+                key: 'byEntity:' + JSON.stringify(row),
                 primary: getEntityName(row.entityType, row.entityId),
                 secondary: `${row.entityType.replaceAll('_', ' ')} · ${row.entityId}`,
                 qualified: row.qualifiedClicks,
                 total: row.totalClicks,
                 onClick: () => void openDetail({
+                  key: 'byEntity:' + JSON.stringify(row),
                   title: getEntityName(row.entityType, row.entityId),
                   description: 'Shows the websites, socials, ticketing, booking, and other outbound actions generated by this entity.',
                   filter: { entityType: row.entityType, entityId: row.entityId },
@@ -267,18 +307,7 @@ const AdminOutboundAnalytics: React.FC = () => {
             />
           </div>
 
-          {detailSelection ? (
-            <OutboundDetailPanel
-              selection={detailSelection}
-              detail={detail}
-              isLoading={isDetailLoading}
-              entityName={getEntityName}
-              onClose={() => {
-                setDetailSelection(null);
-                setDetail(null);
-              }}
-            />
-          ) : null}
+
 
           <section className="rounded-xl border border-gray-200 bg-white p-5 text-sm leading-6 text-gray-600 shadow-sm">
             <div className="flex items-center gap-2 font-bold text-gray-900"><ExternalLink size={16} /> Recommended sponsor wording</div>
@@ -419,29 +448,32 @@ const OutboundDetailPanel: React.FC<{
 const BreakdownTable: React.FC<{
   title: string;
   empty: string;
-  rows: Array<{ primary: string; secondary: string; qualified: number; total: number; href?: string | null; onClick?: () => void }>;
-}> = ({ title, empty, rows }) => (
-  <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-    <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">{title}</h2></div>
+  expandedKey?: string;
+  rows: Array<{ key?: string; primary: string; secondary: string; qualified: number; total: number; href?: string | null; onClick?: () => void }>;
+}> = ({ title, empty, rows, expandedKey }) => (
+  <section className="min-w-0 self-start overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">{title}</h2>{rows.some((row) => row.onClick) ? <p className="mt-1 text-xs text-gray-500">Select a row to open its details.</p> : null}</div>
     {!rows.length ? <div className="p-6 text-sm text-gray-500">{empty}</div> : (
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500"><tr><th className="px-5 py-3">Category</th><th className="px-5 py-3 text-right">Qualified</th><th className="px-5 py-3 text-right">Total</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
-            {rows.map((row) => (
-              <tr key={`${row.primary}-${row.secondary}`} className={row.onClick ? 'transition hover:bg-blue-50/60' : ''}>
-                <td className="px-5 py-3">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0"><div className="break-all font-semibold capitalize text-gray-900">{row.primary}</div><div className="text-xs text-gray-500">{row.secondary}</div></div>
-                    {row.href ? <a href={row.href} target="_blank" rel="noopener noreferrer" className="mt-0.5 shrink-0 text-gray-400 hover:text-blue-600" onClick={(event) => event.stopPropagation()} aria-label="Open outbound destination"><ExternalLink size={13} /></a> : null}
-                  </div>
-                </td>
-                <td className="px-5 py-3 text-right font-bold tabular-nums text-blue-700">{formatNumber(row.qualified)}</td>
-                <td className="px-5 py-3 text-right tabular-nums text-gray-600">
-                  <span className="inline-flex items-center gap-2">{formatNumber(row.total)}{row.onClick ? <button type="button" onClick={row.onClick} className="rounded p-1 text-gray-400 hover:bg-white hover:text-blue-600" aria-label="Open click detail"><ChevronRight size={14} /></button> : null}</span>
-                </td>
-              </tr>
-            ))}
+            {rows.map((row, index) => {
+              const key = row.key || row.primary + ':' + row.secondary + ':' + index;
+              const expanded = !!row.onClick && expandedKey === key;
+              const content = <><span className="min-w-0"><span className="block break-all font-semibold text-gray-900">{row.primary}</span><span className="block text-xs text-gray-500">{row.secondary}</span></span><span className="text-right font-bold tabular-nums text-blue-700">{formatNumber(row.qualified)}</span><span className="flex items-center justify-end gap-2 tabular-nums text-gray-600">{formatNumber(row.total)}{row.onClick ? (expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />) : null}</span></>;
+              return (
+                <React.Fragment key={key}>
+                  <tr className={expanded ? 'bg-blue-50' : ''}>
+                    <td colSpan={3} className="p-0">
+                      <div className="flex items-center">
+                      {row.onClick ? <button type="button" onClick={row.onClick} aria-haspopup="dialog" aria-expanded={expanded} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-3 px-5 py-3 text-left transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">{content}</button> : <div className="grid w-full grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-3 px-5 py-3">{content}</div>}
+                      {row.href ? <a href={row.href} target="_blank" rel="noopener noreferrer" className="mr-3 shrink-0 rounded p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600" aria-label={"Open destination " + row.primary}><ExternalLink size={14} /></a> : null}</div>
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

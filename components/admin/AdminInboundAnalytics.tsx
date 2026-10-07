@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, ChevronRight, ExternalLink, Globe2, Laptop, LoaderCircle, MapPin, RefreshCw, Route, ShieldCheck, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BarChart3, ChevronDown, ChevronRight, ExternalLink, Globe2, Laptop, LoaderCircle, MapPin, RefreshCw, Route, ShieldCheck, X } from 'lucide-react';
 import {
   getInboundAnalyticsDetail,
   getInboundAnalyticsSummary,
@@ -7,6 +7,7 @@ import {
   type InboundAnalyticsDetailFilter,
   type InboundAnalyticsSummary,
 } from '../../lib/analytics/inboundReports';
+import AdminDetailDialog from './AdminDetailDialog';
 import { useAppStore } from '../../store/appStore';
 
 const toDateInput = (date: Date): string => date.toISOString().slice(0, 10);
@@ -43,6 +44,7 @@ const sourceUrlFor = (domain: string, path: string): string | null => {
 };
 
 type DetailSelection = {
+  key: string;
   title: string;
   description: string;
   filter: Omit<InboundAnalyticsDetailFilter, 'from' | 'to'>;
@@ -60,12 +62,22 @@ const AdminInboundAnalytics: React.FC = () => {
   const [detailSelection, setDetailSelection] = useState<DetailSelection | null>(null);
   const [detail, setDetail] = useState<InboundAnalyticsDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const detailRequest = useRef(0);
+  const closeDetail = () => {
+    detailRequest.current += 1;
+    setDetailSelection(null);
+    setDetail(null);
+    setDetailError(null);
+    setIsDetailLoading(false);
+  };
 
   const load = async () => {
     if (!from || !to || from > to) {
       addToast({ message: 'Choose a valid analytics date range.', type: 'error' });
       return;
     }
+    closeDetail();
     setIsLoading(true);
     try {
       setSummary(await getInboundAnalyticsSummary({ from, to }));
@@ -81,19 +93,28 @@ const AdminInboundAnalytics: React.FC = () => {
   }, []);
 
   const openDetail = async (selection: DetailSelection) => {
+    if (detailSelection?.key === selection.key) {
+      closeDetail();
+      return;
+    }
+    const request = ++detailRequest.current;
+    setDetailError(null);
     setDetailSelection(selection);
     setDetail(null);
     setIsDetailLoading(true);
     try {
-      setDetail(await getInboundAnalyticsDetail({
+      const result = await getInboundAnalyticsDetail({
         from: summary?.from ?? from,
         to: summary?.to ?? to,
         ...selection.filter,
-      }));
+      });
+      if (request === detailRequest.current) setDetail(result);
     } catch (error) {
-      addToast({ message: error instanceof Error ? error.message : 'Unable to load source details.', type: 'error' });
+      if (request === detailRequest.current) {
+        setDetailError(error instanceof Error ? error.message : 'Unable to load details. Try collapsing and reopening this row.');
+      }
     } finally {
-      setIsDetailLoading(false);
+      if (request === detailRequest.current) setIsDetailLoading(false);
     }
   };
 
@@ -101,6 +122,7 @@ const AdminInboundAnalytics: React.FC = () => {
   const topLanding = summary?.byLanding?.[0];
   const topDevice = summary?.byDevice?.[0];
   const topCountry = summary?.byCountry?.[0];
+
 
   return (
     <div className="space-y-6">
@@ -145,17 +167,26 @@ const AdminInboundAnalytics: React.FC = () => {
             <MetricCard icon={<Globe2 size={14} />} label="Top country" value={topCountry?.countryCode ?? '—'} footnote={topCountry ? `${formatNumber(topCountry.sessions)} sessions` : undefined} />
           </section>
 
+          {detailSelection ? (
+            <AdminDetailDialog title={detailSelection.title} onClose={closeDetail}>
+              {detailError ? <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800">{detailError}<span className="ml-2">Close and reopen the details to retry.</span></div> : <InboundDetailPanel selection={detailSelection} detail={detail} isLoading={isDetailLoading} onClose={closeDetail} />}
+            </AdminDetailDialog>
+          ) : null}
+
           <div className="grid gap-6 xl:grid-cols-2">
             <SimpleBreakdown
               title="Traffic sources"
               empty="No inbound sessions in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.bySource ?? []).map((row) => ({
+                key: 'bySource:' + JSON.stringify(row),
                 primary: friendlySourceName(row.sourceName),
                 secondary: row.sourceCategory === 'direct'
                   ? 'No referrer or campaign data was supplied'
                   : row.sourceCategory,
                 sessions: row.sessions,
                 onClick: () => void openDetail({
+                  key: 'bySource:' + JSON.stringify(row),
                   title: friendlySourceName(row.sourceName),
                   description: row.sourceCategory === 'direct'
                     ? 'Direct means the browser supplied no external referrer and the visit had no campaign attribution. This can include typed/bookmarked URLs, copied links, messages, apps, privacy-protected browsers, and some redirects.'
@@ -167,13 +198,16 @@ const AdminInboundAnalytics: React.FC = () => {
             <SimpleBreakdown
               title="Referring domains"
               empty="No external referrers in this range."
+              expandedKey={detailSelection?.key}
               rows={(summary.byReferrer ?? []).map((row) => ({
+                key: 'byReferrer:' + JSON.stringify(row),
                 primary: friendlyReferrerName(row.referrerDomain),
                 secondary: row.referrerDomain === 'com.reddit.frontpage'
-                  ? 'Reddit Android app · tap for available source detail'
-                  : `${row.referrerDomain} · tap for available source detail`,
+                  ? 'Reddit Android app · view available source details'
+                  : `${row.referrerDomain} · view available source details`,
                 sessions: row.sessions,
                 onClick: () => void openDetail({
+                  key: 'byReferrer:' + JSON.stringify(row),
                   title: friendlyReferrerName(row.referrerDomain),
                   description: 'Exact source paths appear only when the referring browser or app provides them. Some sites intentionally send only their domain.',
                   filter: { referrerDomain: row.referrerDomain },
@@ -187,17 +221,7 @@ const AdminInboundAnalytics: React.FC = () => {
             <SimpleBreakdown title="Regions" empty="No region data in this range." rows={(summary.byRegion ?? []).map((row) => ({ primary: row.regionName || row.regionCode || 'Unknown', secondary: [row.regionCode, row.countryCode].filter(Boolean).join(' · '), sessions: row.sessions }))} />
           </div>
 
-          {detailSelection ? (
-            <InboundDetailPanel
-              selection={detailSelection}
-              detail={detail}
-              isLoading={isDetailLoading}
-              onClose={() => {
-                setDetailSelection(null);
-                setDetail(null);
-              }}
-            />
-          ) : null}
+
 
           <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">Campaign attribution</h2></div>
@@ -317,6 +341,20 @@ const InboundDetailPanel: React.FC<{
         </div>
 
         <div className="rounded-xl border border-gray-200">
+          <div className="border-b border-gray-100 px-4 py-3"><h3 className="font-bold text-gray-900">Campaigns for this source</h3><p className="mt-1 text-xs text-gray-500">Tagged links identify the specific post or promotion even when an app supplies only its domain.</p></div>
+          {!detail.campaigns?.length ? <div className="p-4 text-sm text-gray-500">No campaign tags were recorded for this source. Use distinct utm_source, utm_medium, and utm_campaign tags on future shared links to distinguish individual posts.</div> : (
+            <div className="divide-y divide-gray-100">
+              {detail.campaigns.map((row, index) => (
+                <div key={index} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0"><div className="break-all text-sm font-semibold text-gray-900">{row.utmCampaign || row.campaignKey || 'Unnamed campaign'}</div><div className="text-xs text-gray-500">{[row.utmSource, row.utmMedium, row.campaignKey].filter(Boolean).join(' · ') || 'No source / medium supplied'}</div></div>
+                  <span className="shrink-0 font-bold tabular-nums text-violet-700">{formatNumber(row.sessions)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-gray-200">
           <div className="border-b border-gray-100 px-4 py-3">
             <h3 className="font-bold text-gray-900">Recent arrivals</h3>
             <p className="mt-1 text-xs text-gray-500">Session-level detail retained temporarily for acquisition debugging. No IP address or user-agent string is stored.</p>
@@ -343,7 +381,7 @@ const InboundDetailPanel: React.FC<{
                               <span className="max-w-[300px] break-all">{normalizeReferrerPathForDisplay(session.referrerDomain, session.referrerPath)}</span>
                               {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-violet-600" aria-label="Open referring source"><ExternalLink size={12} /></a> : null}
                             </div>
-                          ) : null}
+                          ) : <div className="mt-1 text-xs text-gray-500">{session.referrerDomain ? 'Domain only — source page not supplied' : 'No referrer supplied'}</div>}
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-700">{session.landingPath}</td>
                         <td className="px-4 py-3 text-gray-600">{[session.deviceClass, session.regionName || session.regionCode, session.countryCode].filter(Boolean).join(' · ') || '—'}</td>
@@ -364,30 +402,30 @@ const InboundDetailPanel: React.FC<{
 const SimpleBreakdown: React.FC<{
   title: string;
   empty: string;
-  rows: Array<{ primary: string; secondary: string; sessions: number; onClick?: () => void }>;
-}> = ({ title, empty, rows }) => (
-  <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-    <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">{title}</h2></div>
+  expandedKey?: string;
+  rows: Array<{ key?: string; primary: string; secondary: string; sessions: number; onClick?: () => void }>;
+}> = ({ title, empty, rows, expandedKey }) => (
+  <section className="min-w-0 self-start overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="border-b border-gray-200 px-5 py-4"><h2 className="font-bold text-gray-900">{title}</h2>{rows.some((row) => row.onClick) ? <p className="mt-1 text-xs text-gray-500">Select a row to open its details.</p> : null}</div>
     {!rows.length ? <div className="p-6 text-sm text-gray-500">{empty}</div> : (
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500"><tr><th className="px-5 py-3">Category</th><th className="px-5 py-3 text-right">Sessions</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
-            {rows.map((row, index) => (
-              <tr key={`${row.primary}-${row.secondary}-${index}`} className={row.onClick ? 'transition hover:bg-violet-50/60' : ''}>
-                <td className="p-0" colSpan={row.onClick ? 2 : 1}>
-                  {row.onClick ? (
-                    <button type="button" onClick={row.onClick} className="flex w-full items-center justify-between gap-4 px-5 py-3 text-left">
-                      <span className="min-w-0"><span className="block font-semibold text-gray-900">{row.primary}</span><span className="block text-xs text-gray-500">{row.secondary}</span></span>
-                      <span className="flex shrink-0 items-center gap-2"><span className="font-bold tabular-nums text-violet-700">{formatNumber(row.sessions)}</span><ChevronRight size={15} className="text-gray-400" /></span>
-                    </button>
-                  ) : (
-                    <div className="px-5 py-3"><div className="font-semibold text-gray-900">{row.primary}</div><div className="text-xs capitalize text-gray-500">{row.secondary}</div></div>
-                  )}
-                </td>
-                {!row.onClick ? <td className="px-5 py-3 text-right font-bold tabular-nums text-violet-700">{formatNumber(row.sessions)}</td> : null}
-              </tr>
-            ))}
+            {rows.map((row, index) => {
+              const key = row.key || row.primary + ':' + row.secondary + ':' + index;
+              const expanded = !!row.onClick && expandedKey === key;
+              const content = <><span className="min-w-0"><span className="block break-all font-semibold text-gray-900">{row.primary}</span><span className="block text-xs text-gray-500">{row.secondary}</span></span><span className="flex items-center justify-end gap-2 font-bold tabular-nums text-violet-700">{formatNumber(row.sessions)}{row.onClick ? (expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />) : null}</span></>;
+              return (
+                <React.Fragment key={key}>
+                  <tr className={expanded ? 'bg-violet-50' : ''}>
+                    <td colSpan={2} className="p-0">
+                      {row.onClick ? <button type="button" onClick={row.onClick} aria-haspopup="dialog" aria-expanded={expanded} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_90px] items-center gap-3 px-5 py-3 text-left transition hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600">{content}</button> : <div className="grid w-full grid-cols-[minmax(0,1fr)_90px] items-center gap-3 px-5 py-3">{content}</div>}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -12,6 +12,7 @@ import PublicProfileSettings from './account/PublicProfileSettings';
 import PrivacyVisibility from './account/PrivacyVisibility';
 import AccountSettingsPage from './account/AccountSettingsPage';
 import NotificationsPage from './account/NotificationsPage';
+import ActivitySharingSettings from './account/ActivitySharingSettings';
 
 const AccountPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ const AccountPage: React.FC = () => {
         );
       case 'privacy':
         return (
+          <div className="space-y-4"><ActivitySharingSettings key={currentUser.id} />
           <PrivacyVisibility
             privacy={privacy.settings}
             isLoading={privacy.isLoading}
@@ -62,7 +64,7 @@ const AccountPage: React.FC = () => {
                 : 'Profile visibility saved: private.',
               type: 'success',
             })}
-          />
+          /></div>
         );
       case 'notifications':
         return <NotificationsPage />;

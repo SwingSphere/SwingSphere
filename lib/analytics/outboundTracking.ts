@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { recordMemberActivity } from './memberActivity';
 import { getOutboundDestinationDomain, getOutboundDestinationPath } from './outboundDestination';
 export { getOutboundDestinationDomain, getOutboundDestinationPath } from './outboundDestination';
 
@@ -141,6 +142,18 @@ export const trackOutboundClick = async (
   const entityId = metadata.entityId.trim();
   const placement = metadata.placement.trim();
   if (!entityId || !placement) return;
+
+  // The guarded activity RPC records only members who explicitly enabled sharing.
+  // Exclude contact, directions, and calendar destinations from account activity.
+  if (typeof window !== 'undefined' && ['ticket', 'rsvp', 'booking', 'website', 'social'].includes(metadata.destinationType)) {
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        const domain = metadata.destinationDomain ?? getOutboundDestinationDomain(href);
+        const path = getOutboundDestinationPath(href);
+        void recordMemberActivity('outbound', window.location.pathname, metadata.entityType, entityId, domain.endsWith('.local') ? '' : 'https://' + domain + (path || ''));
+      }
+    }).catch(() => {});
+  }
 
   const payload = {
     p_anonymous_session_id: getAnonymousSessionId(),

@@ -85,28 +85,31 @@ const formatScheduleTime = (start: string, end: string): string => {
   return `${formatter.format(new Date(start))} – ${formatter.format(new Date(end))}`;
 };
 
-const getUpcomingStatus = (event: EventData): { label: string; className: string } => {
-  if (event.entryRequirements?.includes('invite_only')) {
+const getUpcomingStatus = (start: string): { label: string; className: string; dotClassName: string } => {
+  const eventDate = new Date(start);
+  const now = new Date();
+  const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const daysAway = Math.round((eventDay - today) / (24 * 60 * 60 * 1000));
+
+  if (daysAway <= 0) {
     return {
-      label: 'Invites only',
-      className: 'border-fuchsia-400/25 bg-fuchsia-500/10 text-fuchsia-200',
+      label: 'Today',
+      className: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200',
+      dotClassName: 'bg-emerald-400',
     };
   }
-  if (event.tags?.some((tag) => tag.toLowerCase() === 'limited capacity')) {
+  if (daysAway <= 7) {
     return {
-      label: 'Limited',
+      label: 'Soon',
       className: 'border-amber-400/25 bg-amber-500/10 text-amber-200',
-    };
-  }
-  if (event.entryRequirements?.includes('screening_approval_required')) {
-    return {
-      label: 'Approval',
-      className: 'border-red-400/25 bg-red-500/10 text-red-200',
+      dotClassName: 'bg-amber-400',
     };
   }
   return {
-    label: 'On sale',
-    className: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200',
+    label: 'Upcoming',
+    className: 'border-red-400/25 bg-red-500/10 text-red-200',
+    dotClassName: 'bg-red-400',
   };
 };
 
@@ -336,7 +339,7 @@ const HostPage: React.FC = () => {
           : event.isAddressPrivate
             ? 'Location revealed later'
             : event.location.split(',')[0] || 'Venue TBD',
-        availability: getUpcomingStatus(event),
+        availability: getUpcomingStatus(event.time.start),
         to: index ? getEventCanonicalPath(event, index) : undefined,
       }));
   }, [hostEvents, index]);
@@ -617,7 +620,8 @@ const HostPage: React.FC = () => {
                     </span>
                     <span className="order-3 hidden truncate text-xs text-gray-400 md:order-none md:block">{item.region}</span>
                     <span className="order-4 hidden truncate text-xs text-gray-400 md:order-none md:block">{item.venue}</span>
-                    <span className={`order-1 row-span-2 inline-flex w-fit items-center rounded-md border px-2 py-1 text-[10px] font-bold md:order-none md:row-span-1 ${item.availability.className}`}>
+                    <span className={`order-1 row-span-2 inline-flex w-fit items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold md:order-none md:row-span-1 ${item.availability.className}`}>
+                      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${item.availability.dotClassName}`} />
                       {item.availability.label}
                     </span>
                     <ChevronRight size={14} className="order-5 hidden text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-red-300 md:block" />
@@ -708,7 +712,7 @@ const HostPage: React.FC = () => {
                 {hostRegions.map((region, regionIndex) => (
                   <li key={region} className="flex gap-3 py-3 first:pt-1">
                     <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-[11px] font-bold text-red-300">{regionIndex + 1}</span>
-                    <div><p className="text-sm font-semibold text-gray-200">{region}</p><p className="mt-0.5 text-[11px] text-gray-500">Bay Area programming</p></div>
+                    <p className="self-center text-sm font-semibold text-gray-200">{region}</p>
                   </li>
                 ))}
               </ul>

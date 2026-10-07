@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import MemberActivityTracker from './components/MemberActivityTracker';
+import IssueReporter from './components/IssueReporter';
 import App from './App';
 import './index.css';
 import LandingPage from './components/LandingPage';
@@ -130,6 +132,8 @@ root.render(
       <AppProvider>
         <BrowserRouter basename={APP_BASENAME}>
           <InboundAnalyticsTracker />
+          <MemberActivityTracker />
+          <IssueReporter />
           <React.Suspense fallback={<div className="min-h-[40vh] bg-[#030405]" aria-label="Loading SwingSphere" />}>
           <Routes>
             <Route
