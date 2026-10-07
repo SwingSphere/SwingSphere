@@ -1511,6 +1511,51 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       },
     }];
   }), [hostRuntimeEvents]);
+  const travelMapPins = useMemo(() => travelRuntimeEvents.flatMap((event) => {
+    if (event.entityType === 'resort') {
+      const resort = travelResorts.find((item) => item.id === event.listingId);
+      if (!resort) return [];
+      return [{
+        id: event.listingId,
+        type: 'resort' as const,
+        name: resort.name,
+        location: [resort.geopoint.address.city, resort.geopoint.address.region, resort.geopoint.address.country].filter(Boolean).join(', '),
+        logoImageUrl: resort.logoImageUrl,
+        geopoint: {
+          latitude: event.lat,
+          longitude: event.lon,
+          address: {
+            city: resort.geopoint.address.city ?? '',
+            region: resort.geopoint.address.region ?? '',
+            country: resort.geopoint.address.country ?? '',
+          },
+        },
+      }];
+    }
+    if (event.entityType === 'cruise') {
+      const sailing = travelCruiseSailings.find((item) => item.id === event.listingId);
+      if (!sailing) return [];
+      const series = travelCruiseSeries.find((item) => item.id === sailing.cruiseSeriesId);
+      return [{
+        id: event.listingId,
+        type: 'cruise' as const,
+        name: series?.name ?? sailing.name,
+        location: [sailing.departurePort.city, sailing.departurePort.country].filter(Boolean).join(', '),
+        logoImageUrl: sailing.logoImageUrl ?? series?.logoImageUrl,
+        geopoint: {
+          latitude: event.lat,
+          longitude: event.lon,
+          address: {
+            city: sailing.departurePort.city ?? sailing.departurePort.portName,
+            region: '',
+            country: sailing.departurePort.country,
+          },
+        },
+      }];
+    }
+    return [];
+  }), [travelCruiseSailings, travelCruiseSeries, travelResorts, travelRuntimeEvents]);
+
   const globeRuntimeEvents = useMemo(
     () => denseUsPinPrototype
       ? adaptListingsToGlobeEvents(spatialGlobeListings)
@@ -3453,6 +3498,13 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   };
 
   const selectMapListing = (listingId: string) => {
+    const travelEvent = travelRuntimeEvents.find((event) => event.listingId === listingId);
+    if ((travelEvent?.entityType === 'resort' || travelEvent?.entityType === 'cruise') && travelEvent.travelSlug) {
+      navigateInCurrentExperience(travelEvent.entityType === 'resort'
+        ? `/resorts/${travelEvent.travelSlug}`
+        : `/cruises/${travelEvent.travelSlug}`);
+      return;
+    }
     const destination = buildListingDestination(listingId);
     if (!destination || destination.type !== 'listing') return;
     clearPlannedTravelTimers();
@@ -3968,7 +4020,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                 <FlatWorldMap
                   listings={performanceFixtureListings ?? scopedRenderedSpatialMapListings}
                   resolutionListings={denseUsPinPrototype ? USA_DISCOVERY_LISTINGS : performanceFixtureListings ?? listings}
-                  hostPins={performanceFixtureEnabled || denseUsPinPrototype ? [] : scopedHostMapPins}
+                  hostPins={performanceFixtureEnabled || denseUsPinPrototype ? [] : [...scopedHostMapPins, ...travelMapPins]}
                   buildingAssets={buildingAssets}
                   activityRegions={activityRegions}
                   selectedActivityRegionId={activeActivityRegionId}

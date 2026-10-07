@@ -9,7 +9,7 @@ import { getApproximateLocationCenter, isApproximateLocation } from '../../lib/p
 
 export type MapHostPin = {
   id: string;
-  type: 'promoter';
+  type: 'promoter' | 'resort' | 'cruise';
   name: string;
   location: string;
   logoImageUrl?: string;
@@ -41,10 +41,14 @@ const PIN_COLORS = {
   eventActive: 0xf4c95d,
   host: 0x3f8cff,
   hostActive: 0x75b2ff,
+  resort: 0x22c55e,
+  resortActive: 0x86efac,
+  cruise: 0x8b5cf6,
+  cruiseActive: 0xc4b5fd,
   white: 0xf5f5f5,
 } as const;
 
-type PinEntityType = 'club' | 'event' | 'promoter';
+type PinEntityType = 'club' | 'event' | 'promoter' | 'resort' | 'cruise';
 
 type PinView = {
   listing: MapPinEntity;
@@ -144,7 +148,15 @@ const createTipGeometry = (type: PinEntityType): THREE.BufferGeometry => {
 };
 
 const resolveEntityType = (listing: MapPinEntity): PinEntityType =>
-  listing.type === 'club' ? 'club' : listing.type === 'promoter' ? 'promoter' : 'event';
+  listing.type === 'club'
+    ? 'club'
+    : listing.type === 'promoter'
+      ? 'promoter'
+      : listing.type === 'resort'
+        ? 'resort'
+        : listing.type === 'cruise'
+          ? 'cruise'
+          : 'event';
 
 const createClusterView = (cluster: ClusterPinData): ClusterView => {
   const group = new THREE.Group();
@@ -178,7 +190,7 @@ const createClusterView = (cluster: ClusterPinData): ClusterView => {
 };
 
 const getPinCoords = (listing: MapPinEntity) => {
-  if (listing.type === 'promoter') {
+  if (listing.type === 'promoter' || listing.type === 'resort' || listing.type === 'cruise') {
     return { lng: listing.geopoint.longitude, lat: listing.geopoint.latitude };
   }
   if (isApproximateLocation(listing)) {
@@ -197,7 +209,11 @@ const createPinView = (listing: MapPinEntity): PinView | null => {
     ? { base: PIN_COLORS.event, active: PIN_COLORS.eventActive, tip: PIN_COLORS.event }
     : type === 'promoter'
       ? { base: PIN_COLORS.host, active: PIN_COLORS.hostActive, tip: PIN_COLORS.host }
-      : { base: PIN_COLORS.accent, active: PIN_COLORS.active, tip: PIN_COLORS.accent };
+      : type === 'resort'
+        ? { base: PIN_COLORS.resort, active: PIN_COLORS.resortActive, tip: PIN_COLORS.resort }
+        : type === 'cruise'
+          ? { base: PIN_COLORS.cruise, active: PIN_COLORS.cruiseActive, tip: PIN_COLORS.cruise }
+          : { base: PIN_COLORS.accent, active: PIN_COLORS.active, tip: PIN_COLORS.accent };
   const group = new THREE.Group();
   // Keep a stem group for the existing runtime shape, but deliberately do not
   // render a pin stem on the flat map. The destination itself is the target.
@@ -237,7 +253,7 @@ const createPinView = (listing: MapPinEntity): PinView | null => {
     currentScale: 1,
     currentStemScale: 1,
     currentLift: 0,
-    approximateLocation: listing.type !== 'promoter' && isApproximateLocation(listing),
+    approximateLocation: !['promoter', 'resort', 'cruise'].includes(listing.type) && isApproximateLocation(listing as Listing),
     privacyOpacity: 1,
   };
 };
@@ -372,7 +388,7 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       const existing = this.views.get(listing.id);
       if (existing) {
         existing.listing = listing;
-        existing.approximateLocation = listing.type !== 'promoter' && isApproximateLocation(listing);
+        existing.approximateLocation = !['promoter', 'resort', 'cruise'].includes(listing.type) && isApproximateLocation(listing as Listing);
         const coords = getPinCoords(listing);
         if (coords) {
           existing.mercator = maplibregl.MercatorCoordinate.fromLngLat([coords.lng, coords.lat], 0);
@@ -396,7 +412,7 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
 
   setVisibleListingIds(ids: Set<string>) {
     this.views.forEach((view, id) => {
-      view.group.visible = view.type === 'promoter' || ids.has(id) || id === this.selectedId;
+      view.group.visible = ['promoter', 'resort', 'cruise'].includes(view.type) || ids.has(id) || id === this.selectedId;
     });
     this.map?.triggerRepaint();
   }
@@ -537,7 +553,11 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
         ? { base: PIN_COLORS.event, active: PIN_COLORS.eventActive, idleTip: PIN_COLORS.event }
         : view.type === 'promoter'
           ? { base: PIN_COLORS.host, active: PIN_COLORS.hostActive, idleTip: PIN_COLORS.host }
-          : { base: PIN_COLORS.accent, active: PIN_COLORS.active, idleTip: PIN_COLORS.accent };
+          : view.type === 'resort'
+            ? { base: PIN_COLORS.resort, active: PIN_COLORS.resortActive, idleTip: PIN_COLORS.resort }
+            : view.type === 'cruise'
+              ? { base: PIN_COLORS.cruise, active: PIN_COLORS.cruiseActive, idleTip: PIN_COLORS.cruise }
+              : { base: PIN_COLORS.accent, active: PIN_COLORS.active, idleTip: PIN_COLORS.accent };
       view.tip.material.color.setHex(selected || hovered ? palette.active : palette.idleTip);
       view.tip.material.opacity = selected ? 1 : hovered ? 0.98 : 0.92;
       view.glow.material.color.setHex(selected || hovered ? palette.active : palette.base);
