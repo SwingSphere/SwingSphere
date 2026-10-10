@@ -4,6 +4,7 @@ import * as api from '../../lib/api';
 import type { AdminView } from './AdminPanel';
 import AdminEntityIdentity from './AdminEntityIdentity';
 import { brandMediaSourceLabel, resolveBrandLogo, type BrandMediaCatalog } from '../../lib/entityBrandMedia';
+import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 const AdminManageOrganizations: React.FC<{
   organizations: OrganizationData[];
@@ -13,14 +14,32 @@ const AdminManageOrganizations: React.FC<{
   mediaCatalog: BrandMediaCatalog;
   setView: (view: AdminView) => void;
   onDeleted: (organizationId: string) => void;
-}> = ({ organizations, listings, relationships, organizationRelationships, mediaCatalog, setView, onDeleted }) => {
+  filterSpec?: AdminQueueFilterSpec | null;
+  onClearFilter?: () => void;
+}> = ({
+  organizations,
+  listings,
+  relationships,
+  organizationRelationships,
+  mediaCatalog,
+  setView,
+  onDeleted,
+  filterSpec,
+  onClearFilter,
+}) => {
+  const activeFilter = filterSpec?.target === 'organizations' ? filterSpec : null;
+  const filterIdSet = useMemo(
+    () => (activeFilter?.ids?.length ? new Set(activeFilter.ids) : null),
+    [activeFilter],
+  );
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     return [...organizations]
+      .filter((organization) => !filterIdSet || filterIdSet.has(organization.id))
       .filter((organization) => !term || [organization.name, organization.slug, organization.contactEmail, ...organization.displayTypes].some((value) => value?.toLowerCase().includes(term)))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [organizations, query]);
+  }, [filterIdSet, organizations, query]);
 
   const deleteOrganization = async (organization: OrganizationData) => {
     if (!window.confirm(`Delete ${organization.name}? This removes the organization/brand record and unlinks its events, venues, and organization relationships.`)) return;
@@ -38,6 +57,23 @@ const AdminManageOrganizations: React.FC<{
         </div>
         <button type="button" onClick={() => setView('add-organization')} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">+ Add organization / brand</button>
       </div>
+
+      {activeFilter && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-3 text-sm text-indigo-950">
+          <div>
+            <span className="font-bold">Filtered from Operational Queue:</span> {activeFilter.label} ({filtered.length} matching record{filtered.length === 1 ? '' : 's'})
+          </div>
+          {onClearFilter && (
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="rounded-lg border border-indigo-300 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Clear filter · Show all
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, slug, email, or type" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />

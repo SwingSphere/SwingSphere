@@ -13,6 +13,14 @@ import { deleteAuthenticatedAccount } from './lib/accountDeletionServer';
 import { createNominatimBuildingAddressResolver } from './lib/buildingAddressResolver';
 import { queryMicrosoftBuildingFootprints } from './lib/microsoftBuildingFootprintsServer';
 import { createAuthenticatedSupabaseServerClient, requireActiveAdmin } from './lib/adminServerAuth';
+import {
+  isLocalhostRequest,
+  runReleasePreflight,
+  runDeployFrontend,
+  runApplyMigrations,
+  runFullRelease,
+  getReleaseAuditLog,
+} from './lib/admin/releaseServer';
 import { BUILDING_PERSISTENCE_POLICY_VERSION, createBuildingVerificationInputSnapshot, guardBuildingAssetPersistence } from './lib/buildingPersistenceGuard';
 import { auditBuildingGeometry } from './lib/buildingGeometry';
 import type { BuildingAssetHistoryEvent } from './lib/buildingAssetHistory';
@@ -47,6 +55,7 @@ const BUILDING_ADDRESS_CACHE_STORE = path.join(ROOT_DIR, '.codex-temp', 'buildin
 const BUILDING_FOOTPRINT_CACHE_DIR = path.join(ROOT_DIR, '.codex-temp', 'microsoft-building-footprints');
 const BUILDING_AUTO_PERSISTENCE_ENV = 'SWINGSPHERE_BUILDING_AUTO_PERSISTENCE';
 const STREET_VIEW_PROFILES_STORE = path.join(ROOT_DIR, 'data', 'street-view-profiles.local.json');
+const AMBIENT_BUILDING_MASSINGS_STORE = path.join(ROOT_DIR, 'data', 'ambient-building-massings.local.json');
 const GLOBE_RUNTIME_CONFIG_PATH = path.join(ROOT_DIR, 'src', 'features', 'globe', 'runtime', 'GlobeRuntimeConfig.js');
 const GLOBE_BORDER_OVERRIDE_PATH = path.join(ROOT_DIR, 'scripts', 'globe', 'manual-border-overrides.json');
 const GLOBE_BORDER_GENERATOR_PATH = path.join(ROOT_DIR, 'scripts', 'globe', 'build-land-coastlines.mjs');
@@ -236,17 +245,50 @@ const loadLocalSchemaVersion = () => {
       .filter((file) => /^\d{14}_.+\.sql$/.test(file))
       .sort()
     : [];
-  const latest = migrationFiles.at(-1) ?? '';
-  const match = latest.match(/^(\d{14})_(.+)\.sql$/);
+  const migrations = migrationFiles.map((filename) => {
+    const match = filename.match(/^(\d{14})_(.+)\.sql$/);
+    return {
+      version: match?.[1] ?? '',
+      name: match?.[2] ?? '',
+      filename,
+    };
+  }).filter((m) => Boolean(m.version));
+  const latest = migrations.at(-1);
   return {
-    version: match?.[1] ?? '',
-    name: match?.[2] ?? '',
-    filename: latest,
+    version: latest?.version ?? '',
+    name: latest?.name ?? '',
+    filename: latest?.filename ?? '',
+    totalMigrations: migrations.length,
+    versions: migrations.map((m) => m.version),
+    migrations,
   };
 };
 
 const globeShowcaseDataPlugin = () => ({
   name: 'swingsphere-globe-showcase-data',
+  configureServer(server: any) {
+    const watchedStores = [LISTINGS_STORE, BUILDING_ASSETS_STORE];
+    watchedStores.forEach((filePath) => server.watcher.add(filePath));
+    server.watcher.on('change', (changedPath: string) => {
+      const normalizedChanged = path.resolve(changedPath);
+      if (!watchedStores.some((filePath) => path.resolve(filePath) === normalizedChanged)) return;
+
+      [
+        RESOLVED_PUBLIC_LISTINGS_MODULE_ID,
+        RESOLVED_PUBLIC_STREET_VIEW_BUILDING_ASSETS_MODULE_ID,
+        RESOLVED_GLOBE_SHOWCASE_MODULE_ID,
+      ].forEach((moduleId) => {
+        const moduleNode = server.moduleGraph.getModuleById(moduleId);
+        if (moduleNode) server.moduleGraph.invalidateModule(moduleNode);
+      });
+
+      // These virtual modules are derived from local JSON stores rather than
+      // normal ESM imports, so Vite cannot infer the dependency edge itself.
+      // Force a clean browser reload so newly added/edited clubs and building
+      // assets are immediately eligible for Street View without restarting dev.
+      server.ws.send({ type: 'full-reload' });
+    });
+  },
   resolveId(id: string) {
     if (id === GLOBE_SHOWCASE_MODULE_ID) return RESOLVED_GLOBE_SHOWCASE_MODULE_ID;
     if (id === PUBLIC_LISTINGS_MODULE_ID) return RESOLVED_PUBLIC_LISTINGS_MODULE_ID;
@@ -1185,79 +1227,22 @@ const releaseCommand = async (command: string, args: string[], label: string) =>
 };
 
 const runLocalProductionSync = async (authorization?: string | null) => {
-  await requireActiveAdmin(authorization);
-
-  const localSchema = loadLocalSchemaVersion();
-  const { supabase } = createAuthenticatedSupabaseServerClient(authorization);
-  const { data: healthData, error: healthError } = await supabase.rpc('admin_platform_health');
-  if (healthError) throw new Error(`Could not verify production migration state: ${healthError.message}`);
-  const remoteSchema = String((healthData as any)?.database?.latestMigration ?? '').trim();
-  if (!localSchema.version || !remoteSchema) {
-    throw new Error('Could not determine both local and production migration heads.');
+  const plan = await runFullRelease(authorization, { confirm: true });
+  if (!plan.success) {
+    throw new Error(plan.error?.userMessage || 'Production sync failed.');
   }
-  if (remoteSchema > localSchema.version) {
-    throw new Error(
-      `Production migration ${remoteSchema} is ahead of local ${localSchema.version}. Pull/reconcile the checkout instead of deploying over it.`,
-    );
-  }
-
-  const gitBranch = await releaseCommand('git', ['branch', '--show-current'], 'Git branch check');
-  const branch = gitBranch.stdout.trim();
-  if (branch !== 'main') {
-    throw new Error(`Production sync is only allowed from main. Current branch: ${branch || 'unknown'}.`);
-  }
-
-  const conflicts = await releaseCommand('git', ['diff', '--name-only', '--diff-filter=U'], 'Merge-conflict check');
-  if (conflicts.stdout.trim()) {
-    throw new Error(`Resolve merge conflicts before production sync: ${conflicts.stdout.trim().replace(/\r?\n/g, ', ')}`);
-  }
-
-  const migrationDryRun = await releaseCommand('supabase', ['db', 'push', '--dry-run'], 'Supabase migration dry-run');
-  const dryRunText = `${migrationDryRun.stdout}\n${migrationDryRun.stderr}`;
-  const migrationPending = !/Remote database is up to date\./i.test(dryRunText);
-
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  await releaseCommand(npmCommand, ['run', 'build:cloudflare'], 'Production build');
-
-  await releaseCommand('git', [
-    'add',
-    '-A',
-    '--',
-    '.',
-    ':(exclude)scratch/**',
-    ':(exclude).codex-temp/**',
-    ':(exclude)dist/**',
-    ':(exclude).wrangler/**',
-  ], 'Git staging');
-
-  const staged = await runProcessCapture('git', ['diff', '--cached', '--quiet']);
-  let committed = false;
-  if (staged.code === 1) {
-    const message = localSchema.version
-      ? `chore: sync production ${localSchema.version}`
-      : 'chore: sync production';
-    await releaseCommand('git', ['commit', '-m', message], 'Git commit');
-    committed = true;
-  } else if (staged.code !== 0) {
-    throw new Error('Could not determine whether there are staged changes.');
-  }
-
-  if (migrationPending) {
-    await releaseCommand('supabase', ['db', 'push'], 'Supabase migration deployment');
-  }
-
-  await releaseCommand('git', ['push', 'origin', 'main'], 'GitHub push');
-  const deployment = await releaseCommand(npmCommand, ['run', 'deploy:cloudflare'], 'Cloudflare production deployment');
-  const head = await releaseCommand('git', ['rev-parse', '--short', 'HEAD'], 'Git revision check');
-
+  const commitStage = plan.stages.find((s) => s.name === 'commit');
+  const migrationStage = plan.stages.find((s) => s.name === 'migration');
+  const deployStage = plan.stages.find((s) => s.name === 'deploy');
   return {
     ok: true,
-    branch,
-    commit: head.stdout.trim(),
-    committed,
-    migrationPending,
-    migrationApplied: migrationPending,
-    deploymentTail: `${deployment.stdout}\n${deployment.stderr}`.trim().split(/\r?\n/).slice(-8).join('\n'),
+    branch: 'main',
+    commit: commitStage?.detail || 'HEAD',
+    committed: commitStage?.status === 'success',
+    migrationPending: migrationStage?.status === 'success',
+    migrationApplied: migrationStage?.status === 'success',
+    deploymentTail: deployStage?.detail || '',
+    plan,
   };
 };
 
@@ -3230,7 +3215,88 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/release/preflight')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      const preflight = await runReleasePreflight(req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(preflight));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/verify')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      const preflight = await runReleasePreflight(req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(preflight));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/deploy-frontend')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      const body = await readJsonBody(req).catch(() => ({}));
+      const plan = await runDeployFrontend(req.headers.authorization, body);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(plan));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/apply-migrations')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      const body = await readJsonBody(req).catch(() => ({}));
+      const plan = await runApplyMigrations(req.headers.authorization, body);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(plan));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/full')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      const body = await readJsonBody(req).catch(() => ({}));
+      const plan = await runFullRelease(req.headers.authorization, body);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(plan));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/release/audit-log')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
+      await requireActiveAdmin(req.headers.authorization);
+      const audit = getReleaseAuditLog();
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(audit));
+      return;
+    }
+
     if (req.method === 'POST' && req.url.startsWith('/api/admin/deployment-sync/run')) {
+      if (!isLocalhostRequest(req)) {
+        res.statusCode = 403;
+        res.end('Release operations are only permitted from localhost.');
+        return;
+      }
       const payload = await runLocalProductionSync(req.headers.authorization);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(payload));
@@ -3252,6 +3318,54 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       const assets = loadBuildingAssetsFromDisk();
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(assets));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/ambient-building-massings')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
+      const url = new URL(req.url, 'http://localhost');
+      const venueId = String(url.searchParams.get('venueId') ?? '').trim();
+      const allSessions = loadJsonArray(AMBIENT_BUILDING_MASSINGS_STORE);
+      if (venueId) {
+        const found = allSessions.find((s: any) => s.venueId === venueId);
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(found?.objects ?? []));
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(allSessions));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/ambient-building-massings/save')) {
+      const admin = await requireBuildingAdmin(req, res);
+      if (!admin) return;
+      const body = await readJsonBody(req);
+      const venueId = String(body?.venueId ?? '').trim();
+      const objects = Array.isArray(body?.objects) ? body.objects : [];
+      if (!venueId) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'venueId is required' }));
+        return;
+      }
+      const allSessions = loadJsonArray(AMBIENT_BUILDING_MASSINGS_STORE);
+      const index = allSessions.findIndex((s: any) => s.venueId === venueId);
+      const updatedSession = {
+        venueId,
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        objects,
+      };
+      if (index >= 0) {
+        allSessions[index] = updatedSession;
+      } else {
+        allSessions.push(updatedSession);
+      }
+      saveJsonArray(AMBIENT_BUILDING_MASSINGS_STORE, allSessions);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: true, count: objects.length }));
       return;
     }
 
@@ -4794,6 +4908,7 @@ export default defineConfig(({ mode }) => {
             '**/data/building-verification-evidence.local.json',
             '**/data/building-verification-reviews.local.json',
             '**/data/building-asset-history.local.json',
+            '**/data/ambient-building-massings.local.json',
           ],
         },
       },

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+<linearGradient id="night" x2="1" y2="1"><stop stop-color="#071039"/><stop offset=".47" stop-color="#291346"/><stop offset="1" stop-color="#16091c"/></linearGradient>
+<linearGradient id="cobalt" x2="0" y2="1"><stop stop-color="#0034b3"/><stop offset="1" stop-color="#02cce7"/></linearGradient>
+<linearGradient id="rose" x2="1" y2="1"><stop stop-color="#fe236f"/><stop offset="1" stop-color="#a61478"/></linearGradient>
+<radialGradient id="sun"><stop stop-color="#ffb338"/><stop offset=".75" stop-color="#f85867"/><stop offset="1" stop-color="#ed2475"/></radialGradient>
+<pattern id="tile" width="70" height="70" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0L70 0 70 70" fill="none" stroke="#f4b25a" stroke-width="2" opacity=".4"/></pattern>
+</defs>
+<rect width="1600" height="900" fill="url(#night)"/>
+<!-- impossible architectural frames -->
+<path d="M0 0H515L407 900H0Z" fill="#092873"/><path d="M0 0L528 0 445 650 0 730" fill="url(#cobalt)" opacity=".65"/>
+<path d="M1075 0H1600V900L1430 665L1300 252Z" fill="#1d104e"/>
+<path d="M1050 0H1600V315L1320 265Z" fill="#660e65"/>
+<path d="M435 0L505 0 415 900 360 900Z" fill="#02c4fa" opacity=".8"/>
+<path d="M390 0L450 0 345 900 285 900Z" fill="#040a43"/>
+<path d="M445 0L520 0 440 900 390 900Z" fill="#05c9fc" opacity=".4"/>
+<!-- floating surreal doorway + eye -->
+<path d="M720 85L1030 145L1000 672L730 608Z" fill="#f99c56"/>
+<path d="M744 110L1005 160L980 640L754 589Z" fill="#0d1248"/>
+<ellipse cx="855" cy="340" rx="175" ry="81" fill="#f5b566" transform="rotate(-7 855 340)"/>
+<ellipse cx="855" cy="340" rx="145" ry="56" fill="#091b50" transform="rotate(-7 855 340)"/>
+<circle cx="855" cy="340" r="66" fill="#02bdcd"/><circle cx="855" cy="340" r="30" fill="#090d3f"/><circle cx="873" cy="319" r="14" fill="#f8f1c9"/>
+<path d="M696 378Q810 475 1005 358" fill="none" stroke="#ee8c87" stroke-width="11"/>
+<!-- levitating clock hand curves, surreal -->
+<circle cx="1229" cy="170" r="117" fill="url(#sun)"/>
+<path d="M1177 124Q1240 99 1290 157Q1275 233 1190 225" fill="none" stroke="#43134b" stroke-width="16" stroke-linecap="round"/>
+<path d="M1233 165L1275 113" stroke="#39154d" stroke-width="13" stroke-linecap="round"/>
+<!-- cubist sofa planes referencing venue -->
+<path d="M98 550L595 460L830 615L544 800L65 724Z" fill="#c82987"/>
+<path d="M98 550L595 460L617 619L105 707Z" fill="#f35b83"/>
+<path d="M595 460L830 615L780 746L617 619Z" fill="#86236c"/>
+<path d="M105 707L617 619L780 746L534 865L75 787Z" fill="#25185b"/>
+<path d="M205 600L400 560L466 669L211 713Z" fill="#ff8b77" opacity=".8"/>
+<path d="M398 558L593 513L618 622L466 669Z" fill="#bd2875"/>
+<!-- luminous fragmented glass tables -->
+<path d="M657 670L1077 555L1343 696L935 834Z" fill="#070d42" stroke="#ee9560" stroke-width="11"/>
+<path d="M718 670L1071 580L1272 695L930 799Z" fill="#00d9ea"/>
+<path d="M769 686L1064 612L1210 695L924 770Z" fill="#027ad5"/>
+<path d="M996 617L953 761" stroke="#c9f6ff" stroke-width="5" opacity=".9"/>
+<path d="M1179 650L895 747" stroke="#c9f6ff" stroke-width="4" opacity=".65"/>
+<!-- cubist figure / sculpture -->
+<path d="M1413 270L1474 347L1422 447L1351 412Z" fill="#ffc67c"/>
+<path d="M1378 275L1455 247L1496 325L1435 352Z" fill="#ec6380"/>
+<path d="M1394 344L1438 367L1477 349L1468 394L1414 401Z" fill="#081748"/>
+<path d="M1415 411Q1500 453 1517 590L1301 625Q1308 464 1415 411Z" fill="#0085b7"/>
+<path d="M1415 417L1497 526L1380 602L1301 625Z" fill="#f6a34a" opacity=".82"/>
+<path d="M1290 620L1580 576L1600 900L1345 900Z" fill="#130d34"/>
+<!-- floor wave and Catalan mosaic -->
+<path d="M0 795Q280 705 580 818T1180 816T1600 820V900H0Z" fill="url(#tile)"/>
+<path d="M0 795Q280 705 580 818T1180 816T1600 820" fill="none" stroke="#f49b51" stroke-width="8"/>
+<!-- moonlike roses in impossible ceiling -->
+<path d="M575 100Q620 25 685 105Q720 164 654 196Q568 215 575 100Z" fill="#ff508d" opacity=".83"/>
+<path d="M585 105Q644 70 665 139Q637 167 610 132Q643 102 653 135" fill="none" stroke="#fdbe87" stroke-width="9"/>
+<path d="M0 0H1600V900H0Z" fill="none" stroke="#ee9d6b" stroke-width="12" opacity=".4"/>
+</svg>

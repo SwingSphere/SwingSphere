@@ -5,13 +5,13 @@ import { formatClockTime, resolveCountryFlagEmoji } from '../../lib/formatting';
 import type { ClubData } from '../../types';
 import ClubPageLayout from './ClubPageLayout';
 import { DetailContextNav } from '../navigation/DetailContextNav';
-import { hasStreetViewForListing } from '../../lib/streetViewAvailability';
+import { isStreetViewEligibleListing } from '../../lib/streetViewAvailability';
 import ClubHero from './ClubHero';
 import WhatHappensHere from './WhatHappensHere';
 import ClubEventsPreview, { type ClubEventPreviewItem } from './ClubEventsPreview';
 import ClubRhythmSection from './ClubRhythmSection';
 import ClubMapCard from './ClubMapCard';
-import { getListingImageUrl } from '../../lib/listingImage';
+import { getListingImageUrl, handleListingImageError } from '../../lib/listingImage';
 import { formatListingPhysicalAddress, getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
 import { getApproximateLocationCenter, isApproximateLocation } from '../../lib/publicLocation';
 import ClubReviewsSection from './ClubReviewsSection';
@@ -119,6 +119,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
   const isApproximateVenue = isApproximateLocation(club);
   const approximateCenter = isApproximateVenue ? getApproximateLocationCenter(club) : null;
   const physicalClubCoords = getListingPhysicalCoords(club) ?? { lat: club.geopoint.latitude, lng: club.geopoint.longitude };
+  const streetViewAvailable = !isApproximateVenue && isStreetViewEligibleListing(club);
   const clubCoords = approximateCenter
     ? { lat: approximateCenter.latitude, lng: approximateCenter.longitude }
     : physicalClubCoords;
@@ -134,7 +135,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             { label: club.name },
           ]}
           listingId={club.id}
-          streetViewAvailable={!isApproximateVenue && hasStreetViewForListing(club.id)}
+          streetViewAvailable={streetViewAvailable}
           showSpatialActions={false}
           className="hidden sm:flex"
         />
@@ -167,7 +168,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
               <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
                 {thumbnails.slice(0, 6).map((image, index) => (
                   <a key={`${image}-${index}`} href={image} target="_blank" rel="noopener noreferrer" className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                    <img src={image} alt={`${club.name} photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                    <img src={image} onError={handleListingImageError} alt={`${club.name} photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                     {index === 5 && thumbnails.length > 6 ? <span className="absolute inset-0 grid place-items-center bg-black/55 text-sm font-bold text-white">+{thumbnails.length - 6}</span> : null}
                   </a>
                 ))}
@@ -196,6 +197,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
             lng={clubCoords.lng}
             isPrivateLocation={Boolean(extended.isPrivateLocation) || isApproximateVenue}
             showDirections={!isApproximateVenue}
+            streetViewAvailable={streetViewAvailable}
             onEditLocation={onEditLocation}
           />
           {ownerOrganization ? (

@@ -9,7 +9,10 @@ import type {
   ResortData,
   VenueData,
 } from '../types';
+import { mockOrganizations } from '../data/mockOrganizations';
 import { supabase } from './supabase';
+
+const mockOrgById = new Map(mockOrganizations.map((org) => [org.id, org]));
 
 const requireData = <T,>(data: T | null, error: unknown): T => {
   if (error) throw error;
@@ -23,29 +26,32 @@ const currentUserId = async (): Promise<string | null> => {
   return data.user?.id ?? null;
 };
 
-const mapOrganization = (row: any): OrganizationData => ({
-  id: row.id,
-  type: 'organization',
-  name: row.name,
-  slug: row.slug,
-  displayTypes: row.display_types ?? [],
-  descriptionShort: row.description_short ?? undefined,
-  descriptionFull: row.description_full ?? undefined,
-  website: row.website ?? undefined,
-  instagram: row.instagram ?? undefined,
-  fetlife: row.fetlife ?? undefined,
-  contactEmail: row.contact_email ?? undefined,
-  logoImageUrl: row.logo_image_url ?? undefined,
-  headerImageUrl: row.header_image_url ?? undefined,
-  galleryImageUrls: row.gallery_image_urls ?? [],
-  operatingRegions: row.operating_regions ?? [],
-  globePresence: row.globe_presence ?? undefined,
-  standards: row.standards ?? [],
-  status: row.status,
-  postedByUserId: row.created_by ?? undefined,
-  createdAt: row.created_at ?? undefined,
-  updatedAt: row.updated_at ?? undefined,
-});
+const mapOrganization = (row: any): OrganizationData => {
+  const fallbackOrg = mockOrgById.get(row.id);
+  return {
+    id: row.id,
+    type: 'organization',
+    name: row.name,
+    slug: row.slug,
+    displayTypes: row.display_types ?? [],
+    descriptionShort: row.description_short ?? undefined,
+    descriptionFull: row.description_full ?? undefined,
+    website: row.website ?? undefined,
+    instagram: row.instagram ?? undefined,
+    fetlife: row.fetlife ?? undefined,
+    contactEmail: row.contact_email ?? undefined,
+    logoImageUrl: row.logo_image_url ?? fallbackOrg?.logoImageUrl ?? undefined,
+    headerImageUrl: row.header_image_url ?? fallbackOrg?.headerImageUrl ?? undefined,
+    galleryImageUrls: row.gallery_image_urls ?? [],
+    operatingRegions: row.operating_regions ?? [],
+    globePresence: row.globe_presence ?? undefined,
+    standards: row.standards ?? [],
+    status: row.status,
+    postedByUserId: row.created_by ?? undefined,
+    createdAt: row.created_at ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
+  };
+};
 
 const mapVenue = (row: any): VenueData => ({
   id: row.id,
@@ -198,7 +204,21 @@ const mapCruiseSailing = (row: any): CruiseSailingData => ({
 export const getOrganizations = async (): Promise<OrganizationData[]> => {
   const { data, error } = await supabase.from('organizations').select('*').order('name');
   if (error) throw error;
-  return (data ?? []).map(mapOrganization);
+  const remoteOrgs = (data ?? []).map(mapOrganization);
+  const byId = new Map<string, OrganizationData>();
+  for (const mockOrg of mockOrganizations) {
+    byId.set(mockOrg.id, mockOrg);
+  }
+  for (const remoteOrg of remoteOrgs) {
+    const existing = byId.get(remoteOrg.id);
+    byId.set(remoteOrg.id, {
+      ...(existing ?? {}),
+      ...remoteOrg,
+      logoImageUrl: remoteOrg.logoImageUrl ?? existing?.logoImageUrl,
+      headerImageUrl: remoteOrg.headerImageUrl ?? existing?.headerImageUrl,
+    });
+  }
+  return Array.from(byId.values());
 };
 
 export const saveOrganization = async (organization: OrganizationData): Promise<OrganizationData> => {

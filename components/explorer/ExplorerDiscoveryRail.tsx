@@ -9,6 +9,7 @@ import {
   Star,
 } from 'lucide-react';
 import type { Listing, OrganizationData } from '../../types';
+import type { EntityIndex } from '../../lib/entityIndex';
 import type { ExplorerListingType } from './ExplorerProvider';
 import { useAppStore } from '../../store/appStore';
 import TimeLensModal from '../time-lens/TimeLensModal';
@@ -59,6 +60,7 @@ type ExplorerDiscoveryRailProps = {
   onNearMe?: () => void;
   variant?: 'docked' | 'floating';
   surfaceMode?: 'globe' | 'map';
+  entityIndex?: EntityIndex;
 };
 
 const ExplorerDiscoveryRail: React.FC<ExplorerDiscoveryRailProps> = ({
@@ -81,6 +83,7 @@ const ExplorerDiscoveryRail: React.FC<ExplorerDiscoveryRailProps> = ({
   onReturnToWorld,
   onNearMe,
   variant = 'docked',
+  entityIndex,
 }) => {
   const { timeLens, setTimeLens, clearTimeLens } = useAppStore();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -320,6 +323,7 @@ const ExplorerDiscoveryRail: React.FC<ExplorerDiscoveryRailProps> = ({
                     selected={listing.id === selectedListingId}
                     isTransitioning={isListTransitioning}
                     onSelect={() => onSelectListing(listing.id)}
+                    entityIndex={entityIndex}
                   />
                 ))}
               </div>
@@ -347,10 +351,10 @@ const ExplorerHostCard: React.FC<{
       onClick={onSelect}
       className={`group relative grid h-full min-h-0 w-full grid-cols-[58px_1fr_auto] items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.22)] backdrop-blur-md outline-none transition ${selected ? 'border-cyan-300/65 bg-cyan-400/10' : 'border-white/[0.08] bg-[rgba(12,16,24,0.46)] hover:border-cyan-300/25 hover:bg-white/[0.07]'}`}
     >
-      <img src={heroImage} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20" />
+      <img src={heroImage} onError={handleListingImageError} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20" />
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/62 to-black/72" />
       <span className="relative z-10 h-[58px] w-[58px] overflow-hidden rounded-md border border-white/10 bg-black/55">
-        <img src={logoImage} alt={`${organization.name} logo`} className="h-full w-full object-contain" />
+        <img src={logoImage} onError={handleListingImageError} alt={`${organization.name} logo`} className="h-full w-full object-contain" />
       </span>
       <span className="relative z-10 min-w-0">
         <span className="block truncate text-sm font-bold text-white">{organization.name}</span>
@@ -373,7 +377,8 @@ const ExplorerListingCard: React.FC<{
   selected: boolean;
   isTransitioning: boolean;
   onSelect: () => void;
-}> = ({ listing, distanceLabel, selected, isTransitioning, onSelect }) => {
+  entityIndex?: EntityIndex;
+}> = ({ listing, distanceLabel, selected, isTransitioning, onSelect, entityIndex }) => {
   const physicalAddress = getListingPhysicalAddress(listing);
   const reviewScore = listing.reviewScore;
   const ratingTotal = reviewScore ? reviewScore.thumbsUp + reviewScore.thumbsDown : 0;
@@ -390,7 +395,7 @@ const ExplorerListingCard: React.FC<{
       className={`group relative grid h-full min-h-0 w-full grid-cols-[58px_1fr_auto] items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.22)] backdrop-blur-md outline-none cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-160 ease-out motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/30 ${selected ? 'border-red-500/70 bg-red-500/12' : 'border-white/[0.08] bg-[rgba(12,16,24,0.46)] hover:border-white/18 hover:bg-white/[0.07]'} ${isTransitioning ? 'opacity-96' : 'opacity-100'}`}
     >
       <img
-        src={getListingCardImageUrl(listing)}
+        src={getListingCardImageUrl(listing, entityIndex)}
         onError={handleListingImageError}
         alt=""
         loading="lazy"
@@ -399,7 +404,7 @@ const ExplorerListingCard: React.FC<{
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/62 to-black/72" />
       <span className="relative z-10 h-[58px] w-[58px] overflow-hidden rounded-md border border-white/10 bg-black/55 shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
         <img
-          src={getListingLogoUrl(listing)}
+          src={getListingLogoUrl(listing, entityIndex)}
           onError={handleListingImageError}
           alt=""
           aria-hidden="true"
@@ -408,7 +413,7 @@ const ExplorerListingCard: React.FC<{
         />
         <span className="absolute inset-0 bg-black/20" />
         <img
-          src={getListingLogoUrl(listing)}
+          src={getListingLogoUrl(listing, entityIndex)}
           onError={handleListingImageError}
           alt={`${listing.name} logo`}
           loading="lazy"

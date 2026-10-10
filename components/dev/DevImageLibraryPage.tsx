@@ -1,1674 +1,2702 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CircleHelp, Eye, ExternalLink, ImageOff, RefreshCw, Search, ShieldAlert, Trash2, Upload, UserRound, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Eye,
+  FileWarning,
+  Filter,
+  FolderOpen,
+  GitMerge,
+  Grid,
+  History,
+  Image as ImageIcon,
+  Info,
+  Layers,
+  Link2,
+  Link2Off,
+  List,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  X,
+} from 'lucide-react';
 import * as api from '../../lib/api';
+import { adminFetchJson } from '../../lib/adminApi';
 import { supabase } from '../../lib/supabase';
+import {
+  appendConsolidationAuditEntry,
+  applyAssetAssignmentToListing,
+  buildCanonicalMediaCatalog,
+  computeFileSha256Hex,
+  evaluateAssetRoleQuality,
+  formatRatioBadge,
+  previewDuplicateConsolidation,
+  readConsolidationAuditLog,
+  removeEventLogoOverrideFromListing,
+  saveStoredUploadMetadata,
+  validateExternalImageUrl,
+  type AssetStatusBadge,
+  type CanonicalAssetCategory,
+  type CanonicalAssetUsage,
+  type CanonicalEntityType,
+  type CanonicalMediaAsset,
+  type ConsolidationAuditEntry,
+  type ConsolidationPreview,
+  type DuplicateCandidateKind,
+  type DuplicateReviewGroup,
+  type MissingMediaAssignmentSlot,
+} from '../../lib/media/canonicalAssetModel';
+import {
+  resolveEventLogoState,
+  type BrandMediaCatalog,
+} from '../../lib/entityBrandMedia';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { isPlaceholderMediaUrl } from '../../lib/entityBrandMedia';
-import { getMediaRule, MEDIA_OWNER_TYPES, MEDIA_ROLES } from '../../lib/media/mediaRules';
-import type { MediaAsset, MediaOwnerType, MediaRole, MediaStatus } from '../../lib/media/types';
-import MediaUploader from '../media/MediaUploader';
+import { ALLOWED_MEDIA_MIME_TYPES, formatMaxUploadSize, getMediaRule } from '../../lib/media/mediaRules';
+import type { MediaAsset, MediaOwnerType, MediaRole } from '../../lib/media/types';
+import MediaLibraryPickerModal from '../media/MediaLibraryPickerModal';
+import type {
+  ClubBrandData,
+  ClubData,
+  CruiseSailingData,
+  CruiseSeriesData,
+  EventData,
+  EventSeriesData,
+  Listing,
+  OrganizationData,
+  OrganizationVenueRelationship,
+  ResortData,
+  User,
+  VenueData,
+} from '../../types';
 
-type ImageSource = 'media_asset' | 'legacy_url';
-type ImageUsage = 'current' | 'extra' | 'unresolved';
+type WorkspaceTab = 'browser' | 'duplicates' | 'inheritance';
+type ViewMode = 'grid' | 'list';
+type UsageFilter =
+  | 'all'
+  | 'linked'
+  | 'unlinked'
+  | 'multi_ref'
+  | 'inherited'
+  | 'redundant_copies'
+  | 'duplicates'
+  | 'external_url'
+  | 'broken_or_invalid'
+  | 'recent';
+type SortMode = 'most_referenced' | 'recent' | 'alphabetical' | 'attention';
 
-type ImageRecord = {
-  id: string;
-  ownerType: MediaOwnerType;
-  ownerId: string;
-  ownerName: string;
-  ownerWebsite?: string;
-  storageOwnerId?: string;
-  role: MediaRole;
-  roleLabel: string;
-  url: string | null;
-  source: ImageSource;
-  status?: MediaStatus;
-  mediaAssetId?: string;
-  externalId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: string;
-  uploaderName?: string;
-  altText?: string | null;
-  sortOrder?: number;
-  aspectMode?: 'contain' | 'cover';
-  targetRatio?: string | null;
-  focalPointX?: number | null;
-  focalPointY?: number | null;
-  isCurrent: boolean;
-  currentReason?: string;
-  ownerResolved: boolean;
-  usage: ImageUsage;
-  ownerRoleCount: number;
-  exactDuplicateCount: number;
-  currentConflict: boolean;
-};
-
-type LegacyMediaEntity = {
-  id: string;
-  type: Exclude<MediaOwnerType, 'user'>;
-  name: string;
-  website?: string;
-  logoImageUrl?: string;
-  headerImageUrl?: string;
-  galleryImageUrls?: string[];
-  mediaAssets?: MediaAsset[];
-};
-
-type LoadResult = {
-  images: ImageRecord[];
-  warnings: string[];
-};
-
-type ImageDimensions = {
+type ImageMetric = {
   width: number;
   height: number;
-  source: 'source' | 'delivery';
+  broken?: boolean;
 };
 
-type QuickView = 'all' | 'needs_attention' | 'external' | 'pending_review';
-type ModerationFilter = 'all' | MediaStatus | 'legacy';
-type AttentionTone = 'amber' | 'red' | 'violet';
-type AttentionReason = {
-  key: string;
-  label: string;
-  detail: string;
-  tone: AttentionTone;
-};
+const CATEGORY_TABS: Array<{ id: CanonicalAssetCategory; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'logo', label: 'Logos' },
+  { id: 'hero', label: 'Heroes' },
+  { id: 'flyer', label: 'Flyers' },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'other', label: 'Other' },
+];
 
-const PAGE_SIZE = 60;
-
-const ownerLabels: Record<MediaOwnerType, string> = {
+const ENTITY_TYPE_LABELS: Record<CanonicalEntityType, string> = {
   club: 'Club',
-  club_brand: 'Club brand',
-  venue: 'Venue',
   event: 'Event',
-  organization: 'Organization',
-  event_series: 'Event series',
+  organization: 'Host / Org',
+  venue: 'Venue',
   resort: 'Resort',
-  cruise_series: 'Cruise series',
-  cruise_sailing: 'Cruise sailing',
-  user: 'User profile',
+  cruise_series: 'Cruise Series',
+  cruise_sailing: 'Cruise Sailing',
+  event_series: 'Event Series',
+  club_brand: 'Club Brand',
+  user: 'User Profile',
 };
 
-const roleLabels: Record<MediaRole, string> = {
-  logo: 'Logo',
-  avatar: 'Avatar',
-  hero: 'Hero',
-  cover: 'Cover',
-  flyer: 'Flyer',
-  gallery: 'Gallery',
+const DUPLICATE_KIND_LABELS: Record<DuplicateCandidateKind, string> = {
+  exact_byte_duplicates: 'Exact Byte Duplicates',
+  duplicate_db_records: 'Same-File DB Records & Inherited Copies',
+  repeated_storage_urls: 'Shared / Repeated URLs',
+  visual_similarity_candidates: 'Visual / Revision Candidates',
+  unused_or_orphaned: 'Unused / Orphaned Assets',
 };
 
-const isNonEmptyUrl = (value: unknown): value is string => typeof value === 'string' && Boolean(value.trim());
-
-const normalizeWebsiteUrl = (value: unknown): string | undefined => {
-  if (!isNonEmptyUrl(value)) return undefined;
-  const raw = value.trim();
-  try {
-    return new URL(raw).toString();
-  } catch {
-    try {
-      return new URL(`https://${raw}`).toString();
-    } catch {
-      return undefined;
-    }
-  }
+const BADGE_TONES: Record<AssetStatusBadge, string> = {
+  Linked: 'border-emerald-500/35 bg-emerald-500/12 text-emerald-200',
+  Unlinked: 'border-amber-500/35 bg-amber-500/12 text-amber-200',
+  Missing: 'border-red-500/40 bg-red-500/15 text-red-200',
+  'Potential Duplicate': 'border-violet-500/40 bg-violet-500/15 text-violet-200',
+  'Invalid URL': 'border-red-500/45 bg-red-500/15 text-red-200',
+  'Broken Image': 'border-red-500/45 bg-red-500/20 text-red-100',
+  'Referenced by Multiple Listings': 'border-sky-500/35 bg-sky-500/12 text-sky-200',
 };
 
-// Legacy fields can still point directly at a venue's server. A working URL
-// today is not a durable SwingSphere-hosted image.
-const isExternalImageReference = (image: ImageRecord) => {
-  if (!image.isCurrent || image.source !== 'legacy_url' || !image.url) return false;
-  try {
-    const host = new URL(image.url, window.location.origin).hostname.toLowerCase();
-    return host !== window.location.hostname.toLowerCase()
-      && host !== 'swingsphere.co'
-      && host !== 'www.swingsphere.co'
-      && host !== 'imagedelivery.net'
-      && !host.endsWith('.imagedelivery.net')
-      && !host.endsWith('.supabase.co');
-  } catch {
-    return false;
-  }
+const formatBytes = (bytes?: number | null): string => {
+  if (!bytes || bytes <= 0) return 'Managed variant';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
-const addLegacyEntityImages = (target: ImageRecord[], entity: LegacyMediaEntity) => {
-  const add = (role: MediaRole, value: unknown, suffix: string) => {
-    if (!isNonEmptyUrl(value)) return;
-    const replacedByAsset = (role === 'logo' || role === 'hero')
-      && entity.mediaAssets?.some((asset) => asset.role === role);
-    target.push({
-      id: `legacy:${entity.type}:${entity.id}:${suffix}:${value}`,
-      ownerType: entity.type,
-      ownerId: entity.id,
-      ownerName: entity.name,
-      ownerWebsite: normalizeWebsiteUrl(entity.website),
-      role,
-      roleLabel: roleLabels[role],
-      url: value.trim(),
-      source: 'legacy_url',
-      isCurrent: !replacedByAsset,
-      currentReason: replacedByAsset ? undefined : 'Current entity field',
-      ownerResolved: true,
-      usage: replacedByAsset ? 'extra' : 'current',
-      ownerRoleCount: 1,
-      exactDuplicateCount: 1,
-      currentConflict: false,
-    });
-  };
-
-  add('logo', entity.logoImageUrl, 'logo');
-  add('hero', entity.headerImageUrl, 'header');
-  (entity.galleryImageUrls ?? []).forEach((url, index) => add('gallery', url, `gallery-${index}`));
-};
-
-const loadImageLibrary = async (): Promise<LoadResult> => {
-  const warnings: string[] = [];
-  const images: ImageRecord[] = [];
-
-  const [
-    listingsResult,
-    usersResult,
-    venuesResult,
-    eventSeriesResult,
-    organizationsResult,
-    clubBrandsResult,
-    resortsResult,
-    cruiseSeriesResult,
-    cruiseSailingsResult,
-    mediaAssetsResult,
-  ] = await Promise.allSettled([
-    api.getListings(),
-    api.getUsers(),
-    api.getVenues(),
-    api.getEventSeries(),
-    api.getOrganizations(),
-    api.getClubBrands(),
-    api.getResorts(),
-    api.getCruiseSeries(),
-    api.getCruiseSailings(),
-    supabase
-      .from('media_assets')
-      .select('id, owner_type, owner_id, role, storage_provider, external_id, status, aspect_mode, target_ratio, alt_text, sort_order, focal_point_x, focal_point_y, created_by, created_at, updated_at')
-      .order('updated_at', { ascending: false }),
-  ]);
-
-  const entityIdentities = new Map<string, { id: string; name: string; website?: string }>();
-  const attachedAssetIds = new Set<string>();
-  const registerEntity = (entity: { type: MediaOwnerType; id: string; name: string; website?: string; mediaAssets?: MediaAsset[] }) => {
-    const identity = { id: entity.id, name: entity.name, website: normalizeWebsiteUrl(entity.website) };
-    entityIdentities.set(`${entity.type}:${entity.id}`, identity);
-    entityIdentities.set(`${entity.type}:${getMediaOwnerId(entity.type, entity.id)}`, identity);
-    (entity.mediaAssets ?? []).forEach((asset) => attachedAssetIds.add(asset.id));
-  };
-
-  const registerCollection = <T extends { type: MediaOwnerType; id: string; name: string }>(
-    result: PromiseSettledResult<T[]>,
-    label: string,
-  ): T[] => {
-    if (result.status === 'rejected') {
-      warnings.push(`${label}: ${result.reason instanceof Error ? result.reason.message : 'failed to load'}`);
-      return [];
-    }
-    result.value.forEach(registerEntity);
-    return result.value;
-  };
-
-  const listings = registerCollection(listingsResult, 'Listings');
-  const venues = registerCollection(venuesResult, 'Venues');
-  const eventSeries = registerCollection(eventSeriesResult, 'Event series');
-  const organizations = registerCollection(organizationsResult, 'Organizations');
-  const clubBrands = registerCollection(clubBrandsResult, 'Club brands');
-  const resorts = registerCollection(resortsResult, 'Resorts');
-  const cruiseSeries = registerCollection(cruiseSeriesResult, 'Cruise series');
-  const cruiseSailings = registerCollection(cruiseSailingsResult, 'Cruise sailings');
-
-  const users = usersResult.status === 'fulfilled' ? usersResult.value : [];
-  if (usersResult.status === 'rejected') {
-    warnings.push(`User profiles: ${usersResult.reason instanceof Error ? usersResult.reason.message : 'failed to load'}`);
-  }
-  const userNames = new Map(users.map((user) => [user.id, user.displayName || user.handle || user.id] as const));
-  users.forEach((user) => {
-    const name = userNames.get(user.id) ?? user.id;
-    const identity = { id: user.id, name };
-    entityIdentities.set(`user:${user.id}`, identity);
-    entityIdentities.set(`user:${getMediaOwnerId('user', user.id)}`, identity);
-  });
-
-  [
-    ...listings,
-    ...venues,
-    ...eventSeries,
-    ...organizations,
-    ...clubBrands,
-    ...resorts,
-    ...cruiseSeries,
-    ...cruiseSailings,
-  ].forEach((entity) => addLegacyEntityImages(images, entity as LegacyMediaEntity));
-
-  users.forEach((user) => {
-    if (!isNonEmptyUrl(user.avatarUrl)) return;
-    images.push({
-      id: `legacy:user:${user.id}:avatar:${user.avatarUrl}`,
-      ownerType: 'user',
-      ownerId: user.id,
-      ownerName: user.displayName || user.handle || user.id,
-      role: 'avatar',
-      roleLabel: roleLabels.avatar,
-      url: user.avatarUrl.trim(),
-      source: 'legacy_url',
-      isCurrent: true,
-      currentReason: 'Current profile field',
-      ownerResolved: true,
-      usage: 'current',
-      ownerRoleCount: 1,
-      exactDuplicateCount: 1,
-      currentConflict: false,
-    });
-  });
-
-  if (mediaAssetsResult.status === 'rejected') {
-    warnings.push(`Canonical media: ${mediaAssetsResult.reason instanceof Error ? mediaAssetsResult.reason.message : 'failed to load'}`);
-  } else if (mediaAssetsResult.value.error) {
-    warnings.push(`Canonical media: ${mediaAssetsResult.value.error.message}`);
-  } else {
-    const mediaAssets = (mediaAssetsResult.value.data ?? []) as MediaAsset[];
-    const latestApprovedProfileAssetIds = new Set<string>();
-    const seenProfileRoles = new Set<string>();
-
-    [...mediaAssets]
-      .filter((asset) => asset.owner_type === 'user' && asset.status === 'approved' && (asset.role === 'avatar' || asset.role === 'hero'))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .forEach((asset) => {
-        const key = `${asset.owner_id}:${asset.role}`;
-        if (seenProfileRoles.has(key)) return;
-        seenProfileRoles.add(key);
-        latestApprovedProfileAssetIds.add(asset.id);
-      });
-
-    mediaAssets.forEach((asset) => {
-      const rule = getMediaRule(asset.role);
-      const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: rule.defaultVariant });
-      const ownerKey = `${asset.owner_type}:${asset.owner_id}`;
-      const resolvedOwner = entityIdentities.get(ownerKey);
-      const isAttached = attachedAssetIds.has(asset.id);
-      const isProfileDisplayAsset = latestApprovedProfileAssetIds.has(asset.id);
-      images.push({
-        id: `asset:${asset.id}`,
-        ownerType: asset.owner_type,
-        ownerId: resolvedOwner?.id ?? asset.owner_id,
-        ownerName: resolvedOwner?.name ?? asset.owner_id,
-        ownerWebsite: resolvedOwner?.website,
-        storageOwnerId: asset.owner_id,
-        role: asset.role,
-        roleLabel: roleLabels[asset.role],
-        url,
-        source: 'media_asset',
-        status: asset.status,
-        mediaAssetId: asset.id,
-        externalId: asset.external_id,
-        createdAt: asset.created_at,
-        updatedAt: asset.updated_at,
-        createdBy: asset.created_by ?? undefined,
-        uploaderName: asset.created_by ? userNames.get(asset.created_by) ?? undefined : undefined,
-        altText: asset.alt_text,
-        sortOrder: asset.sort_order,
-        aspectMode: asset.aspect_mode,
-        targetRatio: asset.target_ratio,
-        focalPointX: asset.focal_point_x,
-        focalPointY: asset.focal_point_y,
-        isCurrent: isAttached || isProfileDisplayAsset,
-        currentReason: isAttached ? 'Attached to current entity record' : isProfileDisplayAsset ? 'Newest approved profile media' : undefined,
-        ownerResolved: Boolean(resolvedOwner),
-        usage: isAttached || isProfileDisplayAsset ? 'current' : 'unresolved',
-        ownerRoleCount: 1,
-        exactDuplicateCount: 1,
-        currentConflict: false,
-      });
-    });
-  }
-
-  // Canonical Cloudflare URLs are also written into some current entity fields.
-  // Collapse that field reference into the canonical card and mark the asset current.
-  const canonicalByOwnerRoleUrl = new Map<string, ImageRecord[]>();
-  images.filter((image) => image.source === 'media_asset' && image.url).forEach((image) => {
-    const key = `${image.ownerType}|${image.ownerId}|${image.role}|${image.url}`;
-    const group = canonicalByOwnerRoleUrl.get(key) ?? [];
-    group.push(image);
-    canonicalByOwnerRoleUrl.set(key, group);
-  });
-
-  const collapsed = images.filter((image) => {
-    if (image.source !== 'legacy_url' || !image.url) return true;
-    const key = `${image.ownerType}|${image.ownerId}|${image.role}|${image.url}`;
-    const canonicalMatches = canonicalByOwnerRoleUrl.get(key);
-    if (!canonicalMatches?.length) return true;
-    const canonical = canonicalMatches[0];
-    canonical.isCurrent = true;
-    canonical.usage = 'current';
-    canonical.currentReason = canonical.currentReason ?? 'Current entity field points to this asset';
-    return false;
-  });
-
-  const ownerRoleGroups = new Map<string, ImageRecord[]>();
-  collapsed.forEach((image) => {
-    const key = `${image.ownerType}|${image.ownerId}|${image.role}`;
-    const group = ownerRoleGroups.get(key) ?? [];
-    group.push(image);
-    ownerRoleGroups.set(key, group);
-  });
-
-  ownerRoleGroups.forEach((group) => {
-    const currentCount = group.filter((image) => image.isCurrent).length;
-    const hasCurrent = currentCount > 0;
-    const referenceCounts = new Map<string, number>();
-    group.forEach((image) => {
-      const signature = image.externalId ? `cf:${image.externalId}` : `url:${image.url ?? image.id}`;
-      referenceCounts.set(signature, (referenceCounts.get(signature) ?? 0) + 1);
-    });
-    group.forEach((image) => {
-      const signature = image.externalId ? `cf:${image.externalId}` : `url:${image.url ?? image.id}`;
-      image.ownerRoleCount = group.length;
-      image.exactDuplicateCount = referenceCounts.get(signature) ?? 1;
-      image.currentConflict = currentCount > 1;
-      if (!image.isCurrent) image.usage = hasCurrent ? 'extra' : 'unresolved';
-    });
-  });
-
-  return {
-    images: collapsed.sort((a, b) => {
-      const nameCompare = a.ownerName.localeCompare(b.ownerName);
-      if (nameCompare !== 0) return nameCompare;
-      if (a.role !== b.role) return a.role.localeCompare(b.role);
-      if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-      return new Date(b.createdAt ?? b.updatedAt ?? 0).getTime() - new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
-    }),
-    warnings,
-  };
-};
-
-const formatAssetDate = (value?: string) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
-};
-
-const getApiError = async (response: Response) => {
-  const text = await response.text().catch(() => '');
-  if (!text) return `Request failed with status ${response.status}.`;
-  try {
-    const parsed = JSON.parse(text);
-    return parsed.error || parsed.message || text;
-  } catch {
-    return text;
-  }
-};
-
-const getMediaAuditUrl = (image: ImageRecord) => {
-  if (image.externalId) {
-    return getCloudflareImageUrl({ externalId: image.externalId, variant: 'public', fallback: image.url });
-  }
-  return image.url;
-};
-
-const isPlaceholderRecord = (image: ImageRecord) => Boolean(image.url && isPlaceholderMediaUrl(image.url));
-
-const mediaQaTargets: Record<MediaRole, { width: number; height: number; label: string }> = {
-  logo: { width: 384, height: 384, label: '384×384 contain' },
-  avatar: { width: 384, height: 384, label: '384×384 cover' },
-  hero: { width: 1280, height: 720, label: '1280×720 cover' },
-  cover: { width: 1280, height: 427, label: '1280×427 cover' },
-  flyer: { width: 1080, height: 1350, label: '1080×1350 contain' },
-  gallery: { width: 1280, height: 960, label: '1280×960 cover' },
-};
-
-const getMediaQa = (role: MediaRole, dimensions?: ImageDimensions) => {
-  if (!dimensions) return null;
-  const target = mediaQaTargets[role];
-  const rule = getMediaRule(role);
-  const widthScale = target.width / Math.max(1, dimensions.width);
-  const heightScale = target.height / Math.max(1, dimensions.height);
-  const requiredUpscale = rule.aspectMode === 'contain'
-    ? Math.min(widthScale, heightScale)
-    : Math.max(widthScale, heightScale);
-  const resolution = requiredUpscale <= 0.75 ? 'Excellent' : requiredUpscale <= 1 ? 'Good' : requiredUpscale <= 1.35 ? 'Usable but small' : 'Too small';
-  const resolutionTone = requiredUpscale <= 1 ? 'good' : requiredUpscale <= 1.35 ? 'warn' : 'bad';
-  const ratio = dimensions.width / Math.max(1, dimensions.height);
-  const shape = role === 'logo'
-    ? ratio >= 2.5 ? 'Wide · width-limited' : ratio > 1.25 ? 'Wide · width-limited' : ratio <= 0.4 ? 'Very tall' : ratio < 0.8 ? 'Tall' : 'Square-ish'
-    : null;
-  const shapeTone = role === 'logo' && ratio <= 0.4 ? 'warn' : 'good';
-  return { resolution, resolutionTone, shape, shapeTone, targetLabel: target.label, requiredUpscale } as const;
-};
-
-const getAttentionReasons = (
-  image: ImageRecord,
-  broken: boolean,
-  dimensions?: ImageDimensions,
-): AttentionReason[] => {
-  const reasons: AttentionReason[] = [];
-  if (isPlaceholderRecord(image)) reasons.push({ key: 'placeholder', label: 'Placeholder', detail: 'Known temporary placeholder media is still referenced.', tone: 'amber' });
-  if (isExternalImageReference(image)) reasons.push({ key: 'external', label: 'External image', detail: 'This current image is loaded from another website. Upload a copy to SwingSphere Images and attach it here so changes or outages at that site do not break the listing.', tone: 'amber' });
-  if (image.usage === 'extra') reasons.push({ key: 'extra', label: 'Extra upload', detail: 'Another image is currently selected for this owner and role.', tone: 'amber' });
-  if (image.exactDuplicateCount > 1) reasons.push({ key: 'duplicate', label: 'Duplicate ref', detail: 'Multiple records point to the same underlying image reference.', tone: 'violet' });
-  if (image.usage === 'unresolved' || !image.ownerResolved) reasons.push({ key: 'unresolved', label: 'Unresolved', detail: 'SwingSphere cannot confidently match this media to a current owner state.', tone: 'violet' });
-  if (image.currentConflict) reasons.push({ key: 'conflict', label: 'Multiple current refs', detail: 'More than one image is claiming to be current for the same owner and role.', tone: 'red' });
-  if (broken) reasons.push({ key: 'broken', label: 'Broken', detail: 'The image failed to load in the current browser session.', tone: 'red' });
-  if (image.status === 'pending_review') reasons.push({ key: 'pending', label: 'Pending review', detail: 'Canonical media is waiting for an administrator moderation decision.', tone: 'amber' });
-  if (image.status === 'rejected') reasons.push({ key: 'rejected', label: 'Rejected', detail: 'This canonical asset has been rejected but remains in media history.', tone: 'red' });
-  const mediaQa = getMediaQa(image.role, dimensions);
-  if (mediaQa?.resolutionTone === 'warn') reasons.push({ key: 'small', label: `Small ${image.roleLabel.toLowerCase()}`, detail: `The detected resolution is usable but requires some upscaling to reach SwingSphere's ${mediaQa.targetLabel} target.`, tone: 'amber' });
-  if (mediaQa?.resolutionTone === 'bad') reasons.push({ key: 'too-small', label: `Low-res ${image.roleLabel.toLowerCase()}`, detail: `The detected resolution requires significant upscaling to reach SwingSphere's ${mediaQa.targetLabel} target and may look soft.`, tone: 'red' });
-  return reasons;
-};
-
-const getRoleUsageDescription = (image: ImageRecord) => {
-  const roleUse: Record<MediaRole, string> = {
-    logo: 'Feeds identity treatments such as detail headers, discovery cards, sidebars, and other surfaces that request the current logo.',
-    avatar: 'Feeds member/profile identity surfaces that request the current avatar.',
-    hero: 'Feeds hero and background presentation where the current hero image is requested.',
-    cover: 'Feeds wide cover or banner presentation where supported.',
-    flyer: 'Feeds event-flyer presentation and flyer previews.',
-    gallery: 'Feeds gallery rails, media collections, and gallery previews.',
-  };
-  return roleUse[image.role];
-};
-
-const attentionToneClass: Record<AttentionTone, string> = {
-  amber: 'border-amber-300/20 bg-amber-300/[0.07] text-amber-200',
-  red: 'border-red-400/20 bg-red-400/[0.07] text-red-300',
-  violet: 'border-violet-400/20 bg-violet-400/[0.07] text-violet-300',
-};
-
-type ReplaceableMediaRole = 'logo' | 'hero';
-
-const replaceOwnerMedia = async (image: ImageRecord, asset: MediaAsset, role: ReplaceableMediaRole) => {
-  const rule = getMediaRule(role);
-  const deliveryUrl = getCloudflareImageUrl({ externalId: asset.external_id, variant: rule.defaultVariant });
-  const roleLabel = roleLabels[role].toLowerCase();
-  if (!deliveryUrl) throw new Error(`The replacement uploaded, but SwingSphere could not build its Cloudflare ${roleLabel} delivery URL.`);
-
-  if (image.ownerType === 'club' || image.ownerType === 'event') {
-    const listings = await api.getListings();
-    const owner = listings.find((item) => item.id === image.ownerId);
-    if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement ${roleLabel}.`);
-    const mediaAssets = [...(owner.mediaAssets ?? []).filter((item) => item.role !== role), asset];
-    const mediaFields = role === 'logo' ? { logoImageUrl: deliveryUrl } : { headerImageUrl: deliveryUrl };
-    if (owner.type === 'club') {
-      await api.saveClub({ ...owner, ...mediaFields, mediaAssets }, { requirePersistence: true });
-    } else {
-      await api.saveEvent({ ...owner, ...mediaFields, mediaAssets });
-    }
-    return;
-  }
-
-  if (image.ownerType === 'user') {
-    throw new Error(`${roleLabels[role]} replacement is not supported for ${ownerLabels[image.ownerType].toLowerCase()} records.`);
-  }
-
-  const loaders = {
-    venue: api.getVenues,
-    organization: api.getOrganizations,
-    event_series: api.getEventSeries,
-    club_brand: api.getClubBrands,
-    resort: api.getResorts,
-    cruise_series: api.getCruiseSeries,
-    cruise_sailing: api.getCruiseSailings,
-  } as const;
-  const savers = {
-    venue: api.saveVenue,
-    organization: api.saveOrganization,
-    event_series: api.saveEventSeries,
-    club_brand: api.saveClubBrand,
-    resort: api.saveResort,
-    cruise_series: api.saveCruiseSeries,
-    cruise_sailing: api.saveCruiseSailing,
-  } as const;
-
-  const ownerType = image.ownerType as keyof typeof loaders;
-  const owners = await loaders[ownerType]();
-  const owner = owners.find((item: { id: string }) => item.id === image.ownerId);
-  if (!owner) throw new Error(`Could not reload ${image.ownerName} before attaching the replacement ${roleLabel}.`);
-  const mediaFields = role === 'logo' ? { logoImageUrl: deliveryUrl } : { headerImageUrl: deliveryUrl };
-  await (savers[ownerType] as (value: any) => Promise<unknown>)({ ...owner, ...mediaFields });
-};
-
-const mediaAssetFromImageRecord = (image: ImageRecord): MediaAsset | null => {
-  if (
-    image.source !== 'media_asset'
-    || !image.mediaAssetId
-    || !image.externalId
-    || !image.status
-    || !image.createdAt
-    || !image.updatedAt
-  ) return null;
-  const rule = getMediaRule(image.role);
-  return {
-    id: image.mediaAssetId,
-    owner_type: image.ownerType,
-    owner_id: image.storageOwnerId ?? getMediaOwnerId(image.ownerType, image.ownerId),
-    role: image.role,
-    storage_provider: 'cloudflare_images',
-    external_id: image.externalId,
-    status: image.status,
-    aspect_mode: image.aspectMode ?? rule.aspectMode,
-    target_ratio: image.targetRatio ?? rule.targetRatio,
-    alt_text: image.altText ?? null,
-    sort_order: image.sortOrder ?? 0,
-    focal_point_x: image.focalPointX ?? null,
-    focal_point_y: image.focalPointY ?? null,
-    created_by: image.createdBy ?? null,
-    created_at: image.createdAt,
-    updated_at: image.updatedAt,
-  };
-};
-
-const clearPlaceholderReference = async (image: ImageRecord) => {
-  if (!image.url || image.source !== 'legacy_url' || !isPlaceholderMediaUrl(image.url)) {
-    throw new Error('This image is not a removable placeholder URL reference.');
-  }
-  if (image.ownerType === 'user') {
-    throw new Error('Profile placeholder cleanup is not supported from this dev tool yet.');
-  }
-
-  const clearFields = <T extends Record<string, any>>(owner: T): T => {
-    if (image.role === 'logo') return { ...owner, logoImageUrl: undefined };
-    if (image.role === 'hero' || image.role === 'cover') return { ...owner, headerImageUrl: undefined };
-    if (image.role === 'gallery') {
-      return {
-        ...owner,
-        galleryImageUrls: (owner.galleryImageUrls ?? []).filter((url: string) => url !== image.url),
-      };
-    }
-    return owner;
-  };
-
-  if (image.ownerType === 'club' || image.ownerType === 'event') {
-    const listings = await api.getListings();
-    const owner = listings.find((item) => item.id === image.ownerId);
-    if (!owner) throw new Error(`Could not reload ${image.ownerName} before clearing its placeholder.`);
-    const next = clearFields(owner);
-    if (owner.type === 'club') {
-      await api.saveClub(next as typeof owner, { requirePersistence: true });
-    } else {
-      await api.saveEvent(next as typeof owner);
-    }
-    return;
-  }
-
-  const loaders = {
-    venue: api.getVenues,
-    organization: api.getOrganizations,
-    event_series: api.getEventSeries,
-    club_brand: api.getClubBrands,
-    resort: api.getResorts,
-    cruise_series: api.getCruiseSeries,
-    cruise_sailing: api.getCruiseSailings,
-  } as const;
-  const savers = {
-    venue: api.saveVenue,
-    organization: api.saveOrganization,
-    event_series: api.saveEventSeries,
-    club_brand: api.saveClubBrand,
-    resort: api.saveResort,
-    cruise_series: api.saveCruiseSeries,
-    cruise_sailing: api.saveCruiseSailing,
-  } as const;
-
-  const ownerType = image.ownerType as keyof typeof loaders;
-  const owners = await loaders[ownerType]();
-  const owner = owners.find((item: { id: string }) => item.id === image.ownerId);
-  if (!owner) throw new Error(`Could not reload ${image.ownerName} before clearing its placeholder.`);
-  await (savers[ownerType] as (value: any) => Promise<unknown>)(clearFields(owner as Record<string, any>));
+const formatShortDate = (iso?: string | null): string => {
+  if (!iso) return 'Catalog seed';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Catalog seed';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const DevImageLibraryPage: React.FC = () => {
-  const [images, setImages] = useState<ImageRecord[]>([]);
-  const [warnings, setWarnings] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [query, setQuery] = useState('');
-  const [ownerType, setOwnerType] = useState<'all' | MediaOwnerType>('all');
-  const [role, setRole] = useState<'all' | MediaRole>('all');
-  const [source, setSource] = useState<'all' | ImageSource>('all');
-  const [usage, setUsage] = useState<'all' | ImageUsage | 'exact_duplicate' | 'placeholder'>('all');
-  const [moderationFilter, setModerationFilter] = useState<ModerationFilter>('all');
-  const [quickView, setQuickView] = useState<QuickView>('all');
-  const [brokenOnly, setBrokenOnly] = useState(false);
+  // Raw catalog state
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationData[]>([]);
+  const [venues, setVenues] = useState<VenueData[]>([]);
+  const [relationships, setRelationships] = useState<OrganizationVenueRelationship[]>([]);
+  const [eventSeries, setEventSeries] = useState<EventSeriesData[]>([]);
+  const [clubBrands, setClubBrands] = useState<ClubBrandData[]>([]);
+  const [resorts, setResorts] = useState<ResortData[]>([]);
+  const [cruiseSeries, setCruiseSeries] = useState<CruiseSeriesData[]>([]);
+  const [cruiseSailings, setCruiseSailings] = useState<CruiseSailingData[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [mediaAssetRows, setMediaAssetRows] = useState<MediaAsset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusBanner, setStatusBanner] = useState<{ tone: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  // UI Workspace & Filter state
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('browser');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [categoryFilter, setCategoryFilter] = useState<CanonicalAssetCategory>('all');
+  const [entityTypeFilter, setEntityTypeFilter] = useState<'all' | CanonicalEntityType>('all');
+  const [usageFilter, setUsageFilter] = useState<UsageFilter>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('most_referenced');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [entityScopeFilter, setEntityScopeFilter] = useState<{ entityType: CanonicalEntityType; entityId: string; entityName: string } | null>(null);
   const [page, setPage] = useState(1);
-  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
-  const [deleteTarget, setDeleteTarget] = useState<ImageRecord | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
-  const [cleanupNotice, setCleanupNotice] = useState('');
-  const [dimensionsById, setDimensionsById] = useState<Record<string, ImageDimensions>>({});
-  const [replacementBusyId, setReplacementBusyId] = useState<string | null>(null);
-  const [replacementError, setReplacementError] = useState('');
-  const [heroRecropFile, setHeroRecropFile] = useState<File | null>(null);
-  const [heroRecropBusyId, setHeroRecropBusyId] = useState<string | null>(null);
-  const [placeholderTarget, setPlaceholderTarget] = useState<ImageRecord | null>(null);
-  const [clearingPlaceholder, setClearingPlaceholder] = useState(false);
-  const [placeholderError, setPlaceholderError] = useState('');
-  const [detailsTarget, setDetailsTarget] = useState<ImageRecord | null>(null);
-  const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
-  const [moderationError, setModerationError] = useState('');
+  const pageSize = viewMode === 'grid' ? 24 : 36;
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    loadImageLibrary()
-      .then((result) => {
-        if (!active) return;
-        setImages(result.images);
-        setWarnings(result.warnings);
-        setBrokenIds(new Set());
-      })
-      .catch((error) => {
-        if (!active) return;
-        setImages([]);
-        setWarnings([error instanceof Error ? error.message : 'Image library failed to load.']);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [refreshKey]);
+  // Image dimensions & broken state tracking
+  const [metricsByCanonicalId, setMetricsByCanonicalId] = useState<Record<string, ImageMetric>>({});
 
-  useEffect(() => {
-    if (!detailsTarget) return;
-    const refreshed = images.find((image) => image.id === detailsTarget.id);
-    if (refreshed) {
-      setDetailsTarget((current) => current?.id === refreshed.id ? refreshed : current);
-      return;
+  // Bounded Detail Drawer state
+  const [selectedCanonicalId, setSelectedCanonicalId] = useState<string | null>(null);
+
+  // Assignment form state inside Detail Drawer
+  const [assignEntityType, setAssignEntityType] = useState<CanonicalEntityType>('event');
+  const [assignEntityId, setAssignEntityId] = useState<string>('');
+  const [assignRole, setAssignRole] = useState<'logo' | 'hero' | 'flyer' | 'gallery'>('flyer');
+  const [assignEntitySearch, setAssignEntitySearch] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Upload & Quick-Replace Modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadTargetEntityType, setUploadTargetEntityType] = useState<CanonicalEntityType>('event');
+  const [uploadTargetEntityId, setUploadTargetEntityId] = useState<string>('');
+  const [uploadTargetRole, setUploadTargetRole] = useState<'logo' | 'hero' | 'flyer' | 'gallery'>('flyer');
+  const [uploadQueuedFiles, setUploadQueuedFiles] = useState<
+    Array<{
+      file: File;
+      previewUrl: string;
+      sha256?: string;
+      width?: number;
+      height?: number;
+      matchingExistingAsset?: CanonicalMediaAsset;
+    }>
+  >([]);
+  const [uploadExternalUrlInput, setUploadExternalUrlInput] = useState('');
+  const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const [uploadModalError, setUploadModalError] = useState('');
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Choose From Media Library Picker Modal (used from Missing Slots & Inheritance tab)
+  const [pickerContext, setPickerContext] = useState<{
+    entityType: CanonicalEntityType;
+    entityId: string;
+    entityName: string;
+    role: 'logo' | 'hero' | 'flyer' | 'gallery';
+  } | null>(null);
+
+  // Duplicate Review & Consolidation state
+  const [duplicateCategoryFilter, setDuplicateCategoryFilter] = useState<'all' | DuplicateCandidateKind>('all');
+  const [selectedCanonicalByGroup, setSelectedCanonicalByGroup] = useState<Record<string, string>>({});
+  const [consolidationPreview, setConsolidationPreview] = useState<ConsolidationPreview | null>(null);
+  const [isConsolidating, setIsConsolidating] = useState(false);
+
+  // Inheritance Inspector filter state
+  const [inheritanceSearch, setInheritanceSearch] = useState('');
+  const [inheritanceModeFilter, setInheritanceModeFilter] = useState<'all' | 'inherited_host' | 'explicit_override' | 'redundant_copy' | 'fallback'>('all');
+
+  // Audit Trail Modal state
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditEntries, setAuditEntries] = useState<ConsolidationAuditEntry[]>(() => readConsolidationAuditLog());
+
+  const loadCatalog = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [
+        listingsRes,
+        orgsRes,
+        venuesRes,
+        relsRes,
+        seriesRes,
+        brandsRes,
+        resortsRes,
+        cruiseSeriesRes,
+        cruiseSailingsRes,
+        usersRes,
+        mediaRowsRes,
+      ] = await Promise.all([
+        api.getListings().catch(() => []),
+        api.getOrganizations().catch(() => []),
+        api.getVenues().catch(() => []),
+        api.getOrganizationVenueRelationships().catch(() => []),
+        api.getEventSeries().catch(() => []),
+        api.getClubBrands().catch(() => []),
+        api.getResorts().catch(() => []),
+        api.getCruiseSeries().catch(() => []),
+        api.getCruiseSailings().catch(() => []),
+        api.getUsers().catch(() => []),
+        supabase
+          .from('media_assets')
+          .select('*')
+          .neq('status', 'deleted')
+          .order('created_at', { ascending: false })
+          .limit(1000),
+      ]);
+
+      setListings(listingsRes);
+      setOrganizations(orgsRes);
+      setVenues(venuesRes);
+      setRelationships(relsRes);
+      setEventSeries(seriesRes);
+      setClubBrands(brandsRes);
+      setResorts(resortsRes);
+      setCruiseSeries(cruiseSeriesRes);
+      setCruiseSailings(cruiseSailingsRes);
+      setUsers(usersRes);
+      setMediaAssetRows((mediaRowsRes.data as MediaAsset[] | null) ?? []);
+    } finally {
+      setIsLoading(false);
     }
-    const sibling = images.find((image) => image.ownerType === detailsTarget.ownerType && image.ownerId === detailsTarget.ownerId);
-    setDetailsTarget(sibling ?? null);
-  }, [images, detailsTarget?.id, detailsTarget?.ownerId, detailsTarget?.ownerType]);
+  }, []);
 
-  const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return images.filter((image) => {
-      const broken = brokenIds.has(image.id) || !image.url;
-      const attentionReasons = getAttentionReasons(image, broken, dimensionsById[image.id]);
-      if (ownerType !== 'all' && image.ownerType !== ownerType) return false;
-      if (role !== 'all' && image.role !== role) return false;
-      if (source !== 'all' && image.source !== source) return false;
-      if (moderationFilter === 'legacy' && image.source !== 'legacy_url') return false;
-      if (moderationFilter !== 'all' && moderationFilter !== 'legacy' && image.status !== moderationFilter) return false;
-      if (usage === 'exact_duplicate' && image.exactDuplicateCount <= 1) return false;
-      if (usage === 'placeholder' && !isPlaceholderRecord(image)) return false;
-      if (usage !== 'all' && usage !== 'exact_duplicate' && usage !== 'placeholder' && image.usage !== usage) return false;
-      if (quickView === 'needs_attention' && attentionReasons.length === 0) return false;
-      if (quickView === 'external' && !isExternalImageReference(image)) return false;
-      if (quickView === 'pending_review' && image.status !== 'pending_review') return false;
-      if (brokenOnly && !broken) return false;
-      if (!normalizedQuery) return true;
-      return [image.ownerName, image.ownerId, image.storageOwnerId, image.ownerType, image.role, image.url, image.externalId, image.mediaAssetId, image.currentReason, image.usage, image.status, image.uploaderName, image.createdBy]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+  useEffect(() => {
+    void loadCatalog();
+  }, [loadCatalog]);
+
+  const catalogResult = useMemo(
+    () =>
+      buildCanonicalMediaCatalog({
+        listings,
+        organizations,
+        venues,
+        relationships,
+        eventSeries,
+        clubBrands,
+        resorts,
+        cruiseSeries,
+        cruiseSailings,
+        users,
+        mediaAssetRows,
+      }),
+    [
+      clubBrands,
+      cruiseSailings,
+      cruiseSeries,
+      eventSeries,
+      listings,
+      mediaAssetRows,
+      organizations,
+      relationships,
+      resorts,
+      users,
+      venues,
+    ],
+  );
+
+  const brandCatalog: BrandMediaCatalog = useMemo(
+    () => ({
+      listings,
+      venues,
+      organizations,
+      relationships,
+      eventSeries,
+      clubBrands,
+      resorts,
+      cruiseSeries,
+      cruiseSailings,
+    }),
+    [clubBrands, cruiseSailings, cruiseSeries, eventSeries, listings, organizations, relationships, resorts, venues],
+  );
+
+  // Enrich assets with live broken-image badges when detected
+  const enrichedAssets = useMemo(() => {
+    return catalogResult.assets.map((asset) => {
+      const metric = metricsByCanonicalId[asset.canonicalId];
+      if (!metric?.broken) return asset;
+      const badges: AssetStatusBadge[] = asset.statusBadges.includes('Broken Image')
+        ? asset.statusBadges
+        : [...asset.statusBadges, 'Broken Image'];
+      return {
+        ...asset,
+        statusBadges: badges,
+      };
     });
-  }, [brokenIds, brokenOnly, dimensionsById, images, moderationFilter, ownerType, query, quickView, role, source, usage]);
+  }, [catalogResult.assets, metricsByCanonicalId]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<CanonicalAssetCategory, number> = {
+      all: enrichedAssets.length,
+      logo: 0,
+      hero: 0,
+      flyer: 0,
+      gallery: 0,
+      other: 0,
+    };
+    for (const asset of enrichedAssets) {
+      counts[asset.primaryCategory] = (counts[asset.primaryCategory] ?? 0) + 1;
+    }
+    return counts;
+  }, [enrichedAssets]);
+
+  const filteredAssets = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
+    const list = enrichedAssets.filter((asset) => {
+      if (categoryFilter !== 'all') {
+        const matchesCat =
+          asset.primaryCategory === categoryFilter
+          || (categoryFilter === 'hero' && (asset.roles.includes('hero') || asset.roles.includes('cover')))
+          || asset.roles.includes(categoryFilter as MediaRole);
+        if (!matchesCat) return false;
+      }
+
+      if (entityTypeFilter !== 'all') {
+        if (!asset.usages.some((u) => u.entityType === entityTypeFilter)) return false;
+      }
+
+      if (entityScopeFilter) {
+        if (!asset.usages.some((u) => u.entityType === entityScopeFilter.entityType && u.entityId === entityScopeFilter.entityId)) {
+          return false;
+        }
+      }
+
+      if (usageFilter === 'linked' && asset.activeReferenceCount === 0) return false;
+      if (usageFilter === 'unlinked' && asset.activeReferenceCount > 0) return false;
+      if (usageFilter === 'multi_ref' && asset.activeReferenceCount <= 1) return false;
+      if (usageFilter === 'inherited' && asset.inheritedReferenceCount === 0) return false;
+      if (usageFilter === 'redundant_copies' && asset.redundantCopyCount === 0) return false;
+      if (usageFilter === 'duplicates' && !asset.statusBadges.includes('Potential Duplicate')) return false;
+      if (usageFilter === 'external_url' && asset.storageProvider !== 'external_url') return false;
+      if (
+        usageFilter === 'broken_or_invalid'
+        && !asset.statusBadges.includes('Broken Image')
+        && !asset.statusBadges.includes('Invalid URL')
+      ) {
+        return false;
+      }
+      if (usageFilter === 'recent' && !asset.createdAt && !asset.updatedAt) return false;
+
+      if (!q) return true;
+      const haystack = [
+        asset.title,
+        asset.filename,
+        asset.altText,
+        asset.externalId ?? '',
+        asset.canonicalId,
+        asset.originalPreviewUrl,
+        asset.storageLocationLabel,
+        ...asset.usages.map((u) => `${u.entityName} ${u.entityId} ${u.role} ${u.inheritedFrom?.entityName ?? ''}`),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+
+    list.sort((a, b) => {
+      if (sortMode === 'alphabetical') {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortMode === 'recent') {
+        const aTime = a.updatedAt || a.createdAt || '';
+        const bTime = b.updatedAt || b.createdAt || '';
+        if (aTime !== bTime) return bTime.localeCompare(aTime);
+        return a.title.localeCompare(b.title);
+      }
+      if (sortMode === 'attention') {
+        const aIssues =
+          (a.statusBadges.includes('Broken Image') ? 4 : 0)
+          + (a.statusBadges.includes('Invalid URL') ? 3 : 0)
+          + (a.statusBadges.includes('Potential Duplicate') ? 2 : 0)
+          + (a.statusBadges.includes('Unlinked') ? 1 : 0);
+        const bIssues =
+          (b.statusBadges.includes('Broken Image') ? 4 : 0)
+          + (b.statusBadges.includes('Invalid URL') ? 3 : 0)
+          + (b.statusBadges.includes('Potential Duplicate') ? 2 : 0)
+          + (b.statusBadges.includes('Unlinked') ? 1 : 0);
+        if (aIssues !== bIssues) return bIssues - aIssues;
+      }
+      // Default: most_referenced
+      if (a.activeReferenceCount !== b.activeReferenceCount) {
+        return b.activeReferenceCount - a.activeReferenceCount;
+      }
+      return a.title.localeCompare(b.title);
+    });
+
+    return list;
+  }, [categoryFilter, enrichedAssets, entityScopeFilter, entityTypeFilter, searchQuery, sortMode, usageFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [brokenOnly, moderationFilter, ownerType, query, quickView, role, source, usage]);
+  }, [categoryFilter, entityTypeFilter, usageFilter, sortMode, searchQuery, entityScopeFilter, viewMode]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount);
-  const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const currentCount = images.filter((image) => image.isCurrent).length;
-  const extraCount = images.filter((image) => image.usage === 'extra').length;
-  const exactDuplicateCount = images.filter((image) => image.exactDuplicateCount > 1).length;
-  const placeholderCount = images.filter(isPlaceholderRecord).length;
-  const externalCount = images.filter(isExternalImageReference).length;
-  const unresolvedCount = images.filter((image) => image.usage === 'unresolved' || !image.ownerResolved).length;
-  const pendingReviewCount = images.filter((image) => image.status === 'pending_review').length;
-  const needsAttentionCount = images.filter((image) => getAttentionReasons(image, brokenIds.has(image.id) || !image.url, dimensionsById[image.id]).length > 0).length;
-  const brokenVisibleCount = visible.filter((image) => brokenIds.has(image.id) || !image.url).length;
-  const visibleMediaAuditKey = visible
-    .filter((image) => image.url)
-    .map((image) => `${image.id}:${image.externalId ?? image.url}`)
-    .join('|');
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedAssets = useMemo(
+    () => filteredAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [currentPage, filteredAssets, pageSize],
+  );
+
+  const selectedAsset = useMemo(
+    () => enrichedAssets.find((a) => a.canonicalId === selectedCanonicalId) ?? null,
+    [enrichedAssets, selectedCanonicalId],
+  );
+
+  // Selectable entities for assignment
+  const assignableEntities = useMemo(() => {
+    const q = assignEntitySearch.trim().toLowerCase();
+    const items: Array<{ id: string; name: string; subtitle?: string }> = [];
+    if (assignEntityType === 'event') {
+      for (const ev of listings.filter((l): l is EventData => l.type === 'event')) {
+        items.push({ id: ev.id, name: ev.name, subtitle: `${ev.hostName || 'Event'} · ${ev.location || ''}` });
+      }
+    } else if (assignEntityType === 'club') {
+      for (const cl of listings.filter((l): l is ClubData => l.type === 'club')) {
+        items.push({ id: cl.id, name: cl.name, subtitle: cl.location });
+      }
+    } else if (assignEntityType === 'organization') {
+      for (const org of organizations) {
+        items.push({ id: org.id, name: org.name, subtitle: org.displayTypes?.join(', ') });
+      }
+    } else if (assignEntityType === 'venue') {
+      for (const v of venues) {
+        items.push({ id: v.id, name: v.name, subtitle: v.address?.city });
+      }
+    } else if (assignEntityType === 'resort') {
+      for (const r of resorts) {
+        items.push({ id: r.id, name: r.name, subtitle: r.geopoint?.address?.country });
+      }
+    } else if (assignEntityType === 'cruise_series') {
+      for (const cs of cruiseSeries) {
+        items.push({ id: cs.id, name: cs.name });
+      }
+    } else if (assignEntityType === 'cruise_sailing') {
+      for (const s of cruiseSailings) {
+        items.push({ id: s.id, name: s.name, subtitle: s.shipName });
+      }
+    } else if (assignEntityType === 'event_series') {
+      for (const es of eventSeries) {
+        items.push({ id: es.id, name: es.name });
+      }
+    } else if (assignEntityType === 'club_brand') {
+      for (const cb of clubBrands) {
+        items.push({ id: cb.id, name: cb.name });
+      }
+    }
+    const filtered = q
+      ? items.filter((item) => `${item.name} ${item.id} ${item.subtitle ?? ''}`.toLowerCase().includes(q))
+      : items;
+    return filtered.slice(0, 100);
+  }, [
+    assignEntitySearch,
+    assignEntityType,
+    clubBrands,
+    cruiseSailings,
+    cruiseSeries,
+    eventSeries,
+    listings,
+    organizations,
+    resorts,
+    venues,
+  ]);
 
   useEffect(() => {
-    let cancelled = false;
-    const candidates = visible.filter((image) => image.url && !dimensionsById[image.id]);
-    candidates.forEach((image) => {
-      const auditUrl = getMediaAuditUrl(image);
-      if (!auditUrl || !image.url) return;
-      const probe = new Image();
-      const record = (source: ImageDimensions['source']) => {
-        if (cancelled || !probe.naturalWidth || !probe.naturalHeight) return;
-        setDimensionsById((current) => current[image.id]
-          ? current
-          : { ...current, [image.id]: { width: probe.naturalWidth, height: probe.naturalHeight, source } });
-      };
-      probe.onload = () => record(auditUrl === image.url ? 'delivery' : 'source');
-      probe.onerror = () => {
-        if (auditUrl === image.url) return;
-        const fallback = new Image();
-        fallback.onload = () => {
-          if (cancelled || !fallback.naturalWidth || !fallback.naturalHeight) return;
-          setDimensionsById((current) => current[image.id]
-            ? current
-            : { ...current, [image.id]: { width: fallback.naturalWidth, height: fallback.naturalHeight, source: 'delivery' } });
-        };
-        fallback.src = image.url!;
-      };
-      probe.src = auditUrl;
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visibleMediaAuditKey]);
-
-  const handleMediaUploaded = async (image: ImageRecord, asset: MediaAsset, role: ReplaceableMediaRole) => {
-    setReplacementBusyId(image.id);
-    setReplacementError('');
-    const label = roleLabels[role].toLowerCase();
-    try {
-      await replaceOwnerMedia(image, asset, role);
-      setCleanupNotice(`Updated the current ${label} for ${image.ownerName}. The previous ${label} is still preserved as an extra upload until you choose to remove it.`);
-      setDimensionsById((current) => {
-        const next = { ...current };
-        delete next[image.id];
-        return next;
-      });
-      setRefreshKey((value) => value + 1);
-    } catch (error) {
-      setReplacementError(error instanceof Error ? error.message : `The replacement ${label} uploaded but could not be attached to the entity.`);
-      setRefreshKey((value) => value + 1);
-    } finally {
-      setReplacementBusyId(null);
+    if (assignableEntities.length > 0 && !assignableEntities.some((e) => e.id === assignEntityId)) {
+      setAssignEntityId(assignableEntities[0].id);
     }
-  };
+  }, [assignEntityId, assignableEntities]);
 
-  const beginHeroRecrop = async (image: ImageRecord) => {
-    if (image.role !== 'hero' || !image.isCurrent || image.source !== 'media_asset' || !image.url) return;
-    setHeroRecropBusyId(image.id);
-    setReplacementError('');
-    try {
-      const sourceUrl = getMediaAuditUrl(image) ?? image.url;
-      const response = await fetch(sourceUrl);
-      if (!response.ok) throw new Error(`Could not load the current Hero source for recropping (HTTP ${response.status}).`);
-      const blob = await response.blob();
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(blob.type)) {
-        throw new Error('The current Hero source is not available in a crop-compatible JPG, PNG, or WebP format.');
+  // Assign an existing CanonicalMediaAsset to any entity & role without re-uploading
+  const assignCanonicalAssetToEntity = useCallback(
+    async (params: {
+      asset: CanonicalMediaAsset;
+      entityType: CanonicalEntityType;
+      entityId: string;
+      role: 'logo' | 'hero' | 'flyer' | 'gallery';
+    }) => {
+      const { asset, entityType, entityId, role } = params;
+      setIsAssigning(true);
+      setStatusBanner(null);
+      try {
+        const extId = asset.externalId;
+        const resolvedUrl = extId
+          ? getCloudflareImageUrl({
+              externalId: extId,
+              variant:
+                role === 'logo'
+                  ? 'logosquare'
+                  : role === 'flyer'
+                    ? 'flyervertical'
+                    : role === 'gallery'
+                      ? 'galleryfull'
+                      : 'herowide',
+            }) ?? asset.originalPreviewUrl
+          : asset.originalPreviewUrl;
+
+        if (entityType === 'club' || entityType === 'event') {
+          const targetListing = listings.find((l) => l.type === entityType && l.id === entityId);
+          if (!targetListing) throw new Error('Target listing not found.');
+          const updatedListing = applyAssetAssignmentToListing(
+            targetListing,
+            {
+              externalId: asset.externalId,
+              originalPreviewUrl: resolvedUrl,
+              title: asset.title,
+            },
+            role,
+            { explicitEventLogoOverride: entityType === 'event' && role === 'logo' },
+          );
+          const saved =
+            updatedListing.type === 'club'
+              ? await api.saveClub(updatedListing).catch(() => updatedListing)
+              : await api.saveEvent(updatedListing).catch(() => updatedListing);
+          setListings((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'organization') {
+          const target = organizations.find((o) => o.id === entityId);
+          if (!target) throw new Error('Organization not found.');
+          const next: OrganizationData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+            ...(role === 'gallery'
+              ? { galleryImageUrls: Array.from(new Set([...(target.galleryImageUrls ?? []), resolvedUrl])) }
+              : {}),
+          };
+          const saved = await api.saveOrganization(next).catch(() => next);
+          setOrganizations((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'venue') {
+          const target = venues.find((v) => v.id === entityId);
+          if (!target) throw new Error('Venue not found.');
+          const next: VenueData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+            ...(role === 'gallery'
+              ? { galleryImageUrls: Array.from(new Set([...(target.galleryImageUrls ?? []), resolvedUrl])) }
+              : {}),
+          };
+          const saved = await api.saveVenue(next).catch(() => next);
+          setVenues((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'resort') {
+          const target = resorts.find((r) => r.id === entityId);
+          if (!target) throw new Error('Resort not found.');
+          const next: ResortData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+            ...(role === 'gallery'
+              ? { galleryImageUrls: Array.from(new Set([...(target.galleryImageUrls ?? []), resolvedUrl])) }
+              : {}),
+          };
+          const saved = await api.saveResort(next).catch(() => next);
+          setResorts((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'cruise_series') {
+          const target = cruiseSeries.find((cs) => cs.id === entityId);
+          if (!target) throw new Error('Cruise series not found.');
+          const next: CruiseSeriesData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+            ...(role === 'gallery'
+              ? { galleryImageUrls: Array.from(new Set([...(target.galleryImageUrls ?? []), resolvedUrl])) }
+              : {}),
+          };
+          const saved = await api.saveCruiseSeries(next).catch(() => next);
+          setCruiseSeries((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'cruise_sailing') {
+          const target = cruiseSailings.find((s) => s.id === entityId);
+          if (!target) throw new Error('Cruise sailing not found.');
+          const next: CruiseSailingData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+          };
+          const saved = await api.saveCruiseSailing(next).catch(() => next);
+          setCruiseSailings((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'event_series') {
+          const target = eventSeries.find((es) => es.id === entityId);
+          if (!target) throw new Error('Event series not found.');
+          const next: EventSeriesData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+          };
+          const saved = await api.saveEventSeries(next).catch(() => next);
+          setEventSeries((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        } else if (entityType === 'club_brand') {
+          const target = clubBrands.find((cb) => cb.id === entityId);
+          if (!target) throw new Error('Club brand not found.');
+          const next: ClubBrandData = {
+            ...target,
+            ...(role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+            ...(role === 'hero' ? { headerImageUrl: resolvedUrl } : {}),
+          };
+          const saved = await api.saveClubBrand(next).catch(() => next);
+          setClubBrands((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+        }
+
+        setStatusBanner({
+          tone: 'success',
+          message: `Assigned "${asset.title}" to ${ENTITY_TYPE_LABELS[entityType]} (${entityId}) as ${role.toUpperCase()}.`,
+        });
+      } catch (err) {
+        setStatusBanner({
+          tone: 'error',
+          message: err instanceof Error ? err.message : 'Unable to assign asset.',
+        });
+      } finally {
+        setIsAssigning(false);
       }
-      const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
-      setHeroRecropFile(new File([blob], `${image.ownerName.replace(/[^a-zA-Z0-9_-]+/g, '-')}-hero-source.${extension}`, { type: blob.type }));
-    } catch (error) {
-      setReplacementError(error instanceof Error ? error.message : 'The current Hero could not be loaded for recropping.');
-    } finally {
-      setHeroRecropBusyId(null);
-    }
-  };
+    },
+    [clubBrands, cruiseSailings, cruiseSeries, eventSeries, listings, organizations, resorts, venues],
+  );
 
-  const useExistingMediaAsCurrent = async (image: ImageRecord) => {
-    if (image.isCurrent || (image.role !== 'logo' && image.role !== 'hero')) return;
-    const asset = mediaAssetFromImageRecord(image);
-    if (!asset) {
-      setReplacementError('Only complete canonical Logo or Hero assets can be promoted to current media.');
-      return;
-    }
-    if (asset.status !== 'approved') {
-      setReplacementError('Approve this media asset before making it the current Logo or Hero.');
-      return;
-    }
-    await handleMediaUploaded(image, asset, image.role);
-  };
+  // Remove explicit event logo override so host inheritance resumes
+  const handleRemoveEventLogoOverride = useCallback(
+    async (eventId: string) => {
+      const targetEvent = listings.find((l): l is EventData => l.type === 'event' && l.id === eventId);
+      if (!targetEvent) return;
+      const cleaned = removeEventLogoOverrideFromListing(targetEvent);
+      const saved = await api.saveEvent(cleaned).catch(() => cleaned);
+      setListings((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
 
-  const requestPlaceholderClear = (image: ImageRecord) => {
-    if (!image.isCurrent || image.source !== 'legacy_url' || !isPlaceholderRecord(image) || image.ownerType === 'user') return;
-    setPlaceholderError('');
-    setPlaceholderTarget(image);
-  };
-
-  const confirmPlaceholderClear = async () => {
-    if (!placeholderTarget || clearingPlaceholder) return;
-    setClearingPlaceholder(true);
-    setPlaceholderError('');
-    try {
-      await clearPlaceholderReference(placeholderTarget);
-      setCleanupNotice(`Cleared the placeholder ${placeholderTarget.roleLabel.toLowerCase()} reference from ${placeholderTarget.ownerName}. No Cloudflare image was deleted.`);
-      setPlaceholderTarget(null);
-      setRefreshKey((value) => value + 1);
-    } catch (error) {
-      setPlaceholderError(error instanceof Error ? error.message : 'Placeholder cleanup failed.');
-    } finally {
-      setClearingPlaceholder(false);
-    }
-  };
-
-  const handleModeration = async (image: ImageRecord, nextStatus: MediaStatus) => {
-    if (!image.mediaAssetId || moderationBusyId) return;
-    if ((nextStatus === 'rejected' || nextStatus === 'archived') && image.isCurrent) {
-      setModerationError(`Replace or remove the current reference before marking this asset ${nextStatus.replace('_', ' ')}. This prevents non-approved media from remaining visibly attached.`);
-      return;
-    }
-    setModerationBusyId(image.id);
-    setModerationError('');
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error('Your admin session has expired. Sign in again before moderating media.');
-      const response = await fetch('/api/media/moderate-asset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ assetId: image.mediaAssetId, status: nextStatus }),
+      const updatedAudit = appendConsolidationAuditEntry({
+        id: `audit-override-remove-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        actorLabel: 'Administrator',
+        canonicalAssetId: `event:${eventId}:inherited-logo`,
+        canonicalTitle: `${targetEvent.hostName || targetEvent.name} — Inherited Host Logo`,
+        canonicalUrl: targetEvent.logoImageUrl ?? '',
+        consolidatedAssetIds: [],
+        kind: 'redundant_event_logo_cleanup',
+        affectedEntities: [
+          {
+            entityType: 'event',
+            entityId: targetEvent.id,
+            entityName: targetEvent.name,
+            role: 'logo',
+            previousUrl: targetEvent.logoImageUrl,
+            nextUrl: 'Inherited from parent host',
+            action: 'removed_redundant_override',
+          },
+        ],
+        sourceFilesDeleted: false,
       });
-      if (!response.ok) throw new Error(await getApiError(response));
-      setImages((current) => current.map((item) => item.id === image.id ? { ...item, status: nextStatus } : item));
-      setDetailsTarget((current) => current?.id === image.id ? { ...current, status: nextStatus } : current);
-      setCleanupNotice(`${image.ownerName} ${image.roleLabel.toLowerCase()} marked ${nextStatus.replace('_', ' ')}. The moderation change was recorded in the admin audit log.`);
-    } catch (error) {
-      setModerationError(error instanceof Error ? error.message : 'Media moderation failed.');
-    } finally {
-      setModerationBusyId(null);
-    }
-  };
-
-  const requestDelete = (image: ImageRecord) => {
-    if (image.isCurrent || image.source !== 'media_asset' || !image.mediaAssetId || !image.externalId) return;
-    setDeleteError('');
-    setDeleteTarget(image);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTarget?.mediaAssetId || !deleteTarget.externalId || deleting) return;
-    setDeleting(true);
-    setDeleteError('');
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error('Your admin session has expired. Sign in again before deleting media.');
-      const response = await fetch('/api/media/delete-asset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          assetId: deleteTarget.mediaAssetId,
-          externalId: deleteTarget.externalId,
-        }),
+      setAuditEntries(updatedAudit);
+      setStatusBanner({
+        tone: 'success',
+        message: `Removed event logo override on "${targetEvent.name}". Host logo inheritance is now active.`,
       });
-      if (!response.ok) throw new Error(await getApiError(response));
-      const result = await response.json();
-      setCleanupNotice(result.cleanupWarning
-        ? `Removed the unused ${deleteTarget.roleLabel.toLowerCase()} record for ${deleteTarget.ownerName}, but Cloudflare cleanup could not be confirmed: ${result.cleanupWarning}`
-        : result.retainedCloudflareImage
-          ? `Removed the redundant ${deleteTarget.roleLabel.toLowerCase()} reference for ${deleteTarget.ownerName}. The shared Cloudflare image was kept because another media record still uses it.`
-          : `Deleted the unused ${deleteTarget.roleLabel.toLowerCase()} for ${deleteTarget.ownerName} from SwingSphere and Cloudflare Images.`);
-      setDeleteTarget(null);
-      setRefreshKey((value) => value + 1);
-    } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Media deletion failed.');
-    } finally {
-      setDeleting(false);
-    }
-  };
+    },
+    [listings],
+  );
 
-  const resetFilters = () => {
-    setQuery('');
-    setOwnerType('all');
-    setRole('all');
-    setSource('all');
-    setUsage('all');
-    setModerationFilter('all');
-    setQuickView('all');
-    setBrokenOnly(false);
-  };
+  // Execute safe duplicate consolidation after admin confirms preview
+  const executeConsolidation = useCallback(
+    async (preview: ConsolidationPreview) => {
+      setIsConsolidating(true);
+      setStatusBanner(null);
+      try {
+        const canonical = preview.canonicalAsset;
+        for (const item of preview.affectedEntities) {
+          if (item.action === 'removed_redundant_override' && item.entityType === 'event') {
+            const ev = listings.find((l): l is EventData => l.type === 'event' && l.id === item.entityId);
+            if (ev) {
+              const cleaned = removeEventLogoOverrideFromListing(ev);
+              const saved = await api.saveEvent(cleaned).catch(() => cleaned);
+              setListings((prev) => prev.map((l) => (l.id === saved.id ? saved : l)));
+            }
+          } else if (
+            item.action === 'migrated_reference'
+            && (item.role === 'logo' || item.role === 'hero' || item.role === 'flyer' || item.role === 'gallery')
+          ) {
+            await assignCanonicalAssetToEntity({
+              asset: canonical,
+              entityType: item.entityType,
+              entityId: item.entityId,
+              role: item.role,
+            });
+          }
+        }
 
-  const applySummaryFilter = (kind: 'current' | 'placeholder' | 'external' | 'extra' | 'duplicate' | 'unresolved' | 'broken') => {
-    setQuery('');
-    setOwnerType('all');
-    setRole('all');
-    setSource('all');
-    setQuickView(kind === 'external' ? 'external' : 'all');
-    setModerationFilter('all');
-    setBrokenOnly(false);
-    setUsage(kind === 'current'
-      ? 'current'
-      : kind === 'placeholder'
-        ? 'placeholder'
-        : kind === 'extra'
-          ? 'extra'
-          : kind === 'duplicate'
-            ? 'exact_duplicate'
-            : kind === 'unresolved'
-              ? 'unresolved'
-              : 'all');
-    if (kind === 'broken') setBrokenOnly(true);
-  };
+        const updatedAudit = appendConsolidationAuditEntry({
+          id: `consolidation-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          actorLabel: 'Administrator',
+          canonicalAssetId: canonical.canonicalId,
+          canonicalTitle: canonical.title,
+          canonicalUrl: canonical.originalPreviewUrl,
+          consolidatedAssetIds: preview.secondaryAssets.map((a) => a.canonicalId),
+          kind: preview.kind,
+          affectedEntities: preview.affectedEntities,
+          sourceFilesDeleted: false,
+        });
+        setAuditEntries(updatedAudit);
+        setConsolidationPreview(null);
+        setStatusBanner({
+          tone: 'success',
+          message: `Consolidated ${preview.affectedEntities.length} reference(s) onto canonical asset "${canonical.title}". Audit trail saved; no source files were deleted.`,
+        });
+      } catch (err) {
+        setStatusBanner({
+          tone: 'error',
+          message: err instanceof Error ? err.message : 'Consolidation failed.',
+        });
+      } finally {
+        setIsConsolidating(false);
+      }
+    },
+    [assignCanonicalAssetToEntity, listings],
+  );
 
-  const hasActiveFilters = Boolean(query.trim()) || ownerType !== 'all' || role !== 'all' || source !== 'all' || usage !== 'all' || moderationFilter !== 'all' || quickView !== 'all' || brokenOnly;
-  const detailsDimensions = detailsTarget ? dimensionsById[detailsTarget.id] : undefined;
-  const detailsAttentionReasons = detailsTarget
-    ? getAttentionReasons(detailsTarget, brokenIds.has(detailsTarget.id) || !detailsTarget.url, detailsDimensions)
-    : [];
-  const detailsMediaQa = detailsTarget ? getMediaQa(detailsTarget.role, detailsDimensions) : null;
-  const detailsOwnerMedia = useMemo(() => {
-    if (!detailsTarget) return [];
-    const roleOrder: Record<MediaRole, number> = { logo: 0, hero: 1, cover: 2, flyer: 3, gallery: 4, avatar: 5 };
-    return images
-      .filter((image) => image.ownerType === detailsTarget.ownerType && image.ownerId === detailsTarget.ownerId)
-      .slice()
-      .sort((a, b) => {
-        if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-        const roleDelta = roleOrder[a.role] - roleOrder[b.role];
-        if (roleDelta) return roleDelta;
-        return new Date(b.createdAt ?? b.updatedAt ?? 0).getTime() - new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
+  // Handle selecting files in the Upload & Quick-Replace Modal
+  const handleQueueUploadFiles = useCallback(
+    async (fileList: FileList | File[]) => {
+      setUploadModalError('');
+      const files = Array.from(fileList);
+      const validFiles: typeof uploadQueuedFiles = [];
+
+      for (const file of files) {
+        if (!ALLOWED_MEDIA_MIME_TYPES.includes(file.type as any)) {
+          setUploadModalError(`"${file.name}" has unsupported format (${file.type || 'unknown'}). Use JPG, PNG, or WebP.`);
+          continue;
+        }
+        const rule = getMediaRule(uploadTargetRole);
+        if (file.size > rule.maxUploadBytes) {
+          setUploadModalError(`"${file.name}" exceeds ${formatMaxUploadSize(rule.maxUploadBytes)}.`);
+          continue;
+        }
+        const sha256 = await computeFileSha256Hex(file).catch(() => undefined);
+        const previewUrl = URL.createObjectURL(file);
+        const matchingExistingAsset = sha256
+          ? enrichedAssets.find((a) => a.contentHash === sha256)
+          : undefined;
+        validFiles.push({
+          file,
+          previewUrl,
+          sha256,
+          matchingExistingAsset,
+        });
+      }
+
+      if (validFiles.length > 0) {
+        setUploadQueuedFiles((prev) => [...prev, ...validFiles]);
+      }
+    },
+    [enrichedAssets, uploadTargetRole],
+  );
+
+  // Events list with computed Host Logo Inheritance states for the Inheritance Inspector tab
+  const eventLogoInheritanceRows = useMemo(() => {
+    const q = inheritanceSearch.trim().toLowerCase();
+    return listings
+      .filter((l): l is EventData => l.type === 'event')
+      .map((event) => {
+        const state = resolveEventLogoState(event, brandCatalog);
+        return { event, state };
+      })
+      .filter(({ event, state }) => {
+        if (inheritanceModeFilter === 'inherited_host' && state.mode !== 'inherited_host') return false;
+        if (inheritanceModeFilter === 'explicit_override' && state.mode !== 'explicit_override') return false;
+        if (inheritanceModeFilter === 'redundant_copy' && !state.hasRedundantOccurrenceCopy) return false;
+        if (inheritanceModeFilter === 'fallback' && state.mode !== 'fallback') return false;
+        if (!q) return true;
+        return `${event.name} ${event.hostName} ${event.id} ${state.resolvedLogo.sourceName ?? ''}`
+          .toLowerCase()
+          .includes(q);
       });
-  }, [detailsTarget, images]);
-  const detailsCurrentLogo = detailsOwnerMedia.find((image) => image.role === 'logo' && image.isCurrent);
-  const detailsCurrentHero = detailsOwnerMedia.find((image) => image.role === 'hero' && image.isCurrent);
-  const canManageDetailsLogo = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user');
-  const canManageDetailsHero = Boolean(detailsTarget?.ownerResolved && detailsTarget.ownerType !== 'user');
-  const detailsOwnerInputKey = detailsTarget ? `${detailsTarget.ownerType}-${detailsTarget.ownerId}`.replace(/[^a-zA-Z0-9_-]/g, '-') : 'owner';
-  const detailsLogoInputId = `details-logo-${detailsOwnerInputKey}`;
-  const detailsHeroInputId = `details-hero-${detailsOwnerInputKey}`;
+  }, [brandCatalog, inheritanceModeFilter, inheritanceSearch, listings]);
+
+  const filteredDuplicateGroups = useMemo(() => {
+    if (duplicateCategoryFilter === 'all') return catalogResult.duplicateGroups;
+    return catalogResult.duplicateGroups.filter((g) => g.kind === duplicateCategoryFilter);
+  }, [catalogResult.duplicateGroups, duplicateCategoryFilter]);
+
+  const selectedMetric = selectedAsset ? metricsByCanonicalId[selectedAsset.canonicalId] : undefined;
+  const selectedQualityReport = useMemo(() => {
+    if (!selectedAsset) return null;
+    return evaluateAssetRoleQuality({
+      roles: selectedAsset.roles,
+      width: selectedMetric?.width,
+      height: selectedMetric?.height,
+      isValidUrl: selectedAsset.isValidUrl,
+      isBroken: selectedMetric?.broken,
+      isPlaceholder: selectedAsset.isPlaceholder,
+    });
+  }, [selectedAsset, selectedMetric]);
 
   return (
-    <div className="min-h-full bg-[#060708] px-4 py-8 text-gray-100 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1800px]">
-        <div className="flex flex-col gap-5 border-b border-white/10 pb-6 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-red-400">Dev utility</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Image Library</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">
-              Browse current image references and upload history across SwingSphere. Green cards are actively attached or selected by the current display logic; extra uploads stay visible so duplicate-looking records can be audited without guessing which one is in use.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setRefreshKey((value) => value + 1)}
-            disabled={loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 text-sm font-semibold text-gray-200 transition hover:bg-white/[0.09] disabled:cursor-wait disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh catalog
-          </button>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-          {[
-            { kind: 'current' as const, label: 'Current / in use', value: currentCount, description: 'Referenced by the current entity/profile display state. These are protected from generic deletion; recognized placeholders remain separately removable.' },
-            { kind: 'placeholder' as const, label: 'Placeholders', value: placeholderCount, description: 'Known temporary placeholder URLs such as Picsum or placeholder services. These should eventually be replaced or cleared.' },
-            { kind: 'external' as const, label: 'External images', value: externalCount, description: 'Current image references hosted on other websites. They may work now but can disappear or block hotlinking. Upload replacements into SwingSphere Images.' },
-            { kind: 'extra' as const, label: 'Extra uploads', value: extraCount, description: 'A different image is current for the same owner + role, so this upload is retained history but is not selected for display.' },
-            { kind: 'duplicate' as const, label: 'Exact duplicate refs', value: exactDuplicateCount, description: 'Multiple records point to the exact same Cloudflare image ID or URL. This does not mean visually similar re-uploads are detected yet.' },
-            { kind: 'unresolved' as const, label: 'Unresolved', value: unresolvedCount, description: 'SwingSphere cannot confidently resolve the owner or determine a current attachment for this media reference.' },
-            { kind: 'broken' as const, label: 'Broken on this page', value: brokenVisibleCount, description: 'Images that failed to load among the cards currently rendered in this browser session. This count grows as more pages are inspected.' },
-          ].map((stat) => (
-            <button
-              key={stat.kind}
-              type="button"
-              onClick={() => applySummaryFilter(stat.kind)}
-              title={stat.description}
-              className="group relative rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-left transition hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300/70"
-            >
-              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">
-                <span>{stat.label}</span>
-                <CircleHelp className="h-3.5 w-3.5 shrink-0 text-gray-600" />
+    <div className="min-h-screen bg-[#07080b] text-gray-100">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
+        {/* Top Benchmark Header */}
+        <header className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 shadow-2xl sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] tracking-wider text-gray-300 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Admin
+                </Link>
+                <span>SwingSphere Asset Governance v2</span>
               </div>
-              <div className="mt-1 text-2xl font-semibold text-white">{stat.value}</div>
-              <div className="pointer-events-none absolute left-3 top-[calc(100%+8px)] z-50 hidden w-72 rounded-xl border border-white/10 bg-[#17191c] px-3 py-2.5 text-[11px] font-normal normal-case leading-5 tracking-normal text-gray-300 shadow-2xl group-hover:block group-focus-visible:block">
-                {stat.description}
-                <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-red-300/70">Click to filter</div>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Media Library & Canonical Asset System
+              </h1>
+              <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-gray-400">
+                Single source of truth for inspecting, assigning, replacing, and consolidating imagery across clubs,
+                events, hosts, venues, resorts, and cruises. Host logos automatically cascade to child events unless an
+                explicit event override is set.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadQueuedFiles([]);
+                  setUploadExternalUrlInput('');
+                  setUploadModalError('');
+                  setIsUploadModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500"
+              >
+                <Upload className="h-4 w-4" />
+                Upload / Quick-Replace
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAuditModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-xs font-semibold text-gray-200 transition hover:bg-white/[0.08]"
+              >
+                <History className="h-4 w-4 text-gray-400" />
+                Audit Trail ({auditEntries.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadCatalog()}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-xs font-semibold text-gray-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin text-red-400' : 'text-gray-400'}`} />
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Metric Strip */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('browser');
+                setUsageFilter('all');
+                setCategoryFilter('all');
+              }}
+              className="rounded-xl border border-white/10 bg-black/35 p-3.5 text-left transition hover:border-white/25"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Canonical Assets</div>
+              <div className="mt-1 text-2xl font-bold text-white">{catalogResult.summary.totalCanonicalAssets}</div>
+              <div className="mt-1 text-[11px] text-gray-500">
+                {catalogResult.summary.externalUrlAssets} external URLs
               </div>
             </button>
-          ))}
-        </div>
 
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex w-fit rounded-xl border border-white/10 bg-white/[0.025] p-1">
-            {[
-              { id: 'all' as const, label: 'All media', count: images.length },
-              { id: 'needs_attention' as const, label: 'Needs attention', count: needsAttentionCount },
-              { id: 'external' as const, label: 'External images', count: externalCount },
-              { id: 'pending_review' as const, label: 'Pending review', count: pendingReviewCount },
-            ].map((view) => (
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('browser');
+                setUsageFilter('linked');
+              }}
+              className="rounded-xl border border-emerald-500/20 bg-emerald-950/15 p-3.5 text-left transition hover:border-emerald-500/40"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">Active / Linked</div>
+              <div className="mt-1 text-2xl font-bold text-white">{catalogResult.summary.linkedAssets}</div>
+              <div className="mt-1 text-[11px] text-emerald-300/75">
+                {catalogResult.summary.multiReferencedAssets} shared across multiple listings
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('browser');
+                setUsageFilter('inherited');
+              }}
+              className="rounded-xl border border-sky-500/20 bg-sky-950/15 p-3.5 text-left transition hover:border-sky-500/40"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-sky-300">Inherited Event Logos</div>
+              <div className="mt-1 text-2xl font-bold text-white">{catalogResult.summary.inheritedEventUsages}</div>
+              <div className="mt-1 text-[11px] text-sky-300/75">
+                Cascaded from canonical host / series
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('duplicates');
+              }}
+              className="rounded-xl border border-violet-500/25 bg-violet-950/15 p-3.5 text-left transition hover:border-violet-500/45"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-violet-300">
+                Duplicate Candidates
+              </div>
+              <div className="mt-1 text-2xl font-bold text-white">
+                {catalogResult.summary.duplicateCandidateGroups}
+              </div>
+              <div className="mt-1 text-[11px] text-violet-300/75">
+                {catalogResult.summary.redundantEventLogoCopies} redundant occurrence copies
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('browser');
+                setUsageFilter('unlinked');
+              }}
+              className="rounded-xl border border-amber-500/20 bg-amber-950/15 p-3.5 text-left transition hover:border-amber-500/40"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
+                Unlinked / Superseded
+              </div>
+              <div className="mt-1 text-2xl font-bold text-white">{catalogResult.summary.unlinkedAssets}</div>
+              <div className="mt-1 text-[11px] text-amber-300/75">0 active public references</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceTab('inheritance');
+              }}
+              className="rounded-xl border border-red-500/25 bg-red-950/15 p-3.5 text-left transition hover:border-red-500/45"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-red-300">
+                Missing Assignments
+              </div>
+              <div className="mt-1 text-2xl font-bold text-white">{catalogResult.summary.missingEntitySlots}</div>
+              <div className="mt-1 text-[11px] text-red-300/75">Slots needing flyer, hero, or logo</div>
+            </button>
+          </div>
+
+          {/* Primary Workspace Mode Tabs */}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+            <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Media Library Workspaces">
               <button
-                key={view.id}
                 type="button"
-                onClick={() => { setQuickView(view.id); setBrokenOnly(false); }}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${quickView === view.id ? 'bg-white/[0.09] text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+                role="tab"
+                aria-selected={workspaceTab === 'browser'}
+                onClick={() => setWorkspaceTab('browser')}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                  workspaceTab === 'browser'
+                    ? 'bg-red-600 text-white shadow'
+                    : 'border border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
+                }`}
               >
-                {view.label} <span className="ml-1 text-[10px] text-gray-500">{view.count}</span>
+                <Grid className="h-3.5 w-3.5" />
+                Asset Browser ({enrichedAssets.length})
               </button>
-            ))}
-          </div>
-          {hasActiveFilters ? (
-            <button type="button" onClick={resetFilters} className="w-fit text-xs font-semibold text-gray-500 transition hover:text-gray-200">Clear filters</button>
-          ) : null}
-        </div>
 
-        <div className="sticky top-0 z-20 -mx-2 mt-5 border-y border-white/10 bg-[#060708]/95 px-2 py-3 backdrop-blur-xl">
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_repeat(5,minmax(135px,0.22fr))]">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search name, ID, URL, or Cloudflare ID…"
-                className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.05] pl-9 pr-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-red-500/50"
-              />
-            </label>
-            <select value={ownerType} onChange={(event) => setOwnerType(event.target.value as 'all' | MediaOwnerType)} className="h-10 rounded-xl border border-white/10 bg-[#101214] px-3 text-sm text-gray-200 outline-none">
-              <option value="all">All entity types</option>
-              {MEDIA_OWNER_TYPES.map((type) => <option key={type} value={type}>{ownerLabels[type]}</option>)}
-            </select>
-            <select value={role} onChange={(event) => setRole(event.target.value as 'all' | MediaRole)} className="h-10 rounded-xl border border-white/10 bg-[#101214] px-3 text-sm text-gray-200 outline-none">
-              <option value="all">All image roles</option>
-              {MEDIA_ROLES.map((mediaRole) => <option key={mediaRole} value={mediaRole}>{roleLabels[mediaRole]}</option>)}
-            </select>
-            <select value={source} onChange={(event) => setSource(event.target.value as 'all' | ImageSource)} className="h-10 rounded-xl border border-white/10 bg-[#101214] px-3 text-sm text-gray-200 outline-none">
-              <option value="all">All sources</option>
-              <option value="media_asset">Canonical media</option>
-              <option value="legacy_url">Legacy URL field</option>
-            </select>
-            <select value={usage} onChange={(event) => setUsage(event.target.value as 'all' | ImageUsage | 'exact_duplicate' | 'placeholder')} className="h-10 rounded-xl border border-white/10 bg-[#101214] px-3 text-sm text-gray-200 outline-none">
-              <option value="all">All usage states</option>
-              <option value="current">Current / in use</option>
-              <option value="placeholder">Placeholder media</option>
-              <option value="extra">Extra uploads</option>
-              <option value="exact_duplicate">Exact duplicate refs</option>
-              <option value="unresolved">Unresolved</option>
-            </select>
-            <select value={moderationFilter} onChange={(event) => setModerationFilter(event.target.value as ModerationFilter)} className="h-10 rounded-xl border border-white/10 bg-[#101214] px-3 text-sm text-gray-200 outline-none">
-              <option value="all">All moderation states</option>
-              <option value="pending_review">Pending review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
-              <option value="legacy">Legacy / unmoderated</option>
-            </select>
-          </div>
-        </div>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workspaceTab === 'duplicates'}
+                onClick={() => setWorkspaceTab('duplicates')}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                  workspaceTab === 'duplicates'
+                    ? 'bg-red-600 text-white shadow'
+                    : 'border border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
+                }`}
+              >
+                <GitMerge className="h-3.5 w-3.5" />
+                Duplicate Review & Consolidation ({catalogResult.duplicateGroups.length})
+              </button>
 
-        {cleanupNotice ? (
-          <div className="mt-4 flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-100/85">
-            <span>{cleanupNotice}</span>
-            <button type="button" onClick={() => setCleanupNotice('')} className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-200/70 hover:text-emerald-100">Dismiss</button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={workspaceTab === 'inheritance'}
+                onClick={() => setWorkspaceTab('inheritance')}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                  workspaceTab === 'inheritance'
+                    ? 'bg-red-600 text-white shadow'
+                    : 'border border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Inheritance & Missing Assignments ({catalogResult.missingSlots.length})
+              </button>
+            </div>
+
+            {workspaceTab === 'browser' ? (
+              <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    viewMode === 'grid' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                  aria-label="Thumbnail Grid View"
+                >
+                  <Grid className="h-3.5 w-3.5" />
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    viewMode === 'list' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                  aria-label="Compact List View"
+                >
+                  <List className="h-3.5 w-3.5" />
+                  Compact List
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </header>
+
+        {/* Status Feedback Banner */}
+        {statusBanner ? (
+          <div
+            className={`mt-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+              statusBanner.tone === 'success'
+                ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200'
+                : statusBanner.tone === 'error'
+                  ? 'border-red-500/40 bg-red-950/30 text-red-200'
+                  : 'border-sky-500/40 bg-sky-950/30 text-sky-200'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{statusBanner.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusBanner(null)}
+              className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         ) : null}
 
-        {replacementError ? (
-          <div className="mt-4 flex items-start justify-between gap-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-100/85">
-            <span>{replacementError}</span>
-            <button type="button" onClick={() => setReplacementError('')} className="text-xs font-semibold uppercase tracking-[0.12em] text-red-200/70 hover:text-red-100">Dismiss</button>
-          </div>
-        ) : null}
-
-        {moderationError ? (
-          <div className="mt-4 flex items-start justify-between gap-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-100/85">
-            <span>{moderationError}</span>
-            <button type="button" onClick={() => setModerationError('')} className="text-xs font-semibold uppercase tracking-[0.12em] text-red-200/70 hover:text-red-100">Dismiss</button>
-          </div>
-        ) : null}
-
-        {warnings.length > 0 ? (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100/80">
-            <div className="font-semibold text-amber-200">Some image sources could not be read.</div>
-            <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-amber-100/65">
-              {warnings.map((warning) => <li key={warning}>{warning}</li>)}
-            </ul>
-          </div>
-        ) : null}
-
-        <div className="mt-5 flex items-center justify-between text-xs text-gray-500">
-          <span>{loading ? 'Loading image catalog…' : `${filtered.length} matching image reference${filtered.length === 1 ? '' : 's'}`}</span>
-          {!loading && filtered.length > 0 ? <span>Page {safePage} of {pageCount}</span> : null}
-        </div>
-
-        {!loading && visible.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-white/10 py-20 text-center text-sm text-gray-500">No images match the current filters.</div>
-        ) : (
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {visible.map((image) => {
-              const broken = brokenIds.has(image.id) || !image.url;
-              const placeholder = isPlaceholderRecord(image);
-              const dimensions = dimensionsById[image.id];
-              const mediaQa = getMediaQa(image.role, dimensions);
-              const attentionReasons = getAttentionReasons(image, broken, dimensions);
-              const replaceableRole: ReplaceableMediaRole | null = image.role === 'logo' || image.role === 'hero' ? image.role : null;
-              const canReplaceMedia = Boolean(
-                replaceableRole
-                && image.isCurrent
-                && image.ownerResolved
-                && image.ownerType !== 'user',
-              );
-              const replaceInputId = `replace-${replaceableRole ?? 'media'}-${image.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-              return (
-                <article key={image.id} className={`group overflow-hidden rounded-2xl border ${placeholder ? 'border-amber-300/45 bg-amber-300/[0.045] shadow-[0_0_0_1px_rgba(252,211,77,0.05)]' : image.isCurrent ? 'border-emerald-400/45 bg-emerald-400/[0.045] shadow-[0_0_0_1px_rgba(52,211,153,0.05)]' : image.usage === 'extra' ? 'border-amber-400/15 bg-white/[0.03]' : 'border-white/10 bg-white/[0.025]'}`}>
-                  <div className="relative aspect-[4/3] bg-black/30">
-                    {broken ? (
-                      <div className="flex h-full items-center justify-center gap-2 text-xs font-semibold text-red-300/80"><ImageOff className="h-4 w-4" /> Image unavailable</div>
-                    ) : (
-                      <img
-                        src={image.url ?? undefined}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        onError={() => setBrokenIds((current) => new Set(current).add(image.id))}
-                        className={`h-full w-full ${image.role === 'logo' ? 'object-contain' : image.role === 'flyer' ? 'object-contain p-2' : 'object-cover'}`}
-                      />
-                    )}
-                    <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
-                      {image.isCurrent ? <span className="rounded-md bg-emerald-500/90 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">Current / in use</span> : null}
-                      {placeholder ? <span className="rounded-md bg-amber-300 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">Placeholder</span> : null}
-                      {isExternalImageReference(image) ? <span className="rounded-md bg-amber-300 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">External image</span> : null}
-                      <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white">{ownerLabels[image.ownerType]}</span>
-                      <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-300">{image.roleLabel}</span>
-                      {image.ownerRoleCount > 1 ? <span className="rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200">{image.ownerRoleCount} {image.roleLabel} refs</span> : null}
-                    </div>
-                    {image.url ? (
-                      <a href={image.url} target="_blank" rel="noreferrer" className="absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-black/75 text-gray-300 opacity-0 transition hover:text-white group-hover:opacity-100" aria-label="Open image in new tab">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2 p-3">
-                    <div>
-                      <div className="truncate text-sm font-semibold text-white" title={image.ownerName}>{image.ownerName}</div>
-                      <div className="mt-0.5 truncate font-mono text-[10px] text-gray-600" title={image.ownerId}>{image.ownerId}</div>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {image.isCurrent ? <span className="rounded-md bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-300">In use</span> : null}
-                      {placeholder ? <span className="rounded-md bg-amber-300/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-amber-200">Placeholder media</span> : null}
-                      {image.usage === 'extra' ? <span className="rounded-md bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-amber-300">Extra upload</span> : null}
-                      {image.usage === 'unresolved' ? <span className="rounded-md bg-violet-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-violet-300">Not resolved</span> : null}
-                      {image.exactDuplicateCount > 1 ? <span className="rounded-md bg-fuchsia-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-fuchsia-300">Exact duplicate ref ×{image.exactDuplicateCount}</span> : null}
-                      {image.currentConflict ? <span className="rounded-md bg-red-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-red-300">Multiple current refs</span> : null}
-                      {!image.ownerResolved ? <span className="rounded-md bg-red-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-red-300">Owner missing</span> : null}
-                      <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${image.source === 'media_asset' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-sky-400/10 text-sky-300'}`}>
-                        {image.source === 'media_asset' ? 'Canonical' : 'Legacy URL'}
+        {/* =====================================================================
+            WORKSPACE 1: CANONICAL ASSET BROWSER (GRID & COMPACT LIST)
+        ===================================================================== */}
+        {workspaceTab === 'browser' ? (
+          <section className="mt-6 space-y-4" aria-label="Canonical Media Browser">
+            {/* Category Tabs & Filter Controls */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              {/* Category Pills: All | Logos | Heroes | Flyers | Gallery | Other */}
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-3.5">
+                {CATEGORY_TABS.map((tab) => {
+                  const active = categoryFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setCategoryFilter(tab.id)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                        active
+                          ? 'bg-red-500/20 text-red-200 ring-1 ring-red-500/50'
+                          : 'bg-black/30 text-gray-400 hover:bg-white/[0.05] hover:text-gray-200'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">
+                        {categoryCounts[tab.id] ?? 0}
                       </span>
-                      {image.status ? <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-gray-400">{image.status.replace('_', ' ')}</span> : null}
-                      {broken ? <span className="rounded-md bg-red-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-red-300">Broken</span> : null}
-                    </div>
-                    {attentionReasons.length > 0 ? (
-                      <div className="rounded-lg border border-amber-300/15 bg-amber-300/[0.035] px-2.5 py-2">
-                        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200/80"><ShieldAlert className="h-3.5 w-3.5" /> Needs attention</div>
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {attentionReasons.slice(0, 4).map((reason) => <span key={reason.key} className={`rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${attentionToneClass[reason.tone]}`}>{reason.label}</span>)}
-                          {attentionReasons.length > 4 ? <span className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-gray-400">+{attentionReasons.length - 4}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search & Dropdown Filters */}
+              <div className="mt-3.5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search filename, asset name, club, event, host, or Cloudflare ID..."
+                    className="w-full rounded-xl border border-white/10 bg-black/50 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:border-red-500/60 focus:outline-none"
+                  />
+                </div>
+
+                <select
+                  aria-label="Filter by entity type"
+                  value={entityTypeFilter}
+                  onChange={(e) => setEntityTypeFilter(e.target.value as any)}
+                  className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs font-medium text-gray-200 focus:border-red-500/60 focus:outline-none"
+                >
+                  <option value="all">All Entity Types</option>
+                  <option value="club">Clubs</option>
+                  <option value="event">Events</option>
+                  <option value="organization">Hosts / Organizations</option>
+                  <option value="venue">Venues</option>
+                  <option value="resort">Resorts</option>
+                  <option value="cruise_series">Cruise Series</option>
+                  <option value="cruise_sailing">Cruise Sailings</option>
+                  <option value="event_series">Event Series</option>
+                  <option value="club_brand">Club Brands</option>
+                  <option value="user">User Avatars</option>
+                </select>
+
+                <select
+                  aria-label="Filter by usage or status"
+                  value={usageFilter}
+                  onChange={(e) => setUsageFilter(e.target.value as UsageFilter)}
+                  className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs font-medium text-gray-200 focus:border-red-500/60 focus:outline-none"
+                >
+                  <option value="all">All Usage & Status States</option>
+                  <option value="linked">Linked (Active on Site)</option>
+                  <option value="unlinked">Unlinked / Orphaned</option>
+                  <option value="multi_ref">Referenced by Multiple Listings</option>
+                  <option value="inherited">Inherited by Child Events</option>
+                  <option value="redundant_copies">Has Redundant Occurrence Copies</option>
+                  <option value="duplicates">Potential Duplicates</option>
+                  <option value="external_url">External URLs</option>
+                  <option value="broken_or_invalid">Broken or Invalid URL</option>
+                  <option value="recent">Recently Uploaded / Modified</option>
+                </select>
+
+                <select
+                  aria-label="Sort media assets"
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as SortMode)}
+                  className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs font-medium text-gray-200 focus:border-red-500/60 focus:outline-none"
+                >
+                  <option value="most_referenced">Sort: Most Referenced First</option>
+                  <option value="recent">Sort: Recently Uploaded / Updated</option>
+                  <option value="attention">Sort: Needs Attention First</option>
+                  <option value="alphabetical">Sort: Alphabetical (A–Z)</option>
+                </select>
+              </div>
+
+              {entityScopeFilter ? (
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-red-500/35 bg-red-500/10 px-3.5 py-2 text-xs text-red-200">
+                  <span>
+                    Filtered to entity:{' '}
+                    <strong className="font-semibold text-white">{entityScopeFilter.entityName}</strong> (
+                    {ENTITY_TYPE_LABELS[entityScopeFilter.entityType]})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEntityScopeFilter(null)}
+                    className="inline-flex items-center gap-1 font-semibold text-red-200 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" /> Clear entity filter
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Result Count & Top Pagination */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-gray-400">
+              <div>
+                Showing <strong className="text-white">{pagedAssets.length}</strong> of{' '}
+                <strong className="text-white">{filteredAssets.length}</strong> canonical assets
+              </div>
+              {totalPages > 1 ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-white/[0.08] disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                  </button>
+                  <span className="text-gray-300">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-white/[0.08] disabled:opacity-40"
+                  >
+                    Next <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Grid View vs Compact List View */}
+            {isLoading ? (
+              <div className="flex h-72 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-sm text-gray-400">
+                Loading canonical media library…
+              </div>
+            ) : filteredAssets.length === 0 ? (
+              <div className="flex h-72 flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center">
+                <ImageIcon className="mb-3 h-10 w-10 text-gray-600" />
+                <h3 className="text-base font-semibold text-white">No matching canonical assets</h3>
+                <p className="mt-1 max-w-md text-xs text-gray-400">
+                  Adjust your category, entity type, usage filter, or search query to see more assets.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryFilter('all');
+                    setEntityTypeFilter('all');
+                    setUsageFilter('all');
+                    setSearchQuery('');
+                    setEntityScopeFilter(null);
+                  }}
+                  className="mt-4 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-semibold text-white hover:bg-white/[0.1]"
+                >
+                  Reset all filters
+                </button>
+              </div>
+            ) : viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                {pagedAssets.map((asset) => {
+                  const isSelected = asset.canonicalId === selectedCanonicalId;
+                  const metric = metricsByCanonicalId[asset.canonicalId];
+                  const ratioLabel = formatRatioBadge(metric?.width, metric?.height);
+
+                  return (
+                    <button
+                      key={asset.canonicalId}
+                      type="button"
+                      onClick={() => setSelectedCanonicalId(asset.canonicalId)}
+                      className={`group flex flex-col overflow-hidden rounded-2xl border text-left transition ${
+                        isSelected
+                          ? 'border-red-500 bg-red-500/[0.07] ring-1 ring-red-500/60'
+                          : 'border-white/10 bg-[#0d0f14] hover:border-white/25 hover:bg-[#12151c]'
+                      }`}
+                    >
+                      {/* Accurate Original Image Thumbnail (Never Darkened) */}
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#050608]">
+                        <img
+                          src={asset.thumbnailUrl}
+                          alt={asset.altText}
+                          loading="lazy"
+                          onLoad={(e) => {
+                            const { naturalWidth, naturalHeight } = e.currentTarget;
+                            if (naturalWidth > 0 && naturalHeight > 0) {
+                              setMetricsByCanonicalId((prev) =>
+                                prev[asset.canonicalId]?.width === naturalWidth
+                                  ? prev
+                                  : {
+                                      ...prev,
+                                      [asset.canonicalId]: { width: naturalWidth, height: naturalHeight, broken: false },
+                                    },
+                              );
+                            }
+                          }}
+                          onError={() => {
+                            setMetricsByCanonicalId((prev) => ({
+                              ...prev,
+                              [asset.canonicalId]: { width: 0, height: 0, broken: true },
+                            }));
+                          }}
+                          className={`h-full w-full transition duration-200 group-hover:scale-[1.02] ${
+                            asset.primaryCategory === 'logo' || asset.primaryCategory === 'flyer'
+                              ? 'object-contain p-2'
+                              : 'object-cover'
+                          }`}
+                        />
+
+                        {/* Minimal Top Badges */}
+                        <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1">
+                          <span className="rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-100 backdrop-blur-sm">
+                            {asset.primaryCategory}
+                          </span>
+                          {ratioLabel ? (
+                            <span className="rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-gray-300 backdrop-blur-sm">
+                              {ratioLabel}
+                            </span>
+                          ) : null}
                         </div>
-                      </div>
-                    ) : null}
-                    <div className="rounded-lg border border-white/8 bg-black/20 px-2.5 py-2">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-gray-500">Media QA · target {mediaQa?.targetLabel ?? mediaQaTargets[image.role].label}</span>
-                        {mediaQa ? (
-                          <>
-                            <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] ${mediaQa.resolutionTone === 'good' ? 'bg-emerald-400/10 text-emerald-300' : mediaQa.resolutionTone === 'warn' ? 'bg-amber-400/10 text-amber-300' : 'bg-red-400/10 text-red-300'}`}>{mediaQa.resolution}</span>
-                            {mediaQa.shape ? <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] ${mediaQa.shapeTone === 'good' ? 'bg-sky-400/10 text-sky-300' : 'bg-amber-400/10 text-amber-300'}`}>{mediaQa.shape}</span> : null}
-                          </>
+
+                        {asset.activeReferenceCount > 1 ? (
+                          <div className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-950/90 px-2 py-0.5 text-[10px] font-semibold text-sky-200 backdrop-blur-sm">
+                            <Layers className="h-3 w-3" />
+                            {asset.activeReferenceCount} uses
+                          </div>
                         ) : null}
                       </div>
-                      <div className="mt-1.5 text-[10px] leading-4 text-gray-500">
-                        {dimensions
-                          ? `${dimensions.source === 'source' ? 'Source rendition' : 'Delivered rendition'}: ${dimensions.width}×${dimensions.height}px${dimensions.source === 'delivery' && image.source === 'media_asset' ? ' · original source size unavailable' : ''}`
-                          : broken ? 'Dimensions unavailable.' : 'Checking dimensions…'}
-                      </div>
-                      {image.role === 'logo' && mediaQa?.shapeTone === 'warn' ? <div className="mt-1 text-[9px] leading-4 text-amber-200/65">This shape is allowed. Wide logos scale to the left/right bounds; tall logos scale to the top/bottom bounds. No cropping or distortion is applied.</div> : null}
-                    </div>
-                    {placeholder ? <div className="text-[10px] leading-4 text-amber-200/75">Recognized placeholder URL. It may be current, but it is not treated as finished media.</div> : null}
-                    {image.currentReason ? <div className={`text-[10px] leading-4 ${placeholder ? 'text-amber-100/55' : 'text-emerald-200/70'}`}>{image.currentReason}</div> : null}
-                    {image.mediaAssetId ? <div className="truncate font-mono text-[9px] text-gray-500" title={image.mediaAssetId}>Asset: {image.mediaAssetId}</div> : null}
-                    {image.externalId ? <div className="truncate font-mono text-[9px] text-gray-600" title={image.externalId}>CF: {image.externalId}</div> : null}
-                    {formatAssetDate(image.createdAt ?? image.updatedAt) ? <div className="text-[9px] uppercase tracking-[0.08em] text-gray-600">Uploaded {formatAssetDate(image.createdAt ?? image.updatedAt)}</div> : null}
-                    {image.source === 'media_asset' ? (
-                      <div className="flex items-center gap-1.5 text-[9px] text-gray-500">
-                        <UserRound className="h-3 w-3" />
-                        <span className="truncate" title={image.createdBy}>{image.uploaderName ? `Uploaded by ${image.uploaderName}` : image.createdBy ? `Uploader ${image.createdBy}` : 'Uploader not recorded'}</span>
-                      </div>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setDetailsTarget(image)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-300 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Inspect / usage
-                    </button>
-                    {image.source === 'media_asset' && image.mediaAssetId && image.status === 'pending_review' ? (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                          type="button"
-                          disabled={moderationBusyId === image.id}
-                          onClick={() => void handleModeration(image, 'approved')}
-                          className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-300 transition hover:bg-emerald-400/[0.12] disabled:opacity-50"
-                        >Approve</button>
-                        <button
-                          type="button"
-                          disabled={moderationBusyId === image.id || image.isCurrent}
-                          onClick={() => void handleModeration(image, 'rejected')}
-                          title={image.isCurrent ? 'Replace or clear the current reference before rejecting this asset.' : 'Reject this media asset.'}
-                          className="rounded-lg border border-red-400/20 bg-red-400/[0.06] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-red-300 transition hover:bg-red-400/[0.11] disabled:cursor-not-allowed disabled:opacity-35"
-                        >Reject</button>
-                      </div>
-                    ) : image.source === 'media_asset' && image.mediaAssetId && image.status === 'rejected' ? (
-                      <button type="button" disabled={moderationBusyId === image.id} onClick={() => void handleModeration(image, 'approved')} className="w-full rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-300 transition hover:bg-emerald-400/[0.12] disabled:opacity-50">Approve rejected asset</button>
-                    ) : null}
-                    {canReplaceMedia && replaceableRole ? (
-                      <div className="pt-1">
-                        <MediaUploader
-                          ownerType={image.ownerType}
-                          ownerId={getMediaOwnerId(image.ownerType, image.ownerId)}
-                          role={replaceableRole}
-                          inputId={replaceInputId}
-                          triggerOnly
-                          onUploaded={(asset) => { void handleMediaUploaded(image, asset, replaceableRole); }}
-                          onError={(message) => setReplacementError(message)}
-                        />
-                        <label
-                          htmlFor={replaceInputId}
-                          className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/[0.06] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.1] ${replacementBusyId === image.id ? 'pointer-events-none opacity-50' : ''}`}
-                        >
-                          <Upload className="h-3.5 w-3.5" />
-                          {replacementBusyId === image.id
-                            ? `Attaching new ${roleLabels[replaceableRole].toLowerCase()}…`
-                            : `Replace ${roleLabels[replaceableRole].toLowerCase()}`}
-                        </label>
-                      </div>
-                    ) : null}
-                    {placeholder && image.isCurrent && image.source === 'legacy_url' && image.ownerType !== 'user' ? (
-                      <button
-                        type="button"
-                        onClick={() => requestPlaceholderClear(image)}
-                        className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-300/25 bg-amber-300/[0.07] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200 transition hover:border-amber-300/40 hover:bg-amber-300/[0.12]"
-                      >
-                        <ImageOff className="h-3.5 w-3.5" />
-                        Remove placeholder
-                      </button>
-                    ) : !image.isCurrent && image.source === 'media_asset' && image.mediaAssetId && image.externalId ? (
-                      <button
-                        type="button"
-                        onClick={() => requestDelete(image)}
-                        className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-300 transition hover:border-red-400/35 hover:bg-red-400/[0.1]"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {image.exactDuplicateCount > 1 ? 'Remove duplicate ref' : 'Delete unused image'}
-                      </button>
-                    ) : image.isCurrent ? (
-                      <div className={`pt-1 text-[9px] font-semibold uppercase tracking-[0.1em] ${placeholder ? 'text-amber-200/55' : 'text-emerald-300/50'}`}>
-                        {placeholder ? 'Current placeholder reference' : 'Protected from deletion'}
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
 
-        {!loading && filtered.length > PAGE_SIZE ? (
-          <div className="mt-8 flex items-center justify-center gap-3 pb-6">
-            <button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-gray-300 disabled:opacity-30">Previous</button>
-            <span className="text-xs text-gray-500">{(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
-            <button type="button" disabled={safePage >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-gray-300 disabled:opacity-30">Next</button>
-          </div>
+                      {/* Minimal Card Footer Metadata */}
+                      <div className="flex flex-1 flex-col justify-between p-3">
+                        <div>
+                          <div className="truncate text-xs font-semibold text-white">{asset.title}</div>
+                          <div className="mt-0.5 truncate text-[11px] text-gray-400">{asset.filename}</div>
+                        </div>
+
+                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5 border-t border-white/5 pt-2">
+                          <div className="flex flex-wrap gap-1">
+                            {asset.statusBadges.slice(0, 2).map((badge) => (
+                              <span
+                                key={badge}
+                                className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${BADGE_TONES[badge]}`}
+                              >
+                                {badge === 'Referenced by Multiple Listings' ? `Shared (${asset.activeReferenceCount})` : badge}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-medium text-gray-500">
+                            {asset.storageProvider === 'cloudflare_images' ? 'CF' : 'EXT'}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Compact List View */
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0f14]">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        <th className="px-4 py-3">Asset</th>
+                        <th className="px-3 py-3">Category / Roles</th>
+                        <th className="px-3 py-3">Storage</th>
+                        <th className="px-3 py-3">Linked Entities & Inheritance</th>
+                        <th className="px-3 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {pagedAssets.map((asset) => {
+                        const isSelected = asset.canonicalId === selectedCanonicalId;
+                        const primaryEntity = asset.usages[0];
+                        return (
+                          <tr
+                            key={asset.canonicalId}
+                            onClick={() => setSelectedCanonicalId(asset.canonicalId)}
+                            className={`cursor-pointer transition ${
+                              isSelected ? 'bg-red-500/10' : 'hover:bg-white/[0.03]'
+                            }`}
+                          >
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center gap-3">
+                                <div className="h-11 w-14 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-[#050608]">
+                                  <img
+                                    src={asset.thumbnailUrl}
+                                    alt={asset.altText}
+                                    loading="lazy"
+                                    className="h-full w-full object-contain"
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate font-semibold text-white">{asset.title}</div>
+                                  <div className="truncate text-[11px] text-gray-400">{asset.filename}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-200">
+                                {asset.primaryCategory}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 text-gray-300">
+                              <div className="truncate max-w-[180px]">{asset.storageLocationLabel}</div>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {primaryEntity ? (
+                                  <span className="font-medium text-gray-200">{primaryEntity.entityName}</span>
+                                ) : (
+                                  <span className="text-gray-500">Unlinked</span>
+                                )}
+                                {asset.inheritedReferenceCount > 0 ? (
+                                  <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">
+                                    +{asset.inheritedReferenceCount} inherited
+                                  </span>
+                                ) : null}
+                                {asset.explicitReferenceCount > 1 ? (
+                                  <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
+                                    {asset.explicitReferenceCount} explicit
+                                  </span>
+                                ) : null}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex flex-wrap gap-1">
+                                {asset.statusBadges.map((b) => (
+                                  <span
+                                    key={b}
+                                    className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${BADGE_TONES[b]}`}
+                                  >
+                                    {b}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCanonicalId(asset.canonicalId);
+                                }}
+                                className="rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-gray-200 hover:bg-white/[0.1]"
+                              >
+                                Inspect
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {/* =====================================================================
+            WORKSPACE 2: DUPLICATE REVIEW & CONSOLIDATION WORKFLOW
+        ===================================================================== */}
+        {workspaceTab === 'duplicates' ? (
+          <section className="mt-6 space-y-5" aria-label="Duplicate Review & Consolidation">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Duplicate Detection & Safe Consolidation</h2>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Review candidate groups side-by-side. Consolidating migrates entity references to your chosen
+                    canonical asset and records a recoverable audit trail. Source files are never deleted automatically.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ['all', 'All Candidates'],
+                      ['exact_byte_duplicates', 'Exact Byte Duplicates'],
+                      ['duplicate_db_records', 'Same-File & Inherited Copies'],
+                      ['repeated_storage_urls', 'Repeated Storage URLs'],
+                      ['visual_similarity_candidates', 'Visual / Revision Candidates'],
+                      ['unused_or_orphaned', 'Unused / Orphaned'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setDuplicateCategoryFilter(id)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                        duplicateCategoryFilter === id
+                          ? 'bg-red-500/20 text-red-200 ring-1 ring-red-500/50'
+                          : 'border border-white/10 bg-black/30 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {filteredDuplicateGroups.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm text-gray-400">
+                No duplicate review candidates in this category.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDuplicateGroups.map((group) => {
+                  const chosenId =
+                    selectedCanonicalByGroup[group.id]
+                    ?? group.recommendedCanonicalId
+                    ?? group.assets[0]?.canonicalId;
+
+                  return (
+                    <div
+                      key={group.id}
+                      className="rounded-2xl border border-white/10 bg-[#0d0f14] p-5 shadow-lg"
+                    >
+                      <div className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-md border border-violet-500/40 bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-200">
+                              {DUPLICATE_KIND_LABELS[group.kind]}
+                            </span>
+                            {!group.canAutoRecommendCanonical ? (
+                              <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                                Manual Review Required — Never Auto-Merged
+                              </span>
+                            ) : null}
+                          </div>
+                          <h3 className="mt-2 text-base font-bold text-white">{group.title}</h3>
+                          <p className="mt-0.5 text-xs text-gray-400">{group.summary}</p>
+                        </div>
+
+                        {group.kind !== 'unused_or_orphaned' && chosenId ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const preview = previewDuplicateConsolidation(group, chosenId);
+                              setConsolidationPreview(preview);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-red-500"
+                          >
+                            <GitMerge className="h-3.5 w-3.5" />
+                            Preview Consolidation Impact
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {/* Side-by-side Asset Previews */}
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {group.assets.slice(0, 6).map((asset) => {
+                          const isCanonicalChoice = chosenId === asset.canonicalId;
+                          return (
+                            <div
+                              key={asset.canonicalId}
+                              className={`flex flex-col justify-between rounded-xl border p-3.5 ${
+                                isCanonicalChoice
+                                  ? 'border-emerald-500/50 bg-emerald-950/15'
+                                  : 'border-white/10 bg-black/35'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="truncate text-xs font-semibold text-white">{asset.title}</span>
+                                  {isCanonicalChoice ? (
+                                    <span className="shrink-0 rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-200">
+                                      Canonical Target
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="mt-2.5 flex h-36 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#050608] p-2">
+                                  <img
+                                    src={asset.originalPreviewUrl}
+                                    alt={asset.altText}
+                                    className="max-h-full max-w-full object-contain"
+                                  />
+                                </div>
+                                <dl className="mt-2.5 grid grid-cols-2 gap-1.5 text-[11px] text-gray-400">
+                                  <div>
+                                    <span className="text-gray-500">Storage: </span>
+                                    <span className="text-gray-200">{asset.externalId?.slice(0, 10) ?? 'External'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Active refs: </span>
+                                    <span className="text-gray-200">{asset.activeReferenceCount}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">DB records: </span>
+                                    <span className="text-gray-200">{asset.dbRecords.length}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Redundant copies: </span>
+                                    <span className="text-gray-200">{asset.redundantCopyCount}</span>
+                                  </div>
+                                </dl>
+                              </div>
+
+                              <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedCanonicalByGroup((prev) => ({
+                                      ...prev,
+                                      [group.id]: asset.canonicalId,
+                                    }))
+                                  }
+                                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                                    isCanonicalChoice
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'border border-white/15 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]'
+                                  }`}
+                                >
+                                  {isCanonicalChoice ? 'Selected as Canonical' : 'Choose as Canonical'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCanonicalId(asset.canonicalId)}
+                                  className="text-[11px] font-semibold text-gray-300 hover:text-white"
+                                >
+                                  Inspect Details →
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Consequences & Affected Entities Summary */}
+                      <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-3.5 text-xs text-gray-300">
+                        <div className="font-semibold text-white">Expected Consolidation Consequences:</div>
+                        <ul className="mt-1.5 list-disc space-y-1 pl-5 text-gray-400">
+                          {group.consequencesSummary.map((line, i) => (
+                            <li key={i}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {/* =====================================================================
+            WORKSPACE 3: INHERITANCE & MISSING ASSIGNMENTS INSPECTOR
+        ===================================================================== */}
+        {workspaceTab === 'inheritance' ? (
+          <section className="mt-6 space-y-6" aria-label="Inheritance and Missing Media Assignments">
+            {/* Part A: Event Host-Logo Inheritance & Override Manager */}
+            <div className="rounded-2xl border border-white/10 bg-[#0d0f14] p-5">
+              <div className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    Event Host-Logo Inheritance & Override Inspector
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Precedence rule:{' '}
+                    <strong className="text-gray-200">
+                      Explicit event override → Parent host asset → Appropriate existing fallback
+                    </strong>
+                    . Remove an explicit override at any time so automatic host-logo inheritance resumes.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="search"
+                    value={inheritanceSearch}
+                    onChange={(e) => setInheritanceSearch(e.target.value)}
+                    placeholder="Search event or host..."
+                    className="rounded-xl border border-white/10 bg-black/50 px-3 py-1.5 text-xs text-white placeholder:text-gray-500"
+                  />
+                  <select
+                    aria-label="Filter event logo inheritance mode"
+                    value={inheritanceModeFilter}
+                    onChange={(e) => setInheritanceModeFilter(e.target.value as any)}
+                    className="rounded-xl border border-white/10 bg-black/50 px-3 py-1.5 text-xs text-gray-200"
+                  >
+                    <option value="all">All Event Logo States</option>
+                    <option value="inherited_host">Using Inherited Host Logo</option>
+                    <option value="explicit_override">Using Explicit Event Override</option>
+                    <option value="redundant_copy">Has Redundant Occurrence Copy</option>
+                    <option value="fallback">Using Fallback Logo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-3 py-2.5">Event</th>
+                      <th className="px-3 py-2.5">Host / Organizer</th>
+                      <th className="px-3 py-2.5">Active Logo Resolution</th>
+                      <th className="px-3 py-2.5">Inheritance Status</th>
+                      <th className="px-3 py-2.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {eventLogoInheritanceRows.slice(0, 40).map(({ event, state }) => (
+                      <tr key={event.id} className="hover:bg-white/[0.02]">
+                        <td className="px-3 py-2.5 font-semibold text-white">{event.name}</td>
+                        <td className="px-3 py-2.5 text-gray-300">
+                          {state.inheritedHostLogo.sourceName || event.hostName || 'Independent'}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            {state.resolvedLogo.url ? (
+                              <img
+                                src={state.resolvedLogo.url}
+                                alt=""
+                                className="h-8 w-8 rounded-lg border border-white/10 bg-black object-contain p-0.5"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[10px] font-bold text-gray-400">
+                                {(event.name || 'E').slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="truncate max-w-[180px] text-[11px] text-gray-400">
+                              {state.resolvedLogo.sourceName
+                                ? `From ${state.resolvedLogo.sourceName}`
+                                : 'Fallback badge'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {state.mode === 'inherited_host' ? (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="rounded border border-sky-500/35 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
+                                Inherited Host Logo
+                              </span>
+                              {state.hasRedundantOccurrenceCopy ? (
+                                <span className="rounded border border-violet-500/35 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-200">
+                                  Redundant Occurrence Copy Stored
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : state.mode === 'explicit_override' ? (
+                            <span className="rounded border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                              Explicit Event Override
+                            </span>
+                          ) : (
+                            <span className="rounded border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+                              Fallback Logo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPickerContext({
+                                  entityType: 'event',
+                                  entityId: event.id,
+                                  entityName: event.name,
+                                  role: 'logo',
+                                })
+                              }
+                              className="rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.1]"
+                            >
+                              {state.mode === 'explicit_override' ? 'Change Override' : 'Set Logo Override'}
+                            </button>
+                            {(state.mode === 'explicit_override' || state.hasRedundantOccurrenceCopy) ? (
+                              <button
+                                type="button"
+                                onClick={() => void handleRemoveEventLogoOverride(event.id)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/20"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                {state.mode === 'explicit_override' ? 'Remove Override' : 'Clean Redundant Copy'}
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Part B: Missing Asset Assignments */}
+            <div className="rounded-2xl border border-white/10 bg-[#0d0f14] p-5">
+              <h2 className="text-lg font-bold text-white">
+                Entities with Missing Primary Media Assignments ({catalogResult.missingSlots.length})
+              </h2>
+              <p className="mt-1 text-xs text-gray-400">
+                Assign an existing canonical asset from the library or upload a new image to fill missing logos, flyers,
+                and heroes.
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {catalogResult.missingSlots.slice(0, 48).map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="flex flex-col justify-between rounded-xl border border-white/10 bg-black/35 p-3.5"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-300">
+                          {ENTITY_TYPE_LABELS[slot.entityType]}
+                        </span>
+                        <span className="rounded border border-red-500/35 bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-200">
+                          Missing {slot.missingRole}
+                        </span>
+                      </div>
+                      <div className="mt-2 font-semibold text-white">{slot.entityName}</div>
+                      <p className="mt-1 text-xs text-gray-400">{slot.reason}</p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPickerContext({
+                            entityType: slot.entityType,
+                            entityId: slot.entityId,
+                            entityName: slot.entityName,
+                            role: slot.missingRole,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        Choose From Library
+                      </button>
+                      {slot.publicRoute ? (
+                        <Link
+                          to={slot.publicRoute}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white"
+                        >
+                          View on Site <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
         ) : null}
       </div>
 
-      {detailsTarget ? (
-        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-hidden bg-black/75 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
-          <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-6xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#111315] shadow-2xl sm:max-h-[calc(100vh-3rem)]">
-            <div className="sticky top-0 z-30 flex items-start justify-between gap-4 border-b border-white/10 bg-[#111315]/95 px-5 py-4 backdrop-blur-xl sm:px-6">
+      {/* =====================================================================
+          BOUNDED ASSET DETAIL DRAWER / MODAL
+      ===================================================================== */}
+      {selectedAsset ? (
+        <div
+          className="fixed inset-0 z-[100] flex justify-end bg-black/75 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Asset Details: ${selectedAsset.title}`}
+          onClick={() => setSelectedCanonicalId(null)}
+        >
+          <aside
+            className="flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-white/15 bg-[#0b0d12] text-gray-100 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-4">
               <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300/70">Entity media workspace</div>
-                <h2 id="media-details-title" className="mt-1 text-xl font-semibold text-white">{detailsTarget.ownerName}</h2>
-                <p className="mt-1 text-sm text-gray-400">{ownerLabels[detailsTarget.ownerType]} · {detailsOwnerMedia.length} media reference{detailsOwnerMedia.length === 1 ? '' : 's'} · inspecting {detailsTarget.roleLabel.toLowerCase()}</p>
-                {detailsTarget.ownerWebsite ? (
-                  <a
-                    href={detailsTarget.ownerWebsite}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300 transition hover:text-sky-200"
-                    title={detailsTarget.ownerWebsite}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {detailsTarget.ownerType === 'club' ? 'Open club website' : 'Open website'}
-                  </a>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+                    {selectedAsset.primaryCategory}
+                  </span>
+                  {selectedAsset.statusBadges.map((badge) => (
+                    <span
+                      key={badge}
+                      className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${BADGE_TONES[badge]}`}
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+                <h2 className="mt-1.5 truncate text-lg font-bold text-white">{selectedAsset.title}</h2>
+                <p className="truncate text-xs text-gray-400">{selectedAsset.filename}</p>
               </div>
-              <button type="button" onClick={() => setDetailsTarget(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-gray-400 transition hover:bg-white/[0.08] hover:text-white" aria-label="Close media details"><X className="h-4 w-4" /></button>
+              <button
+                type="button"
+                onClick={() => setSelectedCanonicalId(null)}
+                className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-gray-400 hover:bg-white/[0.1] hover:text-white"
+                aria-label="Close Asset Details Drawer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <div className="px-5 py-5 sm:px-6">
-              <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            {/* Drawer Scrollable Content */}
+            <div className="flex-1 space-y-6 overflow-y-auto p-6">
+              {/* Accurate Stored Asset Preview (No Darkened Overlay) */}
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#050608] p-3">
+                <div className="flex max-h-80 min-h-48 items-center justify-center">
+                  <img
+                    src={selectedAsset.originalPreviewUrl}
+                    alt={selectedAsset.altText}
+                    onLoad={(e) => {
+                      const { naturalWidth, naturalHeight } = e.currentTarget;
+                      if (naturalWidth > 0 && naturalHeight > 0) {
+                        setMetricsByCanonicalId((prev) => ({
+                          ...prev,
+                          [selectedAsset.canonicalId]: {
+                            width: naturalWidth,
+                            height: naturalHeight,
+                            broken: false,
+                          },
+                        }));
+                      }
+                    }}
+                    className="max-h-72 max-w-full rounded-lg object-contain"
+                  />
+                </div>
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2.5 text-[11px] text-gray-400">
+                  <span>Original stored asset preview (no public page gradient/overlay applied)</span>
+                  <a
+                    href={selectedAsset.originalPreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-semibold text-red-300 hover:underline"
+                  >
+                    Open raw file <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Technical & Storage Metadata Grid */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Asset Specifications & Provenance
+                </h3>
+                <dl className="mt-2.5 grid grid-cols-2 gap-2.5 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-xs sm:grid-cols-3">
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">All media for this entity</div>
-                    <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-500">Review every image tied to {detailsTarget.ownerName}. Select any tile to inspect it below, or replace the current identity media without leaving this workspace.</p>
+                    <dt className="text-gray-500">Filename</dt>
+                    <dd className="mt-0.5 truncate font-semibold text-white" title={selectedAsset.filename}>
+                      {selectedAsset.filename}
+                    </dd>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {canManageDetailsLogo ? (
-                      <div>
-                        <MediaUploader
-                          ownerType={detailsTarget.ownerType}
-                          ownerId={getMediaOwnerId(detailsTarget.ownerType, detailsTarget.ownerId)}
-                          role="logo"
-                          inputId={detailsLogoInputId}
-                          triggerOnly
-                          onUploaded={(asset) => { void handleMediaUploaded(detailsTarget, asset, 'logo'); }}
-                          onError={(message) => setReplacementError(message)}
-                        />
-                        <label htmlFor={detailsLogoInputId} className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.12] ${replacementBusyId === detailsTarget.id ? 'pointer-events-none opacity-50' : ''}`}>
-                          <Upload className="h-3.5 w-3.5" />
-                          {replacementBusyId === detailsTarget.id ? 'Updating…' : detailsCurrentLogo ? 'Replace logo' : 'Add logo'}
-                        </label>
-                      </div>
-                    ) : null}
-                    {canManageDetailsHero ? (
-                      <div>
-                        <MediaUploader
-                          ownerType={detailsTarget.ownerType}
-                          ownerId={getMediaOwnerId(detailsTarget.ownerType, detailsTarget.ownerId)}
-                          role="hero"
-                          inputId={detailsHeroInputId}
-                          triggerOnly
-                          onUploaded={(asset) => {
-                            setHeroRecropFile(null);
-                            void handleMediaUploaded(detailsTarget, asset, 'hero');
-                          }}
-                          onError={(message) => {
-                            setHeroRecropFile(null);
-                            setReplacementError(message);
-                          }}
-                          externalFile={heroRecropFile}
-                        />
-                        <label htmlFor={detailsHeroInputId} className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-sky-300 transition hover:border-sky-400/35 hover:bg-sky-400/[0.12] ${replacementBusyId === detailsTarget.id ? 'pointer-events-none opacity-50' : ''}`}>
-                          <Upload className="h-3.5 w-3.5" />
-                          {replacementBusyId === detailsTarget.id ? 'Updating…' : detailsCurrentHero ? 'Replace hero' : 'Add hero'}
-                        </label>
-                      </div>
-                    ) : null}
-                    {detailsCurrentHero?.source === 'media_asset' && detailsCurrentHero.url ? (
-                      <button
-                        type="button"
-                        disabled={heroRecropBusyId === detailsCurrentHero.id || replacementBusyId === detailsTarget.id}
-                        onClick={() => void beginHeroRecrop(detailsCurrentHero)}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/20 bg-violet-400/[0.07] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-violet-300 transition hover:border-violet-400/35 hover:bg-violet-400/[0.12] disabled:cursor-wait disabled:opacity-50"
-                        title="Reposition and zoom the current Hero into a new 16:9 crop. The original is preserved as an extra upload."
+                  <div>
+                    <dt className="text-gray-500">Dimensions</dt>
+                    <dd className="mt-0.5 font-semibold text-white">
+                      {selectedMetric?.width && selectedMetric?.height
+                        ? `${selectedMetric.width} × ${selectedMetric.height} px`
+                        : 'Measuring…'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Aspect Ratio</dt>
+                    <dd className="mt-0.5 font-semibold text-white">
+                      {selectedQualityReport?.aspectRatioLabel
+                        ?? selectedAsset.targetRatio
+                        ?? 'Auto'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">File Type</dt>
+                    <dd className="mt-0.5 font-semibold text-white">{selectedAsset.fileType}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">File Size</dt>
+                    <dd className="mt-0.5 font-semibold text-white">{formatBytes(selectedAsset.fileSizeBytes)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Roles</dt>
+                    <dd className="mt-0.5 font-semibold uppercase text-white">
+                      {selectedAsset.roles.join(', ')}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 sm:col-span-3">
+                    <dt className="text-gray-500">Storage Location</dt>
+                    <dd className="mt-0.5 break-all font-mono text-[11px] text-gray-200">
+                      {selectedAsset.storageLocationLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Upload Date</dt>
+                    <dd className="mt-0.5 font-medium text-gray-200">{formatShortDate(selectedAsset.createdAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Last Modified</dt>
+                    <dd className="mt-0.5 font-medium text-gray-200">{formatShortDate(selectedAsset.updatedAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Active References</dt>
+                    <dd className="mt-0.5 font-semibold text-emerald-300">
+                      {selectedAsset.activeReferenceCount} ({selectedAsset.explicitReferenceCount} explicit,{' '}
+                      {selectedAsset.inheritedReferenceCount} inherited)
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Quality & Role Dimension Checks */}
+              {selectedQualityReport ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                    Role & Dimension Quality Checks
+                  </div>
+                  <ul className="mt-2 space-y-1.5 text-xs">
+                    {selectedQualityReport.checks.map((check) => (
+                      <li
+                        key={check.code}
+                        className={`flex items-start gap-2 rounded-xl px-3 py-2 ${
+                          check.level === 'error'
+                            ? 'bg-red-500/15 text-red-200'
+                            : check.level === 'warning'
+                              ? 'bg-amber-500/15 text-amber-200'
+                              : check.level === 'info'
+                                ? 'bg-sky-500/15 text-sky-200'
+                                : 'bg-emerald-500/12 text-emerald-200'
+                        }`}
                       >
-                        <RefreshCw className={`h-3.5 w-3.5 ${heroRecropBusyId === detailsCurrentHero.id ? 'animate-spin' : ''}`} />
-                        {heroRecropBusyId === detailsCurrentHero.id ? 'Loading hero…' : 'Recrop hero'}
-                      </button>
-                    ) : null}
-                  </div>
+                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{check.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* Current Usage Across SwingSphere (Explicit vs Inherited) */}
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                    Used By ({selectedAsset.usages.length})
+                  </h3>
+                  {selectedAsset.redundantCopyCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const group = catalogResult.duplicateGroups.find(
+                          (g) => g.id === `same-file-${selectedAsset.canonicalId}`,
+                        );
+                        if (group) {
+                          setConsolidationPreview(previewDuplicateConsolidation(group, selectedAsset.canonicalId));
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/15 px-2.5 py-1 text-[11px] font-semibold text-violet-200 hover:bg-violet-500/25"
+                    >
+                      <GitMerge className="h-3 w-3" />
+                      Consolidate {selectedAsset.redundantCopyCount} redundant event copies
+                    </button>
+                  ) : null}
                 </div>
 
-                {replacementError ? <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2.5 text-xs text-red-200">{replacementError}</div> : null}
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                  {detailsOwnerMedia.map((media) => {
-                    const selected = media.id === detailsTarget.id;
-                    const mediaBroken = brokenIds.has(media.id) || !media.url;
-                    const mediaAttention = getAttentionReasons(media, mediaBroken, dimensionsById[media.id]);
-                    return (
-                      <button
-                        key={media.id}
-                        type="button"
-                        onClick={() => setDetailsTarget(media)}
-                        className={`overflow-hidden rounded-xl border text-left transition ${selected ? 'border-red-400/60 bg-red-400/[0.07] ring-1 ring-red-400/20' : media.isCurrent ? 'border-emerald-400/30 bg-emerald-400/[0.035] hover:border-emerald-400/50' : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/[0.035]'}`}
-                      >
-                        <div className="relative aspect-[4/3] bg-black/35">
-                          {media.url ? <img src={media.url} alt="" className={`h-full w-full ${media.role === 'logo' || media.role === 'flyer' ? 'object-contain' : 'object-cover'}`} /> : <div className="flex h-full items-center justify-center text-red-300/70"><ImageOff className="h-5 w-5" /></div>}
-                          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-                            <span className="rounded-md bg-black/80 px-1.5 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-gray-200">{media.roleLabel}</span>
-                            {media.isCurrent ? <span className="rounded-md bg-emerald-400 px-1.5 py-1 text-[8px] font-black uppercase tracking-[0.1em] text-black">Current</span> : null}
-                          </div>
-                        </div>
-                        <div className="space-y-1.5 p-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-[10px] font-semibold text-gray-200">{media.source === 'media_asset' ? 'Canonical media' : 'Legacy reference'}</span>
-                            {media.status ? <span className="shrink-0 text-[8px] uppercase tracking-[0.08em] text-gray-500">{media.status.replace('_', ' ')}</span> : null}
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {media.usage === 'extra' ? <span className="rounded bg-amber-400/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-300">Extra</span> : null}
-                            {isPlaceholderRecord(media) ? <span className="rounded bg-amber-300/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-amber-200">Placeholder</span> : null}
-                            {mediaAttention.length ? <span className="rounded bg-red-400/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-red-300">{mediaAttention.length} issue{mediaAttention.length === 1 ? '' : 's'}</span> : null}
-                            {selected ? <span className="rounded bg-red-400/15 px-1.5 py-0.5 text-[8px] font-semibold uppercase text-red-300">Inspecting</span> : null}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <div className="space-y-4">
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                  <div className="aspect-[4/3]">
-                    {detailsTarget.url ? <img src={detailsTarget.url} alt="" className={`h-full w-full ${detailsTarget.role === 'logo' || detailsTarget.role === 'flyer' ? 'object-contain' : 'object-cover'}`} /> : <div className="flex h-full items-center justify-center gap-2 text-sm text-red-300"><ImageOff className="h-5 w-5" /> Image unavailable</div>}
-                  </div>
-                </div>
-
-                {detailsTarget.url ? <a href={detailsTarget.url} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-gray-300 transition hover:bg-white/[0.08] hover:text-white"><ExternalLink className="h-4 w-4" /> Open image</a> : null}
-
-                {detailsTarget.source === 'media_asset' && detailsTarget.mediaAssetId ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400"><UserRound className="h-4 w-4" /> Provenance</div>
-                    <dl className="mt-3 space-y-2 text-xs">
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Uploader</dt><dd className="max-w-[70%] text-right text-gray-300">{detailsTarget.uploaderName ?? detailsTarget.createdBy ?? 'Not recorded'}</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Uploaded</dt><dd className="text-right text-gray-300">{formatAssetDate(detailsTarget.createdAt) ?? 'Unknown'}</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Moderation</dt><dd className="text-right capitalize text-gray-300">{detailsTarget.status?.replace('_', ' ') ?? 'Unknown'}</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Storage</dt><dd className="text-right text-gray-300">Cloudflare Images</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Fit</dt><dd className="text-right text-gray-300">{detailsTarget.aspectMode ?? getMediaRule(detailsTarget.role).aspectMode}{detailsTarget.targetRatio ? ` · ${detailsTarget.targetRatio}` : ''}</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Sort order</dt><dd className="text-right text-gray-300">{detailsTarget.sortOrder ?? 0}</dd></div>
-                      <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Alt text</dt><dd className="max-w-[70%] text-right text-gray-300">{detailsTarget.altText || 'Not provided'}</dd></div>
-                      {detailsTarget.focalPointX != null && detailsTarget.focalPointY != null ? <div className="flex items-start justify-between gap-3"><dt className="text-gray-500">Focal point</dt><dd className="text-right text-gray-300">{detailsTarget.focalPointX}, {detailsTarget.focalPointY}</dd></div> : null}
-                    </dl>
+                {selectedAsset.usages.length === 0 ? (
+                  <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-4 text-xs text-gray-400">
+                    This asset is currently unlinked. Use the assignment panel below to link it to any club, event,
+                    host, venue, resort, or cruise.
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-sky-400/10 bg-sky-400/[0.035] p-4 text-xs leading-5 text-sky-100/60">Legacy URL field. Original uploader and moderation history are not available for this reference.</div>
+                  <ul className="mt-2.5 space-y-2">
+                    {selectedAsset.usages.map((usage) => (
+                      <li
+                        key={usage.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/35 px-3.5 py-2.5 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEntityScopeFilter({
+                                  entityType: usage.entityType,
+                                  entityId: usage.entityId,
+                                  entityName: usage.entityName,
+                                });
+                                setWorkspaceTab('browser');
+                              }}
+                              className="font-semibold text-white hover:text-red-300 hover:underline"
+                            >
+                              {usage.entityName}
+                            </button>
+                            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-gray-300">
+                              {ENTITY_TYPE_LABELS[usage.entityType]}
+                            </span>
+                            <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] uppercase text-gray-400">
+                              {usage.role}
+                            </span>
+                            {usage.assignmentKind === 'explicit' ? (
+                              <span className="rounded border border-emerald-500/35 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-200">
+                                Explicit
+                              </span>
+                            ) : usage.assignmentKind === 'inherited' ? (
+                              <span className="rounded border border-sky-500/35 bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-sky-200">
+                                Inherited{usage.inheritedFrom ? ` from ${usage.inheritedFrom.entityName}` : ''}
+                              </span>
+                            ) : usage.assignmentKind === 'redundant_copy' ? (
+                              <span className="rounded border border-violet-500/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200">
+                                Redundant Occurrence Copy
+                              </span>
+                            ) : (
+                              <span className="rounded border border-amber-500/35 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-200">
+                                Historical / Superseded
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {usage.entityType === 'event'
+                          && usage.role === 'logo'
+                          && (usage.assignmentKind === 'explicit' || usage.assignmentKind === 'redundant_copy') ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveEventLogoOverride(usage.entityId)}
+                              className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-500/20"
+                            >
+                              Resume Host Inheritance
+                            </button>
+                          ) : null}
+                          {usage.publicRoute ? (
+                            <Link
+                              to={usage.publicRoute}
+                              className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-gray-200 hover:bg-white/[0.1] hover:text-white"
+                            >
+                              View on Site <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
 
-              <div className="space-y-4">
-                <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400"><Eye className="h-4 w-4" /> Where this is used</div>
-                  <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3 text-sm leading-6 text-gray-300">
-                    {detailsTarget.isCurrent
-                      ? `This is currently selected as ${detailsTarget.ownerName}'s ${detailsTarget.roleLabel.toLowerCase()}.`
-                      : `No current display reference was detected for this ${detailsTarget.roleLabel.toLowerCase()} record.`}
+              {/* Assign This Canonical Asset to Another Listing / Entity */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                  Assign This Asset to a Listing / Entity
+                </h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  Reuse this canonical asset without uploading another physical file.
+                </p>
+
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-400">Entity Type</label>
+                    <select
+                      value={assignEntityType}
+                      onChange={(e) => setAssignEntityType(e.target.value as CanonicalEntityType)}
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white"
+                    >
+                      <option value="event">Event</option>
+                      <option value="club">Club</option>
+                      <option value="organization">Host / Organization</option>
+                      <option value="venue">Venue</option>
+                      <option value="resort">Resort</option>
+                      <option value="cruise_series">Cruise Series</option>
+                      <option value="cruise_sailing">Cruise Sailing</option>
+                      <option value="event_series">Event Series</option>
+                      <option value="club_brand">Club Brand</option>
+                    </select>
                   </div>
-                  {detailsTarget.currentReason ? <div className="mt-2 text-xs leading-5 text-emerald-200/70">{detailsTarget.currentReason}</div> : null}
-                  <p className="mt-3 text-xs leading-5 text-gray-500">{getRoleUsageDescription(detailsTarget)}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="rounded-lg border border-white/8 bg-black/20 px-2.5 py-2 text-gray-500"><span className="block uppercase tracking-[0.1em]">Owner + role refs</span><span className="mt-1 block text-sm font-semibold text-gray-200">{detailsTarget.ownerRoleCount}</span></div>
-                    <div className="rounded-lg border border-white/8 bg-black/20 px-2.5 py-2 text-gray-500"><span className="block uppercase tracking-[0.1em]">Exact refs</span><span className="mt-1 block text-sm font-semibold text-gray-200">{detailsTarget.exactDuplicateCount}</span></div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-400">Target Role</label>
+                    <select
+                      value={assignRole}
+                      onChange={(e) => setAssignRole(e.target.value as any)}
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white"
+                    >
+                      <option value="logo">Logo (Brand / Host / Override)</option>
+                      <option value="hero">Hero Image (Wide Header)</option>
+                      {assignEntityType === 'event' ? (
+                        <option value="flyer">Event Flyer (Card & Poster)</option>
+                      ) : null}
+                      <option value="gallery">Gallery Image</option>
+                    </select>
                   </div>
-                </section>
 
-                <section className={`rounded-2xl border p-4 ${detailsAttentionReasons.length ? 'border-amber-300/15 bg-amber-300/[0.035]' : 'border-emerald-400/15 bg-emerald-400/[0.035]'}`}>
-                  <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] ${detailsAttentionReasons.length ? 'text-amber-200' : 'text-emerald-300'}`}><ShieldAlert className="h-4 w-4" /> {detailsAttentionReasons.length ? 'Needs attention' : 'No detected issues'}</div>
-                  {detailsAttentionReasons.length ? (
-                    <div className="mt-3 space-y-2">
-                      {detailsAttentionReasons.map((reason) => <div key={reason.key} className={`rounded-xl border px-3 py-2.5 ${attentionToneClass[reason.tone]}`}><div className="text-xs font-semibold">{reason.label}</div><div className="mt-1 text-[11px] leading-5 opacity-75">{reason.detail}</div></div>)}
-                    </div>
-                  ) : <p className="mt-2 text-xs leading-5 text-emerald-100/60">Nothing in the current structural or visible quality checks requires action.</p>}
-                </section>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-gray-400">Filter & Select Target Entity</label>
+                    <input
+                      type="search"
+                      value={assignEntitySearch}
+                      onChange={(e) => setAssignEntitySearch(e.target.value)}
+                      placeholder="Filter entities by name..."
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-1.5 text-xs text-white placeholder:text-gray-500"
+                    />
+                    <select
+                      value={assignEntityId}
+                      onChange={(e) => setAssignEntityId(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white"
+                    >
+                      {assignableEntities.map((ent) => (
+                        <option key={ent.id} value={ent.id}>
+                          {ent.name} {ent.subtitle ? `(${ent.subtitle})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-                {detailsDimensions ? (
-                  <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Detected dimensions</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2"><span className="text-lg font-semibold text-white">{detailsDimensions.width} × {detailsDimensions.height}px</span>{detailsMediaQa ? <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${detailsMediaQa.resolutionTone === 'good' ? 'bg-emerald-400/10 text-emerald-300' : detailsMediaQa.resolutionTone === 'warn' ? 'bg-amber-400/10 text-amber-300' : 'bg-red-400/10 text-red-300'}`}>{detailsMediaQa.resolution}</span> : null}</div>
-                    <div className="mt-1 text-xs text-gray-500">{detailsDimensions.source === 'source' ? 'Source rendition' : 'Delivered rendition'} · target {detailsMediaQa?.targetLabel ?? mediaQaTargets[detailsTarget.role].label}</div>
-                  </section>
-                ) : null}
-
-                {detailsTarget.source === 'media_asset' && detailsTarget.mediaAssetId ? (
-                  <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Moderation actions</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {detailsTarget.status !== 'approved' ? <button type="button" disabled={moderationBusyId === detailsTarget.id} onClick={() => void handleModeration(detailsTarget, 'approved')} className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-xs font-bold text-emerald-300 transition hover:bg-emerald-400/[0.13] disabled:opacity-50">Approve</button> : null}
-                      {detailsTarget.status !== 'rejected' ? <button type="button" disabled={moderationBusyId === detailsTarget.id || detailsTarget.isCurrent} onClick={() => void handleModeration(detailsTarget, 'rejected')} title={detailsTarget.isCurrent ? 'Replace or clear the current reference first.' : 'Reject this media asset.'} className="rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-400/[0.12] disabled:cursor-not-allowed disabled:opacity-35">Reject</button> : null}
-                      {detailsTarget.status !== 'archived' ? <button type="button" disabled={moderationBusyId === detailsTarget.id || detailsTarget.isCurrent} onClick={() => void handleModeration(detailsTarget, 'archived')} title={detailsTarget.isCurrent ? 'Replace or clear the current reference first.' : 'Archive this media asset.'} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35">Archive</button> : null}
-                      {detailsTarget.status === 'archived' ? <button type="button" disabled={moderationBusyId === detailsTarget.id} onClick={() => void handleModeration(detailsTarget, 'pending_review')} className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-300/[0.12] disabled:opacity-50">Return to review</button> : null}
-                    </div>
-                    {detailsTarget.isCurrent ? <p className="mt-2 text-[11px] leading-5 text-gray-500">Reject and Archive stay disabled while the asset is current. Replace or clear the live reference first.</p> : null}
-                  </section>
-                ) : null}
-
-                {(detailsTarget.role === 'logo' || detailsTarget.role === 'hero' || isPlaceholderRecord(detailsTarget) || (!detailsTarget.isCurrent && detailsTarget.source === 'media_asset')) ? (
-                  <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Selected media actions</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {!detailsTarget.isCurrent && (detailsTarget.role === 'logo' || detailsTarget.role === 'hero') && detailsTarget.source === 'media_asset' ? (
-                        <button
-                          type="button"
-                          disabled={replacementBusyId === detailsTarget.id || detailsTarget.status !== 'approved'}
-                          onClick={() => void useExistingMediaAsCurrent(detailsTarget)}
-                          title={detailsTarget.status !== 'approved' ? 'Approve this asset before making it current.' : 'Use this as the current ' + detailsTarget.roleLabel.toLowerCase() + '.'}
-                          className="rounded-xl border border-sky-400/20 bg-sky-400/[0.08] px-3 py-2 text-xs font-bold text-sky-300 transition hover:bg-sky-400/[0.13] disabled:cursor-not-allowed disabled:opacity-35"
-                        >
-                          {replacementBusyId === detailsTarget.id ? 'Updating…' : 'Use as current ' + detailsTarget.roleLabel.toLowerCase()}
-                        </button>
-                      ) : null}
-                      {detailsTarget.isCurrent && detailsTarget.source === 'legacy_url' && isPlaceholderRecord(detailsTarget) && detailsTarget.ownerType !== 'user' ? (
-                        <button type="button" onClick={() => requestPlaceholderClear(detailsTarget)} className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-300/[0.12]">Remove placeholder</button>
-                      ) : null}
-                      {!detailsTarget.isCurrent && detailsTarget.source === 'media_asset' && detailsTarget.mediaAssetId && detailsTarget.externalId ? (
-                        <button type="button" onClick={() => requestDelete(detailsTarget)} className="rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-400/[0.12]">
-                          {detailsTarget.exactDuplicateCount > 1 ? 'Remove duplicate ref' : 'Delete unused image'}
-                        </button>
-                      ) : null}
-                    </div>
-                    {!detailsTarget.isCurrent && (detailsTarget.role === 'logo' || detailsTarget.role === 'hero') && detailsTarget.source === 'media_asset' && detailsTarget.status !== 'approved' ? <p className="mt-2 text-[11px] leading-5 text-gray-500">Approve this asset first if you want to promote it back to the current {detailsTarget.roleLabel.toLowerCase()}.</p> : null}
-                  </section>
-                ) : null}
-
-                <section className="rounded-2xl border border-white/10 bg-black/20 p-4 font-mono text-[10px] leading-5 text-gray-500">
-                  <div className="break-all">Owner: {detailsTarget.ownerType}:{detailsTarget.ownerId}</div>
-                  {detailsTarget.storageOwnerId && detailsTarget.storageOwnerId !== detailsTarget.ownerId ? <div className="break-all">Media owner UUID: {detailsTarget.storageOwnerId}</div> : null}
-                  {detailsTarget.mediaAssetId ? <div className="break-all">Asset: {detailsTarget.mediaAssetId}</div> : null}
-                  {detailsTarget.externalId ? <div className="break-all">Cloudflare: {detailsTarget.externalId}</div> : null}
-                  {detailsTarget.createdBy ? <div className="break-all">Created by: {detailsTarget.createdBy}</div> : null}
-                </section>
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    disabled={isAssigning || !assignEntityId}
+                    onClick={() =>
+                      void assignCanonicalAssetToEntity({
+                        asset: selectedAsset,
+                        entityType: assignEntityType,
+                        entityId: assignEntityId,
+                        role: assignRole,
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-500 disabled:opacity-40"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    {isAssigning ? 'Assigning…' : 'Assign Canonical Asset'}
+                  </button>
+                </div>
               </div>
             </div>
-            </div>
-          </div>
+          </aside>
         </div>
       ) : null}
 
-      {placeholderTarget ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-placeholder-title">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-amber-300/25 bg-[#111315] shadow-2xl">
-            <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-300/10 text-amber-200"><ImageOff className="h-5 w-5" /></div>
+      {/* =====================================================================
+          CONSOLIDATION IMPACT PREVIEW CONFIRMATION MODAL
+      ===================================================================== */}
+      {consolidationPreview ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm Duplicate Consolidation"
+        >
+          <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-[#0b0d12] p-6 text-gray-100 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-violet-300">
+                  Safe Consolidation Impact Preview
+                </div>
+                <h2 className="mt-1 text-lg font-bold text-white">
+                  Consolidate onto "{consolidationPreview.canonicalAsset.title}"
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConsolidationPreview(null)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 text-xs">
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3">
+                <img
+                  src={consolidationPreview.canonicalAsset.thumbnailUrl}
+                  alt=""
+                  className="h-14 w-14 rounded-lg border border-white/10 bg-black object-contain p-1"
+                />
                 <div>
-                  <h2 id="clear-placeholder-title" className="text-lg font-semibold text-white">Remove placeholder reference?</h2>
-                  <p className="mt-1 text-sm leading-5 text-gray-400">
-                    This image is currently referenced by the entity, but SwingSphere recognizes the URL as placeholder media.
+                  <div className="font-semibold text-white">
+                    Canonical Asset: {consolidationPreview.canonicalAsset.title}
+                  </div>
+                  <div className="text-gray-300">{consolidationPreview.canonicalAsset.storageLocationLabel}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="font-semibold uppercase tracking-wider text-gray-400">
+                  Affected Entities ({consolidationPreview.affectedEntities.length})
+                </div>
+                {consolidationPreview.affectedEntities.length === 0 ? (
+                  <p className="mt-1.5 text-gray-400">
+                    No active public entity references will be disrupted; only duplicate record metadata will be
+                    consolidated.
                   </p>
-                </div>
+                ) : (
+                  <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3">
+                    {consolidationPreview.affectedEntities.map((item, idx) => (
+                      <li key={`${item.entityId}-${idx}`} className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-white">
+                          {item.entityName} ({ENTITY_TYPE_LABELS[item.entityType]} · {item.role})
+                        </span>
+                        <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] text-gray-300">
+                          {item.action === 'removed_redundant_override'
+                            ? 'Resume host inheritance'
+                            : 'Migrate to canonical asset'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 text-amber-200">
+                <ul className="list-disc space-y-1 pl-4">
+                  {consolidationPreview.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
               </div>
             </div>
 
-            <div className="space-y-4 px-5 py-5 sm:px-6">
-              <div className="grid grid-cols-[96px_1fr] gap-4">
-                <div className="aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                  {placeholderTarget.url ? <img src={placeholderTarget.url} alt="" className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center text-gray-600"><ImageOff className="h-5 w-5" /></div>}
-                </div>
-                <div className="min-w-0 space-y-1.5 text-sm">
-                  <div className="font-semibold text-white">{placeholderTarget.ownerName}</div>
-                  <div className="text-gray-400">{ownerLabels[placeholderTarget.ownerType]} · {placeholderTarget.roleLabel}</div>
-                  <div className="text-amber-200/70">Recognized placeholder URL</div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3 py-3 text-xs leading-5 text-amber-100/80">
-                This clears only the current placeholder URL from the entity. It does not delete a Cloudflare image. The page will then use its normal missing/inherited-media behavior until you upload a real replacement.
-              </div>
-
-              {placeholderError ? <div className="rounded-xl border border-red-400/25 bg-red-400/[0.08] px-3 py-2.5 text-sm text-red-200">{placeholderError}</div> : null}
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 border-t border-white/10 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-              <button type="button" disabled={clearingPlaceholder} onClick={() => { setPlaceholderTarget(null); setPlaceholderError(''); }} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:bg-white/[0.08] disabled:opacity-50">Cancel</button>
-              <button type="button" disabled={clearingPlaceholder} onClick={() => void confirmPlaceholderClear()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-60">
-                <ImageOff className="h-4 w-4" />
-                {clearingPlaceholder ? 'Clearing placeholder…' : 'Remove placeholder'}
+            <div className="mt-6 flex items-center justify-end gap-2 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                onClick={() => setConsolidationPreview(null)}
+                className="rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/[0.08]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isConsolidating}
+                onClick={() => void executeConsolidation(consolidationPreview)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-500 disabled:opacity-50"
+              >
+                <GitMerge className="h-3.5 w-3.5" />
+                {isConsolidating ? 'Consolidating…' : 'Confirm Non-Destructive Consolidation'}
               </button>
             </div>
           </div>
         </div>
       ) : null}
 
-      {deleteTarget ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-image-title">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-red-400/20 bg-[#111315] shadow-2xl">
-            <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-400/10 text-red-300"><AlertTriangle className="h-5 w-5" /></div>
-                <div>
-                  <h2 id="delete-image-title" className="text-lg font-semibold text-white">Delete unused image?</h2>
-                  <p className="mt-1 text-sm leading-5 text-gray-400">
-                    The server will verify this asset is still unused before deleting anything. Current images are never removable from this view.
-                  </p>
+      {/* =====================================================================
+          UPLOAD & QUICK-REPLACE MODAL
+      ===================================================================== */}
+      {isUploadModalOpen ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Upload or Quick-Replace Media Asset"
+        >
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b0d12] text-gray-100 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-red-400">
+                  Upload & Quick-Assign Workflow
                 </div>
+                <h2 className="mt-0.5 text-lg font-bold text-white">
+                  Upload Files, Paste Validated URL, or Choose Existing
+                </h2>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsUploadModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <div className="space-y-4 px-5 py-5 sm:px-6">
-              <div className="grid grid-cols-[96px_1fr] gap-4">
-                <div className="aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                  {deleteTarget.url ? <img src={deleteTarget.url} alt="" className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center text-gray-600"><ImageOff className="h-5 w-5" /></div>}
+            <div className="flex-1 space-y-4 overflow-y-auto p-6 text-xs">
+              {/* Target Entity & Role Selector */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="block font-semibold text-gray-400">Target Entity Type</label>
+                  <select
+                    value={uploadTargetEntityType}
+                    onChange={(e) => {
+                      setUploadTargetEntityType(e.target.value as CanonicalEntityType);
+                      setAssignEntityType(e.target.value as CanonicalEntityType);
+                    }}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white"
+                  >
+                    <option value="event">Event</option>
+                    <option value="club">Club</option>
+                    <option value="organization">Host / Organization</option>
+                    <option value="venue">Venue</option>
+                    <option value="resort">Resort</option>
+                    <option value="cruise_series">Cruise Series</option>
+                    <option value="cruise_sailing">Cruise Sailing</option>
+                  </select>
                 </div>
-                <div className="min-w-0 space-y-1.5 text-sm">
-                  <div className="font-semibold text-white">{deleteTarget.ownerName}</div>
-                  <div className="text-gray-400">{ownerLabels[deleteTarget.ownerType]} · {deleteTarget.roleLabel}</div>
-                  {deleteTarget.status ? <div className="text-gray-500">Status: {deleteTarget.status.replace('_', ' ')}</div> : null}
-                  {formatAssetDate(deleteTarget.createdAt ?? deleteTarget.updatedAt) ? <div className="text-gray-500">Uploaded {formatAssetDate(deleteTarget.createdAt ?? deleteTarget.updatedAt)}</div> : null}
+
+                <div>
+                  <label className="block font-semibold text-gray-400">Target Role</label>
+                  <select
+                    value={uploadTargetRole}
+                    onChange={(e) => setUploadTargetRole(e.target.value as any)}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white"
+                  >
+                    <option value="flyer">Event Flyer</option>
+                    <option value="hero">Hero Image</option>
+                    <option value="logo">Logo</option>
+                    <option value="gallery">Gallery</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-400">Target Entity</label>
+                  <select
+                    value={uploadTargetEntityId || assignEntityId}
+                    onChange={(e) => setUploadTargetEntityId(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white"
+                  >
+                    {assignableEntities.map((ent) => (
+                      <option key={ent.id} value={ent.id}>
+                        {ent.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3 font-mono text-[10px] leading-5 text-gray-500">
-                <div className="truncate" title={deleteTarget.mediaAssetId}>Asset: {deleteTarget.mediaAssetId}</div>
-                <div className="truncate" title={deleteTarget.externalId}>Cloudflare: {deleteTarget.externalId}</div>
+              {/* Drag and Drop Multi-File Zone */}
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files?.length) {
+                    void handleQueueUploadFiles(e.dataTransfer.files);
+                  }
+                }}
+                className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/15 bg-black/35 p-6 text-center transition hover:border-red-500/50"
+              >
+                <Upload className="h-8 w-8 text-red-400" />
+                <p className="mt-2 font-semibold text-white">
+                  Drag & drop image files here, or click to browse
+                </p>
+                <p className="mt-1 text-gray-400">
+                  Supports JPG, PNG, WebP. Computes SHA-256 content hash before upload to warn if an identical file
+                  already exists in the library.
+                </p>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  multiple
+                  accept={ALLOWED_MEDIA_MIME_TYPES.join(',')}
+                  onChange={(e) => {
+                    if (e.target.files?.length) void handleQueueUploadFiles(e.target.files);
+                  }}
+                  className="hidden"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => uploadInputRef.current?.click()}
+                    className="rounded-xl bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/15"
+                  >
+                    Select Image File(s)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetId = uploadTargetEntityId || assignEntityId;
+                      const ent = assignableEntities.find((item) => item.id === targetId);
+                      setIsUploadModalOpen(false);
+                      setPickerContext({
+                        entityType: uploadTargetEntityType,
+                        entityId: targetId,
+                        entityName: ent?.name ?? targetId,
+                        role: uploadTargetRole,
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 font-semibold text-red-200 hover:bg-red-500/25"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Choose Existing From Library Instead
+                  </button>
+                </div>
               </div>
 
-              {deleteTarget.exactDuplicateCount > 1 ? (
-                <div className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/[0.06] px-3 py-3 text-xs leading-5 text-fuchsia-100/80">
-                  This is an exact duplicate reference. If another database record points to the same Cloudflare image, only this redundant record will be removed; the shared image file will be kept.
+              {/* Queued Files Pre-Save Preview */}
+              {uploadQueuedFiles.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="font-semibold text-white">
+                    Pre-Save Preview ({uploadQueuedFiles.length} file{uploadQueuedFiles.length === 1 ? '' : 's'})
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {uploadQueuedFiles.map((item, idx) => (
+                      <div
+                        key={`${item.file.name}-${idx}`}
+                        className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-2.5"
+                      >
+                        <img
+                          src={item.previewUrl}
+                          alt={item.file.name}
+                          className="h-14 w-14 rounded-lg object-contain bg-black"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold text-white">{item.file.name}</div>
+                          <div className="text-[11px] text-gray-400">
+                            {formatBytes(item.file.size)} · SHA-256: {item.sha256?.slice(0, 10) ?? '…'}
+                          </div>
+                          {item.matchingExistingAsset ? (
+                            <div className="mt-1 text-[11px] font-semibold text-amber-300">
+                              Exact byte match in library: {item.matchingExistingAsset.title}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ) : deleteTarget.usage === 'unresolved' || !deleteTarget.ownerResolved ? (
-                <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-3 text-xs leading-5 text-amber-100/80">
-                  SwingSphere could not fully resolve this asset's current owner state. The server will perform one final reference check before allowing deletion.
+              ) : null}
+
+              {/* Validated External URL Paste Option */}
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3.5">
+                <label className="block font-semibold text-white">
+                  Or Link a Validated External / Cloudflare Image URL
+                </label>
+                <p className="mt-0.5 text-[11px] text-gray-400">
+                  External URLs are validated and clearly distinguished from locally managed Cloudflare Images.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="url"
+                    value={uploadExternalUrlInput}
+                    onChange={(e) => setUploadExternalUrlInput(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const check = validateExternalImageUrl(uploadExternalUrlInput);
+                      if (!check.valid || !check.normalizedUrl) {
+                        setUploadModalError(check.error ?? 'Invalid image URL.');
+                        return;
+                      }
+                      const targetId = uploadTargetEntityId || assignEntityId;
+                      const syntheticAsset: CanonicalMediaAsset = {
+                        canonicalId: `url:${check.normalizedUrl}`,
+                        externalId: null,
+                        storageProvider: check.isCloudflareManaged ? 'cloudflare_images' : 'external_url',
+                        storageLocationLabel: `External URL (${check.host})`,
+                        originalPreviewUrl: check.normalizedUrl,
+                        thumbnailUrl: check.normalizedUrl,
+                        filename: check.normalizedUrl.split('/').pop() || 'external-image',
+                        title: `External ${uploadTargetRole.toUpperCase()}`,
+                        altText: 'External image',
+                        primaryCategory: uploadTargetRole === 'cover' ? 'hero' : uploadTargetRole,
+                        roles: [uploadTargetRole],
+                        status: 'approved',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        targetRatio: null,
+                        aspectMode: null,
+                        fileType: 'External Image',
+                        fileSizeBytes: null,
+                        contentHash: null,
+                        visualHash: null,
+                        dbRecords: [],
+                        usages: [],
+                        activeReferenceCount: 1,
+                        explicitReferenceCount: 1,
+                        inheritedReferenceCount: 0,
+                        redundantCopyCount: 0,
+                        isPlaceholder: false,
+                        isValidUrl: true,
+                        duplicateFlags: {
+                          hasDuplicateDbRecords: false,
+                          hasRedundantEventCopies: false,
+                          exactByteDuplicateGroupId: null,
+                          repeatedUrlGroupId: null,
+                          visualSimilarityGroupId: null,
+                          isUnlinkedOrOrphaned: false,
+                        },
+                        statusBadges: ['Linked'],
+                      };
+                      await assignCanonicalAssetToEntity({
+                        asset: syntheticAsset,
+                        entityType: uploadTargetEntityType,
+                        entityId: targetId,
+                        role: uploadTargetRole,
+                      });
+                      setIsUploadModalOpen(false);
+                    }}
+                    className="rounded-xl bg-red-600 px-3.5 py-2 font-semibold text-white hover:bg-red-500"
+                  >
+                    Validate & Assign URL
+                  </button>
+                </div>
+              </div>
+
+              {uploadModalError ? (
+                <div className="rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-red-200">
+                  {uploadModalError}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* =====================================================================
+          RECOVERABLE CONSOLIDATION AUDIT TRAIL MODAL
+      ===================================================================== */}
+      {isAuditModalOpen ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Consolidation Audit Trail"
+        >
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b0d12] text-gray-100 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-red-400">
+                  Non-Destructive Governance
+                </div>
+                <h2 className="mt-0.5 text-lg font-bold text-white">
+                  Consolidation & Override Audit Trail ({auditEntries.length})
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAuditModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 text-xs">
+              {auditEntries.length === 0 ? (
+                <div className="py-12 text-center text-gray-400">
+                  No duplicate consolidations or override removals have been recorded in this session yet.
                 </div>
               ) : (
-                <div className="rounded-xl border border-red-400/20 bg-red-400/[0.05] px-3 py-3 text-xs leading-5 text-red-100/75">
-                  This removes the media record and, when nothing else references it, permanently deletes the underlying Cloudflare image. There is no restore from this action.
+                <div className="space-y-3">
+                  {auditEntries.map((entry) => (
+                    <div key={entry.id} className="rounded-xl border border-white/10 bg-black/35 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-white">{entry.canonicalTitle}</span>
+                        <span className="text-[11px] text-gray-400">{formatShortDate(entry.timestamp)}</span>
+                      </div>
+                      <div className="mt-1 text-gray-400">
+                        Action: <span className="text-gray-200">{entry.kind}</span> · Source files deleted:{' '}
+                        <span className="text-emerald-300">No (Preserved)</span>
+                      </div>
+                      {entry.affectedEntities.length > 0 ? (
+                        <ul className="mt-2 space-y-1 border-t border-white/10 pt-2 text-[11px] text-gray-300">
+                          {entry.affectedEntities.map((aff, i) => (
+                            <li key={i}>
+                              • {aff.entityName} ({aff.entityType} · {aff.role}) → {aff.action}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {deleteError ? <div className="rounded-xl border border-red-400/25 bg-red-400/[0.08] px-3 py-2.5 text-sm text-red-200">{deleteError}</div> : null}
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 border-t border-white/10 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-              <button type="button" disabled={deleting} onClick={() => { setDeleteTarget(null); setDeleteError(''); }} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:bg-white/[0.08] disabled:opacity-50">Cancel</button>
-              <button type="button" disabled={deleting} onClick={() => void confirmDelete()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-400 disabled:cursor-wait disabled:opacity-60">
-                <Trash2 className="h-4 w-4" />
-                {deleting ? 'Verifying & deleting…' : deleteTarget.exactDuplicateCount > 1 ? 'Remove duplicate reference' : 'Delete image'}
-              </button>
             </div>
           </div>
         </div>
       ) : null}
+
+      {/* =====================================================================
+          CHOOSE FROM MEDIA LIBRARY MODAL (FOR MISSING SLOTS & INHERITANCE TAB)
+      ===================================================================== */}
+      <MediaLibraryPickerModal
+        isOpen={Boolean(pickerContext)}
+        onClose={() => setPickerContext(null)}
+        targetRole={pickerContext?.role ?? 'flyer'}
+        targetOwnerType={(pickerContext?.entityType as MediaOwnerType) ?? 'event'}
+        targetOwnerId={pickerContext?.entityId ?? ''}
+        targetEntityName={pickerContext?.entityName}
+        preloadedAssets={enrichedAssets}
+        onSelectCanonicalAsset={({ canonicalAsset }) => {
+          if (!pickerContext) return;
+          void assignCanonicalAssetToEntity({
+            asset: canonicalAsset,
+            entityType: pickerContext.entityType,
+            entityId: pickerContext.entityId,
+            role: pickerContext.role,
+          });
+        }}
+      />
     </div>
   );
 };

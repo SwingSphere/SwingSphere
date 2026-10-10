@@ -69,6 +69,7 @@ const EventBrowser: React.FC = () => {
         buildingAssets={buildingAssets}
         selectedId={selectedListingId}
         onSelect={handleListingSelect}
+        activeListingTypes={listingTypes}
         className="absolute inset-0 h-full w-full"
       />
 
@@ -86,6 +87,7 @@ const EventBrowser: React.FC = () => {
             selectedTags={selectedTags}
             onSelectedTagsChange={setSelectedTags}
             onNearMe={handleNearMe}
+            entityIndex={entityIndex ?? undefined}
           />
         </div>
 

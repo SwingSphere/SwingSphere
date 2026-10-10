@@ -1,12 +1,36 @@
 import buildingAssetsJson from 'virtual:swingsphere-public-street-view-building-assets';
+import publicListingsJson from 'virtual:swingsphere-public-listings';
 import type { BuildingAsset, Listing } from '../types';
 import { getBuildingAssetForListing, type EntityCollections } from './entityCompatibility';
 
 const buildingAssets = buildingAssetsJson as unknown as BuildingAsset[];
+const publicListings = publicListingsJson as unknown as Listing[];
 const streetViewListingIds = new Set(
-  buildingAssets
-    .map((asset) => String(asset?.listingId ?? '').trim())
+  publicListings
+    .filter((listing) => (
+      listing?.status === 'approved'
+      && listing?.type === 'club'
+      && listing?.isAddressPrivate !== true
+      && listing?.locationVisibility !== 'approximate_public'
+      && listing?.locationVisibility !== 'private'
+      && listing?.locationVisibility !== 'hidden'
+      && listing?.locationMeta?.status !== 'private'
+      && Boolean(listing?.geopoint?.address?.addressLine1?.trim())
+    ))
+    .map((listing) => String(listing.id).trim())
     .filter(Boolean),
+);
+
+export const isStreetViewEligibleListing = (listing?: Listing | null): boolean => Boolean(
+  listing
+  && listing.status === 'approved'
+  && listing.type === 'club'
+  && listing.isAddressPrivate !== true
+  && listing.locationVisibility !== 'approximate_public'
+  && listing.locationVisibility !== 'private'
+  && listing.locationVisibility !== 'hidden'
+  && listing.locationMeta?.status !== 'private'
+  && listing.geopoint?.address?.addressLine1?.trim()
 );
 
 export const hasStreetViewForListing = (listingId?: string | null): boolean =>

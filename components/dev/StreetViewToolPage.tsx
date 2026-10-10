@@ -49,14 +49,16 @@ const formatClockTime = (value?: string): string => {
 };
 const buildingAssets = buildingAssetsJson as unknown as Array<any>;
 const listings = listingsJson as unknown as Array<any>;
-const buildingAssetListingIds = new Set(buildingAssets.map((asset) => String(asset?.listingId ?? '')).filter(Boolean));
 const PUBLIC_STREET_VIEW_VENUES = listings
   .filter((listing) => (
     listing?.status === 'approved'
     && listing?.type === 'club'
     && listing?.isAddressPrivate !== true
     && listing?.locationVisibility !== 'approximate_public'
-    && buildingAssetListingIds.has(String(listing?.id ?? ''))
+    && listing?.locationVisibility !== 'private'
+    && listing?.locationVisibility !== 'hidden'
+    && listing?.locationMeta?.status !== 'private'
+    && Boolean(String(listing?.geopoint?.address?.addressLine1 ?? '').trim())
   ))
   .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
 const requestedListingId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('listingId') : null;
@@ -1137,6 +1139,7 @@ function buildPersistentNearFieldAtlas(
         role: part.nearField ? 'near' : 'sibling',
         height: part.height,
         minHeight: part.minHeight,
+        distanceMeters: part.center ? centerDistanceMeters(part.center, venueCenter) : 0,
       },
       geometry: clone(part.geometry),
       meta: {
@@ -1725,6 +1728,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
     let supplementalContextAttempted = false;
     let nearFieldAtlas: ReturnType<typeof buildPersistentNearFieldAtlas> | null = null;
     const neighborhoodPulseTimeouts = new Set<number>();
+    let neighborhoodPulseInterval = 0;
     let arrivalStartTimeout = 0;
     let arrivalFinishTimeout = 0;
 
@@ -2299,33 +2303,47 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       }
     };
 
-    const runNeighborhoodPulse = () => {
-      if (disposed || !nearFieldAtlas || !map.getLayer(NEAR_FIELD_LAYER_ID)) return;
+    const updateNearFieldPulsePaint = () => {
+      if (!map.getLayer(NEAR_FIELD_LAYER_ID)) return;
       const pulseColor = mixHexColors(
         visualRef.current.buildingColor,
         visualRef.current.selectedColor,
         NEIGHBORHOOD_PULSE_COLOR_MIX,
       );
+      map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', [
+        'case',
+        ['boolean', ['feature-state', 'neighborhoodPulse'], false],
+        pulseColor,
+        visualRef.current.buildingColor,
+      ] as any);
+    };
 
-      map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color-transition', {
-        duration: NEIGHBORHOOD_PULSE_ATTACK_MS,
-        delay: 0,
-      } as any);
-      map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', pulseColor);
-      scheduleNeighborhoodPulseTimeout(() => {
-        if (disposed || !map.getLayer(NEAR_FIELD_LAYER_ID)) return;
-        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color-transition', {
-          duration: NEIGHBORHOOD_PULSE_RELEASE_MS,
-          delay: 0,
-        } as any);
-        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', visualRef.current.buildingColor);
-      }, NEIGHBORHOOD_PULSE_ATTACK_MS + NEIGHBORHOOD_PULSE_HOLD_MS);
+    const runNeighborhoodPulse = () => {
+      if (disposed || !nearFieldAtlas || !map.getLayer(NEAR_FIELD_LAYER_ID)) return;
+      updateNearFieldPulsePaint();
+      nearFieldAtlas.nearFeatures.forEach((feature: any) => {
+        const atlasId = String(feature.properties?.atlasId ?? feature.id ?? '');
+        if (!atlasId) return;
+        const distanceMeters = Number(feature.properties?.distanceMeters ?? 0);
+        const waveDelay = Math.round((Math.max(0, distanceMeters) / NEIGHBORHOOD_PULSE_WAVE_SPEED_MPS) * 1000);
+        scheduleNeighborhoodPulseTimeout(() => {
+          if (disposed) return;
+          map.setFeatureState({ source: AUTHORED_PARTS_SOURCE_ID, id: atlasId }, { neighborhoodPulse: true });
+        }, waveDelay);
+        scheduleNeighborhoodPulseTimeout(() => {
+          if (disposed) return;
+          map.setFeatureState({ source: AUTHORED_PARTS_SOURCE_ID, id: atlasId }, { neighborhoodPulse: false });
+        }, waveDelay + NEIGHBORHOOD_PULSE_ATTACK_MS + NEIGHBORHOOD_PULSE_HOLD_MS + NEIGHBORHOOD_PULSE_RELEASE_MS);
+      });
       map.triggerRepaint();
     };
 
     const triggerArrivalPulse = () => {
       if (disposed) return;
       scheduleNeighborhoodPulseTimeout(runNeighborhoodPulse, 850);
+      if (!neighborhoodPulseInterval) {
+        neighborhoodPulseInterval = window.setInterval(runNeighborhoodPulse, NEIGHBORHOOD_PULSE_INTERVAL_MS);
+      }
     };
 
     const installNearFieldAtlas = () => {
@@ -2393,7 +2411,13 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
         map.setPaintProperty(AUTHORED_CONTEXT_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
       if (map.getLayer(NEAR_FIELD_LAYER_ID)) {
-        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', next.buildingColor);
+        const pulseColor = mixHexColors(next.buildingColor, next.selectedColor, NEIGHBORHOOD_PULSE_COLOR_MIX);
+        map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-color', [
+          'case',
+          ['boolean', ['feature-state', 'neighborhoodPulse'], false],
+          pulseColor,
+          next.buildingColor,
+        ] as any);
         map.setPaintProperty(NEAR_FIELD_LAYER_ID, 'fill-extrusion-opacity', next.buildingOpacity);
       }
       NEAR_FIELD_FADE_OUT_LAYER_IDS.forEach((id) => {
@@ -3161,6 +3185,7 @@ const StreetViewToolPage: React.FC<StreetViewToolPageProps> = ({ presentationOnl
       settledHiddenIdsRef.current.clear();
       neighborhoodPulseTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
       neighborhoodPulseTimeouts.clear();
+      if (neighborhoodPulseInterval) window.clearInterval(neighborhoodPulseInterval);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', endDrag);

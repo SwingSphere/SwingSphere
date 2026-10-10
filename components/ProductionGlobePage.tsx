@@ -20,7 +20,6 @@ import MobileExplorerPrototype from './explorer/MobileExplorerPrototype';
 import TabletExplorerOverlay from './dev/tablet/TabletExplorerOverlay';
 import DiscoveryRotaryStack, { type DiscoveryRotaryHostItem } from './explorer/DiscoveryRotaryStack';
 import { useExplorerState } from '../hooks/useExplorerState';
-import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
 import { useExplorerContext } from './explorer/ExplorerProvider';
 import { useAppStore } from '../store/appStore';
 import { useEntityIndex } from '../hooks/useEntityIndex';
@@ -1765,21 +1764,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       : filteredMapListings,
     [activeRegionListingIds, filteredMapListings],
   );
-  const scopedRenderedSpatialMapListings = useMemo(
-    () => activeRegionListingIds
-      ? renderedSpatialMapListings.filter((listing) => activeRegionListingIds.has(listing.id))
-      : renderedSpatialMapListings,
-    [activeRegionListingIds, renderedSpatialMapListings],
-  );
-  const scopedHostMapPins = useMemo(
-    () => activeRegionListingIds
-      ? hostMapPins.filter((pin) => activeRegionListingIds.has(pin.id))
-      : hostMapPins,
-    [activeRegionListingIds, hostMapPins],
-  );
-  const mapViewportListings = useViewportDiscovery(scopedFilteredMapListings, mapViewportDiscovery, {
-    paddingRatio: 0.18,
-  });
+
   const globeHeroSelectedListingId =
     travelDestination?.type === 'listing' && ['planning', 'globe-travel', 'globe-arrived'].includes(travelPhase)
       ? travelDestination.listingId
@@ -3990,6 +3975,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                 setSelectedOrganizationId(host.organizationId);
               }}
               onOpenMap={() => setManualSurfaceMode('map')}
+              entityIndex={entityIndex ?? undefined}
             />
           ) : null}
 
@@ -4018,17 +4004,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             {shouldMountMap ? (
               <React.Suspense fallback={<div className="h-full w-full bg-[#05070a]" aria-hidden="true" />}>
                 <FlatWorldMap
-                  listings={performanceFixtureListings ?? scopedRenderedSpatialMapListings}
+                  listings={performanceFixtureListings ?? renderedSpatialMapListings}
                   resolutionListings={denseUsPinPrototype ? USA_DISCOVERY_LISTINGS : performanceFixtureListings ?? listings}
-                  hostPins={performanceFixtureEnabled || denseUsPinPrototype ? [] : [...scopedHostMapPins, ...travelMapPins]}
+                  hostPins={performanceFixtureEnabled || denseUsPinPrototype ? [] : [...hostMapPins, ...travelMapPins]}
                   buildingAssets={buildingAssets}
-                  activityRegions={activityRegions}
-                  selectedActivityRegionId={activeActivityRegionId}
-                  onActivityRegionSelect={(regionId) => {
-                    setActiveActivityRegionId(regionId);
-                    setSelectedListingId(null);
-                    setSelectedOrganizationId(null);
-                  }}
                   selectedId={resolveSpatialListingId(displaySelectedListingId)}
                   onSelect={selectMapListing}
                   onReset={resetMapToWorld}
@@ -4040,6 +4019,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                   onVenueArrivalComplete={handleVenueArrivalComplete}
                   contextBoundaryUrls={discoveryContextBoundaryUrls}
                   selectedCityBoundaryUrl={selectedCityBoundaryUrl}
+                  activeListingTypes={activeListingTypes}
                   onReady={mobilePrototype ? handleMobilePreparedMapReady : undefined}
                   className="h-full w-full"
                 />

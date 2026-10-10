@@ -22,9 +22,9 @@ export type EntityCollections = {
 
 const defaultCollections = (collections: EntityCollections = {}) => ({
   listings: collections.listings ?? [],
-  venues: collections.venues ?? mockVenues,
-  organizations: collections.organizations ?? mockOrganizations,
-  relationships: collections.relationships ?? mockOrganizationVenueRelationships,
+  venues: collections.venues && collections.venues.length > 0 ? collections.venues : mockVenues,
+  organizations: collections.organizations && collections.organizations.length > 0 ? collections.organizations : mockOrganizations,
+  relationships: collections.relationships && collections.relationships.length > 0 ? collections.relationships : mockOrganizationVenueRelationships,
 });
 
 const findClubByVenueKey = (venueKey: string | undefined, listings: Listing[]): ClubData | null => {
@@ -69,15 +69,29 @@ export const resolveEventOrganizerOrganizationId = (
   event: EventData,
   collections: EntityCollections = {},
 ): string | undefined => {
-  if (event.organizerOrganizationId) return event.organizerOrganizationId;
   const { organizations } = defaultCollections(collections);
+  if (event.organizerOrganizationId && !event.organizerOrganizationId.startsWith('org-host-')) {
+    const exact = organizations.find((org) => org.id === event.organizerOrganizationId);
+    const isProducerOnly =
+      exact?.displayTypes?.length === 1 && exact.displayTypes[0] === 'producer';
+    if (exact && !isProducerOnly) return exact.id;
+  }
   const normalizedHost = normalizeHostName(event.hostName ?? '');
-  if (!normalizedHost) return undefined;
-  return organizations.find((organization) => (
-    organization.slug === nameSlug(normalizedHost) ||
-    organization.id === `org-host-${nameSlug(normalizedHost)}` ||
+  if (!normalizedHost) return event.organizerOrganizationId;
+  const slug = nameSlug(normalizedHost);
+  const matches = organizations.filter((organization) => (
+    organization.id === event.organizerOrganizationId ||
+    organization.slug === slug ||
+    organization.id === `org-host-${slug}` ||
     normalizeHostName(organization.name) === normalizedHost
-  ))?.id;
+  ));
+  if (matches.length === 0) return event.organizerOrganizationId;
+  const canonicalMatch =
+    matches.find((org) => Boolean(org.logoImageUrl) && !org.id.startsWith('org-host-'))
+    ?? matches.find((org) => !org.id.startsWith('org-host-'))
+    ?? matches.find((org) => Boolean(org.logoImageUrl))
+    ?? matches[0];
+  return canonicalMatch.id;
 };
 
 export const getPrimaryVenueForClub = (
@@ -311,3 +325,19 @@ export const getListingDisplayVenue = (
       }
     : null;
 };
+
+export const getDependentListingsForVenue = (
+  venueId: string | undefined,
+  collections: EntityCollections = {},
+): { clubs: Listing[]; events: Listing[]; total: number } => {
+  if (!venueId) return { clubs: [], events: [], total: 0 };
+  const listings = collections.listings ?? [];
+  const related = listings.filter((listing) => {
+    const venue = getVenueForListing(listing, collections);
+    return venue?.id === venueId;
+  });
+  const clubs = related.filter((item) => item.type === 'club');
+  const events = related.filter((item) => item.type === 'event');
+  return { clubs, events, total: related.length };
+};
+

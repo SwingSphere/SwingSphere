@@ -16,7 +16,13 @@ import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUtils';
 import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
-import { getListingFlyerUrl, getListingImageUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import {
+  getListingFlyerUrl,
+  getListingImageUrl,
+  getListingPrimaryLogoUrl,
+  handleListingImageError,
+  serializeFallbackCandidates,
+} from '../../lib/listingImage';
 import type { CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
 import { DetailContextNav } from '../navigation/DetailContextNav';
@@ -550,14 +556,17 @@ const HostPage: React.FC = () => {
               <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
                 <div className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-black/30 sm:aspect-square">
                   <img
-                    src={getListingFlyerUrl(nextEvent)}
+                    src={getListingFlyerUrl(nextEvent, index)}
                     alt={`${nextEvent.name} event artwork`}
+                    data-entity-id={nextEvent.id}
+                    data-media-role="flyer"
+                    data-fallback-candidates={serializeFallbackCandidates([
+                      nextEvent.headerImageUrl,
+                      resolvedHostHeader,
+                      resolvedHostLogo,
+                    ])}
                     className="h-full w-full object-contain"
-                    onError={(error) => {
-                      const fallback = nextEvent.headerImageUrl;
-                      if (fallback && error.currentTarget.src !== fallback) error.currentTarget.src = fallback;
-                      else error.currentTarget.style.display = 'none';
-                    }}
+                    onError={handleListingImageError}
                   />
                 </div>
                 <div className="min-w-0">
@@ -694,7 +703,7 @@ const HostPage: React.FC = () => {
               </summary>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {hostProfile.organization.galleryImageUrls.slice(0, 4).map((imageUrl, imageIndex) => (
-                  <img key={imageUrl} src={imageUrl} alt={`${hostProfile.name} gallery ${imageIndex + 1}`} className="aspect-[4/3] w-full rounded-xl border border-white/10 object-cover" />
+                  <img key={imageUrl} src={imageUrl} onError={handleListingImageError} alt={`${hostProfile.name} gallery ${imageIndex + 1}`} className="aspect-[4/3] w-full rounded-xl border border-white/10 object-cover" />
                 ))}
               </div>
             </details>

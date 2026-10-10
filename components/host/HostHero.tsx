@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, MapPin, Pencil } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
 import BadgeShelf from '../badges/BadgeShelf';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
+import { buildFallbackCandidateChain, markMediaUrlFailed } from '../../lib/listingImage';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import type { HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
 
@@ -51,17 +52,46 @@ const HostHero: React.FC<HostHeroProps> = ({
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
 
+  const headerCandidates = useMemo(
+    () => buildFallbackCandidateChain([headerImageUrl], false),
+    [headerImageUrl],
+  );
+  const logoCandidates = useMemo(
+    () => buildFallbackCandidateChain([logoImageUrl], false),
+    [logoImageUrl],
+  );
+  const [headerIdx, setHeaderIdx] = useState(0);
+  const [logoIdx, setLogoIdx] = useState(0);
+
+  useEffect(() => {
+    setHeaderIdx(0);
+  }, [headerCandidates]);
+
+  useEffect(() => {
+    setLogoIdx(0);
+  }, [logoCandidates]);
+
+  const activeHeaderUrl = headerCandidates[headerIdx] ?? null;
+  const activeLogoUrl = logoCandidates[logoIdx] ?? null;
+
   return (
     <section className="relative mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-2xl shadow-black/40">
       <div className="relative min-h-[360px] sm:min-h-[420px]">
-        {headerImageUrl ? (
-          <img src={headerImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        {activeHeaderUrl ? (
+          <img
+            src={activeHeaderUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={() => {
+              const nextUrl = headerCandidates[headerIdx + 1] ?? null;
+              markMediaUrlFailed(activeHeaderUrl, { entityId: organizationId ?? hostSlug, role: 'hero', nextUrl });
+              setHeaderIdx((prev) => prev + 1);
+            }}
+          />
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(185,28,28,0.28),transparent_34%),linear-gradient(135deg,#17191f,#07090d_62%,#14070a)]" />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-r from-black/78 via-black/24 to-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-transparent to-black/18" />
 
         {showQuickControls ? (
           <div className="absolute right-4 top-4 z-30 flex flex-wrap gap-2 sm:right-6 sm:top-6">
@@ -84,8 +114,17 @@ const HostHero: React.FC<HostHeroProps> = ({
 
         <div className="absolute left-4 top-4 z-20 sm:left-6 sm:top-6">
           <div className="ss-glass ss-glass--liquid relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl text-2xl font-black text-white sm:h-24 sm:w-24">
-            {logoImageUrl ? (
-              <img src={logoImageUrl} alt={`${hostName} logo`} className="h-full w-full object-contain" />
+            {activeLogoUrl ? (
+              <img
+                src={activeLogoUrl}
+                alt={`${hostName} logo`}
+                className="h-full w-full object-contain"
+                onError={() => {
+                  const nextUrl = logoCandidates[logoIdx + 1] ?? null;
+                  markMediaUrlFailed(activeLogoUrl, { entityId: organizationId ?? hostSlug, role: 'logo', nextUrl });
+                  setLogoIdx((prev) => prev + 1);
+                }}
+              />
             ) : (
               <>
                 <span className="font-serif text-3xl tracking-[-0.12em] text-white sm:text-4xl">{toInitials(hostName)}</span>
@@ -105,7 +144,7 @@ const HostHero: React.FC<HostHeroProps> = ({
         </div>
 
         <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-6">
-          <div className="ss-glass ss-glass--liquid max-w-4xl rounded-2xl p-4">
+          <div className="max-w-4xl rounded-2xl p-4 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)]">
             <div className="flex flex-wrap items-center gap-2">
               <EntityTypePill tone="host">{displayLabel}</EntityTypePill>
               {operatorName ? (

@@ -1,6 +1,6 @@
 import React, { useState, useContext, createContext, useRef, useCallback, useMemo, useEffect } from 'react';
 import type { AppState, Toast, TimeLens } from '../types';
-import type { User } from '../data/mockUsers';
+import { mockUsers, type User } from '../data/mockUsers';
 import { getPublicTagCategories, getPublicTags } from '../lib/taxonomySupabase';
 import { supabase } from '../lib/supabase';
 import { getCloudflareImageUrl } from '../lib/media/getCloudflareImageUrl';
@@ -110,6 +110,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (error) {
           console.error('Failed to restore authenticated profile:', error);
         }
+      } else if (import.meta.env.DEV && typeof window !== 'undefined' && window.localStorage.getItem('swingsphere:dev-admin') === 'true') {
+        profile = mockUsers[0];
       }
       if (mounted) {
         setCurrentUser(profile);

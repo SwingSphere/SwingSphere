@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl, { type Map as MapLibreMap, type Marker } from 'maplibre-gl';
-import { Pencil, Plus } from 'lucide-react';
+import { FolderOpen, Pencil, Plus, RotateCcw } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type {
   BuildingAsset,
@@ -42,6 +42,7 @@ import { formatEntryRequirements as formatAccessEntryRequirements } from '../../
 import DayProgramFields from '../../club/DayProgramFields';
 import { buildEditorTaxonomyGroups } from '../../../lib/taxonomySupabase';
 import MediaUploader from '../../media/MediaUploader';
+import MediaLibraryPickerModal from '../../media/MediaLibraryPickerModal';
 import { getCloudflareImageUrl } from '../../../lib/media/getCloudflareImageUrl';
 import { getMediaOwnerId } from '../../../lib/media/getMediaOwnerId';
 import { getMediaRule } from '../../../lib/media/mediaRules';
@@ -526,26 +527,37 @@ const ImagesSection = ({
   ownerId,
   mediaAssets,
   logoImageUrl,
+  flyerImageUrl,
   headerImageUrl,
   galleryImageUrls,
   onAssetUploaded,
   onLogoChange,
+  onFlyerChange,
   onHeaderChange,
   onGalleryChange,
+  onRemoveEventLogoOverride,
+  allowEventLogoOverride = true,
+  hasInheritedLogoSource = false,
 }: {
   ownerType: 'club' | 'event';
   ownerId: string;
   mediaAssets?: MediaAsset[];
   logoImageUrl?: string;
+  flyerImageUrl?: string;
   headerImageUrl?: string;
   galleryImageUrls?: string[];
   onAssetUploaded: (asset: MediaAsset) => void;
   onLogoChange: (value: string | undefined) => void;
+  onFlyerChange?: (value: string | undefined) => void;
   onHeaderChange: (value: string) => void;
   onGalleryChange: (value: string[]) => void;
+  onRemoveEventLogoOverride?: () => void;
+  allowEventLogoOverride?: boolean;
+  hasInheritedLogoSource?: boolean;
 }) => {
   const mediaOwnerId = getMediaOwnerId(ownerType, ownerId);
   const [uploadError, setUploadError] = useState('');
+  const [libraryPickerRole, setLibraryPickerRole] = useState<MediaRole | null>(null);
   const getAsset = (role: MediaRole) => mediaAssets?.find((asset) => asset.role === role) ?? null;
   const getAssets = (role: MediaRole) => mediaAssets?.filter((asset) => asset.role === role) ?? [];
   const assetUrl = (asset: MediaAsset) => getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
@@ -554,12 +566,13 @@ const ImagesSection = ({
   const flyerAsset = getAsset('flyer');
   const logoUrl = logoImageUrl || (logoAsset ? assetUrl(logoAsset) : undefined);
   const heroUrl = headerImageUrl || (heroAsset ? assetUrl(heroAsset) : undefined);
-  const flyerUrl = flyerAsset ? assetUrl(flyerAsset) : undefined;
+  const flyerUrl = flyerImageUrl || (flyerAsset ? assetUrl(flyerAsset) : undefined);
   const galleryUrls = Array.from(new Set([
     ...(galleryImageUrls ?? []),
     ...getAssets('gallery').map(assetUrl),
   ]));
   const inputId = (role: MediaRole) => `admin-${ownerType}-${ownerId}-${role}-upload`;
+  const logoEditable = ownerType !== 'event' || allowEventLogoOverride;
 
   const handleUploaded = (asset: MediaAsset) => {
     setUploadError('');
@@ -567,20 +580,30 @@ const ImagesSection = ({
     const url = getCloudflareImageUrl({ externalId: asset.external_id, variant });
     onAssetUploaded(asset);
     if (asset.role === 'logo') onLogoChange(url);
+    if (asset.role === 'flyer') onFlyerChange?.(url);
     if (asset.role === 'hero') onHeaderChange(url);
     if (asset.role === 'gallery') onGalleryChange(Array.from(new Set([...(galleryImageUrls ?? []), url])));
   };
 
   const MediaCard = ({ title, value, role, shape }: { title: string; value?: string; role: 'logo' | 'hero'; shape: 'square' | 'hero' }) => (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
           <p className="mt-0.5 text-xs text-gray-500">{role === 'logo' ? 'Square identity image' : 'Wide destination header image'}</p>
         </div>
-        <label htmlFor={inputId(role)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50">
-          <Pencil size={13} /> {value ? 'Replace' : 'Add'}
-        </label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setLibraryPickerRole(role)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+          >
+            <FolderOpen size={13} className="text-red-600" /> Choose From Library
+          </button>
+          <label htmlFor={inputId(role)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50">
+            <Pencil size={13} /> {value ? 'Replace' : 'Upload'}
+          </label>
+        </div>
       </div>
       <div className={shape === 'square' ? 'mx-auto aspect-square w-full max-w-[180px]' : 'aspect-[16/7] w-full'}>
         {value ? (
@@ -591,12 +614,31 @@ const ImagesSection = ({
           </label>
         )}
       </div>
+      {ownerType === 'event' && role === 'logo' ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+          <span>
+            Status:{' '}
+            <strong className="text-gray-900">
+              {value ? 'Explicit Event Override' : hasInheritedLogoSource ? 'Inherited Host Logo' : 'Fallback Logo'}
+            </strong>
+          </span>
+          {value && onRemoveEventLogoOverride ? (
+            <button
+              type="button"
+              onClick={onRemoveEventLogoOverride}
+              className="inline-flex items-center gap-1 font-semibold text-red-700 hover:underline"
+            >
+              <RotateCcw size={12} /> Remove override
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <MediaUploader triggerOnly tone="light" inputId={inputId('logo')} ownerType={ownerType} ownerId={mediaOwnerId} role="logo" existingAsset={logoAsset} onUploaded={handleUploaded} onError={setUploadError} />
+      {logoEditable ? <MediaUploader triggerOnly tone="light" inputId={inputId('logo')} ownerType={ownerType} ownerId={mediaOwnerId} role="logo" existingAsset={logoAsset} onUploaded={handleUploaded} onError={setUploadError} /> : null}
       <MediaUploader triggerOnly tone="light" inputId={inputId('hero')} ownerType={ownerType} ownerId={mediaOwnerId} role="hero" existingAsset={heroAsset} onUploaded={handleUploaded} onError={setUploadError} />
       <MediaUploader triggerOnly tone="light" inputId={inputId('gallery')} ownerType={ownerType} ownerId={mediaOwnerId} role="gallery" existingAsset={getAssets('gallery').at(-1) ?? null} onUploaded={handleUploaded} onError={setUploadError} />
       {ownerType === 'event' ? (
@@ -605,31 +647,49 @@ const ImagesSection = ({
 
       {uploadError ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{uploadError}</div> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <MediaCard title={ownerType === 'event' ? 'Occurrence logo' : 'Logo'} value={logoUrl} role="logo" shape="square" />
-        <MediaCard title={ownerType === 'event' ? 'Occurrence hero' : 'Hero image'} value={heroUrl} role="hero" shape="hero" />
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <MediaCard title={ownerType === 'event' ? 'Event Logo (Host or Override)' : 'Logo'} value={logoUrl} role="logo" shape="square" />
+        <MediaCard title={ownerType === 'event' ? 'Occurrence Hero' : 'Hero Image'} value={heroUrl} role="hero" shape="hero" />
       </div>
 
       {ownerType === 'event' ? (
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Event flyer</h3>
-              <p className="mt-0.5 text-xs text-gray-500">Date-specific vertical artwork.</p>
+              <p className="mt-0.5 text-xs text-gray-500">Date-specific event flyer artwork (prioritized on directory event cards).</p>
             </div>
-            <label htmlFor={inputId('flyer')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"><Pencil size={13} /> {flyerUrl ? 'Replace' : 'Add'}</label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setLibraryPickerRole('flyer')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <FolderOpen size={13} className="text-red-600" /> Choose From Library
+              </button>
+              <label htmlFor={inputId('flyer')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"><Pencil size={13} /> {flyerUrl ? 'Replace' : 'Upload'}</label>
+            </div>
           </div>
           {flyerUrl ? <img src={flyerUrl} alt="" className="mx-auto max-h-72 rounded-lg border border-gray-200 object-contain" /> : <label htmlFor={inputId('flyer')} className="flex min-h-32 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-400 hover:bg-gray-100">Add event flyer</label>}
         </div>
       ) : null}
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-gray-900">Gallery</h3>
             <p className="mt-0.5 text-xs text-gray-500">Listing gallery images, shown in display order.</p>
           </div>
-          <label htmlFor={inputId('gallery')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"><Plus size={13} /> Add image</label>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setLibraryPickerRole('gallery')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <FolderOpen size={13} className="text-red-600" /> Choose From Library
+            </button>
+            <label htmlFor={inputId('gallery')} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"><Plus size={13} /> Upload image</label>
+          </div>
         </div>
         {galleryUrls.length ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -647,6 +707,23 @@ const ImagesSection = ({
           <label htmlFor={inputId('gallery')} className="flex min-h-28 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-400 transition hover:bg-gray-100">No gallery images — add one</label>
         )}
       </div>
+
+      <MediaLibraryPickerModal
+        isOpen={Boolean(libraryPickerRole)}
+        onClose={() => setLibraryPickerRole(null)}
+        targetRole={libraryPickerRole ?? 'hero'}
+        targetOwnerType={ownerType}
+        targetOwnerId={ownerId}
+        onSelectCanonicalAsset={({ syntheticMediaAsset, resolvedUrl }) => {
+          onAssetUploaded(syntheticMediaAsset);
+          if (syntheticMediaAsset.role === 'logo') onLogoChange(resolvedUrl);
+          if (syntheticMediaAsset.role === 'flyer') onFlyerChange?.(resolvedUrl);
+          if (syntheticMediaAsset.role === 'hero') onHeaderChange(resolvedUrl);
+          if (syntheticMediaAsset.role === 'gallery') {
+            onGalleryChange(Array.from(new Set([...(galleryImageUrls ?? []), resolvedUrl])));
+          }
+        }}
+      />
     </div>
   );
 };
@@ -859,13 +936,56 @@ const DebugSection = ({ value }: { value: unknown }) => (
   </pre>
 );
 
-const buildVenueFromListing = (listing: ClubData | EventData): VenueData => {
+const normalizeVenueAddressPart = (value: string | undefined) => (value ?? '')
+  .normalize('NFKD')
+  .replace(/\p{M}/gu, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+const venueAddressKey = (address: Geopoint['address']) => [
+  address.addressLine1,
+  address.city,
+  address.region,
+  address.postalCode,
+  address.country,
+].map(normalizeVenueAddressPart).filter(Boolean).join('|');
+
+const deriveEventVenueName = (listing: EventData): { name: string; namedPublicPlace: boolean } => {
+  const geocoderLabel = listing.locationMeta?.geocoderLabel?.trim() ?? '';
+  const geocoderFirst = geocoderLabel.split(',')[0]?.trim() ?? '';
+  const locationFirst = listing.location?.split(',')[0]?.trim() ?? '';
+  const street = normalizeVenueAddressPart(listing.geopoint.address.addressLine1);
+  const looksLikeStreet = (value: string) => {
+    const normalized = normalizeVenueAddressPart(value);
+    return !normalized || /^\d/.test(normalized) || normalized === street;
+  };
+
+  if (geocoderFirst && !looksLikeStreet(geocoderFirst) && normalizeVenueAddressPart(geocoderFirst) !== normalizeVenueAddressPart(listing.name)) {
+    return { name: geocoderFirst, namedPublicPlace: true };
+  }
+  if (locationFirst && !looksLikeStreet(locationFirst) && normalizeVenueAddressPart(locationFirst) !== normalizeVenueAddressPart(listing.name)) {
+    return { name: locationFirst, namedPublicPlace: true };
+  }
+
+  const city = listing.geopoint.address.city || 'Unknown city';
+  if (listing.isAddressPrivate) return { name: `Private venue — ${city}`, namedPublicPlace: false };
+  if (listing.geopoint.address.addressLine1) return { name: `Venue at ${listing.geopoint.address.addressLine1}`, namedPublicPlace: false };
+  return { name: `Venue — ${city}`, namedPublicPlace: false };
+};
+
+const buildVenueFromListing = (
+  listing: ClubData | EventData,
+  options: { nameOverride?: string; visibilityOverride?: VenueData['visibility'] } = {},
+): VenueData => {
   const id = `venue-admin-${listing.id}-${Date.now()}`;
-  const name = listing.type === 'club'
-    ? listing.name
-    : listing.isAddressPrivate
-      ? `${listing.geopoint.address.city || listing.location || listing.name} private venue`
-      : listing.location || listing.name;
+  const derivedEventVenue = listing.type === 'event' ? deriveEventVenueName(listing) : null;
+  const name = options.nameOverride ?? (listing.type === 'club' ? listing.name : derivedEventVenue!.name);
+  const visibility = options.visibilityOverride ?? (
+    listing.type === 'event' && listing.isAddressPrivate && !derivedEventVenue?.namedPublicPlace
+      ? 'private'
+      : 'public_exact'
+  );
   return {
     id,
     type: 'venue',
@@ -876,7 +996,7 @@ const buildVenueFromListing = (listing: ClubData | EventData): VenueData => {
     latitude: listing.geopoint.latitude,
     longitude: listing.geopoint.longitude,
     locationMeta: listing.locationMeta,
-    visibility: listing.type === 'event' && listing.isAddressPrivate ? 'private' : 'public_exact',
+    visibility,
     status: listing.status,
     amenities: listing.type === 'club' ? [...listing.generalAmenities] : [],
     logoImageUrl: listing.logoImageUrl,
@@ -1042,7 +1162,27 @@ export const AdminListingDetailEditor = ({
   };
 
   const createVenueFromDraft = async () => {
-    const savedVenue = await api.saveVenue(buildVenueFromListing(draft));
+    const currentAddressKey = venueAddressKey(draft.geopoint.address);
+    const sameAddressVenues = venues.filter((venue) => venueAddressKey(venue.address) === currentAddressKey);
+    if (draft.type === 'event' && sameAddressVenues.length === 1) {
+      const existingVenue = sameAddressVenues[0];
+      const nextDraft = syncListingPhysicalFieldsFromVenue({ ...draft, venueId: existingVenue.id } as EventData, existingVenue);
+      setDraft(nextDraft);
+      await saveDraft(nextDraft);
+      addToast({ message: `Linked event to existing venue: ${existingVenue.name}.`, type: 'success' });
+      return;
+    }
+
+    const sameAddressClubs = listings.filter((listing): listing is ClubData => (
+      listing.type === 'club'
+      && listing.id !== draft.id
+      && venueAddressKey(listing.geopoint.address) === currentAddressKey
+    ));
+    const matchingClub = draft.type === 'event' && sameAddressClubs.length === 1 ? sameAddressClubs[0] : null;
+    const savedVenue = await api.saveVenue(buildVenueFromListing(
+      draft,
+      matchingClub ? { nameOverride: matchingClub.name, visibilityOverride: 'public_exact' } : undefined,
+    ));
     onVenueSaved(savedVenue);
 
     if (draft.type === 'club') {
@@ -1062,6 +1202,15 @@ export const AdminListingDetailEditor = ({
       }
       await saveDraft(nextDraft);
       return;
+    }
+
+    if (matchingClub && !matchingClub.primaryVenueId) {
+      const savedClub = await api.saveClub({
+        ...matchingClub,
+        primaryVenueId: savedVenue.id,
+        buildingAssetId: savedVenue.buildingAssetId ?? matchingClub.buildingAssetId,
+      });
+      onSaved(savedClub);
     }
 
     const nextDraft = syncListingPhysicalFieldsFromVenue({ ...draft, venueId: savedVenue.id } as EventData, savedVenue);
@@ -1115,17 +1264,35 @@ export const AdminListingDetailEditor = ({
             ownerId={draft.id}
             mediaAssets={draft.mediaAssets}
             logoImageUrl={draft.logoImageUrl}
+            flyerImageUrl={draft.type === 'event' ? draft.flyerImageUrl : undefined}
             headerImageUrl={draft.headerImageUrl}
             galleryImageUrls={draft.galleryImageUrls}
             onAssetUploaded={(asset) => setDraft((current) => ({
               ...current,
+              ...(current.type === 'event' && asset.role === 'logo' ? { logoOverride: true } : {}),
               mediaAssets: asset.role === 'gallery'
                 ? [...(current.mediaAssets ?? []), asset]
                 : [...(current.mediaAssets ?? []).filter((item) => item.role !== asset.role), asset],
             } as ClubData | EventData))}
-            onLogoChange={(logoImageUrl) => setDraft((current) => ({ ...current, logoImageUrl } as ClubData | EventData))}
+            onLogoChange={(logoImageUrl) => setDraft((current) => ({
+              ...current,
+              logoImageUrl,
+              ...(current.type === 'event' ? { logoOverride: Boolean(logoImageUrl) } : {}),
+            } as ClubData | EventData))}
+            onFlyerChange={(flyerImageUrl) => setDraft((current) => ({
+              ...current,
+              ...(current.type === 'event' ? { flyerImageUrl } : {}),
+            } as ClubData | EventData))}
             onHeaderChange={(headerImageUrl) => setDraft((current) => ({ ...current, headerImageUrl } as ClubData | EventData))}
             onGalleryChange={(galleryImageUrls) => setDraft((current) => ({ ...current, galleryImageUrls } as ClubData | EventData))}
+            onRemoveEventLogoOverride={draft.type === 'event' ? () => setDraft((current) => ({
+              ...current,
+              logoImageUrl: undefined,
+              ...(current.type === 'event' ? { logoOverride: false } : {}),
+              mediaAssets: (current.mediaAssets ?? []).filter((item) => item.role !== 'logo'),
+            } as ClubData | EventData)) : undefined}
+            allowEventLogoOverride={true}
+            hasInheritedLogoSource={draft.type === 'event' && Boolean(draft.eventSeriesId || draft.organizerOrganizationId)}
           />
         ),
       },

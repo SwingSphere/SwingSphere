@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#070c22"/><stop offset="1" stop-color="#181324"/></linearGradient><linearGradient id="gold" x2=".1" y2="1"><stop stop-color="#ffcb58"/><stop offset=".55" stop-color="#ffa41c"/><stop offset="1" stop-color="#e16d15"/></linearGradient></defs>
+<rect width="1024" height="1024" rx="92" fill="url(#bg)"/>
+<rect x="58" y="58" width="908" height="908" rx="55" fill="none" stroke="#ed951e" stroke-width="5" opacity=".8"/>
+<path d="M102 772 Q512 675 922 772" fill="none" stroke="#bd6b24" stroke-width="3" opacity=".65"/>
+<text x="512" y="536" fill="url(#gold)" text-anchor="middle" font-family="Impact,'Arial Narrow',sans-serif" font-stretch="condensed" font-weight="900" letter-spacing="-15" font-size="260" textLength="805" lengthAdjust="spacingAndGlyphs">LIBERT</text>
+<rect x="225" y="580" width="574" height="4" fill="#c78530"/>
+<text x="512" y="684" fill="#ffc054" text-anchor="middle" font-family="'Arial Narrow',Arial,sans-serif" font-size="88" letter-spacing="20" textLength="560" lengthAdjust="spacingAndGlyphs">BARCELONA</text>
+<path d="M512 172 L530 210 L571 216 L542 245 L549 287 L512 267 L475 287 L482 245 L453 216 L494 210Z" fill="#e89a28" opacity=".7"/>
+</svg>

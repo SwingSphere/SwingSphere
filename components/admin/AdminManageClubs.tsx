@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { ClubBrandData, ClubData, OrganizationData } from '../../types';
 import { AdminView } from './AdminPanel';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import AdminEntityIdentity from './AdminEntityIdentity';
 import { brandMediaSourceLabel, resolveBrandLogo, type BrandMediaCatalog } from '../../lib/entityBrandMedia';
+import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 type Props = {
   clubs: ClubData[];
@@ -13,16 +14,41 @@ type Props = {
   mediaCatalog: BrandMediaCatalog;
   setView: (view: AdminView) => void;
   onDataChange: () => void;
+  filterSpec?: AdminQueueFilterSpec | null;
+  onClearFilter?: () => void;
 };
 
-const AdminManageClubs: React.FC<Props> = ({ clubs, clubBrands, organizations, mediaCatalog, setView, onDataChange }) => {
-  const [mode, setMode] = useState<'brands' | 'locations' | 'inactive'>('brands');
+const AdminManageClubs: React.FC<Props> = ({
+  clubs,
+  clubBrands,
+  organizations,
+  mediaCatalog,
+  setView,
+  onDataChange,
+  filterSpec,
+  onClearFilter,
+}) => {
+  const activeFilter = filterSpec?.target === 'clubs' ? filterSpec : null;
+  const [mode, setMode] = useState<'brands' | 'locations' | 'inactive'>(
+    activeFilter?.mode === 'locations' || activeFilter?.ids?.length ? 'locations' : 'brands',
+  );
   const [search, setSearch] = useState('');
   const [inactiveClubs, setInactiveClubs] = useState<ClubData[]>([]);
   const [loadingInactive, setLoadingInactive] = useState(false);
   const [inactiveError, setInactiveError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const { addToast } = useAppStore();
+
+  useEffect(() => {
+    if (activeFilter?.mode === 'locations' || activeFilter?.ids?.length) {
+      setMode('locations');
+    }
+  }, [activeFilter]);
+
+  const filterIdSet = useMemo(
+    () => (activeFilter?.ids?.length ? new Set(activeFilter.ids) : null),
+    [activeFilter],
+  );
   const orgById = useMemo(() => new Map(organizations.map((org) => [org.id, org])), [organizations]);
   const grouped = useMemo(() => clubBrands.map((brand) => ({
     brand,
@@ -30,8 +56,9 @@ const AdminManageClubs: React.FC<Props> = ({ clubs, clubBrands, organizations, m
   })).filter(({ brand }) => !search || brand.name.toLowerCase().includes(search.toLowerCase())), [clubBrands, clubs, search]);
   const visibleLocations = mode === 'inactive' ? inactiveClubs : clubs;
   const locations = useMemo(() => visibleLocations
+    .filter((club) => !filterIdSet || filterIdSet.has(club.id))
     .filter((club) => !search || `${club.name} ${club.location}`.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name)), [visibleLocations, search]);
+    .sort((a, b) => a.name.localeCompare(b.name)), [visibleLocations, filterIdSet, search]);
 
   const loadInactive = async () => {
     setLoadingInactive(true);
@@ -83,6 +110,22 @@ const AdminManageClubs: React.FC<Props> = ({ clubs, clubBrands, organizations, m
         <button onClick={() => setView('add-club')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Add location</button>
       </div>
     </div>
+    {activeFilter && (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-3 text-sm text-indigo-950">
+        <div>
+          <span className="font-bold">Filtered from Operational Queue:</span> {activeFilter.label} ({locations.length} matching record{locations.length === 1 ? '' : 's'})
+        </div>
+        {onClearFilter && (
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="rounded-lg border border-indigo-300 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+          >
+            Clear filter · Show all
+          </button>
+        )}
+      </div>
+    )}
     <div className="mb-5 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="inline-flex w-fit rounded-lg bg-gray-100 p-1">
         <button onClick={() => changeMode('brands')} className={`rounded-md px-4 py-2 text-sm font-semibold ${mode === 'brands' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Club brands</button>

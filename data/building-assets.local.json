@@ -5505,5 +5505,190 @@
       "ringCount": 1,
       "vertexCount": 9
     }
+  },
+  {
+    "id": "building-asset-club-ice-lounge-wichita",
+    "listingId": "club-ice-lounge-wichita",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "6695787290"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -97.33445227146149,
+            37.53644449708659
+          ],
+          [
+            -97.33423233032227,
+            37.53644449708659
+          ],
+          [
+            -97.33423233032227,
+            37.53632539056632
+          ],
+          [
+            -97.33445763587952,
+            37.53632539056632
+          ],
+          [
+            -97.33445227146149,
+            37.53644449708659
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-10-07T04:12:10.055Z",
+      "updatedAt": "2026-10-07T04:12:15.309Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 5
+    }
+  },
+  {
+    "id": "building-asset-club-ohio-swings-new-carlisle",
+    "listingId": "club-ohio-swings-new-carlisle",
+    "venueId": "venue-ohio-swings-new-carlisle",
+    "version": 1,
+    "provider": {
+      "source": "Microsoft Global ML Building Footprints",
+      "featureIds": [
+        "microsoft-ml:footprint-v2-1wn1xv1-1-6"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -84.04613283618362,
+            39.87832313370222
+          ],
+          [
+            -84.04603365066068,
+            39.87824441185329
+          ],
+          [
+            -84.0458395776444,
+            39.878388414622165
+          ],
+          [
+            -84.04596691041036,
+            39.87848947622657
+          ],
+          [
+            -84.04605701573934,
+            39.87842261793431
+          ],
+          [
+            -84.04602886849634,
+            39.87840027799174
+          ],
+          [
+            -84.04613283618362,
+            39.87832313370222
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 3.5197291374206543,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-10-07T08:46:53.937Z",
+      "updatedAt": "2026-10-07T08:47:47.029Z",
+      "polygonCount": 1,
+      "ringCount": 1,
+      "vertexCount": 7
+    }
+  },
+  {
+    "id": "building-asset-club-libert-swinger-club-barcelona",
+    "listingId": "club-libert-swinger-club-barcelona",
+    "venueId": "venue-libert-swinger-club-barcelona",
+    "version": 1,
+    "provider": {
+      "source": "OpenFreeMap",
+      "featureIds": [
+        "16891840",
+        "1554220"
+      ],
+      "origin": "provider"
+    },
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ],
+            [
+              2.153497338294983,
+              41.37655094311543
+            ],
+            [
+              2.1532827615737915,
+              41.37655094311543
+            ],
+            [
+              2.1532398462295532,
+              41.376615348857825
+            ],
+            [
+              2.153620719909668,
+              41.37691724992516
+            ],
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ],
+            [
+              2.1533578634262085,
+              41.37644628364802
+            ],
+            [
+              2.1532398462295532,
+              41.376615348857825
+            ],
+            [
+              2.153620719909668,
+              41.37691724992516
+            ],
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ]
+          ]
+        ]
+      ]
+    },
+    "renderHeightMeters": 5,
+    "renderMinHeightMeters": 0,
+    "capture": {
+      "createdAt": "2026-10-09T03:26:09.305Z",
+      "updatedAt": "2026-10-09T03:26:36.235Z",
+      "polygonCount": 2,
+      "ringCount": 2,
+      "vertexCount": 11
+    }
   }
 ]

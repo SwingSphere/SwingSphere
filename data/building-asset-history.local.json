@@ -2579,5 +2579,644 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-ice-lounge-wichita-1791346330904",
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "action": "create",
+    "occurredAt": "2026-10-07T04:12:10.400Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-ice-lounge-wichita",
+      "venueId": null,
+      "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+      "latitude": 37.5363851,
+      "longitude": -97.334344,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-07T04:11:52.408Z",
+      "hash": "bvs-41723a5b"
+    },
+    "evidenceEvaluatedAt": "2026-10-07T04:12:02.442Z",
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-ice-lounge-wichita",
+      "listingId": "club-ice-lounge-wichita",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "6695787290"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53632539056632
+            ],
+            [
+              -97.33445763587952,
+              37.53632539056632
+            ],
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T04:12:10.055Z",
+        "updatedAt": "2026-10-07T04:12:10.400Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-ice-lounge-wichita-1791346335760",
+    "listingId": "club-ice-lounge-wichita",
+    "venueId": null,
+    "action": "replace",
+    "occurredAt": "2026-10-07T04:12:15.309Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-ice-lounge-wichita",
+      "venueId": null,
+      "normalizedAddress": "8721 s broadway haysville kansas 67060 united states",
+      "latitude": 37.536384943826455,
+      "longitude": -97.33434498310089,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-07T04:11:52.408Z",
+      "hash": "bvs-91a259a3"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-ice-lounge-wichita",
+      "listingId": "club-ice-lounge-wichita",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "6695787290"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53632539056632
+            ],
+            [
+              -97.33445763587952,
+              37.53632539056632
+            ],
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T04:12:10.055Z",
+        "updatedAt": "2026-10-07T04:12:10.400Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-ice-lounge-wichita",
+      "listingId": "club-ice-lounge-wichita",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "6695787290"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53644449708659
+            ],
+            [
+              -97.33423233032227,
+              37.53632539056632
+            ],
+            [
+              -97.33445763587952,
+              37.53632539056632
+            ],
+            [
+              -97.33445227146149,
+              37.53644449708659
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T04:12:10.055Z",
+        "updatedAt": "2026-10-07T04:12:15.309Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-ohio-swings-new-carlisle-1791362814883",
+    "listingId": "club-ohio-swings-new-carlisle",
+    "venueId": "venue-ohio-swings-new-carlisle",
+    "action": "create",
+    "occurredAt": "2026-10-07T08:46:54.369Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-ohio-swings-new-carlisle",
+      "venueId": "venue-ohio-swings-new-carlisle",
+      "normalizedAddress": "12225 gerlaugh road new carlisle ohio 45344 united states",
+      "latitude": 39.8806251975626,
+      "longitude": -84.0454117835516,
+      "visibility": "public_exact",
+      "coordinateProvenance": "google-maps-manual",
+      "coordinateConfidence": null,
+      "validatedAt": "2026-10-07 08:38:55.785893+00",
+      "hash": "bvs-8e752edb"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-ohio-swings-new-carlisle",
+      "listingId": "club-ohio-swings-new-carlisle",
+      "venueId": "venue-ohio-swings-new-carlisle",
+      "version": 1,
+      "provider": {
+        "source": "Microsoft Global ML Building Footprints",
+        "featureIds": [
+          "microsoft-ml:esri:84424137"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -84.0461530440753,
+              39.878308029065
+            ],
+            [
+              -84.0459689792736,
+              39.878449005962
+            ],
+            [
+              -84.0458699849293,
+              39.8783729680922
+            ],
+            [
+              -84.0460539598995,
+              39.8782319910389
+            ],
+            [
+              -84.0461530440753,
+              39.878308029065
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T08:46:53.937Z",
+        "updatedAt": "2026-10-07T08:46:54.369Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-ohio-swings-new-carlisle-1791362867503",
+    "listingId": "club-ohio-swings-new-carlisle",
+    "venueId": "venue-ohio-swings-new-carlisle",
+    "action": "replace",
+    "occurredAt": "2026-10-07T08:47:47.029Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-ohio-swings-new-carlisle",
+      "venueId": "venue-ohio-swings-new-carlisle",
+      "normalizedAddress": "12225 gerlaugh road new carlisle ohio 45344 united states",
+      "latitude": 39.8783669440399,
+      "longitude": -84.045986206914,
+      "visibility": "public_exact",
+      "coordinateProvenance": "google-maps-manual",
+      "coordinateConfidence": null,
+      "validatedAt": "2026-10-07T08:47:30.550Z",
+      "hash": "bvs-7b603b08"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-ohio-swings-new-carlisle",
+      "listingId": "club-ohio-swings-new-carlisle",
+      "venueId": "venue-ohio-swings-new-carlisle",
+      "version": 1,
+      "provider": {
+        "source": "Microsoft Global ML Building Footprints",
+        "featureIds": [
+          "microsoft-ml:esri:84424137"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -84.0461530440753,
+              39.878308029065
+            ],
+            [
+              -84.0459689792736,
+              39.878449005962
+            ],
+            [
+              -84.0458699849293,
+              39.8783729680922
+            ],
+            [
+              -84.0460539598995,
+              39.8782319910389
+            ],
+            [
+              -84.0461530440753,
+              39.878308029065
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 6,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T08:46:53.937Z",
+        "updatedAt": "2026-10-07T08:46:54.369Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-ohio-swings-new-carlisle",
+      "listingId": "club-ohio-swings-new-carlisle",
+      "venueId": "venue-ohio-swings-new-carlisle",
+      "version": 1,
+      "provider": {
+        "source": "Microsoft Global ML Building Footprints",
+        "featureIds": [
+          "microsoft-ml:footprint-v2-1wn1xv1-1-6"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -84.04613283618362,
+              39.87832313370222
+            ],
+            [
+              -84.04603365066068,
+              39.87824441185329
+            ],
+            [
+              -84.0458395776444,
+              39.878388414622165
+            ],
+            [
+              -84.04596691041036,
+              39.87848947622657
+            ],
+            [
+              -84.04605701573934,
+              39.87842261793431
+            ],
+            [
+              -84.04602886849634,
+              39.87840027799174
+            ],
+            [
+              -84.04613283618362,
+              39.87832313370222
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 3.5197291374206543,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-07T08:46:53.937Z",
+        "updatedAt": "2026-10-07T08:47:47.029Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 7
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-libert-swinger-club-barcelona-1791516370113",
+    "listingId": "club-libert-swinger-club-barcelona",
+    "venueId": "venue-libert-swinger-club-barcelona",
+    "action": "create",
+    "occurredAt": "2026-10-09T03:26:09.599Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-libert-swinger-club-barcelona",
+      "venueId": "venue-libert-swinger-club-barcelona",
+      "normalizedAddress": "carrer de sepulveda 31 35 barcelona catalonia 08015 spain",
+      "latitude": 41.3766797,
+      "longitude": 2.1536698,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-09T03:25:39.809Z",
+      "hash": "bvs-ce352398"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-club-libert-swinger-club-barcelona",
+      "listingId": "club-libert-swinger-club-barcelona",
+      "venueId": "venue-libert-swinger-club-barcelona",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "16891840"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ],
+            [
+              2.153497338294983,
+              41.37655094311543
+            ],
+            [
+              2.1532827615737915,
+              41.37655094311543
+            ],
+            [
+              2.1532398462295532,
+              41.376615348857825
+            ],
+            [
+              2.153620719909668,
+              41.37691724992516
+            ],
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-09T03:26:09.305Z",
+        "updatedAt": "2026-10-09T03:26:09.599Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 6
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-club-libert-swinger-club-barcelona-1791516396818",
+    "listingId": "club-libert-swinger-club-barcelona",
+    "venueId": "venue-libert-swinger-club-barcelona",
+    "action": "replace",
+    "occurredAt": "2026-10-09T03:26:36.235Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "club-libert-swinger-club-barcelona",
+      "venueId": "venue-libert-swinger-club-barcelona",
+      "normalizedAddress": "carrer de sepulveda 31 35 barcelona catalonia 08015 spain",
+      "latitude": 41.3766797,
+      "longitude": 2.1536698,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-09T03:26:19.556Z",
+      "hash": "bvs-f6818eb6"
+    },
+    "previousAsset": {
+      "id": "building-asset-club-libert-swinger-club-barcelona",
+      "listingId": "club-libert-swinger-club-barcelona",
+      "venueId": "venue-libert-swinger-club-barcelona",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "16891840"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ],
+            [
+              2.153497338294983,
+              41.37655094311543
+            ],
+            [
+              2.1532827615737915,
+              41.37655094311543
+            ],
+            [
+              2.1532398462295532,
+              41.376615348857825
+            ],
+            [
+              2.153620719909668,
+              41.37691724992516
+            ],
+            [
+              2.1538031101226807,
+              41.376776362934805
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-09T03:26:09.305Z",
+        "updatedAt": "2026-10-09T03:26:09.599Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 6
+      }
+    },
+    "nextAsset": {
+      "id": "building-asset-club-libert-swinger-club-barcelona",
+      "listingId": "club-libert-swinger-club-barcelona",
+      "venueId": "venue-libert-swinger-club-barcelona",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "16891840",
+          "1554220"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                2.1538031101226807,
+                41.376776362934805
+              ],
+              [
+                2.153497338294983,
+                41.37655094311543
+              ],
+              [
+                2.1532827615737915,
+                41.37655094311543
+              ],
+              [
+                2.1532398462295532,
+                41.376615348857825
+              ],
+              [
+                2.153620719909668,
+                41.37691724992516
+              ],
+              [
+                2.1538031101226807,
+                41.376776362934805
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                2.1538031101226807,
+                41.376776362934805
+              ],
+              [
+                2.1533578634262085,
+                41.37644628364802
+              ],
+              [
+                2.1532398462295532,
+                41.376615348857825
+              ],
+              [
+                2.153620719909668,
+                41.37691724992516
+              ],
+              [
+                2.1538031101226807,
+                41.376776362934805
+              ]
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-09T03:26:09.305Z",
+        "updatedAt": "2026-10-09T03:26:36.235Z",
+        "polygonCount": 2,
+        "ringCount": 2,
+        "vertexCount": 11
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

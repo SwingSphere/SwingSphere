@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import maplibregl, { type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { ArrowLeft, CircleHelp, Copy, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as api from '../../lib/api';
@@ -13,6 +12,7 @@ import { isDevRouteEnabled } from '../../lib/devRoutes';
 import {
   formatListingPhysicalAddress,
   getBuildingAssetForListing as getCompatibilityBuildingAssetForListing,
+  getDependentListingsForVenue,
   getListingPhysicalAddress,
   getListingPhysicalCityLabel,
   getVenueForListing,
@@ -20,6 +20,7 @@ import {
 } from '../../lib/entityCompatibility';
 import { getListingCanonicalCoords } from '../../lib/explorerMarkers';
 import { isApproximateLocation } from '../../lib/publicLocation';
+import { validateListingLocation } from '../../lib/listingLocationValidation';
 import {
   getBuildingVerificationForListing,
   evaluateBuildingVerification,
@@ -40,6 +41,32 @@ import type {
 import { buildBuildingsSource, getBuildingsSourceId, venueArrival } from '../maps/venueArrival';
 import { swingMapStyle } from '../maps/mapStyle';
 import BuildingVerificationAuditPanel from './BuildingVerificationAuditPanel';
+import BuildingImpactReviewModal, { type ImpactReviewActionType } from './BuildingImpactReviewModal';
+import { BuildingInspectorLayout } from './building-inspector/BuildingInspectorLayout';
+import { BuildingInspectorAppBar } from './building-inspector/BuildingInspectorAppBar';
+import { BuildingInspectorPlaceBrowser, type LandmarkTestRecord } from './building-inspector/BuildingInspectorPlaceBrowser';
+import { BuildingInspectorSpatialHud } from './building-inspector/BuildingInspectorSpatialHud';
+import { BuildingInspectorRightPanel } from './building-inspector/BuildingInspectorRightPanel';
+import { BuildingInspectorMassingPanel } from './building-inspector/BuildingInspectorMassingPanel';
+import type {
+  BuildingInspectorSelectionMode,
+  BuildingInspectorViewMode,
+  BuildingInspectorWorkspaceMode,
+  ManualMassingDrawTool,
+  ManualMassingObject,
+  ReferenceImageState,
+  StepperStep,
+} from './building-inspector/types';
+import {
+  buildExtrudedManualMassingGeometry,
+  calculatePolygonAreaMeters,
+  createRectangleLocalPoints,
+  duplicateMassingObject,
+  ensureClosedRing,
+  localPointsToGeoJsonPolygon,
+  transformLocalPoints,
+} from './building-inspector/manualMassingUtils';
+
 import { buildingAddressBelongsToFootprint, inspectorBuildingAddressResolver, type BuildingAddressResolution, type ResolvedBuildingAddress } from '../../lib/buildingAddressResolver';
 import { geometryFingerprint, materializeProviderFootprintFeature, pointIntersectsBuildingGeometry, pointToBuildingDistanceMeters } from '../../lib/buildingGeometry';
 import {
@@ -195,7 +222,8 @@ type StreetReferenceSnapshot = {
   bounds: Bounds;
 };
 
-const STREET_PLANE_CONTEXT_RADIUS_METERS = 500;
+// Street reference context radius and texture resolution for physical workspace
+const STREET_PLANE_CONTEXT_RADIUS_METERS = 800;
 const STREET_PLANE_CAPTURE_SIZE_PX = 1024;
 
 const getStreetPlaneBounds = (lng: number, lat: number, radiusMeters = STREET_PLANE_CONTEXT_RADIUS_METERS): Bounds => {
@@ -426,8 +454,8 @@ type RenderedPolygon = {
   stroke: string;
 };
 
-type BuildingAssetFilter = 'all' | 'missing' | 'location' | 'has';
-type BuildingLocationAuditState = 'ready' | 'review' | 'approximate';
+type BuildingAssetFilter = 'all' | 'missing' | 'location' | 'private' | 'has';
+type BuildingLocationAuditState = 'ready' | 'review' | 'private';
 type BuildingLocationAudit = {
   state: BuildingLocationAuditState;
   label: string;
@@ -1370,18 +1398,18 @@ const getBuildingLocationAudit = (
 
   if (!streetAddress) {
     return {
-      state: 'approximate',
-      label: 'No exact address',
-      reason: 'This listing does not have a street-level address, so selecting a specific building would be guesswork.',
+      state: 'private',
+      label: 'Private',
+      reason: 'This listing does not publish a street-level address, so it is intentionally excluded from building selection.',
       venueListingDriftMeters: null,
     };
   }
 
   if (isApproximate) {
     return {
-      state: 'approximate',
-      label: 'Approximate pin',
-      reason: 'This location is intentionally approximate, private, or otherwise not precise enough for building authoring.',
+      state: 'private',
+      label: 'Private',
+      reason: 'This location is private or intentionally approximate, so it is excluded from building selection.',
       venueListingDriftMeters: null,
     };
   }
@@ -2461,27 +2489,65 @@ const applySceneMeshStyles = (
     const isSuggested = suggestedPolygonIndices.has(entry.record.polygonIndex);
     const isGenerated = isGeneratedBuildingFeatureId(entry.record.providerFeatureId);
     const isDimmed = isolateSelected && hasSelection && !isSelected;
-    const baseColor = new THREE.Color(
-      isSelected
-        ? '#37d97a'
-        : (isHovered || isSuggested) && !isDimmed
-          ? '#f1c35a'
-          : isGenerated
-            ? '#35d6f4'
-            : ['#5cc8ff', '#8b7dff', '#55d6a9', '#ff8c4a', '#ff5f6d', '#9ee493'][entry.record.polygonIndex % 6],
-    );
-    entry.material.color.copy(baseColor);
-    entry.material.emissive.set(isSelected ? '#10301c' : (isHovered || isSuggested) && !isDimmed ? '#231c08' : '#000000');
-    entry.material.opacity = isDimmed ? 0.08 : isSelected ? 0.95 : isHovered ? 0.9 : isSuggested ? 0.88 : 0.82;
+
+    // Semantic 3D visual language:
+    // 1. Selected: Signal Green (#37d97a)
+    // 2. Hovered (when unselected): Clean White neutral highlight (#ffffff)
+    // 3. Recommended/Suggested (when unselected & unhovered): Warm Amber/Gold (#f1c35a)
+    // 4. Generated synthetic massing: Cyan (#35d6f4)
+    // 5. Surrounding background buildings: Neutral dark graphite/slate (#282d38)
+    let baseHex: string;
+    let emissiveHex: string;
+    let opacity: number;
+    let outlineHex: string;
+    let outlineOpacity: number;
+
+    if (isSelected) {
+      baseHex = '#37d97a';
+      emissiveHex = '#10301c';
+      opacity = isDimmed ? 0.2 : 0.95;
+      outlineHex = '#7dff99';
+      outlineOpacity = 0.95;
+    } else if (isHovered && !isDimmed) {
+      baseHex = '#ffffff';
+      emissiveHex = '#30343f';
+      opacity = 0.92;
+      outlineHex = '#ffffff';
+      outlineOpacity = 1.0;
+    } else if (isSuggested && !isDimmed) {
+      baseHex = '#f1c35a';
+      emissiveHex = '#231c08';
+      opacity = 0.88;
+      outlineHex = '#f1c35a';
+      outlineOpacity = 0.9;
+    } else if (isGenerated) {
+      baseHex = '#35d6f4';
+      emissiveHex = '#082029';
+      opacity = isDimmed ? 0.08 : 0.82;
+      outlineHex = '#35d6f4';
+      outlineOpacity = 0.7;
+    } else {
+      // Clean slate/graphite for unselected context buildings (rainbow removed)
+      baseHex = '#282d38';
+      emissiveHex = '#000000';
+      opacity = isDimmed ? 0.06 : 0.78;
+      outlineHex = '#424958';
+      outlineOpacity = isDimmed ? 0.05 : 0.35;
+    }
+
+    entry.material.color.set(baseHex);
+    entry.material.emissive.set(emissiveHex);
+    entry.material.opacity = opacity;
     entry.mesh.visible = !isolateSelected || !hasSelection || isSelected;
     entry.material.needsUpdate = true;
 
-    entry.outline.visible = !isDimmed && (isHovered || isSelected || isSuggested);
-    entry.outlineMaterial.color.set(isSelected ? '#7dff99' : isSuggested ? '#f1c35a' : '#ffffff');
-    entry.outlineMaterial.opacity = isSelected ? 0.95 : isSuggested ? 0.8 : 0.45;
+    entry.outline.visible = !isDimmed;
+    entry.outlineMaterial.color.set(outlineHex);
+    entry.outlineMaterial.opacity = outlineOpacity;
     entry.outlineMaterial.needsUpdate = true;
   }
 };
+
 
 const frameSceneBounds = (
   bounds: THREE.Box3,
@@ -2493,7 +2559,12 @@ const frameSceneBounds = (
   const maxDimension = Math.max(size.x, size.y, size.z, 1);
   const distance = maxDimension * 1.8;
   controls.target.copy(center);
-  camera.position.set(center.x + distance, center.y + distance * 0.8, center.z + distance);
+  // 3D architectural orbit framing: balanced elevation angle showing both rooflines and facade heights
+  camera.position.set(
+    center.x + distance * 0.85,
+    center.y + distance * 1.15,
+    center.z + distance * 0.85,
+  );
   camera.near = Math.max(0.1, maxDimension / 100);
   camera.far = Math.max(1000, maxDimension * 20);
   camera.updateProjectionMatrix();
@@ -2536,8 +2607,10 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   onVenueLocationSaved,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const referenceMapContainerRef = useRef<HTMLDivElement | null>(null);
   const sceneContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const referenceMapRef = useRef<MapLibreMap | null>(null);
   const mapReferenceMarkerRef = useRef<maplibregl.Marker | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -2547,7 +2620,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const referenceGroupRef = useRef<THREE.Group | null>(null);
   const venueMarkerGroupRef = useRef<THREE.Group | null>(null);
   const streetFloorGroupRef = useRef<THREE.Group | null>(null);
-  const compassNeedleRef = useRef<HTMLSpanElement | null>(null);
+  const compassNeedleRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const meshEntriesRef = useRef<SceneMeshEntry[]>([]);
   const referenceMeshEntriesRef = useRef<SceneMeshEntry[]>([]);
@@ -2573,13 +2646,52 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [loadedFeatureCount, setLoadedFeatureCount] = useState(0);
   const [loadedUniqueIdCount, setLoadedUniqueIdCount] = useState(0);
   const [forensicReport, setForensicReport] = useState<ForensicReport | null>(null);
-  const [status, setStatus] = useState('Ready. Load geometry to inspect the selected feature id.');
+  const [status, setStatus] = useState('Ready. Inspect Venue Footprints to inspect the selected physical place.');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState<string | null>(null);
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState<number | null>(null);
   const [selectedPolygonIndices, setSelectedPolygonIndices] = useState<number[]>([]);
   const [suggestedPolygonIndices, setSuggestedPolygonIndices] = useState<number[]>([]);
+  const [viewMode, setViewMode] = useState<BuildingInspectorViewMode>('3d');
+  const [selectionMode, setSelectionMode] = useState<BuildingInspectorSelectionMode>('single');
+  const selectionModeRef = useRef<BuildingInspectorSelectionMode>('single');
+  selectionModeRef.current = selectionMode;
+
+  const [workspaceMode, setWorkspaceMode] = useState<BuildingInspectorWorkspaceMode>('provider');
+  const workspaceModeRef = useRef<BuildingInspectorWorkspaceMode>('provider');
+  workspaceModeRef.current = workspaceMode;
+
+  const [activeDrawTool, setActiveDrawTool] = useState<ManualMassingDrawTool>('select');
+  const activeDrawToolRef = useRef<ManualMassingDrawTool>('select');
+  activeDrawToolRef.current = activeDrawTool;
+
+  const [referenceImage, setReferenceImage] = useState<ReferenceImageState | null>(null);
+  const referenceImageRef = useRef<ReferenceImageState | null>(null);
+  referenceImageRef.current = referenceImage;
+
+  const [manualMassings, setManualMassings] = useState<ManualMassingObject[]>([]);
+  const manualMassingsRef = useRef<ManualMassingObject[]>([]);
+  manualMassingsRef.current = manualMassings;
+
+  const [selectedMassingId, setSelectedMassingId] = useState<string | null>(null);
+  const selectedMassingIdRef = useRef<string | null>(null);
+  selectedMassingIdRef.current = selectedMassingId;
+
+  const [historyStack, setHistoryStack] = useState<ManualMassingObject[][]>([[]]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const [isSavingAmbient, setIsSavingAmbient] = useState(false);
+  const [ambientSaveStatusMessage, setAmbientSaveStatusMessage] = useState<string | null>(null);
+
+  const manualMassingsGroupRef = useRef<THREE.Group | null>(null);
+  const referenceImageMeshRef = useRef<THREE.Mesh | null>(null);
+  const drawingPreviewGroupRef = useRef<THREE.Group | null>(null);
+  const isDrawingRef = useRef(false);
+  const drawingStartPointRef = useRef<{ x: number; z: number } | null>(null);
+  const drawingPolygonPointsRef = useRef<[number, number][]>([]);
+  const sceneOriginRef = useRef<[number, number] | null>(null);
+
   const [isolateSelected, setIsolateSelected] = useState(false);
   const [showVenueMarker, setShowVenueMarker] = useState(true);
   const [showNearbyBuildings, setShowNearbyBuildings] = useState(true);
@@ -2625,6 +2737,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   const [resolvedVenueFeatureId, setResolvedVenueFeatureId] = useState<string | null>(null);
   const [assetStatusMessage, setAssetStatusMessage] = useState<string | null>(null);
   const [venueNameDraft, setVenueNameDraft] = useState('');
+  const [coordinateDraft, setCoordinateDraft] = useState({ lat: '', lng: '' });
   const [localListings, setLocalListings] = useState<Listing[]>([]);
   const [localVenues, setLocalVenues] = useState<VenueData[]>([]);
   const [localBuildingAssets, setLocalBuildingAssets] = useState<BuildingAsset[]>([]);
@@ -2676,6 +2789,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
   );
   const selectedVenueLat = selectedVenueCoords?.lat ?? null;
   const selectedVenueLng = selectedVenueCoords?.lng ?? null;
+  useEffect(() => {
+    setCoordinateDraft({
+      lat: selectedVenueCoords ? String(selectedVenueCoords.lat) : '',
+      lng: selectedVenueCoords ? String(selectedVenueCoords.lng) : '',
+    });
+  }, [selectedVenueId, selectedVenueCoords?.lat, selectedVenueCoords?.lng]);
   const selectedStoredBuildingVerification = useMemo(
     () => selectedVenue ? getBuildingVerificationForListing(selectedVenue, semv2Collections) : undefined,
     [selectedVenue, semv2Collections],
@@ -2712,14 +2831,57 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     const center = getGeometryCenter(selectedVenueAsset.geometry);
     return center ? haversineMeters(selectedVenueCoords, { lat: center[1], lng: center[0] }) : null;
   }, [selectedVenueAsset, selectedVenueCoords]);
+  const isBuildingInspectorCandidate = (listing: Listing) => {
+    const physicalVenue = getVenueForListing(listing, semv2Collections);
+    if (physicalVenue) {
+      // Attached to an existing physical Venue: valid candidate (the physical venue is inspected)
+      return physicalVenue.visibility === 'public_exact' || Boolean(physicalVenue.address?.addressLine1);
+    }
+    // Private/city-only events with no physical venue and no exact street-level location are excluded
+    if (isApproximateLocation(listing)) {
+      return false;
+    }
+    if (listing.type === 'club') {
+      return Boolean(listing.geopoint?.address?.addressLine1 || listing.location);
+    }
+    // Events with an exact street address but no Venue may appear because they represent a venue-normalization task
+    return listingHasExactBuildingAddress(listing, semv2Collections);
+  };
+
+  const getBuildingInspectorPhysicalKey = (listing: Listing) => {
+    const physicalVenue = getVenueForListing(listing, semv2Collections);
+    if (physicalVenue) return `venue:${physicalVenue.id}`;
+    const address = getListingPhysicalAddress(listing, semv2Collections);
+    const addressKey = normalizeAddressText([
+      address.addressLine1,
+      address.city,
+      address.region,
+      address.postalCode,
+      address.country,
+    ].filter(Boolean).join(' '));
+    return addressKey ? `address:${addressKey}` : `listing:${listing.id}`;
+  };
+  const collapsePhysicalVenueRepresentatives = (candidates: Listing[]) => {
+    const representatives = new Map<string, Listing>();
+    candidates.forEach((listing) => {
+      const key = getBuildingInspectorPhysicalKey(listing);
+      const existing = representatives.get(key);
+      if (!existing || (existing.type === 'event' && listing.type === 'club')) {
+        representatives.set(key, listing);
+      }
+    });
+    return Array.from(representatives.values());
+  };
   const filteredVenues = useMemo(() => {
     const query = normalizeAddressText(venueSearch);
-    return listings
+    const filtered = listings
+      .filter(isBuildingInspectorCandidate)
       .filter((listing) => {
         const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
         const locationAudit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
         if (assetFilter === 'missing' && (hasAsset || locationAudit.state !== 'ready')) return false;
-        if (assetFilter === 'location' && (hasAsset || locationAudit.state === 'ready')) return false;
+        if (assetFilter === 'location' && (hasAsset || locationAudit.state !== 'review')) return false;
+        if (assetFilter === 'private' && (hasAsset || locationAudit.state !== 'private')) return false;
         if (assetFilter === 'has' && !hasAsset) return false;
         if (!query) return true;
         const haystack = [
@@ -2734,26 +2896,37 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         return normalizeAddressText(haystack).includes(query);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
+
+    return collapsePhysicalVenueRepresentatives(filtered).sort((a, b) => {
+      const aVenue = getVenueForListing(a, semv2Collections);
+      const bVenue = getVenueForListing(b, semv2Collections);
+      return (aVenue?.name ?? a.name).localeCompare(bVenue?.name ?? b.name);
+    });
   }, [assetFilter, buildingAssets, listingLocationAudits, listings, organizations, relationships, semv2Collections, venueSearch, venues]);
   const venueStats = useMemo(() => {
-    let withAssets = 0;
+    const assetKeys = new Set<string>();
     let missing = 0;
     let locationReview = 0;
-    listings.forEach((listing) => {
+    let privateLocations = 0;
+    collapsePhysicalVenueRepresentatives(listings.filter(isBuildingInspectorCandidate)).forEach((listing) => {
       const hasAsset = Boolean(getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships));
       if (hasAsset) {
-        withAssets += 1;
+        const asset = getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships);
+        const physicalVenue = getVenueForListing(listing, semv2Collections);
+        if (asset) assetKeys.add(physicalVenue?.id ?? asset.venueId ?? asset.id);
         return;
       }
       const audit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
       if (audit.state === 'ready') missing += 1;
-      else locationReview += 1;
+      else if (audit.state === 'review') locationReview += 1;
+      else privateLocations += 1;
     });
     return {
-      total: listings.length,
+      total: collapsePhysicalVenueRepresentatives(listings.filter(isBuildingInspectorCandidate)).length,
       missing,
       locationReview,
-      withAssets,
+      privateLocations,
+      withAssets: assetKeys.size,
     };
   }, [buildingAssets, listingLocationAudits, listings, organizations, relationships, semv2Collections, venues]);
 
@@ -2776,6 +2949,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       ?? (selectedVenueCoords ? [selectedVenueCoords.lng, selectedVenueCoords.lat] as [number, number] : null),
     [resolution?.geometry, selectedVenueCoords],
   );
+  sceneOriginRef.current = sceneOrigin;
   const rawGeoJSONText = useMemo(
     () => (resolution ? stringifyGeoJSON(resolution.rawGeoJSON) : ''),
     [resolution],
@@ -2810,6 +2984,15 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     () => getGeometrySignature(selectedSummary.geoJson?.geometry),
     [selectedSummary.geoJson?.geometry],
   );
+  const recommendedGeoJson = useMemo(() => {
+    const indices = suggestedPolygonIndices.length > 0
+      ? suggestedPolygonIndices
+      : (addressIntelligence.bestCandidate?.polygonIndices ?? []);
+    if (!indices.length) return null;
+    const records = indices.map((idx) => polygonRecords[idx]).filter((r): r is PolygonRecord => Boolean(r));
+    if (!records.length) return null;
+    return buildSelectionSummary(records).geoJson;
+  }, [addressIntelligence.bestCandidate?.polygonIndices, polygonRecords, suggestedPolygonIndices]);
 
   useEffect(() => {
     if (!selectedPolygonRecords.length) {
@@ -2877,13 +3060,177 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     };
   }, [selectedGeometrySignature, selectedPolygonRecords, selectedVenue]);
 
-  const saveStateLabel = useMemo(() => {
+  const saveStateInfo = useMemo(() => {
     if (selectedSummary.count > 0) {
       const persistedSignature = getGeometrySignature(selectedVenueAsset?.geometry);
-      return selectedGeometrySignature && selectedGeometrySignature === persistedSignature ? 'Saved' : 'Unsaved Changes';
+      const isPersisted = Boolean(selectedGeometrySignature && selectedGeometrySignature === persistedSignature);
+      if (isPersisted) {
+        return {
+          state: 'saved_canonical_loaded' as const,
+          label: 'Saved Canonical Building',
+          shortLabel: 'Saved',
+          badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
+          description: 'The footprint in 3D matches the persisted canonical BuildingAsset in the database.',
+        };
+      }
+      if (selectedVenueAsset) {
+        return {
+          state: 'selected_unsaved_differs' as const,
+          label: 'Unsaved Changes (Differs from Saved)',
+          shortLabel: 'Unsaved Changes',
+          badgeClass: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
+          description: 'Local footprint selection differs from the saved asset. Click Save Building Asset to persist changes.',
+        };
+      }
+      return {
+        state: 'selected_unsaved_new' as const,
+        label: 'Unsaved Selection (Not Saved)',
+        shortLabel: 'Unsaved (New)',
+        badgeClass: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
+        description: 'Footprint is selected in the 3D scene, but NOT SAVED to the database yet. Click Save Building Asset to commit.',
+      };
     }
-    return selectedVenueAsset ? 'Saved asset available' : 'Never Saved';
-  }, [selectedGeometrySignature, selectedSummary.count, selectedVenueAsset]);
+
+    if (suggestedPolygonIndices.length > 0 || (addressIntelligence.bestCandidate && addressIntelligence.status !== 'idle')) {
+      return {
+        state: 'recommended_available' as const,
+        label: 'Recommended Footprint Ready',
+        shortLabel: 'Recommendation Ready',
+        badgeClass: 'border-sky-400/40 bg-sky-500/15 text-sky-200',
+        description: 'Algorithm found a matching footprint. Click "Use Recommended Footprint" to stage it in 3D.',
+      };
+    }
+
+    return {
+      state: 'nothing_selected' as const,
+      label: selectedVenueAsset ? 'Saved Asset in Catalog (Unselected)' : 'No Footprint Selected',
+      shortLabel: selectedVenueAsset ? 'Saved in Catalog' : 'No Selection',
+      badgeClass: 'border-white/10 bg-white/5 text-zinc-400',
+      description: selectedVenueAsset
+        ? 'A saved building asset exists in the catalog. Click Inspect Venue Footprints to load it.'
+        : 'Click a building footprint in the 3D scene to select it.',
+    };
+  }, [
+    addressIntelligence.bestCandidate,
+    addressIntelligence.status,
+    selectedGeometrySignature,
+    selectedSummary.count,
+    selectedVenueAsset,
+    suggestedPolygonIndices.length,
+  ]);
+
+  const saveStateLabel = saveStateInfo.shortLabel;
+
+  const [impactReview, setImpactReview] = useState<{
+    isOpen: boolean;
+    actionType: ImpactReviewActionType;
+    proposedCoords?: { lat: number; lng: number } | null;
+    distanceMovedMeters?: number | null;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    actionType: 'save_building',
+    onConfirm: () => {},
+  });
+
+  const selectedVenueDependents = useMemo(() => {
+    const venueId = selectedPhysicalVenue?.id ?? (selectedVenue ? getVenueForListing(selectedVenue, semv2Collections)?.id : undefined);
+    return getDependentListingsForVenue(venueId, semv2Collections);
+  }, [selectedPhysicalVenue?.id, selectedVenue, semv2Collections]);
+
+  const stepperSteps = useMemo<StepperStep[]>(() => {
+    // 1. Place
+    const placeStatus: StepperStep['status'] = selectedVenue ? 'complete' : 'pending';
+    const placeLabel = selectedVenue ? selectedVenueDisplayName : 'Select Place';
+    const placeDetail = selectedVenue
+      ? `Selected physical place: ${selectedVenueDisplayName} (${selectedVenue.id})`
+      : 'Select a physical venue from the Place Browser';
+
+    // 2. Location
+    let locationStatus: StepperStep['status'] = 'pending';
+    let locationLabel = 'Verify Location';
+    let locationDetail = 'Pin review not started';
+    if (selectedVenue) {
+      if (!selectedVenueCoords) {
+        locationStatus = 'warning';
+        locationLabel = 'Missing Pin';
+        locationDetail = 'Venue has no latitude/longitude coordinates';
+      } else if (selectedVenueLocationAudit?.state === 'review') {
+        locationStatus = 'warning';
+        locationLabel = 'Pin Review';
+        locationDetail = selectedVenueLocationAudit.reason || 'Pin coordinates differ significantly from geocoded address';
+      } else if (selectedVenueLocationAudit?.state === 'private') {
+        locationStatus = 'warning';
+        locationLabel = 'Private Place';
+        locationDetail = 'Exact street address is masked/private';
+      } else {
+        locationStatus = 'complete';
+        locationLabel = 'Location Verified';
+        locationDetail = `Canonical pin verified (${selectedVenueCoords.lat.toFixed(5)}, ${selectedVenueCoords.lng.toFixed(5)})`;
+      }
+    }
+
+    // 3. Footprint
+    let footprintStatus: StepperStep['status'] = 'pending';
+    let footprintLabel = 'Select Footprint';
+    let footprintDetail = 'Click a building in the 3D scene to select it';
+    if (selectedVenue) {
+      if (saveStateInfo.state === 'saved_canonical_loaded') {
+        footprintStatus = 'complete';
+        footprintLabel = `${selectedSummary.count} Piece${selectedSummary.count === 1 ? '' : 's'} (Saved)`;
+        footprintDetail = `Matches saved canonical BuildingAsset (${selectedSummary.count} polygon pieces, ${Math.round(selectedSummary.areaMeters)} m²)`;
+      } else if (selectedSummary.count > 0) {
+        footprintStatus = 'ready';
+        footprintLabel = `${selectedSummary.count} Piece${selectedSummary.count === 1 ? '' : 's'} Selected`;
+        footprintDetail = `${selectedSummary.count} polygon pieces selected in 3D scene (${Math.round(selectedSummary.areaMeters)} m²). Unsaved.`;
+      } else if (addressIntelligence.bestCandidate) {
+        footprintStatus = 'info';
+        footprintLabel = 'Recommended Ready';
+        footprintDetail = 'Algorithm identified a recommended footprint. Click "Use Recommended Footprint" to stage it.';
+      } else {
+        footprintStatus = 'pending';
+        footprintLabel = 'No Footprint';
+        footprintDetail = 'No footprint currently selected in the 3D scene';
+      }
+    }
+
+    // 4. Save
+    let saveStatus: StepperStep['status'] = 'pending';
+    let saveLabel = 'Review & Save';
+    let saveDetail = 'Save canonical BuildingAsset';
+    if (selectedVenue) {
+      if (saveStateInfo.state === 'saved_canonical_loaded') {
+        saveStatus = 'complete';
+        saveLabel = 'Asset Saved';
+        saveDetail = 'BuildingAsset is up to date in the database';
+      } else if (selectedSummary.count > 0) {
+        saveStatus = 'ready';
+        saveLabel = 'Ready to Save';
+        saveDetail = 'Click Review & Save to verify canonical impact and persist BuildingAsset';
+      } else {
+        saveStatus = 'blocked';
+        saveLabel = 'Save Blocked';
+        saveDetail = 'Select at least one footprint piece before saving';
+      }
+    }
+
+    return [
+      { id: 'place', label: 'Physical Place', shortLabel: placeLabel, status: placeStatus, detail: placeDetail },
+      { id: 'location', label: 'Location & Pin', shortLabel: locationLabel, status: locationStatus, detail: locationDetail },
+      { id: 'footprint', label: 'Footprint', shortLabel: footprintLabel, status: footprintStatus, detail: footprintDetail },
+      { id: 'save', label: 'Save', shortLabel: saveLabel, status: saveStatus, detail: saveDetail },
+    ];
+  }, [
+    addressIntelligence.bestCandidate,
+    saveStateInfo.state,
+    selectedSummary.areaMeters,
+    selectedSummary.count,
+    selectedVenue,
+    selectedVenueCoords,
+    selectedVenueDisplayName,
+    selectedVenueLocationAudit,
+  ]);
+
   const selectedMetrics = useMemo(
     () => getBaseFeatureMetrics(resolution?.geometry ?? null),
     [resolution?.geometry],
@@ -3039,6 +3386,40 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }));
   }, [fullProviderTileCandidates.length, resolution?.featureId, resolution?.geometry, showFullProviderTileCache]);
 
+  const handleViewModeChange = (mode: BuildingInspectorViewMode) => {
+    setViewMode(mode);
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+
+    if (mode === '2d') {
+      controls.enableRotate = false;
+      const target = controls.target.clone();
+      camera.up.set(0, 0, -1);
+      camera.position.set(target.x, target.y + 110, target.z + 0.001);
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+      controls.update();
+    } else {
+      controls.enableRotate = true;
+      const target = controls.target.clone();
+      camera.up.set(0, 1, 0);
+      camera.position.set(target.x + 36, target.y + 92, target.z + 36);
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+      controls.update();
+    }
+  };
+
+  const handleRemovePiece = (polygonIndex: number) => {
+    setSelectedPolygonIndices((prev) => prev.filter((idx) => idx !== polygonIndex));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedPolygonIndices([]);
+    setSuggestedPolygonIndices([]);
+  };
+
   const frameSelected = () => {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
@@ -3046,7 +3427,19 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     const selectedEntries = meshEntriesRef.current.filter((entry) => selectedPolygonIndexSet.has(entry.record.polygonIndex));
     const bounds = buildMeshEntriesBounds(selectedEntries);
     if (!bounds) return;
-    frameSceneBounds(bounds, camera, controls);
+    if (viewMode === '2d') {
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.z, 1);
+      controls.target.copy(center);
+      camera.up.set(0, 0, -1);
+      camera.position.set(center.x, center.y + Math.max(40, maxDim * 2.2), center.z + 0.001);
+      camera.lookAt(center);
+      camera.updateProjectionMatrix();
+      controls.update();
+    } else {
+      frameSceneBounds(bounds, camera, controls);
+    }
   };
 
   const frameVenue = () => {
@@ -3059,11 +3452,20 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     );
     const target = new THREE.Vector3(local.x, 0, -local.y);
     controls.target.copy(target);
-    camera.position.set(target.x + 70, target.y + 60, target.z + 70);
-    camera.near = 0.1;
-    camera.far = 3000;
-    camera.updateProjectionMatrix();
-    controls.update();
+    if (viewMode === '2d') {
+      camera.up.set(0, 0, -1);
+      camera.position.set(target.x, target.y + 110, target.z + 0.001);
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+      controls.update();
+    } else {
+      camera.up.set(0, 1, 0);
+      camera.position.set(target.x + 50, target.y + 130, target.z + 50);
+      camera.near = 0.1;
+      camera.far = 3000;
+      camera.updateProjectionMatrix();
+      controls.update();
+    }
   };
 
   const frameProviderFeature = (candidate: ProviderCandidate) => {
@@ -3089,6 +3491,164 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setSoloProviderFeatureId((current) => (current === featureId ? null : featureId));
     setPendingCandidateId(featureId);
     setHoveredCandidateId(featureId);
+  };
+
+  const GROUND_PLANE = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+
+  const pushHistory = (newMassings: ManualMassingObject[]) => {
+    setHistoryStack((prev) => {
+      const nextStack = [...prev.slice(0, historyIndex + 1), newMassings];
+      if (nextStack.length > 50) nextStack.shift();
+      return nextStack;
+    });
+    setHistoryIndex((prev) => Math.min(prev + 1, 49));
+    setManualMassings(newMassings);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setManualMassings(historyStack[prevIndex] || []);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < historyStack.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setManualMassings(historyStack[nextIndex] || []);
+    }
+  };
+
+  const clearDrawingPreview = () => {
+    const group = drawingPreviewGroupRef.current;
+    if (!group) return;
+    while (group.children.length > 0) {
+      const child = group.children[0] as THREE.Mesh;
+      group.remove(child);
+      if (child.geometry) child.geometry.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach((m) => m.dispose());
+      } else if (child.material) {
+        child.material.dispose();
+      }
+    }
+  };
+
+  const updateRectanglePreview = (p1: { x: number; z: number }, p2: { x: number; z: number }) => {
+    clearDrawingPreview();
+    const group = drawingPreviewGroupRef.current;
+    if (!group) return;
+
+    const points = createRectangleLocalPoints(p1, p2);
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(
+      points.map(([x, z]) => new THREE.Vector3(x, 0.15, z)),
+    );
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+    const line = new THREE.Line(lineGeo, lineMat);
+    group.add(line);
+
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+    const minZ = Math.min(p1.z, p2.z);
+    const maxZ = Math.max(p1.z, p2.z);
+    const w = maxX - minX;
+    const d = maxZ - minZ;
+    if (w > 0.1 && d > 0.1) {
+      const planeGeo = new THREE.PlaneGeometry(w, d);
+      const planeMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+      planeMesh.rotation.x = -Math.PI / 2;
+      planeMesh.position.set((minX + maxX) / 2, 0.12, (minZ + maxZ) / 2);
+      group.add(planeMesh);
+    }
+  };
+
+  const updatePolygonPreview = (pts: [number, number][], currentCursor: { x: number; z: number }) => {
+    clearDrawingPreview();
+    const group = drawingPreviewGroupRef.current;
+    if (!group) return;
+
+    const allPts = [...pts, [currentCursor.x, currentCursor.z]];
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(
+      allPts.map(([x, z]) => new THREE.Vector3(x, 0.15, z)),
+    );
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+    const line = new THREE.Line(lineGeo, lineMat);
+    group.add(line);
+
+    const sphereGeo = new THREE.SphereGeometry(0.5, 8, 8);
+    const sphereMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+    for (const [x, z] of pts) {
+      const dot = new THREE.Mesh(sphereGeo, sphereMat);
+      dot.position.set(x, 0.15, z);
+      group.add(dot);
+    }
+  };
+
+  const commitNewRectangle = (p1: { x: number; z: number }, p2: { x: number; z: number }) => {
+    const origin = sceneOriginRef.current
+      ? { lng: sceneOriginRef.current[0], lat: sceneOriginRef.current[1] }
+      : (selectedVenueCoords ? { lng: selectedVenueCoords.lng, lat: selectedVenueCoords.lat } : { lng: 0, lat: 0 });
+    const localCoords = createRectangleLocalPoints(p1, p2);
+    const geoJson = localPointsToGeoJsonPolygon(localCoords, origin);
+    const area = calculatePolygonAreaMeters(localCoords);
+    const currentMassings = manualMassingsRef.current;
+    const hasVenueCandidate = currentMassings.some((m) => m.role === 'venue_candidate');
+    const w = Math.abs(p2.x - p1.x);
+    const d = Math.abs(p2.z - p1.z);
+    const newObj: ManualMassingObject = {
+      id: `massing-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: `Structure ${currentMassings.length + 1}`,
+      role: hasVenueCandidate ? 'ambient_context' : 'venue_candidate',
+      heightMeters: 10,
+      minHeightMeters: 0,
+      localCoordinates: localCoords,
+      geoJson,
+      areaMeters: area,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const nextList = [...currentMassings, newObj];
+    pushHistory(nextList);
+    setSelectedMassingId(newObj.id);
+    setActiveDrawTool('select');
+    setStatus(`Created manual footprint (${w.toFixed(1)}m × ${d.toFixed(1)}m, ${Math.round(area)} m²).`);
+  };
+
+  const commitNewPolygon = (pts: [number, number][]) => {
+    const origin = sceneOriginRef.current
+      ? { lng: sceneOriginRef.current[0], lat: sceneOriginRef.current[1] }
+      : (selectedVenueCoords ? { lng: selectedVenueCoords.lng, lat: selectedVenueCoords.lat } : { lng: 0, lat: 0 });
+    const localCoords = ensureClosedRing(pts);
+    const geoJson = localPointsToGeoJsonPolygon(localCoords, origin);
+    const area = calculatePolygonAreaMeters(localCoords);
+    const currentMassings = manualMassingsRef.current;
+    const hasVenueCandidate = currentMassings.some((m) => m.role === 'venue_candidate');
+    const newObj: ManualMassingObject = {
+      id: `massing-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: `Structure ${currentMassings.length + 1}`,
+      role: hasVenueCandidate ? 'ambient_context' : 'venue_candidate',
+      heightMeters: 10,
+      minHeightMeters: 0,
+      localCoordinates: localCoords,
+      geoJson,
+      areaMeters: area,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const nextList = [...currentMassings, newObj];
+    pushHistory(nextList);
+    setSelectedMassingId(newObj.id);
+    setActiveDrawTool('select');
+    setStatus(`Created manual polygon footprint (${pts.length} vertices, ${Math.round(area)} m²).`);
   };
 
   useEffect(() => {
@@ -3131,6 +3691,14 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     const axes = new THREE.AxesHelper(14);
     scene.add(axes);
 
+    const manualGroup = new THREE.Group();
+    scene.add(manualGroup);
+    manualMassingsGroupRef.current = manualGroup;
+
+    const previewGroup = new THREE.Group();
+    scene.add(previewGroup);
+    drawingPreviewGroupRef.current = previewGroup;
+
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
@@ -3147,7 +3715,60 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       camera.updateProjectionMatrix();
     };
 
+    const getGroundIntersection = (clientX: number, clientY: number): THREE.Vector3 | null => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointerRef.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointerRef.current.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+      raycasterRef.current.setFromCamera(pointerRef.current, camera);
+      const target = new THREE.Vector3();
+      return raycasterRef.current.ray.intersectPlane(GROUND_PLANE, target);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (workspaceModeRef.current !== 'manual_massing') return;
+
+      if (activeDrawToolRef.current === 'rectangle') {
+        const hit = getGroundIntersection(event.clientX, event.clientY);
+        if (hit) {
+          controls.enabled = false;
+          isDrawingRef.current = true;
+          drawingStartPointRef.current = { x: hit.x, z: hit.z };
+        }
+      }
+    };
+
     const onPointerMove = (event: PointerEvent) => {
+      if (workspaceModeRef.current === 'manual_massing') {
+        if (activeDrawToolRef.current === 'rectangle' && isDrawingRef.current && drawingStartPointRef.current) {
+          const hit = getGroundIntersection(event.clientX, event.clientY);
+          if (hit) {
+            updateRectanglePreview(drawingStartPointRef.current, { x: hit.x, z: hit.z });
+          }
+          return;
+        }
+        if (activeDrawToolRef.current === 'polygon' && drawingPolygonPointsRef.current.length > 0) {
+          const hit = getGroundIntersection(event.clientX, event.clientY);
+          if (hit) {
+            updatePolygonPreview(drawingPolygonPointsRef.current, { x: hit.x, z: hit.z });
+          }
+          return;
+        }
+        if (activeDrawToolRef.current === 'select') {
+          const mGroup = manualMassingsGroupRef.current;
+          if (mGroup && mGroup.children.length > 0) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointerRef.current.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+            raycasterRef.current.setFromCamera(pointerRef.current, camera);
+            const hits = raycasterRef.current.intersectObjects(mGroup.children, true);
+            renderer.domElement.style.cursor = hits.length > 0 ? 'pointer' : 'default';
+          }
+          return;
+        }
+        return;
+      }
+
       const entries = meshEntriesRef.current;
       const candidateEntries = referenceMeshEntriesRef.current;
       if (!entries.length && !candidateEntries.length) {
@@ -3175,12 +3796,76 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       setHoveredCandidateId((current) => (current === nextCandidate ? current : nextCandidate));
     };
 
+    const onPointerUp = (event: PointerEvent) => {
+      if (workspaceModeRef.current === 'manual_massing' && activeDrawToolRef.current === 'rectangle' && isDrawingRef.current) {
+        controls.enabled = true;
+        isDrawingRef.current = false;
+        clearDrawingPreview();
+        const hit = getGroundIntersection(event.clientX, event.clientY);
+        if (hit && drawingStartPointRef.current) {
+          const p1 = drawingStartPointRef.current;
+          const p2 = { x: hit.x, z: hit.z };
+          if (Math.abs(p2.x - p1.x) >= 1 && Math.abs(p2.z - p1.z) >= 1) {
+            commitNewRectangle(p1, p2);
+          }
+        }
+        drawingStartPointRef.current = null;
+      }
+    };
+
     const onPointerLeave = () => {
       setHoveredPolygonIndex(null);
       setHoveredCandidateId(null);
+      if (renderer.domElement) renderer.domElement.style.cursor = 'default';
     };
 
     const onClick = (event: MouseEvent) => {
+      if (workspaceModeRef.current === 'manual_massing') {
+        if (activeDrawToolRef.current === 'polygon') {
+          const hit = getGroundIntersection(event.clientX, event.clientY);
+          if (hit) {
+            const pts = drawingPolygonPointsRef.current;
+            if (pts.length >= 3) {
+              const first = pts[0];
+              const dist = Math.hypot(hit.x - first[0], hit.z - first[1]);
+              if (dist < 3.0) {
+                commitNewPolygon(pts);
+                drawingPolygonPointsRef.current = [];
+                clearDrawingPreview();
+                setActiveDrawTool('select');
+                return;
+              }
+            }
+            drawingPolygonPointsRef.current = [...pts, [hit.x, hit.z]];
+            updatePolygonPreview(drawingPolygonPointsRef.current, { x: hit.x, z: hit.z });
+          }
+          return;
+        }
+        if (activeDrawToolRef.current === 'select') {
+          const mGroup = manualMassingsGroupRef.current;
+          if (!mGroup) return;
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          pointerRef.current.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+          raycasterRef.current.setFromCamera(pointerRef.current, camera);
+          const hits = raycasterRef.current.intersectObjects(mGroup.children, true);
+          if (hits.length > 0) {
+            let obj: THREE.Object3D | null = hits[0].object;
+            while (obj && !obj.userData?.massingId && obj !== mGroup) {
+              obj = obj.parent;
+            }
+            const massingId = obj?.userData?.massingId as string | undefined;
+            if (massingId) {
+              setSelectedMassingId(massingId);
+              return;
+            }
+          }
+          setSelectedMassingId(null);
+          return;
+        }
+        return;
+      }
+
       const entries = meshEntriesRef.current;
       const candidateEntries = referenceMeshEntriesRef.current;
       if (!entries.length && !candidateEntries.length) return;
@@ -3191,7 +3876,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       const intersections = raycasterRef.current.intersectObjects(entries.map((entry) => entry.mesh), false);
       const polygonIndex = intersections[0]?.object.userData?.polygonIndex;
       if (typeof polygonIndex === 'number') {
-        const shouldToggle = event.shiftKey || event.ctrlKey || event.metaKey;
+        const shouldToggle = event.shiftKey || event.ctrlKey || event.metaKey || selectionModeRef.current === 'multi';
         setSuggestedPolygonIndices([]);
         setSelectedPolygonIndices((current) => {
           if (!shouldToggle) return [polygonIndex];
@@ -3213,9 +3898,24 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       }
     };
 
+    const onDblClick = (event: MouseEvent) => {
+      if (workspaceModeRef.current === 'manual_massing' && activeDrawToolRef.current === 'polygon') {
+        const pts = drawingPolygonPointsRef.current;
+        if (pts.length >= 3) {
+          commitNewPolygon(pts);
+          drawingPolygonPointsRef.current = [];
+          clearDrawingPreview();
+          setActiveDrawTool('select');
+        }
+      }
+    };
+
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
     renderer.domElement.addEventListener('pointerleave', onPointerLeave);
     renderer.domElement.addEventListener('click', onClick);
+    renderer.domElement.addEventListener('dblclick', onDblClick);
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
@@ -3254,17 +3954,35 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     sceneRef.current = scene;
     cameraRef.current = camera;
     controlsRef.current = controls;
+
+    if (import.meta.env.DEV) {
+      (window as any).__THREE_INSPECTOR__ = {
+        scene,
+        camera,
+        renderer,
+        controls,
+        container,
+      };
+      (window as any).THREE = THREE;
+    }
     resizeObserverRef.current = resizeObserver;
 
     return () => {
+      if (import.meta.env.DEV) {
+        delete (window as any).__THREE_INSPECTOR__;
+        delete (window as any).THREE;
+      }
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
       resizeObserver.disconnect();
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave);
       renderer.domElement.removeEventListener('click', onClick);
+      renderer.domElement.removeEventListener('dblclick', onDblClick);
       controls.dispose();
       disposeSceneMeshEntries(meshEntriesRef.current);
       disposeSceneMeshEntries(referenceMeshEntriesRef.current);
@@ -3274,6 +3992,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       referenceGroupRef.current?.removeFromParent();
       venueMarkerGroupRef.current?.removeFromParent();
       disposeSceneGroup(streetFloorGroupRef.current);
+      disposeSceneGroup(manualMassingsGroupRef.current);
+      disposeSceneGroup(drawingPreviewGroupRef.current);
+      if (referenceImageMeshRef.current) {
+        scene.remove(referenceImageMeshRef.current);
+        referenceImageMeshRef.current.geometry?.dispose();
+        (referenceImageMeshRef.current.material as THREE.Material)?.dispose();
+        referenceImageMeshRef.current = null;
+      }
+      manualMassingsGroupRef.current = null;
+      drawingPreviewGroupRef.current = null;
       modelGroupRef.current = null;
       referenceGroupRef.current = null;
       venueMarkerGroupRef.current = null;
@@ -3700,6 +4428,381 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     pendingSelectAllRef.current = false;
     setSelectedPolygonIndices(polygonRecords.map((record) => record.polygonIndex));
   }, [polygonRecords]);
+
+  useEffect(() => {
+    const group = manualMassingsGroupRef.current;
+    if (!group) return;
+
+    while (group.children.length > 0) {
+      const child = group.children[0] as THREE.Mesh;
+      group.remove(child);
+      if (child.geometry) child.geometry.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach((m) => m.dispose());
+      } else if (child.material) {
+        child.material.dispose();
+      }
+    }
+
+    for (const massing of manualMassings) {
+      const geom = buildExtrudedManualMassingGeometry(massing.localCoordinates, massing.heightMeters);
+      if (!geom) continue;
+
+      const isSelected = massing.id === selectedMassingId;
+      const isCandidate = massing.role === 'venue_candidate';
+
+      let fillColor = '#64748b';
+      let outlineColor = '#94a3b8';
+      let opacity = 0.72;
+
+      if (isSelected) {
+        fillColor = isCandidate ? '#0ea5e9' : '#f59e0b';
+        outlineColor = '#ffffff';
+        opacity = 0.92;
+      } else if (isCandidate) {
+        fillColor = '#06b6d4';
+        outlineColor = '#67e8f9';
+        opacity = 0.85;
+      }
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(fillColor),
+        roughness: 0.65,
+        metalness: 0.1,
+        transparent: true,
+        opacity,
+        side: THREE.DoubleSide,
+      });
+
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.userData = { massingId: massing.id };
+
+      const edges = new THREE.EdgesGeometry(geom, 15);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: new THREE.Color(outlineColor),
+        transparent: true,
+        opacity: isSelected ? 0.95 : 0.55,
+      });
+      const outline = new THREE.LineSegments(edges, lineMat);
+      mesh.add(outline);
+
+      group.add(mesh);
+    }
+  }, [manualMassings, selectedMassingId]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    if (!referenceImage || !referenceImage.visible || !referenceImage.dataUrl) {
+      if (referenceImageMeshRef.current) {
+        scene.remove(referenceImageMeshRef.current);
+        if (referenceImageMeshRef.current.geometry) referenceImageMeshRef.current.geometry.dispose();
+        if (referenceImageMeshRef.current.material) {
+          const mat = referenceImageMeshRef.current.material as THREE.MeshBasicMaterial;
+          mat.map?.dispose();
+          mat.dispose();
+        }
+        referenceImageMeshRef.current = null;
+      }
+      return;
+    }
+
+    const currentMesh = referenceImageMeshRef.current;
+    if (currentMesh && currentMesh.userData?.dataUrl === referenceImage.dataUrl) {
+      currentMesh.scale.set(referenceImage.scale, referenceImage.scale, 1);
+      currentMesh.rotation.z = -(referenceImage.rotationDeg * Math.PI) / 180;
+      currentMesh.position.set(referenceImage.offsetX, 0.08, referenceImage.offsetZ);
+      const mat = currentMesh.material as THREE.MeshBasicMaterial;
+      mat.opacity = referenceImage.opacity;
+      mat.needsUpdate = true;
+      return;
+    }
+
+    if (currentMesh) {
+      scene.remove(currentMesh);
+      if (currentMesh.geometry) currentMesh.geometry.dispose();
+      if (currentMesh.material) {
+        const mat = currentMesh.material as THREE.MeshBasicMaterial;
+        mat.map?.dispose();
+        mat.dispose();
+      }
+      referenceImageMeshRef.current = null;
+    }
+
+    const loader = new THREE.TextureLoader();
+    loader.load(referenceImage.dataUrl, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const planeGeo = new THREE.PlaneGeometry(referenceImage.widthMeters, referenceImage.heightMeters);
+      const planeMat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: referenceImage.opacity,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+      planeMesh.rotation.x = -Math.PI / 2;
+      planeMesh.rotation.z = -(referenceImage.rotationDeg * Math.PI) / 180;
+      planeMesh.position.set(referenceImage.offsetX, 0.08, referenceImage.offsetZ);
+      planeMesh.scale.set(referenceImage.scale, referenceImage.scale, 1);
+      planeMesh.userData = { dataUrl: referenceImage.dataUrl };
+      planeMesh.renderOrder = 1;
+      scene.add(planeMesh);
+      referenceImageMeshRef.current = planeMesh;
+    });
+  }, [referenceImage]);
+
+  const handleUploadReferenceImage = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const aspect = img.width / img.height;
+        const widthMeters = 100;
+        const heightMeters = 100 / aspect;
+        const localVenue = selectedVenueCoords && sceneOrigin
+          ? toLocalMeters([selectedVenueCoords.lng, selectedVenueCoords.lat], { lng: sceneOrigin[0], lat: sceneOrigin[1] })
+          : { x: 0, y: 0 };
+        setReferenceImage({
+          file,
+          dataUrl,
+          name: file.name,
+          widthMeters,
+          heightMeters,
+          offsetX: localVenue.x,
+          offsetZ: -localVenue.y,
+          rotationDeg: 0,
+          scale: 1,
+          opacity: 0.65,
+          isLocked: false,
+          visible: true,
+        });
+        setStatus(`Uploaded reference image ${file.name} (${img.width}×${img.height}px).`);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateReferenceImage = (update: Partial<ReferenceImageState>) => {
+    setReferenceImage((prev) => (prev ? { ...prev, ...update } : null));
+  };
+
+  const handleClearReferenceImage = () => {
+    setReferenceImage(null);
+    setStatus('Reference image cleared.');
+  };
+
+  const handleCenterReferenceOnPin = () => {
+    if (!selectedVenueCoords || !sceneOrigin) return;
+    const local = toLocalMeters(
+      [selectedVenueCoords.lng, selectedVenueCoords.lat],
+      { lng: sceneOrigin[0], lat: sceneOrigin[1] },
+    );
+    handleUpdateReferenceImage({
+      offsetX: local.x,
+      offsetZ: -local.y,
+    });
+    setStatus('Centered reference image on venue pin.');
+  };
+
+  const handleUpdateMassingObject = (id: string, update: Partial<ManualMassingObject>) => {
+    const origin = sceneOrigin
+      ? { lng: sceneOrigin[0], lat: sceneOrigin[1] }
+      : (selectedVenueCoords ? { lng: selectedVenueCoords.lng, lat: selectedVenueCoords.lat } : { lng: 0, lat: 0 });
+
+    const nextList = manualMassings.map((m) => {
+      if (m.id !== id) {
+        if (update.role === 'venue_candidate' && m.role === 'venue_candidate') {
+          return { ...m, role: 'ambient_context' as const, updatedAt: new Date().toISOString() };
+        }
+        return m;
+      }
+      const updated = { ...m, ...update, updatedAt: new Date().toISOString() };
+      if (update.localCoordinates) {
+        updated.geoJson = localPointsToGeoJsonPolygon(update.localCoordinates, origin);
+        updated.areaMeters = calculatePolygonAreaMeters(update.localCoordinates);
+      }
+      return updated;
+    });
+    pushHistory(nextList);
+  };
+
+  const handleDuplicateMassingObject = (id: string) => {
+    const target = manualMassings.find((m) => m.id === id);
+    if (!target) return;
+    const origin = sceneOrigin
+      ? { lng: sceneOrigin[0], lat: sceneOrigin[1] }
+      : (selectedVenueCoords ? { lng: selectedVenueCoords.lng, lat: selectedVenueCoords.lat } : { lng: 0, lat: 0 });
+    const duplicated = duplicateMassingObject(target, { x: 4, z: 4 }, origin, manualMassings.length + 1);
+    const nextList = [...manualMassings, duplicated];
+    pushHistory(nextList);
+    setSelectedMassingId(duplicated.id);
+    setStatus(`Duplicated structure ${target.name}.`);
+  };
+
+  const handleDeleteMassingObject = (id: string) => {
+    const nextList = manualMassings.filter((m) => m.id !== id);
+    pushHistory(nextList);
+    if (selectedMassingId === id) setSelectedMassingId(null);
+    setStatus('Deleted manual massing structure.');
+  };
+
+  const handleFrameMassingObject = (id: string) => {
+    const target = manualMassings.find((m) => m.id === id);
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!target || !camera || !controls) return;
+    const bounds = new THREE.Box3();
+    for (const [x, z] of target.localCoordinates) {
+      bounds.expandByPoint(new THREE.Vector3(x, 0, z));
+      bounds.expandByPoint(new THREE.Vector3(x, target.heightMeters, z));
+    }
+    frameSceneBounds(bounds, camera, controls);
+  };
+
+  const handlePromoteVenueCandidate = () => {
+    const candidate = manualMassings.find((m) => m.role === 'venue_candidate') ??
+      manualMassings.find((m) => m.id === selectedMassingId);
+
+    if (!candidate) {
+      setAssetStatusMessage('Select or draw a building footprint to promote as the venue candidate.');
+      return;
+    }
+
+    if (candidate.role !== 'venue_candidate') {
+      handleUpdateMassingObject(candidate.id, { role: 'venue_candidate' });
+    }
+
+    const geoJson = candidate.geoJson;
+    setResolution({
+      featureId: `manual-massing-${candidate.id}`,
+      source: 'Manual Reference Massing',
+      geometry: geoJson.geometry,
+      properties: {
+        manualCandidate: true,
+        heightMeters: candidate.heightMeters,
+      },
+      rawGeoJSON: geoJson,
+    });
+    setWorkspacePolygonMetadata([
+      {
+        renderHeightMeters: candidate.heightMeters,
+        renderMinHeightMeters: candidate.minHeightMeters,
+        providerFeatureId: `manual-massing-${candidate.id}`,
+      },
+    ]);
+    setSelectedPolygonIndices([0]);
+    setLoadedBuildingSourceLabel('Manual Reference Massing');
+    setAssetStatusMessage('Manual footprint promoted to venue candidate. Review impact before saving.');
+    setStatus(`Manual massing "${candidate.name}" staged as canonical venue candidate.`);
+
+    setImpactReview({
+      isOpen: true,
+      actionType: 'save_building',
+      onConfirm: () => {
+        void executeSaveBuildingAsset();
+      },
+    });
+  };
+
+  const handleSaveAmbientMassings = async () => {
+    const venueId = selectedPhysicalVenue?.id ?? selectedVenue?.id;
+    if (!venueId) {
+      setAmbientSaveStatusMessage('Select a physical venue before saving ambient massings.');
+      return;
+    }
+    const ambientObjects = manualMassings.filter((m) => m.role === 'ambient_context');
+    setIsSavingAmbient(true);
+    setAmbientSaveStatusMessage(null);
+    try {
+      await api.saveAmbientBuildingMassings(venueId, ambientObjects);
+      setAmbientSaveStatusMessage(`Saved ${ambientObjects.length} ambient building massing(s).`);
+      setStatus(`Saved ${ambientObjects.length} ambient massings for ${selectedVenueDisplayName}.`);
+    } catch (error) {
+      setAmbientSaveStatusMessage((error as Error).message || 'Failed to save ambient massings.');
+    } finally {
+      setIsSavingAmbient(false);
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (workspaceModeRef.current !== 'manual_massing') return;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      if (
+        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') ||
+        ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'z')
+      ) {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (drawingPolygonPointsRef.current.length > 0 || isDrawingRef.current) {
+          drawingPolygonPointsRef.current = [];
+          isDrawingRef.current = false;
+          clearDrawingPreview();
+          setActiveDrawTool('select');
+        } else {
+          setSelectedMassingId(null);
+        }
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (activeDrawToolRef.current === 'polygon' && drawingPolygonPointsRef.current.length >= 3) {
+          commitNewPolygon(drawingPolygonPointsRef.current);
+          drawingPolygonPointsRef.current = [];
+          clearDrawingPreview();
+          setActiveDrawTool('select');
+        }
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedMassingIdRef.current) {
+          event.preventDefault();
+          handleDeleteMassingObject(selectedMassingIdRef.current);
+        }
+        return;
+      }
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        if (selectedMassingIdRef.current) {
+          event.preventDefault();
+          const step = event.shiftKey ? 2.0 : 0.5;
+          const delta = {
+            x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+            z: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
+          };
+          const selected = manualMassingsRef.current.find((m) => m.id === selectedMassingIdRef.current);
+          if (selected) {
+            const transformed = transformLocalPoints(selected.localCoordinates, delta);
+            handleUpdateMassingObject(selected.id, { localCoordinates: transformed });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [historyIndex, historyStack, manualMassings]);
 
   const persistBuildingVerification = async (
     listing: Listing,
@@ -4603,12 +5706,19 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
 
   const loadVenueGeometry = async (
     listing: Listing,
-    options: { forceProvider?: boolean; buildingSourceMode?: BuildingSourceMode } = {},
+    options: { forceProvider?: boolean; buildingSourceMode?: BuildingSourceMode; coordinateOverride?: { lat: number; lng: number }; bypassUnsavedCheck?: boolean } = {},
   ) => {
-    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection?')) {
-      logBuildingInspector('loadVenueGeometry:exit cancelled unsaved changes', { listingId: listing.id });
+    if (!options.bypassUnsavedCheck && saveStateLabel === 'Unsaved Changes') {
+      setImpactReview({
+        isOpen: true,
+        actionType: 'discard_unsaved',
+        onConfirm: () => {
+          void loadVenueGeometry(listing, { ...options, bypassUnsavedCheck: true });
+        },
+      });
       return;
     }
+
     venueLoadAbortRef.current?.abort(new Error('A newer venue lookup started.'));
     const controller = new AbortController();
     venueLoadAbortRef.current = controller;
@@ -4638,7 +5748,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       return;
     }
 
-    const coords = getListingCanonicalCoords(listing, semv2Collections);
+    const coords = options.coordinateOverride ?? getListingCanonicalCoords(listing, semv2Collections);
     const savedAsset = getBuildingAssetForListing(
       listing,
       buildingAssets,
@@ -4663,6 +5773,27 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       setLandmarkListing(null);
     }
     setSelectedVenueId(listing.id);
+    setSelectedMassingId(null);
+    setReferenceImage(null);
+    const physicalVenueForLoad = getVenueForListing(listing, semv2Collections);
+    const ambientVenueId = physicalVenueForLoad?.id ?? listing.id;
+    api.getAmbientBuildingMassings(ambientVenueId)
+      .then((ambientList) => {
+        if (Array.isArray(ambientList) && ambientList.length > 0) {
+          setManualMassings(ambientList);
+          setHistoryStack([ambientList]);
+          setHistoryIndex(0);
+        } else {
+          setManualMassings([]);
+          setHistoryStack([[]]);
+          setHistoryIndex(0);
+        }
+      })
+      .catch(() => {
+        setManualMassings([]);
+        setHistoryStack([[]]);
+        setHistoryIndex(0);
+      });
     addressIntelligenceRunRef.current += 1;
     setAddressIntelligence({
       status: 'idle',
@@ -4787,15 +5918,12 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     await loadVenueGeometry(listing);
   };
 
-  const loadSavedBuildingAsset = (
+  const executeLoadSavedBuildingAsset = (
     asset: BuildingAsset | null = selectedVenueAsset,
     venueName: string = selectedVenue?.name ?? 'selected venue',
   ) => {
     if (!asset) {
       setAssetStatusMessage('No saved building asset exists for this venue yet.');
-      return;
-    }
-    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection with the saved asset?')) {
       return;
     }
 
@@ -4823,6 +5951,27 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     pendingSelectAllRef.current = true;
   };
 
+  const loadSavedBuildingAsset = (
+    asset: BuildingAsset | null = selectedVenueAsset,
+    venueName: string = selectedVenue?.name ?? 'selected venue',
+  ) => {
+    if (!asset) {
+      setAssetStatusMessage('No saved building asset exists for this venue yet.');
+      return;
+    }
+    if (saveStateLabel === 'Unsaved Changes') {
+      setImpactReview({
+        isOpen: true,
+        actionType: 'discard_unsaved',
+        onConfirm: () => {
+          executeLoadSavedBuildingAsset(asset, venueName);
+        },
+      });
+      return;
+    }
+    executeLoadSavedBuildingAsset(asset, venueName);
+  };
+
   const reloadBuildingSource = async (mode: BuildingSourceMode = buildingSourceMode) => {
     if (!selectedVenue || isLoading) return;
     await loadVenueGeometry(selectedVenue, { forceProvider: true, buildingSourceMode: mode });
@@ -4837,11 +5986,8 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const promoteCandidateToEditable = (candidate: ProviderCandidate | null = promotedCandidate) => {
+  const executePromoteCandidateToEditable = (candidate: ProviderCandidate | null = promotedCandidate) => {
     if (!candidate) return;
-    if (saveStateLabel === 'Unsaved Changes' && !window.confirm('Replace the current unsaved building selection with this provider candidate?')) {
-      return;
-    }
     const next = buildResolution(candidate.featureId, [candidate.feature], selectedVenueCoords);
     if (!next) {
       setAssetStatusMessage(`Candidate ${candidate.featureId} could not be converted into editable geometry.`);
@@ -4872,6 +6018,21 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setStatus(`Promoted nearby provider candidate ${candidate.featureId} to editable geometry.`);
   };
 
+  const promoteCandidateToEditable = (candidate: ProviderCandidate | null = promotedCandidate) => {
+    if (!candidate) return;
+    if (saveStateLabel === 'Unsaved Changes') {
+      setImpactReview({
+        isOpen: true,
+        actionType: 'discard_unsaved',
+        onConfirm: () => {
+          executePromoteCandidateToEditable(candidate);
+        },
+      });
+      return;
+    }
+    executePromoteCandidateToEditable(candidate);
+  };
+
   const saveSelectedVenueName = async () => {
     if (!persistedSelectedVenue) return;
     const name = venueNameDraft.trim();
@@ -4896,7 +6057,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const saveSelectedBuildingAsset = async () => {
+  const executeSaveBuildingAsset = async () => {
     if (!selectedVenue) {
       setAssetStatusMessage('Select a venue before saving a building asset.');
       return;
@@ -4920,16 +6081,21 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       !value.startsWith('building-asset-') &&
       !value.startsWith('workspace:'),
     ))));
-    const selectedIncludesGenerated = providerFeatureIds.some((providerFeatureId) =>
+    const selectedIncludesManual = providerFeatureIds.some((providerFeatureId) =>
+      providerFeatureId.startsWith('manual-massing-')
+    ) || loadedBuildingSourceLabel === 'Manual Reference Massing';
+    const selectedIncludesGenerated = !selectedIncludesManual && providerFeatureIds.some((providerFeatureId) =>
       isGeneratedBuildingFeatureId(providerFeatureId)
     );
-    const selectedProviderSource = selectedIncludesGenerated
-      ? GENERATED_BUILDING_SOURCE
-      : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX))
-        ? OS_OPENMAP_LOCAL_SOURCE
-        : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(MICROSOFT_BUILDING_ID_PREFIX))
-          ? MICROSOFT_BUILDING_SOURCE
-          : resolution?.source ?? 'OpenFreeMap';
+    const selectedProviderSource = selectedIncludesManual
+      ? 'manual_reference_massing'
+      : selectedIncludesGenerated
+        ? GENERATED_BUILDING_SOURCE
+        : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX))
+          ? OS_OPENMAP_LOCAL_SOURCE
+          : providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(MICROSOFT_BUILDING_ID_PREFIX))
+            ? MICROSOFT_BUILDING_SOURCE
+            : resolution?.source ?? 'OpenFreeMap';
     const renderHeightMeters = selectedSummary.maxRenderHeightMeters ??
       venueArrival.buildingFallbackHeight * venueArrival.selectedBuilding.heightBoost;
     const renderMinHeightMeters = minMetric(selectedPolygonRecords.map((record) => record.renderMinHeightMeters)) ?? 0;
@@ -4948,14 +6114,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
       venueId: existingAsset?.venueId ?? resolvedVenueId,
       version: 1,
       provider: {
-        source: providerWasManuallyCorrected
-          ? `${selectedProviderSource} (manually corrected)`
-          : selectedProviderSource,
+        source: selectedIncludesManual
+          ? 'manual_reference_massing'
+          : providerWasManuallyCorrected
+            ? `${selectedProviderSource} (manually corrected)`
+            : selectedProviderSource,
         featureIds: providerFeatureIds,
-        origin: selectedIncludesGenerated ? 'generated' : 'provider',
-        generationMethod: selectedIncludesGenerated ? generatedBuildingCandidate?.method : undefined,
-        generationConfidence: selectedIncludesGenerated ? generatedBuildingCandidate?.confidence : undefined,
-        provenanceNote: selectedIncludesGenerated ? generatedBuildingCandidate?.sourceDetail : undefined,
+        origin: selectedIncludesManual ? 'manual' : (selectedIncludesGenerated ? 'generated' : 'provider'),
+        generationMethod: selectedIncludesManual ? 'manual_reference_massing' : (selectedIncludesGenerated ? generatedBuildingCandidate?.method : undefined),
+        generationConfidence: selectedIncludesManual ? 1.0 : (selectedIncludesGenerated ? generatedBuildingCandidate?.confidence : undefined),
+        provenanceNote: selectedIncludesManual ? 'Created via Reference Overlay & Manual Massing' : (selectedIncludesGenerated ? generatedBuildingCandidate?.sourceDetail : undefined),
       },
       geometry: selectedSummary.geoJson.geometry,
       renderHeightMeters,
@@ -5015,7 +6183,27 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const rollbackLastBuildingSave = async () => {
+  const requestSaveBuildingAsset = () => {
+    if (!selectedVenue) {
+      setAssetStatusMessage('Select a venue before saving a building asset.');
+      return;
+    }
+    if (!selectedSummary.geoJson?.geometry) {
+      setAssetStatusMessage('Select one or more footprints before saving.');
+      return;
+    }
+    setImpactReview({
+      isOpen: true,
+      actionType: 'save_building',
+      onConfirm: () => {
+        void executeSaveBuildingAsset();
+      },
+    });
+  };
+
+  const saveSelectedBuildingAsset = () => requestSaveBuildingAsset();
+
+  const executeRollbackLastBuildingSave = async () => {
     if (!selectedVenue) return;
     const ownerListingId = selectedVenueAsset?.listingId ?? selectedVenue.id;
     const ownerListing = listings.find((listing) => listing.id === ownerListingId) ?? selectedVenue;
@@ -5039,7 +6227,7 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         return next;
       });
       if (saved.listing) {
-        setLocalListings((current) => current.map((item) => item.id === saved.listing?.id ? saved.listing : item));
+        setLocalListings((current) => current.map((item) => (item.id === saved.listing?.id ? saved.listing : item)));
       }
       setBuildingAssetHistory(await api.getBuildingAssetHistory(ownerListingId));
       onBuildingAssetSaved?.(saved.asset, saved.listing);
@@ -5053,19 +6241,34 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const movePinToSelectedBuilding = async () => {
+  const requestRollbackLastBuildingSave = () => {
+    if (!selectedVenue || !selectedVenueAsset) return;
+    setImpactReview({
+      isOpen: true,
+      actionType: 'rollback',
+      onConfirm: () => {
+        void executeRollbackLastBuildingSave();
+      },
+    });
+  };
+
+  const rollbackLastBuildingSave = () => requestRollbackLastBuildingSave();
+
+
+  const saveVenueCoordinatesAndReload = async (
+    latitude: number,
+    longitude: number,
+    locationMetaOverride?: Listing['locationMeta'],
+  ) => {
     if (!selectedVenue) {
-      setAssetStatusMessage('Select a venue before moving its pin.');
+      setAssetStatusMessage('Select a venue before changing coordinates.');
       return;
     }
-    const geometry = selectedSummary.geoJson?.geometry ?? selectedVenueAsset?.geometry;
-    const center = getGeometryCenter(geometry ?? null);
-    if (!center) {
-      setAssetStatusMessage('Select or load a saved building before moving the pin.');
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      setAssetStatusMessage('Enter valid latitude and longitude values.');
       return;
     }
 
-    const [longitude, latitude] = center;
     const resolvedVenue = getVenueForListing(selectedVenue, { listings, venues, organizations, relationships });
     const persistedVenue = resolvedVenue && venues.some((venue) => venue.id === resolvedVenue.id)
       ? resolvedVenue
@@ -5077,10 +6280,16 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
         latitude,
         longitude,
       },
+      locationMeta: locationMetaOverride ?? {
+        ...(selectedVenue.locationMeta ?? { status: 'manual' as const }),
+        status: 'manual',
+        manualAdjustment: true,
+        validatedAt: new Date().toISOString(),
+      },
     };
 
     setIsLoading(true);
-    setLoadingPhase('Moving venue pin');
+    setLoadingPhase('Updating venue coordinates');
     setAssetStatusMessage(null);
     try {
       if (persistedVenue) {
@@ -5088,42 +6297,148 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           ...persistedVenue,
           latitude,
           longitude,
+          locationMeta: locationMetaOverride ?? {
+            ...(persistedVenue.locationMeta ?? { status: 'manual' as const }),
+            status: 'manual',
+            manualAdjustment: true,
+            validatedAt: new Date().toISOString(),
+          },
         });
         setLocalVenues((current) => current.map((venue) => (venue.id === savedVenue.id ? savedVenue : venue)));
         onVenueLocationSaved?.(savedVenue);
 
-        let listingMirrorUpdated = true;
         if (selectedVenue.type === 'club') {
-          try {
-            const savedListing = await api.saveListing(updatedListing);
-            setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
-            onListingLocationSaved?.(savedListing);
-          } catch (error) {
-            listingMirrorUpdated = false;
-            console.warn('[BuildingInspector] Venue pin moved, but the legacy club listing coordinate could not be mirrored.', error);
-          }
+          const savedListing = await api.saveListing(updatedListing);
+          setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
+          onListingLocationSaved?.(savedListing);
         }
-
-        setAssetStatusMessage(
-          listingMirrorUpdated
-            ? `Moved shared venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`
-            : `Moved the canonical Venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, but the legacy club listing coordinate still needs to be synchronized.`,
-        );
-        setStatus(`Moved ${persistedVenue.name}'s canonical venue pin to the center of the selected building.`);
       } else {
         const savedListing = await api.saveListing(updatedListing);
         setLocalListings((current) => current.map((item) => (item.id === savedListing.id ? savedListing : item)));
         onListingLocationSaved?.(savedListing);
-        setAssetStatusMessage(`Moved venue pin to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}. Address text was preserved.`);
-        setStatus(`Moved ${savedListing.name}'s display pin to the center of the selected building.`);
       }
+
+      setCoordinateDraft({ lat: String(latitude), lng: String(longitude) });
+      setAssetStatusMessage(`Updated venue coordinates to ${latitude.toFixed(6)}, ${longitude.toFixed(6)} and reloaded the inspector.`);
+      await loadVenueGeometry(updatedListing, { forceProvider: true, coordinateOverride: { lat: latitude, lng: longitude } });
     } catch (error) {
-      setAssetStatusMessage((error as Error).message || 'Failed to move the venue pin.');
+      setAssetStatusMessage((error as Error).message || 'Failed to update venue coordinates.');
     } finally {
       setLoadingPhase(null);
       setIsLoading(false);
     }
   };
+
+  const requestGoToCoordinateDraft = () => {
+    if (!selectedVenue) return;
+    const latitude = Number(coordinateDraft.lat);
+    const longitude = Number(coordinateDraft.lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      setAssetStatusMessage('Enter valid latitude and longitude values.');
+      return;
+    }
+    const existingLat = selectedVenueCoords?.lat ?? selectedVenue.geopoint.latitude;
+    const existingLng = selectedVenueCoords?.lng ?? selectedVenue.geopoint.longitude;
+    const distanceMoved = haversineMeters({ lat: existingLat, lng: existingLng }, { lat: latitude, lng: longitude });
+
+    if (distanceMoved < 0.2 && selectedVenueDependents.total <= 1) {
+      void saveVenueCoordinatesAndReload(latitude, longitude);
+      return;
+    }
+
+    setImpactReview({
+      isOpen: true,
+      actionType: 'update_coordinates',
+      proposedCoords: { lat: latitude, lng: longitude },
+      distanceMovedMeters: distanceMoved,
+      onConfirm: () => {
+        void saveVenueCoordinatesAndReload(latitude, longitude);
+      },
+    });
+  };
+
+  const goToCoordinateDraft = () => requestGoToCoordinateDraft();
+
+  const requestGoToVenueAddress = async () => {
+    if (!selectedVenue) return;
+    const address = formatListingAddress(selectedVenue, semv2Collections).trim();
+    if (!address) {
+      setAssetStatusMessage('This venue has no exact address to geocode.');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingPhase('Geocoding venue address');
+    setAssetStatusMessage(null);
+    try {
+      const result = await validateListingLocation({
+        freeformAddress: address,
+        listingType: selectedVenue.type,
+        advancedAddress: getListingPhysicalAddress(selectedVenue, semv2Collections),
+      });
+      if (!result.geopoint) {
+        setAssetStatusMessage('The address could not be resolved to a precise coordinate. Existing coordinates were left unchanged.');
+        return;
+      }
+      const newLat = result.geopoint.latitude;
+      const newLng = result.geopoint.longitude;
+      const existingLat = selectedVenueCoords?.lat ?? selectedVenue.geopoint.latitude;
+      const existingLng = selectedVenueCoords?.lng ?? selectedVenue.geopoint.longitude;
+      const distanceMoved = haversineMeters({ lat: existingLat, lng: existingLng }, { lat: newLat, lng: newLng });
+
+      if (distanceMoved < 0.2 && selectedVenueDependents.total <= 1) {
+        await saveVenueCoordinatesAndReload(newLat, newLng, result.meta);
+        return;
+      }
+
+      setImpactReview({
+        isOpen: true,
+        actionType: 'recode_address',
+        proposedCoords: { lat: newLat, lng: newLng },
+        distanceMovedMeters: distanceMoved,
+        onConfirm: () => {
+          void saveVenueCoordinatesAndReload(newLat, newLng, result.meta);
+        },
+      });
+    } catch (error) {
+      setAssetStatusMessage((error as Error).message || 'Failed to resolve the venue address.');
+    } finally {
+      setLoadingPhase(null);
+      setIsLoading(false);
+    }
+  };
+
+  const goToVenueAddress = () => void requestGoToVenueAddress();
+
+  const requestMovePinToSelectedBuilding = () => {
+    if (!selectedVenue) {
+      setAssetStatusMessage('Select a venue before snapping its pin.');
+      return;
+    }
+    const geometry = selectedSummary.geoJson?.geometry ?? selectedVenueAsset?.geometry;
+    const center = getGeometryCenter(geometry ?? null);
+    if (!center) {
+      setAssetStatusMessage('Select or load a saved building before snapping the pin.');
+      return;
+    }
+
+    const [longitude, latitude] = center;
+    const existingLat = selectedVenueCoords?.lat ?? selectedVenue.geopoint.latitude;
+    const existingLng = selectedVenueCoords?.lng ?? selectedVenue.geopoint.longitude;
+    const distanceMoved = haversineMeters({ lat: existingLat, lng: existingLng }, { lat: latitude, lng: longitude });
+
+    setImpactReview({
+      isOpen: true,
+      actionType: 'snap_pin',
+      proposedCoords: { lat: latitude, lng: longitude },
+      distanceMovedMeters: distanceMoved,
+      onConfirm: () => {
+        void saveVenueCoordinatesAndReload(latitude, longitude);
+      },
+    });
+  };
+
+  const movePinToSelectedBuilding = () => requestMovePinToSelectedBuilding();
 
   const recordBuildingReview = async (disposition: BuildingReviewDisposition, note?: string) => {
     if (!selectedVenue || !selectedBuildingEvidence) {
@@ -5142,17 +6457,21 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     }
   };
 
-  const acceptRecommendedBuildingForReview = async () => {
+  const useRecommendedBuildingFootprint = async () => {
     const candidate = addressIntelligence.bestCandidate;
     if (!candidate) {
-      setAssetStatusMessage('No live provider recommendation is loaded. Use Compare live first.');
+      setAssetStatusMessage('No live provider recommendation is loaded. Use Fetch Live Footprints first.');
       return;
     }
     setSelectedPolygonIndices(candidate.polygonIndices);
     setSuggestedPolygonIndices([]);
-    await recordBuildingReview('accept_recommended_building', 'Recommended footprint selected; Save Building remains an explicit canonical write.');
-    setStatus('Recommended footprint selected. Review it against the street plane, then use Save Building for the explicit asset change.');
+    await recordBuildingReview('accept_recommended_building', 'Recommended footprint staged; Save Building Asset remains an explicit canonical write.');
+    setStatus('Recommended footprint staged in 3D. Review it against the street plane, then use Save Building Asset to persist.');
+    setAssetStatusMessage('Recommended footprint staged for visual review (not saved yet). Click Save Building Asset to commit.');
   };
+
+  const acceptRecommendedBuildingForReview = () => void useRecommendedBuildingFootprint();
+
 
   const handleCopy = async (label: string, value: string) => {
     try {
@@ -5195,21 +6514,101 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
           'fill-opacity': 0,
         },
       });
+
+      // Synchronized 2D reference footprint layers
+      map.addSource('selected-footprint', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'selected-footprint-fill',
+        type: 'fill',
+        source: 'selected-footprint',
+        paint: {
+          'fill-color': '#37d97a',
+          'fill-opacity': 0.45,
+        },
+      });
+      map.addLayer({
+        id: 'selected-footprint-stroke',
+        type: 'line',
+        source: 'selected-footprint',
+        paint: {
+          'line-color': '#37d97a',
+          'line-width': 2.5,
+        },
+      });
+
+      map.addSource('recommended-footprint', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'recommended-footprint-fill',
+        type: 'fill',
+        source: 'recommended-footprint',
+        paint: {
+          'fill-color': '#f1c35a',
+          'fill-opacity': 0.35,
+        },
+      });
+      map.addLayer({
+        id: 'recommended-footprint-stroke',
+        type: 'line',
+        source: 'recommended-footprint',
+        paint: {
+          'line-color': '#f1c35a',
+          'line-width': 2,
+          'line-dasharray': [2, 1],
+        },
+      });
+
       map.once('idle', () => {
         setStatus('Building source ready. Select a venue to resolve its provider geometry.');
       });
     });
 
     return () => {
-      mapReferenceMarkerRef.current?.remove();
-      mapReferenceMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
+    if (!selectedVenue || !referenceMapContainerRef.current || referenceMapRef.current) return;
+    const map = new maplibregl.Map({
+      container: referenceMapContainerRef.current,
+      style: swingMapStyle,
+      center: selectedVenueCoords ? [selectedVenueCoords.lng, selectedVenueCoords.lat] : [DEFAULT_TWIST_LNG, DEFAULT_TWIST_LAT],
+      zoom: 18.2,
+      minZoom: 3,
+      maxZoom: 20,
+      attributionControl: false,
+      interactive: true,
+    });
+    referenceMapRef.current = map;
+    map.on('load', () => {
+      map.setPaintProperty('dark-basemap', 'raster-brightness-max', 0.9);
+      map.setPaintProperty('dark-basemap-labels', 'raster-opacity', 1);
+      map.setPaintProperty('dark-basemap-labels', 'raster-brightness-max', 1);
+      map.addSource('selected-footprint', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'selected-footprint-fill', type: 'fill', source: 'selected-footprint', paint: { 'fill-color': '#37d97a', 'fill-opacity': 0.45 } });
+      map.addLayer({ id: 'selected-footprint-stroke', type: 'line', source: 'selected-footprint', paint: { 'line-color': '#37d97a', 'line-width': 2.5 } });
+      map.addSource('recommended-footprint', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'recommended-footprint-fill', type: 'fill', source: 'recommended-footprint', paint: { 'fill-color': '#f1c35a', 'fill-opacity': 0.35 } });
+      map.addLayer({ id: 'recommended-footprint-stroke', type: 'line', source: 'recommended-footprint', paint: { 'line-color': '#f1c35a', 'line-width': 2, 'line-dasharray': [2, 1] } });
+      map.resize();
+    });
+    return () => {
+      mapReferenceMarkerRef.current?.remove();
+      mapReferenceMarkerRef.current = null;
+      map.remove();
+      referenceMapRef.current = null;
+    };
+  }, [Boolean(selectedVenue)]);
+
+  useEffect(() => {
+    const map = referenceMapRef.current;
     if (!map || selectedVenueLat === null || selectedVenueLng === null) return;
 
     let cancelled = false;
@@ -5217,9 +6616,9 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     setStreetReferenceSnapshot(null);
     setStreetReferenceStatus('Loading streets');
     // Keep the compact top-right reference map readable at a close neighborhood
-    // scale. The projected street plane is captured separately at high resolution
-    // across a fixed ±500m area so it contains roughly a four-block-radius context
-    // instead of stretching this small reference-map canvas.
+    // scale. The projected street plane is captured separately with substantial
+    // overscan so its rectangular texture edge stays outside normal 3D inspection
+    // views instead of appearing as a horizontal render cutoff.
     map.jumpTo({ center: lngLat, zoom: 18.2 });
 
     if (!mapReferenceMarkerRef.current) {
@@ -5250,1495 +6649,377 @@ const BuildingInspectorPage: React.FC<BuildingInspectorPageProps> = ({
     };
   }, [selectedVenueLat, selectedVenueLng]);
 
+  useEffect(() => {
+    const map = referenceMapRef.current;
+    if (!map) return;
+    const updateSources = () => {
+      try {
+        const selectedSource = map.getSource('selected-footprint') as maplibregl.GeoJSONSource | undefined;
+        if (selectedSource) {
+          selectedSource.setData(selectedSummary.geoJson ?? { type: 'FeatureCollection', features: [] });
+        }
+        const recommendedSource = map.getSource('recommended-footprint') as maplibregl.GeoJSONSource | undefined;
+        if (recommendedSource) {
+          recommendedSource.setData(recommendedGeoJson ?? { type: 'FeatureCollection', features: [] });
+        }
+        if (selectedSummary.bbox && selectedVenueCoords) {
+          const [minLng, minLat, maxLng, maxLat] = selectedSummary.bbox;
+          const boundsMinLng = Math.min(minLng, selectedVenueCoords.lng);
+          const boundsMinLat = Math.min(minLat, selectedVenueCoords.lat);
+          const boundsMaxLng = Math.max(maxLng, selectedVenueCoords.lng);
+          const boundsMaxLat = Math.max(maxLat, selectedVenueCoords.lat);
+          map.fitBounds(
+            [[boundsMinLng, boundsMinLat], [boundsMaxLng, boundsMaxLat]],
+            { padding: 24, maxZoom: 18.8, duration: 400 },
+          );
+        }
+      } catch {
+        // Map may be tearing down or style reloading
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      updateSources();
+    } else {
+      map.once('load', updateSources);
+    }
+  }, [selectedSummary.geoJson, selectedSummary.bbox, selectedVenueCoords, recommendedGeoJson]);
+
   if (!embedded && !isDevRouteEnabled()) {
     return <Navigate to="/" replace />;
   }
 
   const shellClassName = embedded
-    ? 'relative h-[calc(100vh-4rem)] min-h-[42rem] overflow-hidden rounded-2xl border border-gray-200 bg-[#050608] text-zinc-100 shadow-lg'
-    : 'relative h-screen min-h-[44rem] overflow-hidden bg-[#050608] text-zinc-100';
-  const sidebarClassName = embedded
-    ? 'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b0f]/94 shadow-2xl shadow-black/40 backdrop-blur-xl'
-    : 'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b0f]/94 shadow-2xl shadow-black/40 backdrop-blur-xl';
-  const resolverStatusPanel = (
-    <details className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl" open>
-      <summary className="cursor-pointer select-none">
-        <div className="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-3 align-middle">
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-50">Resolver Status</h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              {resolverState.failure ?? 'Resolution pipeline ready'}
-            </p>
-          </div>
-          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
-            {resolverState.neighborhoodFeatureCount} nearby
-          </span>
-        </div>
-      </summary>
-      <div className="mt-3 space-y-3">
-        {(['Venue', 'Provider', 'Neighborhood', 'Geometry', 'Asset'] as ResolverStep['section'][]).map((section) => (
-          <div key={section} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{section}</div>
-            <div className="mt-2 space-y-1.5">
-              {resolverState.steps.filter((step) => step.section === section).map((step) => {
-                const marker =
-                  step.status === 'success' ? 'OK'
-                    : step.status === 'failed' ? 'X'
-                      : step.status === 'running' ? '..'
-                        : step.status === 'skipped' ? '-'
-                          : 'o';
-                const colorClass =
-                  step.status === 'success' ? 'text-emerald-200'
-                    : step.status === 'failed' ? 'text-red-200'
-                      : step.status === 'running' ? 'text-amber-200'
-                        : 'text-zinc-500';
-                return (
-                  <div key={`${step.section}-${step.label}`} className={`flex items-start gap-2 text-[11px] ${colorClass}`}>
-                    <span className="mt-px w-3 shrink-0">{marker}</span>
-                    <span className="min-w-0">
-                      <span className="text-zinc-200">{step.label}</span>
-                      {step.detail ? <span className="block truncate text-zinc-500">{step.detail}</span> : null}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-      {resolverState.failure ? (
-        <div className="mt-3 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2">
-          <div className="text-[11px] font-semibold text-red-100">{resolverState.failure}</div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {resolverState.suggestions.map((suggestion) => (
-              <span key={suggestion} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-zinc-200">
-                {suggestion}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </details>
-  );
-  const providerNeighborhoodManager = (
-    <details className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl" open>
-      <summary className="cursor-pointer select-none">
-        <div className="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-3 align-middle">
-        <div>
-          <h2 className="text-sm font-semibold text-zinc-50">Workspace</h2>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
-            Local building geometry inside the authoring radius.
-          </p>
-        </div>
-        <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
-          {workspaceSummary.selected} selected
-        </span>
-        </div>
-      </summary>
-      <div className="mt-3 grid grid-cols-4 gap-2 text-[11px] text-zinc-400">
-        <MiniStat label="Radius" value={`${workspaceSummary.radiusMeters}m`} />
-        <MiniStat label="Buildings" value={String(workspaceSummary.buildings)} />
-        <MiniStat label="Polygons" value={String(workspaceSummary.polygons)} />
-        <MiniStat label="Selected" value={String(workspaceSummary.selected)} />
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-        <MiniStat label="Provider Tile" value={String(workspaceSummary.providerTile)} />
-        <MiniStat label="Visible" value={String(workspaceSummary.visible)} />
-      </div>
-      <div className="mt-3 max-h-[min(34rem,calc(100vh-18rem))] space-y-2 overflow-y-auto pr-1">
-        {workspaceBuildings.length ? workspaceBuildings.map((building) => {
-          return (
-            <div
-              key={building.id}
-              className="rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 text-[11px] text-zinc-300"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-zinc-100">{building.label}</div>
-                  <div className="mt-0.5 text-zinc-500">
-                    {building.polygonCount} polygon{building.polygonCount === 1 ? '' : 's'} | {formatMeters(building.distanceMeters)}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right text-zinc-500">
-                  {formatNumber(building.areaMeters, 0)} m²
-                </div>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <MiniStat label="Max height" value={formatMeters(building.maxRenderHeightMeters)} />
-                <MiniStat label="Avg height" value={formatMeters(building.avgRenderHeightMeters)} />
-              </div>
-              <details className="mt-2">
-                <summary className="cursor-pointer select-none text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  Developer provenance
-                </summary>
-                <div className="mt-1 break-words text-[10px] leading-4 text-zinc-500">
-                  Provider feature IDs: {building.providerFeatureIds.length ? building.providerFeatureIds.join(', ') : 'n/a'}
-                </div>
-                <div className="mt-1 text-[10px] text-zinc-600">
-                  BBox: {formatBounds(building.bbox)}
-                </div>
-                {building.providerFeatureIds.some((providerFeatureId) => providerFeatureId.startsWith(OS_OPENMAP_LOCAL_FEATURE_ID_PREFIX)) ? (
-                  <div className="mt-1 text-[10px] leading-4 text-zinc-600">
-                    {OS_OPENMAP_LOCAL_ATTRIBUTION}
-                  </div>
-                ) : null}
-              </details>
-            </div>
-          );
-        }) : (
-          <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-3 text-[11px] text-zinc-500">
-            Load a venue to build the local authoring workspace.
-          </div>
-        )}
-      </div>
-      <details className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-        <summary className="cursor-pointer select-none text-[11px] font-semibold text-zinc-300">
-          Developer Diagnostics
-        </summary>
-        <div className="mt-2 space-y-2 text-[11px] text-zinc-500">
-          <Row label="Provider tile features" value={String(providerNeighborhoodSummary.providerTile)} />
-          <Row label="Scoped provider candidates" value={String(providerNeighborhoodSummary.neighborhoodCache)} />
-          <Row label="Provider feature IDs" value={workspaceSummary.providerFeatureIds.length ? workspaceSummary.providerFeatureIds.join(', ') : 'n/a'} />
-          <label className="inline-flex items-center gap-2 rounded-md border border-white/5 bg-white/5 px-2 py-2 text-zinc-300">
-            <input
-              type="checkbox"
-              checked={showFullProviderTileCache}
-              onChange={(event) => setShowFullProviderTileCache(event.target.checked)}
-              className="h-3.5 w-3.5 accent-zinc-300"
-            />
-            Show full provider tile cache
-          </label>
-          <label className="inline-flex items-center gap-2 rounded-md border border-white/5 bg-white/5 px-2 py-2 text-zinc-300">
-            <input
-              type="checkbox"
-              checked={showRawProviderGeometry}
-              onChange={(event) => setShowRawProviderGeometry(event.target.checked)}
-              className="h-3.5 w-3.5 accent-amber-300"
-            />
-            Show Raw Provider Geometry
-          </label>
-        </div>
-      </details>
-    </details>
-  );
-  const selectionWorkspacePanel = (
-    <details
-      className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl"
-      open
-    >
-      <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">
-        Selection & Asset
-      </summary>
-      <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-        Green is the current building selection. Click a footprint to replace it; Shift-click or Ctrl-click to add or remove pieces.
-      </p>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-        <MiniStat label="Selected" value={String(selectedSummary.count)} help="How many footprint pieces are currently selected for this building asset." />
-        <MiniStat label="Editable" value={String(polygonRecords.length)} help="All footprint pieces currently loaded into the 3D workspace." />
-        <MiniStat label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'n/a'} help="Combined ground area of the selected footprints." />
-        <MiniStat label="Vertices" value={String(selectedSummary.vertexCount)} help="Technical point count for the selected footprint geometry." />
-        <MiniStat label="Max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} help="Tallest provider-reported render height among the selected footprint pieces." />
-        <MiniStat label="Avg height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} help="Average provider-reported render height among the selected footprint pieces." />
-      </div>
-      <div className="mt-3 space-y-2 text-xs text-zinc-300">
-        <Row
-          label="Footprints"
-          value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => `#${index + 1}`).join(', ') : 'None'}
-          help="These are internal footprint numbers inside the current workspace. They are not provider IDs or street addresses."
-        />
-        <Row label="Asset state" value={saveStateLabel} help="Saved means the current selection matches the stored building asset. Unsaved Changes means it has not been written yet." />
-      </div>
-      <details className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-        <summary className="cursor-pointer select-none text-[11px] font-semibold text-zinc-400">Technical geometry</summary>
-        <div className="mt-2 space-y-2 text-xs text-zinc-300">
-          <Row label="Geometry type" value={selectedMetrics.geometryType} help="GeoJSON geometry type for the currently loaded workspace." />
-          <Row label="Bounding box (BBox)" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} help="BBox means bounding box: the smallest latitude/longitude rectangle that contains the selected geometry." />
-        </div>
-      </details>
-      {assetStatusMessage ? (
-        <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-300">
-          {assetStatusMessage}
-        </div>
-      ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10" title="Hide unselected footprints so you can inspect only the current building selection.">
-          <input
-            type="checkbox"
-            checked={isolateSelected}
-            onChange={(event) => setIsolateSelected(event.target.checked)}
-            className="h-3.5 w-3.5 accent-emerald-400"
-          />
-          Isolate
-        </label>
-        <button
-          type="button"
-          disabled={!selectedSummary.count}
-          onClick={frameSelected}
-          title="Move the 3D camera so the current selection fills the viewport."
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Frame
-        </button>
-        <button
-          type="button"
-          disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
-          onClick={() => void saveSelectedBuildingAsset()}
-          title="Save the selected footprint geometry as this venue's building asset."
-          className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Save Building
-        </button>
-        <button
-          type="button"
-          disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
-          onClick={() => void movePinToSelectedBuilding()}
-          title="Move the venue's map pin to the center of the selected building without changing its address text."
-          className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Move Pin to Building
-        </button>
-        <button
-          type="button"
-          disabled={!selectedVenueAsset || isLoading}
-          onClick={() => loadSavedBuildingAsset()}
-          title="Discard the current selection and reload the last saved building asset."
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Reload
-        </button>
-      </div>
-    </details>
-  );
-  const venueSummaryPanel = selectedVenue ? (
-    <details
-      className="rounded-2xl border border-white/10 bg-[#08090d]/92 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl"
-      open
-    >
-      <summary className="cursor-pointer select-none">
-        <div className="inline-flex w-[calc(100%-1rem)] items-start justify-between gap-3 align-middle">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-zinc-50">Venue Summary</h2>
-            <p className="mt-0.5 truncate text-[11px] text-zinc-500">{selectedVenueDisplayName}</p>
-          </div>
-          <div className="flex shrink-0 gap-1.5">
-            {selectedVenueAsset && (
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={(event) => {
-                  event.preventDefault();
-                  void loadVenueGeometry(selectedVenue, { forceProvider: true });
-                }}
-                title="Load current provider footprints without replacing the saved asset."
-                className="rounded-lg border border-sky-300/30 bg-sky-300/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-300/20 disabled:opacity-60"
-              >
-                Compare live
-              </button>
-            )}
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={(event) => {
-                event.preventDefault();
-                void loadVenueGeometry(selectedVenue);
-              }}
-              title="Load the preserved asset, or current provider footprints when no asset exists."
-              className="rounded-lg border border-red-500/40 bg-red-500/20 px-2.5 py-1.5 text-[11px] font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Load geometry
-            </button>
-          </div>
-        </div>
-      </summary>
-      <div className="mt-3 space-y-2 text-xs text-zinc-300">
-        {persistedSelectedVenue && (
-          <div className="flex items-end gap-2">
-            <label className="min-w-0 flex-1 text-[11px] text-zinc-400">
-              Venue name
-              <input
-                type="text"
-                value={venueNameDraft}
-                onChange={(event) => setVenueNameDraft(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-zinc-100"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={isLoading || !venueNameDraft.trim() || venueNameDraft.trim() === persistedSelectedVenue.name}
-              onClick={() => void saveSelectedVenueName()}
-              className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-100 disabled:opacity-50"
-            >
-              Save name
-            </button>
-          </div>
-        )}
-        {selectedVenue.type !== 'club' && <Row label="Selected listing" value={selectedVenue.name} />}
-        <Row label="Listing type" value={selectedVenue.type} />
-        <Row
-          label="Address"
-          value={formatListingAddress(selectedVenue, semv2Collections)}
-          help="The venue address used as your real-world reference while choosing a building footprint."
-          action={(
-            <button
-              type="button"
-              onClick={() => void handleCopy('Venue address', formatListingAddress(selectedVenue, semv2Collections))}
-              title="Copy venue address"
-              aria-label="Copy venue address"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-zinc-100"
-            >
-              <Copy size={13} aria-hidden="true" />
-            </button>
-          )}
-        />
-        <Row
-          label="Coordinates"
-          value={selectedVenueCoords ? `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}` : 'Not resolved'}
-          action={selectedVenueCoords ? (
-            <button
-              type="button"
-              onClick={() => void handleCopy('Venue coordinates', `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}`)}
-              title="Copy venue coordinates"
-              aria-label="Copy venue coordinates"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-zinc-400 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-zinc-100"
-            >
-              <Copy size={13} aria-hidden="true" />
-            </button>
-          ) : undefined}
-        />
-        {selectedVenueLocationAudit && (
-          <Row
-            label="Pin audit"
-            value={(
-              <span className={selectedVenueLocationAudit.state === 'ready' ? 'text-emerald-300' : 'text-amber-200'}>
-                {selectedVenueLocationAudit.label}
-              </span>
-            )}
-            help={selectedVenueLocationAudit.reason}
-          />
-        )}
-        <Row
-          label="Address intelligence"
-          value={(() => {
-            const statusValue = addressIntelligence.status === 'idle' && selectedStoredBuildingVerification
-              ? selectedStoredBuildingVerification.status
-              : addressIntelligence.status;
-            const label = statusValue === 'checking' ? 'Checking nearby buildings…'
-              : statusValue === 'confirmed' ? 'Confirmed — auto-selected'
-                : statusValue === 'probable' ? 'Probable match — review'
-                  : statusValue === 'mismatch' ? 'Address mismatch — flagged'
-                    : statusValue === 'unconfirmed' ? 'Could not confirm — flagged'
-                      : statusValue === 'skipped' ? 'Skipped'
-                        : 'Not checked yet';
-            const className = statusValue === 'confirmed' ? 'text-emerald-300'
-              : statusValue === 'checking' ? 'text-sky-300'
-                : statusValue === 'probable' ? 'text-amber-200'
-                  : statusValue === 'mismatch' || statusValue === 'unconfirmed' ? 'text-red-300'
-                    : 'text-zinc-400';
-            return <span className={className}>{label}</span>;
-          })()}
-          help={addressIntelligence.status === 'idle' && selectedStoredBuildingVerification
-            ? `Last checked ${new Date(selectedStoredBuildingVerification.checkedAt).toLocaleString()}. ${selectedStoredBuildingVerification.notes?.join(' · ') ?? ''}`
-            : addressIntelligence.message}
-        />
-        {(addressIntelligence.bestCandidate || selectedStoredBuildingVerification?.candidateAddress) && (
-          <Row
-            label="Best building match"
-            value={addressIntelligence.bestCandidate?.address?.primary
-              ?? selectedStoredBuildingVerification?.candidateAddress
-              ?? 'Address unavailable'}
-            help={addressIntelligence.bestCandidate
-              ? `${Math.round(addressIntelligence.bestCandidate.confidence * 100)}% confidence · ${formatMeters(addressIntelligence.bestCandidate.distanceMeters)} from pin · ${addressIntelligence.bestCandidate.pinIntersects ? 'pin intersects footprint' : 'pin does not intersect footprint'} · searched ${addressIntelligence.searchRadiusMeters ?? DEFAULT_NEIGHBORHOOD_RADIUS_METERS}m`
-              : selectedStoredBuildingVerification
-                ? `${Math.round(selectedStoredBuildingVerification.confidence * 100)}% confidence · ${formatMeters(selectedStoredBuildingVerification.distanceMeters)} from pin · searched ${selectedStoredBuildingVerification.searchRadiusMeters ?? DEFAULT_NEIGHBORHOOD_RADIUS_METERS}m`
-                : undefined}
-          />
-        )}
-        {selectedVenueAssetPinDriftMeters !== null && selectedVenueAssetPinDriftMeters > 25 && (
-          <Row
-            label="Pin ↔ asset"
-            value={<span className="text-amber-200">{Math.round(selectedVenueAssetPinDriftMeters)} m apart</span>}
-            help={`Minimum distance from the canonical pin to the saved footprint. Centroid distance is secondary${selectedVenueAssetCentroidDistanceMeters === null ? '' : ` (${Math.round(selectedVenueAssetCentroidDistanceMeters)} m)`}. A pin inside the footprint is never flagged.`}
-          />
-        )}
-        <Row
-          label="Provider feature ID"
-          value={resolvedVenueFeatureId ?? workspaceProviderFeatureIds[0] ?? getListingProviderFeatureId(selectedVenue) ?? 'Not resolved yet'}
-          help="An internal building ID from the map-tile provider. It is useful for provenance, but it is not the venue ID and does not by itself prove this is the correct building."
-        />
-        <Row
-          label="Building asset"
-          value={selectedVenueAsset
-            ? selectedVenueAssetIsShared
-              ? `Shared via ${selectedVenueAssetOwnerListing?.name ?? 'venue'}`
-              : 'Has asset'
-            : 'Missing asset'}
-          help="Building geometry belongs to the physical venue. Events at a venue automatically reuse its verified asset instead of requiring a second building selection."
-        />
-        {generatedBuildingCandidate && generatedPolygonIndices.length > 0 && (
-          <div className="mt-3 rounded-xl border border-cyan-300/25 bg-cyan-300/[0.06] p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">Generated footprint estimate</div>
-                <p className="mt-1 text-[10px] leading-4 text-zinc-400">No sourced building footprint intersected the verified venue pin, so SwingSphere created a reviewable geometry candidate instead of leaving the venue blank.</p>
-              </div>
-              <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[9px] font-semibold text-cyan-100">Human review</span>
-            </div>
-            <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px] leading-4">
-              <span className="text-zinc-600">Source</span><span className="text-zinc-300">{generatedBuildingCandidate.sourceLabel}</span>
-              <span className="text-zinc-600">Inputs</span><span className="text-zinc-300">Verified venue pin + nearby open building geometry</span>
-              <span className="text-zinc-600">Method</span><span className="text-zinc-300">{generatedBuildingCandidate.method === 'nearby-orientation-estimate' ? 'Nearby-building orientation and size estimate' : 'Conservative rectangle centered on verified pin'}</span>
-              <span className="text-zinc-600">Estimate</span><span className="text-zinc-300">{generatedBuildingCandidate.widthMeters.toFixed(0)} × {generatedBuildingCandidate.depthMeters.toFixed(0)} m · {generatedBuildingCandidate.heightMeters.toFixed(1)} m tall</span>
-              <span className="text-zinc-600">Confidence</span><span className="text-zinc-300">{Math.round(generatedBuildingCandidate.confidence * 100)}% geometry estimate</span>
-            </div>
-            <p className="mt-2 text-[9px] leading-3.5 text-zinc-500">{generatedBuildingCandidate.sourceDetail} This geometry is never automatically accepted or saved.</p>
-            <button
-              type="button"
-              onClick={() => {
-                setSuggestedPolygonIndices([]);
-                setSelectedPolygonIndices(generatedPolygonIndices);
-                setAssetStatusMessage('Generated footprint selected for review. Save Building remains an explicit manual confirmation.');
-                setStatus('Generated SwingSphere footprint selected. Compare it with the street plane before saving.');
-              }}
-              className="mt-3 w-full rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left text-[10px] font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/20"
-            >
-              Select generated footprint
-            </button>
-          </div>
-        )}
-        {selectedVenueAsset && (
-          <Row
-            label="Asset updated"
-            value={new Date(selectedVenueAsset.capture.updatedAt).toLocaleString()}
-          />
-        )}
-        {selectedVenueAsset && (
-          <Row
-            label="Asset polygons"
-            value={String(selectedVenueAsset.capture.polygonCount)}
-          />
-        )}
-        <Row
-          label="Editor state"
-          value={saveStateLabel}
-          help="Shows whether the current footprint selection matches the saved building asset or still needs to be saved."
-        />
-        {selectedBuildingEvidence && (
-          <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100">Human building review</div>
-            <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px] leading-4">
-              <span className="text-zinc-600">Listing address</span><span className="text-zinc-300">{formatListingAddress(selectedVenue, semv2Collections)}</span>
-              <span className="text-zinc-600">Stored pin</span><span className="text-zinc-300">{selectedVenueCoords ? `${selectedVenueCoords.lat.toFixed(6)}, ${selectedVenueCoords.lng.toFixed(6)}` : 'Unavailable'}</span>
-              <span className="text-zinc-600">Recommended</span><span className="text-zinc-300">{selectedBuildingEvidence.bestCandidate?.candidateAddress ?? 'Address unresolved'}</span>
-              <span className="text-zinc-600">Relationship</span><span className="text-zinc-300">{selectedBuildingEvidence.bestCandidate?.pinIntersects ? 'Pin is inside footprint' : `${selectedBuildingEvidence.bestCandidate?.minimumPinToFootprintMeters.toFixed(1) ?? 'n/a'} m minimum distance`}</span>
-              <span className="text-zinc-600">Evidence</span><span className="text-zinc-300">{selectedBuildingEvidence.outcome} · score {selectedBuildingEvidence.bestCandidate?.score ?? 'n/a'} · margin {selectedBuildingEvidence.scoreMargin ?? 'n/a'}</span>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-1.5">
-              <button type="button" onClick={() => void acceptRecommendedBuildingForReview()} className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2 py-1.5 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-400/20">Accept recommended</button>
-              <button type="button" disabled={!selectedVenueAsset} onClick={() => { loadSavedBuildingAsset(); void recordBuildingReview('keep_existing_building'); }} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[10px] font-semibold text-zinc-200 hover:bg-white/10 disabled:opacity-40">Keep existing</button>
-              <button type="button" onClick={async () => { await movePinToSelectedBuilding(); await recordBuildingReview('move_pin_to_recommended_building'); }} className="rounded-lg border border-sky-300/25 bg-sky-300/10 px-2 py-1.5 text-[10px] font-semibold text-sky-100 hover:bg-sky-300/20">Move pin</button>
-              <button type="button" onClick={() => void recordBuildingReview('mark_location_for_research')} className="rounded-lg border border-rose-300/25 bg-rose-300/10 px-2 py-1.5 text-[10px] font-semibold text-rose-100 hover:bg-rose-300/20">Mark for research</button>
-            </div>
-            <p className="mt-2 text-[9px] leading-3.5 text-zinc-500">Accept selects the footprint for inspection; Save Building remains the explicit asset write. Move pin is an explicit canonical coordinate change.</p>
-          </div>
-        )}
-      </div>
-    </details>
-  ) : null;
-
-  const menuPanelClassName = 'absolute left-0 top-[calc(100%+0.5rem)] z-50 max-h-[min(42rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#08090d]/98 p-3 shadow-2xl shadow-black/60 backdrop-blur-xl';
-  const menuSummaryClassName = 'cursor-pointer list-none rounded-lg px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden';
+    ? 'relative flex flex-col h-[calc(100vh-4rem)] min-h-[42rem] overflow-hidden rounded-2xl border border-white/10 bg-[#050608] text-zinc-100 shadow-2xl'
+    : 'relative flex flex-col h-screen min-h-[44rem] overflow-hidden bg-[#050608] text-zinc-100';
 
   return (
-    <main className={shellClassName}>
-      <style>{`
-        @keyframes loading-bar {
-          0% { transform: translateX(-140%); }
-          100% { transform: translateX(240%); }
-        }
-        .building-inspector-sidebar:not(.show-advanced-controls) > :nth-child(n+3):not(.building-inspector-venue-picker) { display: none; }
-      `}</style>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,76,76,0.08),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_30%)]" />
+    <div className={shellClassName}>
+      <BuildingInspectorAppBar
+        embedded={embedded}
+        selectedVenueName={selectedVenue ? selectedVenueDisplayName : null}
+        dependentListingCount={selectedVenueDependents.total}
+        steps={stepperSteps}
+        saveStateInfo={saveStateInfo}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        onSaveClick={workspaceMode === 'manual_massing' ? handlePromoteVenueCandidate : () => void saveSelectedBuildingAsset()}
+        isSaveDisabled={workspaceMode === 'manual_massing' ? (!manualMassings.some((m) => m.role === 'venue_candidate') && !selectedMassingId) : (!selectedVenue || !selectedSummary.geoJson || isLoading)}
+        isSaving={isLoading && loadingPhase === 'Saving building asset'}
+      />
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
-        <header className="relative z-40 flex min-h-12 shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-[#0a0b0f]/96 px-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
-          <div className="mr-3 flex min-w-0 items-center gap-2 px-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.7)]" />
-            <span className="truncate text-sm font-semibold text-zinc-100">Building Inspector</span>
-          </div>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName}>File</summary>
-            <div className={menuPanelClassName}>
-              <div className="space-y-2">
-                <button type="button" disabled={!selectedVenue || !selectedSummary.geoJson || isLoading} onClick={() => void saveSelectedBuildingAsset()} className="w-full rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-2 text-left text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-50">Save Building</button>
-                <button type="button" disabled={!selectedVenueAsset || isLoading} onClick={() => loadSavedBuildingAsset()} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-white/10 disabled:opacity-50">Reload Saved Building</button>
-                <Link to={embedded ? '/dev/building-inspector' : '/map'} className="block rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 hover:bg-white/10">{embedded ? 'Open full studio' : 'Back to map'}</Link>
-              </div>
-            </div>
-          </details>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName} title="Control the 3D scene reference layers and camera.">View</summary>
-            <div className={menuPanelClassName}>
-              <div className="space-y-2 text-xs text-zinc-200">
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Red beacon showing the venue's stored latitude/longitude."><input type="checkbox" checked={showVenueMarker} onChange={(event) => setShowVenueMarker(event.target.checked)} className="accent-red-400" />Venue marker</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Project the live street-reference map onto the 3D ground plane so buildings can be matched to real streets."><input type="checkbox" checked={showStreetFloor} onChange={(event) => setShowStreetFloor(event.target.checked)} className="accent-sky-300" />Street plane</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Show nearby provider buildings when raw provider geometry is enabled."><input type="checkbox" checked={showNearbyBuildings} onChange={(event) => setShowNearbyBuildings(event.target.checked)} />Nearby buildings</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Show the metric orientation grid above the street plane."><input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />Metric grid</label>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2" title="Hide everything except the current green selection."><input type="checkbox" checked={isolateSelected} onChange={(event) => setIsolateSelected(event.target.checked)} className="accent-emerald-400" />Isolate selected</label>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" disabled={!selectedSummary.count} onClick={frameSelected} title="Move the camera to the selected building footprint." className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame selection</button>
-                  <button type="button" disabled={!selectedVenue || !sceneOrigin} onClick={frameVenue} title="Move the camera to the venue's stored pin coordinate." className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-50">Frame venue</button>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName} title="Venue address, coordinates, provider match, and saved-asset state.">Venue</summary>
-            <div className={menuPanelClassName}>{venueSummaryPanel ?? <p className="p-2 text-xs text-zinc-500">Select a venue from the left panel.</p>}</div>
-          </details>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName} title="Inspect the current green footprint selection and save it as the venue building.">Selection</summary>
-            <div className={menuPanelClassName}>{selectionWorkspacePanel}</div>
-          </details>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName} title="Inspect nearby building geometry and provider provenance.">Workspace</summary>
-            <div className={menuPanelClassName}>{providerNeighborhoodManager}</div>
-          </details>
-
-          <details className="group relative">
-            <summary className={menuSummaryClassName} title="Technical resolver status and failure details.">Diagnostics</summary>
-            <div className={menuPanelClassName}>
-              {resolverStatusPanel}
-              <button type="button" onClick={() => setShowAdvancedSidebar((value) => !value)} className="mt-3 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-200">{showAdvancedSidebar ? 'Hide advanced controls' : 'Show advanced controls'}</button>
-              <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
-                <div className="text-xs font-semibold text-zinc-100">Current status</div>
-                <p className="mt-2 text-[11px] leading-5 text-zinc-400">{status}</p>
-              </div>
-            </div>
-          </details>
-
-          <div className="ml-auto hidden min-w-0 items-center gap-3 px-3 text-[11px] text-zinc-500 md:flex">
-            <span className="max-w-64 truncate">{selectedVenueDisplayName}</span>
-            <span className={saveStateLabel === 'Saved' ? 'text-emerald-300' : 'text-amber-200'}>{saveStateLabel}</span>
-          </div>
-        </header>
-
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] gap-3">
-      <aside className={`building-inspector-sidebar ${showAdvancedSidebar ? 'show-advanced-controls' : ''} ${sidebarClassName}`}>
-        <div className="border-b border-white/10 px-4 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.28em] text-red-300/80">
-                {embedded ? 'Admin tool' : 'Internal tool'}
-              </p>
-              <h1 className="mt-1 text-lg font-semibold text-zinc-50">Building Inspector</h1>
-            </div>
-            {!embedded && (
-              <Link
-                to="/map"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/10"
-              >
-                <ArrowLeft size={14} />
-                Back to map
-              </Link>
-            )}
-            {embedded && (
-              <Link
-                to="/dev/building-inspector"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/10"
-              >
-                Open Studio
-              </Link>
-            )}
-          </div>
-          <p className="mt-3 text-xs leading-5 text-zinc-400">
-            Match a venue to the correct real-world building, verify it against the street plane, then save the selected footprint.
-          </p>
-          <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-            The provider match is only a starting guess. Use the red venue beacon, street labels, and green selection to confirm the building before saving.
-          </p>
-        </div>
-
-        <BuildingVerificationAuditPanel
-          listings={listings}
-          venues={venues}
-          organizations={organizations}
-          relationships={relationships}
-          buildingAssets={buildingAssets}
-          evidenceRecords={buildingEvidenceRecords}
-          onSelectListing={(listingId) => {
-            const listing = listings.find((candidate) => candidate.id === listingId);
-            if (listing) void loadVenueGeometry(listing);
-          }}
-        />
-
-        {(
-          <section className="building-inspector-venue-picker border-b border-white/10 px-4 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-50">Select venue</h2>
-                <p className="mt-1 text-[11px] leading-5 text-zinc-500">
-                  Choose an existing club or event. The inspector resolves provider geometry behind the scenes.
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-1 text-right text-[11px] text-zinc-400">
-                <div className="text-zinc-500">Ready / pin review</div>
-                <div className="font-semibold text-zinc-100">{venueStats.missing} / <span className="text-amber-200">{venueStats.locationReview}</span></div>
-              </div>
-            </div>
-
-            <label className="mt-3 block space-y-1">
-              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Search venue</span>
-              <input
-                value={venueSearch}
-                onChange={(event) => {
-                  setVenueSearch(event.target.value);
-                  if (event.target.value.trim()) setAssetFilter('all');
-                }}
-                className="h-10 w-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-red-400/60"
-                placeholder="Search by name, city, address, or type"
-              />
-            </label>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
-              {([
-                ['all', `All ${venueStats.total}`],
-                ['missing', `Ready ${venueStats.missing}`],
-                ['location', `Pin review ${venueStats.locationReview}`],
-                ['has', `Has asset ${venueStats.withAssets}`],
-              ] as Array<[BuildingAssetFilter, string]>).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setAssetFilter(value)}
-                  className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition-colors ${
-                    assetFilter === value
-                      ? 'border-red-400/50 bg-red-500/20 text-red-100'
-                      : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
-              {filteredVenues.length ? filteredVenues.slice(0, 80).map((listing) => {
-                const isSelected = selectedVenueId === listing.id;
-                const asset = getBuildingAssetForListing(listing, buildingAssets, venues, listings, organizations, relationships);
-                const locationAudit = listingLocationAudits.get(listing.id) ?? getBuildingLocationAudit(listing, semv2Collections);
-                const assetLabel = asset
-                  ? (asset.listingId === listing.id ? 'Has asset' : 'Shared asset')
-                  : locationAudit.state === 'ready'
-                    ? 'Ready for asset'
-                    : locationAudit.label;
-                const assetLabelClass = asset
-                  ? 'text-emerald-300'
-                  : locationAudit.state === 'ready'
-                    ? 'text-red-200'
-                    : 'text-amber-200';
-                return (
-                  <button
-                    key={listing.id}
-                    type="button"
-                    onClick={() => void loadVenueGeometry(listing)}
-                    className={`w-full rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                      isSelected
-                        ? 'border-red-400/50 bg-red-500/15'
-                        : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="truncate text-sm font-semibold text-zinc-100">{listing.name}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
-                        listing.type === 'club' ? 'bg-sky-500/15 text-sky-200' : 'bg-amber-500/15 text-amber-200'
-                      }`}>
-                        {listing.type}
-                      </span>
-                    </div>
-                    <div className="mt-1 truncate text-[11px] text-zinc-500">{getListingCityLabel(listing, semv2Collections)}</div>
-                    <div className="mt-1 flex items-center justify-between gap-3 text-[11px]">
-                      <span className="truncate text-zinc-400">{formatListingAddress(listing, semv2Collections)}</span>
-                      <span className={assetLabelClass} title={!asset ? locationAudit.reason : undefined}>
-                        {assetLabel}
-                      </span>
-                    </div>
-                  </button>
-                );
-              }) : (
-                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-xs text-zinc-500">
-                  {venueSearch.trim() ? 'No clubs or events match that name or address.' : 'No venues match the current filters.'}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        <details className="border-b border-white/10" open={!embedded}>
-          <summary className="cursor-pointer select-none px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 transition-colors hover:text-zinc-200">
-            Landmark Tests
-          </summary>
-          <div className="px-4 pb-4">
-            <p className="text-[11px] leading-5 text-zinc-500">
-              Developer validation fixtures. Loading a landmark uses the same venue resolver and workspace pipeline as ordinary venues.
-            </p>
-            <div className="mt-3 space-y-2">
-              {LANDMARK_TESTS.map((landmark) => (
-                <label
-                  key={landmark.id}
-                  className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                    selectedLandmarkId === landmark.id
-                      ? 'border-amber-300/45 bg-amber-400/12 text-amber-100'
-                      : 'border-white/10 bg-black/20 text-zinc-300 hover:bg-white/10'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="building-inspector-landmark"
-                    checked={selectedLandmarkId === landmark.id}
-                    onChange={() => setSelectedLandmarkId(landmark.id)}
-                    className="mt-0.5 h-3.5 w-3.5 accent-amber-300"
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-zinc-100">{landmark.name}</span>
-                    <span className="mt-0.5 block text-[11px] text-zinc-500">
-                      {landmark.city} | expected {formatMeters(landmark.expectedHeightMeters)}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            <button
-              type="button"
-              disabled={isLoading || !selectedLandmarkId}
-              onClick={() => void loadLandmarkTest()}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-300/35 bg-amber-400/15 px-3 py-2 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-400/25 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Search size={14} className={isLoading ? 'animate-spin' : ''} />
-              {isLoading ? 'Loading landmark' : 'Load Landmark'}
-            </button>
-            {landmarkValidation ? (
-              <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-[11px] text-zinc-400">
-                <Row label="Expected footprint" value={landmarkValidation.expectedFootprint} />
-                <Row label="Expected height" value={formatMeters(landmarkValidation.expectedHeightMeters)} />
-                <Row label="Rendered max height" value={formatMeters(workspaceBuildings.length ? maxMetric(workspaceBuildings.map((building) => building.maxRenderHeightMeters)) : selectedSummary.maxRenderHeightMeters)} />
-                <Row label="Selected max height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
-                <Row label="Provider polygons loaded" value={String(providerCandidates.reduce((total, candidate) => total + candidate.polygonCount, 0))} />
-                <Row label="Workspace polygons" value={String(workspaceSummary.polygons)} />
-                <Row label="Building groups" value={String(workspaceSummary.buildings)} />
-                <Row label="Selected building" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'None'} />
-                <Row label="Bounding box" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : formatBounds(resolution?.bbox ?? null)} />
-                <Row label="Polygon count" value={String(selectedSummary.count || polygonRecords.length)} />
-                <Row label="Area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'Select polygons to measure'} />
-              </div>
-            ) : null}
-          </div>
-        </details>
-
-        <details className="border-b border-white/10" open={!embedded}>
-          <summary className="cursor-pointer select-none px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 transition-colors hover:text-zinc-200">
-            Advanced provider feature lookup
-          </summary>
-          <form
-            className="px-4 pb-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void resolveFeature();
-            }}
-          >
-            <label className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Feature id</span>
-              <div className="flex gap-2">
-                <input
-                  value={featureIdInput}
-                  onChange={(event) => setFeatureIdInput(event.target.value)}
-                  className="h-10 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-red-400/60"
-                  placeholder="13581200"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/20 px-3 text-sm text-red-100 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Search size={14} className={isLoading ? 'animate-spin' : ''} />
-                  {isLoading ? 'Loading' : 'Load'}
-                </button>
-              </div>
-            </label>
-            <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-              Manual feature ID lookup is an advanced provider workflow. This view does not load basemaps, roads, labels, or nearby buildings.
-            </p>
-            {isLoading && (
-              <div className="mt-3 space-y-2 rounded-lg border border-red-500/25 bg-black/25 px-3 py-3">
-                <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-400">
-                  <span>{loadingPhase ?? 'Loading feature'}</span>
-                  <span className="text-red-200">working</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-red-400 to-transparent"
-                    style={{ animation: 'loading-bar 1.1s ease-in-out infinite' }}
-                  />
-                </div>
-              </div>
-            )}
-            <div className="mt-3 border-t border-white/10 pt-3">
-              <button
-                type="button"
-                disabled={!selectedSummary.geoJson}
-                onClick={() => {
-                  if (!selectedSummary.geoJson) return;
-                  const suffix = selectedSummary.count === 1
-                    ? `polygon-${selectedSummary.indices[0] + 1}`
-                    : `multipolygon-${selectedSummary.indices.map((index) => index + 1).join('-')}`;
-                  exportGeoJSONFeature(
-                    selectedSummary.geoJson,
-                    `building-${resolution?.featureId ?? featureIdInput}-${suffix}.geojson`,
-                  );
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Export selected GeoJSON
-              </button>
-              <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-                GeoJSON export is retained for development checks. The primary workflow is Save Building.
-              </p>
-            </div>
-          </form>
-        </details>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <section className="rounded-xl border border-red-500/20 bg-red-500/8 p-3">
-            <div className="text-sm font-semibold text-red-100">Status</div>
-            <p className="mt-2 text-xs leading-5 text-zinc-300">{status}</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Feature id</div>
-                <div className="mt-1 text-zinc-100">{resolution?.featureId ?? featureIdInput}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Loaded source</div>
-                <div className="mt-1 text-zinc-100">{resolution?.source ?? 'n/a'}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Source-layer</div>
-                <div className="mt-1 text-zinc-100">{resolution?.sourceLayer ?? SOURCE_LAYER}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Primary tile</div>
-                <div className="mt-1 text-zinc-100">{resolution?.primaryTile ?? 'n/a'}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Returned features</div>
-                <div className="mt-1 text-zinc-100">{forensicReport?.returnedFeatureCount ?? 0}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Model polygons</div>
-                <div className="mt-1 text-zinc-100">{polygonRecords.length}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Provider tile</div>
-                <div className="mt-1 text-zinc-100">{loadedFeatureCount}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Unique loaded ids</div>
-                <div className="mt-1 text-zinc-100">{loadedUniqueIdCount}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-2">
-                <div className="text-zinc-500">Reference polygons</div>
-                <div className="mt-1 text-zinc-100">{referencePolygonRecords.length}</div>
-              </div>
-            </div>
-          </section>
-
-          <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-zinc-50">Workspace</h2>
-              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-400">
-                {workspaceSummary.radiusMeters}m
-              </span>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-              <MiniStat label="Buildings" value={String(workspaceSummary.buildings)} />
-              <MiniStat label="Editable polygons" value={String(workspaceSummary.polygons)} />
-              <MiniStat label="Selected polygons" value={String(workspaceSummary.selected)} />
-              <MiniStat label="Provider tile" value={String(workspaceSummary.providerTile)} />
-            </div>
-            <p className="mt-3 text-[11px] leading-5 text-zinc-500">
-              The authoring workspace is built from flattened provider polygons near the venue. Provider IDs are provenance only.
-            </p>
-          </section>
-
-          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3" open>
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Selection Inspector</summary>
-            <div className="mt-3 space-y-2 text-xs text-zinc-300">
-              <Row label="Geometry type" value={selectedMetrics.geometryType} />
-              <Row label="Selected count" value={String(selectedSummary.count)} />
-              <Row label="Selected indices" value={selectedSummary.indices.length ? selectedSummary.indices.map((index) => index + 1).join(', ') : 'n/a'} />
-              <Row label="Combined area" value={selectedSummary.count ? `${formatNumber(selectedSummary.areaMeters, 0)} m²` : 'n/a'} />
-              <Row label="Combined bbox" value={selectedSummary.count ? formatBounds(selectedSummary.bbox) : 'n/a'} />
-              <Row label="Max render height" value={formatMeters(selectedSummary.maxRenderHeightMeters)} />
-              <Row label="Avg render height" value={formatMeters(selectedSummary.avgRenderHeightMeters)} />
-              <Row label="Ring count" value={String(selectedSummary.ringCount)} />
-              <Row label="Total vertices" value={String(selectedSummary.vertexCount)} />
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
-                <input
-                  type="checkbox"
-                  checked={isolateSelected}
-                  onChange={(event) => setIsolateSelected(event.target.checked)}
-                  className="h-3.5 w-3.5 accent-emerald-400"
-                />
-                Isolate selected
-              </label>
-              <button
-                type="button"
-                disabled={!selectedSummary.count}
-                onClick={frameSelected}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Frame selected
-              </button>
-              <button
-                type="button"
-                disabled={!selectedVenue || !sceneOrigin}
-                onClick={frameVenue}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Frame Venue
-              </button>
-              <button
-                type="button"
-                disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
-                onClick={() => void saveSelectedBuildingAsset()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Save Building
-              </button>
-              <button
-                type="button"
-                disabled={!selectedVenueAsset || isLoading}
-                onClick={() => loadSavedBuildingAsset()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Reload Saved Building
-              </button>
-            </div>
-
-            <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-400">
-              Asset state: <span className="font-semibold text-zinc-100">{saveStateLabel}</span>
-              {assetStatusMessage ? <div className="mt-1 text-zinc-300">{assetStatusMessage}</div> : null}
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
-                <input
-                  type="checkbox"
-                  checked={showVenueMarker}
-                  onChange={(event) => setShowVenueMarker(event.target.checked)}
-                  className="h-3.5 w-3.5 accent-red-400"
-                />
-                Venue Marker
-              </label>
-              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
-                <input
-                  type="checkbox"
-                  checked={showNearbyBuildings}
-                  onChange={(event) => setShowNearbyBuildings(event.target.checked)}
-                  className="h-3.5 w-3.5 accent-zinc-300"
-                />
-                Nearby Buildings
-              </label>
-              <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-zinc-200 transition-colors hover:bg-white/10">
-                <input
-                  type="checkbox"
-                  checked={showGrid}
-                  onChange={(event) => setShowGrid(event.target.checked)}
-                  className="h-3.5 w-3.5 accent-zinc-300"
-                />
-                Grid
-              </label>
-            </div>
-
-            <p className="mt-3 text-[11px] leading-5 text-zinc-500">
-              Hover to preview. Click to replace selection. Shift-click or Ctrl-click to add or remove footprints.
-            </p>
-          </details>
-
-          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Selected polygon GeoJSON</summary>
-            <pre className="mt-3 max-h-[30rem] overflow-auto rounded-lg border border-white/10 bg-black/30 p-3 text-[11px] leading-5 text-zinc-300 whitespace-pre-wrap">
-              {selectedPolygonGeoJSONText || 'Click a footprint to preview its GeoJSON here.'}
-            </pre>
-          </details>
-
-          <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Developer Diagnostics</summary>
-            <div className="mt-3 space-y-3">
-          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Raw querySourceFeatures() dump</summary>
-            <pre className="mt-3 max-h-[24rem] overflow-auto rounded-lg border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-zinc-300 whitespace-pre-wrap">
-{forensicReport
-  ? [
-      `Feature ID: ${forensicReport.selectedFeatureId}`,
-      `Returned features: ${forensicReport.returnedFeatureCount}`,
-      `Unique tiles: ${forensicReport.selectedTileCount}`,
-      `Unique centroids: ${forensicReport.selectedUniqueCentroids}`,
-      `Loaded features: ${forensicReport.loadedFeatureCount}`,
-      `Unique loaded ids: ${forensicReport.loadedUniqueIdCount}`,
-      '',
-      ...forensicReport.rawFeatureDumpLines,
-    ].join('\n')
-  : 'Load a feature id to print the raw source objects here.'}
-            </pre>
-          </details>
-
-          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Fragments</summary>
-            <div className="mt-3 space-y-2">
-              {fragmentRecords.length ? fragmentRecords.map((fragment, index) => (
-                <div
-                  key={`${fragment.featureId}-${fragment.tile}-${index}`}
-                  className={`rounded-lg border px-3 py-2 text-xs ${
-                    resolution?.primaryTile === fragment.tile && resolution.featureId === fragment.featureId
-                      ? 'border-red-400/40 bg-red-500/10 text-zinc-200'
-                      : 'border-white/10 bg-black/20 text-zinc-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium text-zinc-100">
-                      Fragment {index + 1}{' '}
-                      {resolution?.primaryTile === fragment.tile && resolution.featureId === fragment.featureId ? '(rendered)' : ''}
-                    </div>
-                    <div className="text-zinc-500">{fragment.tile}</div>
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-zinc-400">
-                    <MiniStat label="Geometry" value={fragment.geometryType} />
-                    <MiniStat label="Polygon count" value={formatDiagnosticMetric(fragment.polygonCount)} />
-                    <MiniStat label="Ring count" value={formatDiagnosticMetric(fragment.ringCount)} />
-                    <MiniStat label="Vertices" value={formatDiagnosticMetric(fragment.vertexCount)} />
-                    <MiniStat label="Area" value={`${formatNumber(fragment.areaMeters, 0)} m²`} />
-                    <MiniStat label="Centroid" value={fragment.centroid ? `${fragment.centroid[1].toFixed(6)}, ${fragment.centroid[0].toFixed(6)}` : 'n/a'} />
-                    <MiniStat label="Distance from Twist" value={fragment.distanceFromTwistMeters ? formatMeters(fragment.distanceFromTwistMeters) : 'n/a'} />
-                    <MiniStat label="BBox" value={formatBounds(fragment.bbox)} />
-                    <MiniStat label="Disconnected pieces" value={formatDiagnosticMetric(fragment.disconnectedPieces)} />
-                  </div>
-                </div>
-              )) : (
-                <p className="text-xs text-zinc-500">Load a feature id to see its returned fragments.</p>
-              )}
-            </div>
-          </details>
-
-          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Raw GeoJSON</summary>
-            <pre className="mt-3 max-h-[32rem] overflow-auto rounded-lg border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-zinc-300">
-              {rawGeoJSONText || 'Load a feature id to print the loaded raw GeoJSON fragments here.'}
-            </pre>
-          </details>
-
-          <details className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-50">Duplicate ids in view</summary>
-            <div className="mt-3 space-y-2">
-              {duplicateSummaries.length ? duplicateSummaries.slice(0, 25).map((item) => (
-                <div key={item.featureId} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-300">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium text-zinc-100">{item.featureId}</div>
-                    <div className="text-zinc-500">{item.fragmentCount} fragments</div>
-                  </div>
-                  <div className="mt-1 text-zinc-500">
-                    Connected pieces: {formatDiagnosticMetric(item.disconnectedPieces)}
-                  </div>
-                  <div className="mt-1 break-words text-zinc-400">
-                    Tiles: {item.tileSet.join(', ')}
-                  </div>
-                </div>
-              )) : (
-                <p className="text-xs text-zinc-500">No duplicate feature ids were returned by the current source window.</p>
-              )}
-            </div>
-          </details>
-            </div>
-          </details>
-        </div>
-      </aside>
-
-      <section className="relative min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl shadow-black/30">
-        <div ref={sceneContainerRef} className="h-full w-full" />
-        {isLoading ? (
-          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/35 backdrop-blur-[2px]" aria-live="polite" aria-busy="true">
-            <div className="w-[min(34rem,calc(100%-3rem))] overflow-hidden rounded-2xl border border-white/15 bg-[#08090d]/96 shadow-2xl shadow-black/70 backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-4">
-                <div className="min-w-0">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">Building Inspector</div>
-                  <div className="mt-1 truncate text-sm font-semibold text-zinc-100">
-                    {loadingPhase === 'Saving building asset'
-                      ? 'Saving building asset'
-                      : loadingPhase === 'Moving venue pin'
-                        ? 'Updating venue location'
-                        : selectedVenue
-                          ? `Loading ${selectedVenue.name}`
-                          : 'Loading building data'}
-                  </div>
-                  <div className="mt-1 text-[11px] text-zinc-400">{loadingPhase ?? 'Preparing venue geometry'}</div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.65)]" />
-                  Working
-                </div>
-              </div>
-              <div className="h-1.5 overflow-hidden bg-white/10">
-                <div
-                  className="h-full w-1/3 bg-gradient-to-r from-transparent via-red-400 to-transparent"
-                  style={{ animation: 'loading-bar 1.05s ease-in-out infinite' }}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {selectedVenue && resolverState.failure && resolverState.failure !== 'FEATURE_FOUND' ? (
-          <div className="pointer-events-none absolute left-4 top-4 z-20 w-[min(24rem,calc(100%-2rem))] rounded-xl border border-rose-400/25 bg-[#12090d]/94 p-3 shadow-2xl shadow-black/50 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-200">Action required</div>
-              <div className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2 py-0.5 text-[9px] text-rose-200">{resolverState.failure}</div>
-            </div>
-            <div className="mt-1 text-sm font-semibold text-zinc-100">{RESOLVER_FAILURE_COPY[resolverState.failure].title}</div>
-            <div className="mt-1 text-[11px] leading-4 text-zinc-400">{RESOLVER_FAILURE_COPY[resolverState.failure].action}</div>
-            {resolverState.failure === 'NO_PROVIDER_FEATURE' && (
-              <div className="mt-2 text-[10px] leading-4 text-zinc-500">{loadedBuildingSourceLabel} · {status}</div>
-            )}
-          </div>
-        ) : null}
-        {selectedVenue && (!resolverState.failure || resolverState.failure === 'FEATURE_FOUND') && ['checking', 'unconfirmed', 'mismatch', 'skipped'].includes(addressIntelligence.status) ? (
-          <div className={`pointer-events-none absolute left-4 top-4 z-20 w-[min(24rem,calc(100%-2rem))] rounded-xl border p-3 shadow-2xl shadow-black/50 backdrop-blur-xl ${addressIntelligence.status === 'checking' ? 'border-sky-300/25 bg-[#080d14]/94' : addressIntelligence.status === 'skipped' ? 'border-violet-300/20 bg-[#0d0914]/94' : 'border-amber-300/25 bg-[#120f08]/94'}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className={`text-[10px] font-bold uppercase tracking-[0.14em] ${addressIntelligence.status === 'checking' ? 'text-sky-200' : addressIntelligence.status === 'skipped' ? 'text-violet-200' : 'text-amber-200'}`}>
-                {addressIntelligence.status === 'checking' ? 'Shadow verification running' : addressIntelligence.status === 'skipped' ? 'Verification skipped' : 'Human review required'}
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-zinc-300">No automatic writes</div>
-            </div>
-            <div className="mt-1 text-[11px] leading-4 text-zinc-300">{addressIntelligence.message}</div>
-          </div>
-        ) : null}
-        <div className="absolute bottom-20 left-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2 text-[10px]">
-          <div className="pointer-events-none flex items-center gap-2 rounded-xl border border-white/10 bg-[#08090d]/88 px-2.5 py-2 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md">
-            <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/30 text-[9px] font-bold text-zinc-200">
-              N
-              <span
-                ref={compassNeedleRef}
-                className="absolute inset-0 flex origin-center items-start justify-center pt-0.5 text-sm leading-none text-sky-300"
-                style={{ transform: 'rotate(0deg)' }}
-                aria-hidden="true"
-              >
-                ↑
-              </span>
-            </span>
-            <span>North in 3D</span>
-          </div>
-          <button
-            type="button"
-            aria-pressed={showStreetFloor}
-            onClick={() => setShowStreetFloor((current) => !current)}
-            title="Toggle the street-aligned ground plane beneath the 3D buildings."
-            className={`pointer-events-auto flex items-center gap-2 rounded-xl border px-3 py-2.5 font-semibold shadow-xl shadow-black/40 backdrop-blur-md transition-colors ${showStreetFloor ? 'border-sky-300/30 bg-sky-300/15 text-sky-100 hover:bg-sky-300/20' : 'border-white/10 bg-[#08090d]/88 text-zinc-400 hover:bg-white/10'}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${showStreetFloor && streetReferenceStatus === 'Ready' ? 'bg-emerald-300' : showStreetFloor ? 'bg-amber-300' : 'bg-zinc-600'}`} />
-            Street plane · {showStreetFloor ? streetReferenceStatus : 'Off'}
-          </button>
-          <button
-            type="button"
-            aria-pressed={showGrid}
-            onClick={() => setShowGrid((current) => !current)}
-            title="Overlay the metric measurement grid on the street plane."
-            className={`pointer-events-auto rounded-xl border px-3 py-2.5 font-semibold shadow-xl shadow-black/40 backdrop-blur-md transition-colors ${showGrid ? 'border-white/25 bg-white/15 text-zinc-100 hover:bg-white/20' : 'border-white/10 bg-[#08090d]/88 text-zinc-400 hover:bg-white/10'}`}
-          >
-            Metric grid
-          </button>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => void cycleBuildingSource()}
-            title="Cycle the building source: Auto prefers OpenStreetMap/OpenFreeMap and fills missing coverage with Microsoft ML footprints; OSM uses OpenFreeMap only; Microsoft uses Microsoft footprints only."
-            className="pointer-events-auto flex items-center gap-2 rounded-xl border border-violet-300/25 bg-[#08090d]/88 px-3 py-2.5 font-semibold text-violet-100 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-violet-300/10 disabled:cursor-wait disabled:opacity-60"
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${loadedBuildingSourceLabel.includes('Microsoft') || loadedBuildingSourceLabel.includes('Hybrid') ? 'bg-violet-300' : loadedBuildingSourceLabel.includes('OSM') || loadedBuildingSourceLabel.includes('OpenFreeMap') ? 'bg-emerald-300' : 'bg-zinc-500'}`} />
-            <span>Buildings · {BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]}</span>
-            <span className="max-w-40 truncate text-[9px] font-medium text-zinc-500">{loadedBuildingSourceLabel}</span>
-          </button>
-          <button
-            type="button"
-            disabled={!selectedVenue || isLoading}
-            onClick={() => void reloadBuildingSource()}
-            title={loadedBuildingSourceLabel.startsWith('Saved ·')
-              ? `Load the live ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} neighborhood around ${selectedVenue?.name ?? 'the selected venue'} so the saved asset can be compared or re-authored in context.`
-              : `Reload ${selectedVenue?.name ?? 'the selected venue'} using ${BUILDING_SOURCE_MODE_LABELS[buildingSourceMode]} building coverage.`}
-            aria-label={loadedBuildingSourceLabel.startsWith('Saved ·') ? 'Load live neighborhood' : 'Reload building source'}
-            className={`pointer-events-auto flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#08090d]/88 text-zinc-400 shadow-xl shadow-black/40 backdrop-blur-md transition-colors hover:bg-white/10 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 ${loadedBuildingSourceLabel.startsWith('Saved ·') ? 'px-3' : 'w-9'}`}
-          >
-            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-            {loadedBuildingSourceLabel.startsWith('Saved ·') && <span className="text-[10px] font-semibold">Live neighborhood</span>}
-          </button>
-        </div>
-        <div className="absolute right-4 top-4 z-30 w-[min(24rem,calc(100%-2rem))] overflow-hidden rounded-xl border border-white/15 bg-[#08090d]/95 shadow-2xl shadow-black/50">
-          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-            <div>
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-100">
-                Street reference
-                <InfoTip text="This compact map is aligned to the venue pin. The Street plane is generated separately from a high-resolution ±500m neighborhood capture so the 3D grid includes roughly four blocks of streets and intersections in every direction." />
-              </div>
-              <div className="text-[10px] text-zinc-500">North is up · same venue coordinate as the red beacon</div>
-            </div>
-            <span
-              className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-200"
-              title={showStreetFloor ? `Street plane: ${streetReferenceStatus}` : 'Street plane hidden'}
-            >
-              N ↑
-            </span>
-          </div>
-          <div ref={mapContainerRef} className="h-64 w-full bg-[#050608]" />
-          <div className="border-t border-white/10 bg-[#0a0b0f]/98 px-3 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Selected building address
-                  <InfoTip text="Reverse-geocoded from the center of the selected building footprint. This is the nearest address mapped in OpenStreetMap and should be verified before changing the venue listing." />
-                </div>
-                {selectedBuildingAddress.status === 'idle' ? (
-                  <div className="mt-1.5 text-[11px] text-zinc-500">Select a building to identify its street address.</div>
-                ) : (
-                  <>
-                    <div className={`mt-1.5 text-sm font-semibold ${selectedBuildingAddress.status === 'error' || selectedBuildingAddress.status === 'missing' ? 'text-amber-200' : 'text-zinc-100'}`}>
-                      {selectedBuildingAddress.primary}
-                    </div>
-                    {selectedBuildingAddress.secondary ? (
-                      <div className="mt-0.5 text-[11px] leading-4 text-zinc-400">{selectedBuildingAddress.secondary}</div>
-                    ) : null}
-                    {selectedBuildingAddress.status === 'resolved' ? (
-                      <div className="mt-1 text-[9px] uppercase tracking-wide text-zinc-600">Nearest mapped address · OpenStreetMap</div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-              {selectedPolygonRecords.length === 1 ? (
-                <span className="shrink-0 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-semibold text-zinc-400">
-                  #{selectedPolygonRecords[0].polygonIndex + 1}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        {!resolution?.geometry && !isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="max-w-md rounded-2xl border border-white/10 bg-black/30 px-6 py-5 text-center text-sm text-zinc-400 backdrop-blur-md">
-              Select a venue to load provider geometry, or use Advanced tools for manual provider lookup.
-            </div>
-          </div>
-        )}
-        {focusedProviderFeature ? (
-          <div className="pointer-events-none absolute bottom-24 left-1/2 z-30 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2">
-            <div className="pointer-events-auto rounded-2xl border border-amber-300/35 bg-[#08090d]/95 p-3 shadow-2xl shadow-black/50 backdrop-blur-xl">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
-                    Provider building
-                  </div>
-                  <div className="mt-1 break-all font-mono text-sm font-semibold text-zinc-50">
-                    {focusedProviderFeature.featureId}
-                  </div>
-                  <div className="mt-1 text-[11px] text-zinc-500">
-                    {focusedProviderFeature.polygonCount} polygon{focusedProviderFeature.polygonCount === 1 ? '' : 's'} · {formatMeters(focusedProviderFeature.distanceMeters)} from the venue pin
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPendingCandidateId(null);
-                    setHoveredCandidateId(null);
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <BuildingInspectorLayout
+          leftPane={
+            <BuildingInspectorPlaceBrowser
+              venueSearch={venueSearch}
+              onVenueSearchChange={(value) => {
+                setVenueSearch(value);
+                if (value.trim()) setAssetFilter('all');
+              }}
+              assetFilter={assetFilter}
+              onAssetFilterChange={setAssetFilter}
+              venueStats={venueStats}
+              filteredVenues={filteredVenues}
+              selectedVenueId={selectedVenueId}
+              onSelectVenue={(listing) => void loadVenueGeometry(listing)}
+              buildingAssets={buildingAssets}
+              venues={venues}
+              listings={listings}
+              organizations={organizations}
+              relationships={relationships}
+              semv2Collections={semv2Collections}
+              listingLocationAudits={listingLocationAudits}
+              landmarkTests={LANDMARK_TESTS}
+              selectedLandmarkId={selectedLandmarkId}
+              onSelectLandmarkId={setSelectedLandmarkId}
+              onLoadLandmark={() => void loadLandmarkTest()}
+              isLoading={isLoading}
+              auditPanelNode={
+                <BuildingVerificationAuditPanel
+                  listings={listings}
+                  venues={venues}
+                  organizations={organizations}
+                  relationships={relationships}
+                  buildingAssets={buildingAssets}
+                  evidenceRecords={buildingEvidenceRecords}
+                  onSelectListing={(listingId) => {
+                    const listing = listings.find((candidate) => candidate.id === listingId);
+                    if (listing) void loadVenueGeometry(listing);
                   }}
-                  className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
-                >
-                  Close
-                </button>
+                />
+              }
+            />
+          }
+          centerPane={
+            <div className="relative h-full w-full overflow-hidden bg-[#050608]">
+              <div aria-hidden="true" className="pointer-events-none absolute -left-[10000px] top-0 h-0 w-0 overflow-hidden opacity-0">
+                <div ref={mapContainerRef} className="h-64 w-64" />
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => frameProviderFeature(focusedProviderFeature)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10"
+              <div ref={sceneContainerRef} className="absolute inset-0 h-full w-full" />
+
+              <BuildingInspectorSpatialHud
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                workspaceMode={workspaceMode}
+                onWorkspaceModeChange={setWorkspaceMode}
+                showStreetFloor={showStreetFloor}
+                onToggleStreetFloor={setShowStreetFloor}
+                showNearbyBuildings={showNearbyBuildings}
+                onToggleNearbyBuildings={setShowNearbyBuildings}
+                showGrid={showGrid}
+                onToggleGrid={setShowGrid}
+                isolateSelected={isolateSelected}
+                onToggleIsolateSelected={setIsolateSelected}
+                showVenueMarker={showVenueMarker}
+                onToggleVenueMarker={setShowVenueMarker}
+                onFrameSelection={frameSelected}
+                onFrameVenue={frameVenue}
+                hasSelection={selectedSummary.count > 0}
+                hasVenue={Boolean(selectedVenue && sceneOrigin)}
+                compassNeedleRef={compassNeedleRef}
+                loadedSourceLabel={loadedBuildingSourceLabel}
+                onCycleSource={() => void cycleBuildingSource()}
+                activeDrawTool={activeDrawTool}
+                onSelectDrawTool={setActiveDrawTool}
+                canUndo={historyIndex > 0}
+                canRedo={historyIndex < historyStack.length - 1}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+              />
+
+              {isLoading && (
+                <div
+                  className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+                  aria-live="polite"
+                  aria-busy="true"
                 >
-                  Frame building
-                </button>
-                <button
-                  type="button"
-                  onClick={() => promoteCandidateToEditable(focusedProviderFeature)}
-                  className="rounded-lg border border-amber-300/40 bg-amber-400/15 px-3 py-2 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-400/25"
-                >
-                  Edit this building
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleCopy('Provider feature ID', focusedProviderFeature.featureId)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10"
-                >
-                  {copiedLabel === 'Provider feature ID' ? 'Copied ID' : 'Copy ID'}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-        <div className="pointer-events-none absolute inset-x-4 bottom-4">
-          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-[#08090d]/90 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-zinc-100">
-                  {selectedVenueDisplayName}
+                  <div className="w-[min(28rem,calc(100%-2rem))] overflow-hidden rounded-2xl border border-white/15 bg-[#08090d]/96 p-4 shadow-2xl backdrop-blur-xl">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">
+                          Building Inspector
+                        </div>
+                        <div className="mt-1 truncate text-sm font-semibold text-zinc-100">
+                          {loadingPhase ?? (selectedVenue ? `Loading ${selectedVenue.name}` : 'Working…')}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-semibold text-red-300">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+                        Working
+                      </div>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-red-400 to-transparent"
+                        style={{ animation: 'loading-bar 1.05s ease-in-out infinite' }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1 text-[11px] text-zinc-500">
-                  {saveStateLabel} · Green = selected · Gold = suggested / hover · Red beacon = venue pin · Street plane = real-world context
+              )}
+
+              {focusedProviderFeature && (
+                <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2">
+                  <div className="pointer-events-auto rounded-2xl border border-amber-300/35 bg-[#08090d]/95 p-3 shadow-2xl backdrop-blur-xl">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
+                          Provider building
+                        </div>
+                        <div className="mt-1 break-all font-mono text-sm font-semibold text-zinc-50">
+                          {focusedProviderFeature.featureId}
+                        </div>
+                        <div className="mt-1 text-[11px] text-zinc-500">
+                          {focusedProviderFeature.polygonCount} polygon{focusedProviderFeature.polygonCount === 1 ? '' : 's'} · {formatMeters(focusedProviderFeature.distanceMeters)} from venue pin
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPendingCandidateId(null);
+                          setHoveredCandidateId(null);
+                        }}
+                        className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10 hover:text-white"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => frameProviderFeature(focusedProviderFeature)}
+                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-zinc-200 hover:bg-white/10"
+                      >
+                        Frame building
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => promoteCandidateToEditable(focusedProviderFeature)}
+                        className="rounded-lg border border-amber-300/40 bg-amber-400/15 px-3 py-1.5 text-[11px] font-semibold text-amber-100 hover:bg-amber-400/25"
+                      >
+                        Edit this building
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleCopy('Provider feature ID', focusedProviderFeature.featureId)}
+                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-zinc-200 hover:bg-white/10"
+                      >
+                        {copiedLabel === 'Provider feature ID' ? 'Copied' : 'Copy ID'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={!selectedSummary.count}
-                  onClick={frameSelected}
-                  title="Move the camera to the selected building footprint."
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Frame Selection
-                </button>
-                <button
-                  type="button"
-                  disabled={!selectedVenue || !sceneOrigin}
-                  onClick={frameVenue}
-                  title="Move the camera to the venue's stored pin coordinate."
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Frame Venue
-                </button>
-                <button
-                  type="button"
-                  disabled={!selectedVenue || !selectedSummary.geoJson || isLoading}
-                  onClick={() => void saveSelectedBuildingAsset()}
-                  title="Save the current green footprint selection as this venue's building asset."
-                  className="rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoading && loadingPhase === 'Saving building asset' ? 'Saving...' : saveStateLabel === 'Saved' ? 'Saved' : 'Save Building'}
-                </button>
-                <button
-                  type="button"
-                  disabled={!selectedVenue || (!selectedSummary.geoJson && !selectedVenueAsset) || isLoading}
-                  onClick={() => void movePinToSelectedBuilding()}
-                  title="Move the venue pin to the center of the selected building while preserving the address text."
-                  className="rounded-lg border border-sky-500/35 bg-sky-500/15 px-3 py-2 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoading && loadingPhase === 'Moving venue pin' ? 'Moving Pin...' : 'Move Pin to Building'}
-                </button>
-                <button
-                  type="button"
-                  disabled={!selectedVenueAsset || !buildingAssetHistory.some((event) => event.action === 'replace' && event.previousAsset) || isLoading}
-                  onClick={() => void rollbackLastBuildingSave()}
-                  title="Restore the previous authored BuildingAsset revision. This creates a new audit event instead of deleting history."
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  {isLoading && loadingPhase === 'Restoring previous building asset' ? 'Restoring...' : 'Restore Previous'}
-                </button>
-                <button
-                  type="button"
-                  disabled={!selectedVenueAsset || isLoading}
-                  onClick={() => loadSavedBuildingAsset()}
-                  title="Discard the current selection and reload the last saved building asset."
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Reload
-                </button>
-              </div>
+              )}
+
+              {!resolution?.geometry && !isLoading && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="max-w-md rounded-2xl border border-white/10 bg-black/60 px-6 py-5 text-center text-sm text-zinc-400 backdrop-blur-md">
+                    Select a physical place from the left browser to load building geometry into the spatial workspace.
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      </section>
-        </div>
+          }
+          rightPane={
+            workspaceMode === 'manual_massing' ? (
+              <BuildingInspectorMassingPanel
+                workspaceMode={workspaceMode}
+                onWorkspaceModeChange={setWorkspaceMode}
+                selectedVenueName={selectedVenueDisplayName}
+                referenceImage={referenceImage}
+                onUploadReferenceImage={handleUploadReferenceImage}
+                onUpdateReferenceImage={handleUpdateReferenceImage}
+                onClearReferenceImage={handleClearReferenceImage}
+                onCenterReferenceOnPin={handleCenterReferenceOnPin}
+                activeDrawTool={activeDrawTool}
+                onSelectDrawTool={setActiveDrawTool}
+                canUndo={historyIndex > 0}
+                canRedo={historyIndex < historyStack.length - 1}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                massingObjects={manualMassings}
+                selectedMassingId={selectedMassingId}
+                onSelectMassingId={setSelectedMassingId}
+                onUpdateMassingObject={handleUpdateMassingObject}
+                onDuplicateMassingObject={handleDuplicateMassingObject}
+                onDeleteMassingObject={handleDeleteMassingObject}
+                onFrameMassingObject={handleFrameMassingObject}
+                onPromoteVenueCandidate={handlePromoteVenueCandidate}
+                onSaveAmbientMassings={() => void handleSaveAmbientMassings()}
+                isSavingAmbient={isSavingAmbient}
+                ambientSaveStatusMessage={ambientSaveStatusMessage}
+              />
+            ) : (
+              <BuildingInspectorRightPanel
+                selectedVenue={selectedVenue}
+                selectedVenueDisplayName={selectedVenueDisplayName}
+                persistedSelectedVenue={persistedSelectedVenue}
+                venueNameDraft={venueNameDraft}
+                onVenueNameDraftChange={setVenueNameDraft}
+                onSaveVenueName={() => void saveSelectedVenueName()}
+                venueAddress={selectedVenue ? formatListingAddress(selectedVenue, semv2Collections) : ''}
+                onCopyText={(label, text) => void handleCopy(label, text)}
+                onRegeocodeAddress={() => void goToVenueAddress()}
+                coordinateDraft={coordinateDraft}
+                onCoordinateDraftChange={(update) => setCoordinateDraft((prev) => ({ ...prev, ...update }))}
+                onApplyCoordinates={() => void goToCoordinateDraft()}
+                selectedVenueLocationAudit={selectedVenueLocationAudit}
+                selectedVenueCoords={selectedVenueCoords}
+                pinToFootprintDistanceMeters={selectedVenueAssetPinDriftMeters}
+                onSnapPinToFootprint={() => void movePinToSelectedBuilding()}
+                mapContainerRef={referenceMapContainerRef}
+                streetReferenceStatus={streetReferenceStatus}
+                showStreetFloor={showStreetFloor}
+                selectionMode={selectionMode}
+                onSelectionModeChange={setSelectionMode}
+                selectedPolygonRecords={selectedPolygonRecords}
+                onRemovePiece={handleRemovePiece}
+                onClearSelection={handleClearSelection}
+                selectedSummary={selectedSummary}
+                selectedVenueAsset={selectedVenueAsset}
+                loadedBuildingSourceLabel={loadedBuildingSourceLabel}
+                onRevertToSaved={() => loadSavedBuildingAsset()}
+                onFrameSelection={frameSelected}
+                addressIntelligence={addressIntelligence}
+                selectedBuildingEvidence={selectedBuildingEvidence}
+                onUseRecommendedFootprint={() => void useRecommendedBuildingFootprint()}
+                onKeepExisting={() => {
+                  loadSavedBuildingAsset();
+                  void recordBuildingReview('keep_existing_building');
+                }}
+                onMarkForResearch={() => void recordBuildingReview('mark_location_for_research')}
+                generatedBuildingCandidate={generatedBuildingCandidate}
+                onSelectGeneratedFootprint={() => {
+                  setSuggestedPolygonIndices([]);
+                  setSelectedPolygonIndices(generatedPolygonIndices);
+                  setAssetStatusMessage('Generated footprint selected for review. Save Building Asset remains an explicit manual confirmation.');
+                  setStatus('Generated SwingSphere footprint selected. Compare it with the street plane before saving.');
+                }}
+                selectedBuildingAddress={selectedBuildingAddress}
+                saveStateInfo={saveStateInfo}
+                selectedVenueDependents={selectedVenueDependents}
+                onSaveBuildingAsset={() => void saveSelectedBuildingAsset()}
+                isLoading={isLoading}
+                loadingPhase={loadingPhase}
+                buildingAssetHistory={buildingAssetHistory}
+                onRollback={() => void rollbackLastBuildingSave()}
+                resolution={resolution}
+                featureIdInput={featureIdInput}
+                onFeatureIdInputChange={setFeatureIdInput}
+                onLoadFeatureId={() => void resolveFeature()}
+                loadedFeatureCount={loadedFeatureCount}
+                loadedUniqueIdCount={loadedUniqueIdCount}
+                selectedPolygonGeoJSONText={selectedPolygonGeoJSONText}
+                rawGeoJSONText={rawGeoJSONText}
+                forensicReport={forensicReport}
+                fragmentRecords={fragmentRecords}
+                status={status}
+              />
+            )
+          }
+        />
       </div>
-    </main>
-  );
-};
 
-const buildOutlinePath = (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon): string => {
-  const bounds = getGeometryBBox(geometry);
-  if (!bounds) return '';
-  const [minLng, minLat, maxLng, maxLat] = bounds;
-  const width = Math.max(maxLng - minLng, 1e-9);
-  const height = Math.max(maxLat - minLat, 1e-9);
-  const scale = Math.min(
-    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / width,
-    (VIEWBOX_SIZE - VIEWBOX_PADDING * 2) / height,
-  );
-  const drawnWidth = width * scale;
-  const drawnHeight = height * scale;
-  const offsetX = (VIEWBOX_SIZE - drawnWidth) / 2;
-  const offsetY = (VIEWBOX_SIZE - drawnHeight) / 2;
-  const project = (coordinate: [number, number]) => [
-    offsetX + (coordinate[0] - minLng) * scale,
-    VIEWBOX_SIZE - offsetY - (coordinate[1] - minLat) * scale,
-  ];
-
-  return collectPolygons(geometry)
-    .map((polygon) =>
-      polygon
-        .filter((ring) => ring.length >= 2)
-        .map((ring) => {
-          const coords = ring
-            .map((coordinate, coordinateIndex) => {
-              const [x, y] = project([coordinate[0], coordinate[1]]);
-              return `${coordinateIndex === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-            })
-            .join(' ');
-          return `${coords} Z`;
-        })
-        .join(' '),
-    )
-    .join(' ');
-};
-
-const InfoTip: React.FC<{ text: string }> = ({ text }) => (
-  <span
-    className="inline-flex cursor-help items-center text-zinc-600 transition-colors hover:text-zinc-300"
-    title={text}
-    aria-label={text}
-    tabIndex={0}
-  >
-    <CircleHelp size={12} aria-hidden="true" />
-  </span>
-);
-
-const Row: React.FC<{ label: string; value: React.ReactNode; help?: string; action?: React.ReactNode }> = ({ label, value, help, action }) => (
-  <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-black/20 px-3 py-2" title={help}>
-    <span className="flex items-center gap-1.5 text-zinc-500">
-      {label}
-      {help ? <InfoTip text={help} /> : null}
-    </span>
-    <span className="flex max-w-[68%] items-start justify-end gap-2 text-right text-zinc-100">
-      <span>{value}</span>
-      {action}
-    </span>
-  </div>
-);
-
-const MiniStat: React.FC<{ label: string; value: React.ReactNode; help?: string }> = ({ label, value, help }) => (
-  <div className="rounded-md border border-white/5 bg-white/5 px-2 py-2" title={help}>
-    <div className="flex items-center gap-1.5 text-zinc-500">
-      {label}
-      {help ? <InfoTip text={help} /> : null}
+      <BuildingImpactReviewModal
+        isOpen={impactReview.isOpen}
+        onClose={() => setImpactReview((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {
+          const action = impactReview.onConfirm;
+          setImpactReview((prev) => ({ ...prev, isOpen: false }));
+          action();
+        }}
+        actionType={impactReview.actionType}
+        venue={{
+          id: selectedPhysicalVenue?.id ?? selectedVenue?.id ?? 'unknown',
+          name: selectedVenueDisplayName,
+          address: selectedVenue ? formatListingAddress(selectedVenue, semv2Collections) : undefined,
+        }}
+        coordinates={{
+          existing: selectedVenueCoords ?? (selectedVenue ? { lat: selectedVenue.geopoint.latitude, lng: selectedVenue.geopoint.longitude } : null),
+          proposed: impactReview.proposedCoords ?? null,
+          distanceMovedMeters: impactReview.distanceMovedMeters ?? null,
+        }}
+        building={{
+          existing: selectedVenueAsset,
+          proposed: selectedSummary.geoJson ? {
+            polygonCount: selectedSummary.count,
+            areaMeters: selectedSummary.areaMeters,
+            source: loadedBuildingSourceLabel,
+            maxRenderHeightMeters: selectedSummary.maxRenderHeightMeters ?? undefined,
+          } : null,
+        }}
+        dependents={selectedVenueDependents}
+        isStrongConfirmation={
+          impactReview.actionType === 'rollback' ||
+          (impactReview.actionType === 'save_building' && Boolean(selectedVenueAsset)) ||
+          (impactReview.actionType === 'save_building' && selectedVenueDependents.total > 1) ||
+          ((impactReview.actionType === 'update_coordinates' || impactReview.actionType === 'recode_address' || impactReview.actionType === 'snap_pin') &&
+            ((impactReview.distanceMovedMeters ?? 0) > 3 || selectedVenueDependents.total > 1))
+        }
+      />
     </div>
-    <div className="mt-0.5 text-zinc-100">{value}</div>
-  </div>
-);
+  );
+};
 
 export default BuildingInspectorPage;

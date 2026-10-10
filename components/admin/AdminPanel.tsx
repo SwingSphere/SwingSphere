@@ -49,6 +49,7 @@ import type {
 } from '../../types';
 import type { User } from '../../data/mockUsers';
 import { getOpenSiteIssueCount } from '../../lib/issueReports';
+import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 export type AdminView = 
     | 'dashboard' 
@@ -90,6 +91,8 @@ export type AdminView =
 
 const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
     const [view, setView] = useState<AdminView>(initialView ?? 'dashboard');
+    const [queueFilter, setQueueFilter] = useState<AdminQueueFilterSpec | null>(null);
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const { currentUser, tags, fetchTags, addToast } = useAppStore();
     const navigate = useNavigate();
     const location = useLocation();
@@ -123,6 +126,17 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
         if (!listings.length) return null;
         return buildEntityIndex(listings, users, venues, organizations, organizationVenueRelationships, eventSeries, organizationRelationships);
     }, [eventSeries, listings, organizationRelationships, organizationVenueRelationships, organizations, users, venues]);
+    const analyticsCatalog = React.useMemo(() => ({
+        listings,
+        venues,
+        organizations,
+        eventSeries,
+        clubBrands,
+        resorts,
+        cruiseSeries,
+        cruiseSailings,
+        entityIndex,
+    }), [clubBrands, cruiseSailings, cruiseSeries, entityIndex, eventSeries, listings, organizations, resorts, venues]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -335,8 +349,34 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
 
         switch(currentView) {
             case 'dashboard':
-                // FIX: Pass fetched tags to AdminDashboard
-                return <AdminDashboard setView={setView} allTags={tags} />;
+                return (
+                    <AdminDashboard
+                        setView={(nextView) => {
+                            setQueueFilter(null);
+                            setView(nextView);
+                        }}
+                        onNavigateWithFilter={(nextView, filter) => {
+                            setQueueFilter(filter ?? null);
+                            setView(nextView);
+                        }}
+                        allTags={tags}
+                        initialCollections={{
+                            listings,
+                            flagged: issueCount,
+                            venues,
+                            resorts,
+                            cruiseSeries,
+                            cruiseSailings,
+                            clubBrands,
+                            eventSeries,
+                            organizations,
+                            buildingAssets,
+                            venueRelationships: organizationVenueRelationships,
+                        }}
+                        analyticsCatalog={analyticsCatalog}
+                        onRefresh={fetchData}
+                    />
+                );
             case 'submissions':
                 return <AdminSubmissionsQueue users={users} onReview={(listing) => setView({ view: 'review-submission', listingId: listing.id })} />;
             case 'review-submission': {
@@ -363,16 +403,33 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 );
             }
             case 'moderation':
-                return <AdminModerationQueue onDataChange={fetchData} mediaCatalog={brandMediaCatalog} />;
+                return (
+                    <AdminModerationQueue
+                        onDataChange={fetchData}
+                        mediaCatalog={brandMediaCatalog}
+                        initialTab={queueFilter?.target === 'moderation' && (queueFilter.tab === 'reports' || queueFilter.tab === 'reviews') ? queueFilter.tab : undefined}
+                    />
+                );
             case 'listing-claims':
                 return <AdminListingClaims listings={listings} organizations={organizations} />;
             case 'outbound-analytics':
-                return <AdminOutboundAnalytics />;
+                return <AdminOutboundAnalytics catalog={analyticsCatalog} />;
             case 'inbound-analytics':
-                return <AdminInboundAnalytics />;
+                return <AdminInboundAnalytics catalog={analyticsCatalog} />;
             case 'manage-clubs':
                 const clubs = listings.filter(l => l.type === 'club') as ClubData[];
-                return <AdminManageClubs clubs={clubs} clubBrands={clubBrands} organizations={organizations} mediaCatalog={brandMediaCatalog} setView={setView} onDataChange={fetchData} />;
+                return (
+                    <AdminManageClubs
+                        clubs={clubs}
+                        clubBrands={clubBrands}
+                        organizations={organizations}
+                        mediaCatalog={brandMediaCatalog}
+                        setView={setView}
+                        onDataChange={fetchData}
+                        filterSpec={queueFilter}
+                        onClearFilter={() => setQueueFilter(null)}
+                    />
+                );
             case 'add-club-brand':
                 return <AdminClubBrandEditor brand={{ id: '', type: 'club_brand', name: '', slug: '', status: 'draft' }} clubs={listings.filter(l => l.type === 'club') as ClubData[]} organizations={organizations} onSaved={(saved) => { handleClubBrandSaved(saved); setView({ view: 'edit-club-brand', clubBrandId: saved.id }); }} onOpenClub={(clubId) => setView({ view: 'edit-club', clubId })} onBack={() => setView('manage-clubs')} />;
             case 'edit-club-brand':
@@ -430,7 +487,19 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 }} onCancel={() => setView('manage-events')} />;
             case 'manage-events':
                 const events = listings.filter(l => l.type === 'event') as EventData[];
-                return <AdminManageEvents events={events} eventSeries={eventSeries} organizations={organizations} venues={venues} mediaCatalog={brandMediaCatalog} setView={setView} onDataChange={fetchData} />;
+                return (
+                    <AdminManageEvents
+                        events={events}
+                        eventSeries={eventSeries}
+                        organizations={organizations}
+                        venues={venues}
+                        mediaCatalog={brandMediaCatalog}
+                        setView={setView}
+                        onDataChange={fetchData}
+                        filterSpec={queueFilter}
+                        onClearFilter={() => setQueueFilter(null)}
+                    />
+                );
             case 'add-event-series':
                 return <AdminEventSeriesEditor eventSeries={{ id: '', type: 'event_series', name: '', slug: '', status: 'draft' }} events={listings.filter(l => l.type === 'event') as EventData[]} organizations={organizations} venues={venues} onSaved={(saved) => { handleEventSeriesSaved(saved); setView({ view: 'edit-event-series', eventSeriesId: saved.id }); }} onEditOccurrence={(eventId) => setView({ view: 'edit-event', eventId })} onBack={() => setView('manage-events')} />;
             case 'edit-event-series':
@@ -463,9 +532,32 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 if (!sailingToEdit) return <div>Cruise sailing not found.</div>;
                 return <AdminTravelEditor entity={sailingToEdit} organizations={organizations} cruiseSeries={cruiseSeries} sailings={cruiseSailings} onSaved={handleTravelSaved} onOpenSailing={(id) => setView({ view: 'edit-cruise-sailing', cruiseSailingId: id })} onBack={() => setView('manage-travel')} />;
             case 'manage-venues':
-                return <AdminManageVenues venues={venues} listings={listings} buildingAssets={buildingAssets} mediaCatalog={brandMediaCatalog} setView={setView} onDataChange={fetchData} />;
+                return (
+                    <AdminManageVenues
+                        venues={venues}
+                        listings={listings}
+                        buildingAssets={buildingAssets}
+                        mediaCatalog={brandMediaCatalog}
+                        setView={setView}
+                        onDataChange={fetchData}
+                        filterSpec={queueFilter}
+                        onClearFilter={() => setQueueFilter(null)}
+                    />
+                );
             case 'manage-organizations':
-                return <AdminManageOrganizations organizations={organizations} listings={listings} relationships={organizationVenueRelationships} organizationRelationships={organizationRelationships} mediaCatalog={brandMediaCatalog} setView={setView} onDeleted={handleOrganizationDeleted} />;
+                return (
+                    <AdminManageOrganizations
+                        organizations={organizations}
+                        listings={listings}
+                        relationships={organizationVenueRelationships}
+                        organizationRelationships={organizationRelationships}
+                        mediaCatalog={brandMediaCatalog}
+                        setView={setView}
+                        onDeleted={handleOrganizationDeleted}
+                        filterSpec={queueFilter}
+                        onClearFilter={() => setQueueFilter(null)}
+                    />
+                );
             case 'add-organization':
                 return <AdminOrganizationDetailEditor organization={{ id: '', type: 'organization', name: '', slug: '', displayTypes: ['host', 'promoter'], status: 'draft' }} organizations={organizations} organizationRelationships={organizationRelationships} onOrganizationRelationshipsChanged={setOrganizationRelationships} listings={listings} venues={venues} relationships={organizationVenueRelationships} users={users} onSaved={(saved) => { handleOrganizationSaved(saved); setView({ view: 'edit-organization', organizationId: saved.id }); }} onDeleted={handleOrganizationDeleted} onBack={() => setView('manage-organizations')} />;
             case 'edit-organization':
@@ -570,16 +662,86 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
     }
 
     const currentViewName = typeof view === 'string' ? view : view.view;
+    const pendingSubmissionsCount = listings.filter(l => l.status === 'pending_approval').length;
+    const pendingFlagsCount = issueCount ?? 0;
 
     return (
-        <div className="flex h-screen bg-blue-50 font-sans text-gray-800">
-            <AdminSidebar 
-                currentView={currentViewName} 
-                setView={setView} 
-                pendingSubmissions={listings.filter(l => l.status === 'pending_approval').length}
-                pendingFlags={issueCount ?? 0}
-            />
-            <main className={currentViewName === 'building-inspector' ? 'flex-1 overflow-hidden p-3 md:p-4' : 'flex-1 p-6 md:p-8 overflow-y-auto'}>
+        <div className="flex h-screen flex-col bg-slate-50 font-sans text-gray-800 lg:flex-row">
+            {/* Mobile & Tablet Top Header */}
+            <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setQueueFilter(null);
+                        setView('dashboard');
+                        setIsMobileNavOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 text-left"
+                >
+                    <img src="/swingsphere-logo_2.png" alt="SwingSphere" className="h-7 w-7 rounded-lg object-contain" />
+                    <div>
+                        <div className="text-sm font-black tracking-wide text-slate-900">SwingSphere Admin</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                            {currentViewName.replaceAll('-', ' ')}
+                        </div>
+                    </div>
+                </button>
+                <div className="flex items-center gap-2">
+                    {(pendingSubmissionsCount + pendingFlagsCount) > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">
+                            {pendingSubmissionsCount + pendingFlagsCount} pending
+                        </span>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileNavOpen((prev) => !prev)}
+                        aria-label="Toggle admin navigation"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d={isMobileNavOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
+                        </svg>
+                        <span>{isMobileNavOpen ? 'Close' : 'Menu'}</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* Mobile Drawer Overlay */}
+            {isMobileNavOpen && (
+                <div className="fixed inset-0 z-50 flex lg:hidden">
+                    <div
+                        className="fixed inset-0 bg-slate-950/40 backdrop-blur-[1px]"
+                        onClick={() => setIsMobileNavOpen(false)}
+                    />
+                    <div className="relative z-10 flex h-full max-w-[85vw]">
+                        <AdminSidebar
+                            currentView={currentViewName}
+                            setView={(nextView) => {
+                                setQueueFilter(null);
+                                setView(nextView);
+                                setIsMobileNavOpen(false);
+                            }}
+                            pendingSubmissions={pendingSubmissionsCount}
+                            pendingFlags={pendingFlagsCount}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop Permanent Sidebar */}
+            <div className="hidden lg:flex lg:shrink-0">
+                <AdminSidebar 
+                    currentView={currentViewName} 
+                    setView={(nextView) => {
+                        setQueueFilter(null);
+                        setView(nextView);
+                    }} 
+                    pendingSubmissions={pendingSubmissionsCount}
+                    pendingFlags={pendingFlagsCount}
+                />
+            </div>
+
+            <main className={currentViewName === 'building-inspector' ? 'min-w-0 flex-1 overflow-hidden p-3 md:p-4' : 'min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 md:p-8'}>
                 {renderContent()}
             </main>
         </div>

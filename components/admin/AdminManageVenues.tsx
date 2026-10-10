@@ -6,6 +6,7 @@ import { brandMediaSourceLabel, resolveBrandLogo, type BrandMediaCatalog } from 
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { getBuildingAssetForVenue } from '../../lib/entityCompatibility';
+import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 type AdminManageVenuesProps = {
   venues: VenueData[];
@@ -14,6 +15,8 @@ type AdminManageVenuesProps = {
   mediaCatalog: BrandMediaCatalog;
   setView: (view: AdminView) => void;
   onDataChange: () => void;
+  filterSpec?: AdminQueueFilterSpec | null;
+  onClearFilter?: () => void;
 };
 
 const formatFullAddress = (venue: VenueData) => [
@@ -24,7 +27,21 @@ const formatFullAddress = (venue: VenueData) => [
   venue.address.country,
 ].filter(Boolean).join(', ');
 
-const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({ venues, listings, buildingAssets, mediaCatalog, setView, onDataChange }) => {
+const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({
+  venues,
+  listings,
+  buildingAssets,
+  mediaCatalog,
+  setView,
+  onDataChange,
+  filterSpec,
+  onClearFilter,
+}) => {
+  const activeFilter = filterSpec?.target === 'venues' ? filterSpec : null;
+  const filterIdSet = useMemo(
+    () => (activeFilter?.ids?.length ? new Set(activeFilter.ids) : null),
+    [activeFilter],
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { addToast } = useAppStore();
@@ -37,6 +54,7 @@ const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({ venues, listings,
     const query = searchTerm.trim().toLowerCase();
     return [...venues]
       .sort((a, b) => a.name.localeCompare(b.name))
+      .filter((venue) => !filterIdSet || filterIdSet.has(venue.id))
       .filter((venue) => {
         if (!query) return true;
         const haystack = [
@@ -51,7 +69,7 @@ const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({ venues, listings,
         ].filter(Boolean).join(' ').toLowerCase();
         return haystack.includes(query);
       });
-  }, [searchTerm, venues]);
+  }, [filterIdSet, searchTerm, venues]);
 
   const handleSelect = (id: string) => {
     setSelectedIds((current) => {
@@ -98,6 +116,23 @@ const AdminManageVenues: React.FC<AdminManageVenuesProps> = ({ venues, listings,
           Add New Venue
         </button>
       </div>
+
+      {activeFilter && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-3 text-sm text-indigo-950">
+          <div>
+            <span className="font-bold">Filtered from Operational Queue:</span> {activeFilter.label} ({filteredVenues.length} matching record{filteredVenues.length === 1 ? '' : 's'})
+          </div>
+          {onClearFilter && (
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="rounded-lg border border-indigo-300 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Clear filter · Show all
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <input

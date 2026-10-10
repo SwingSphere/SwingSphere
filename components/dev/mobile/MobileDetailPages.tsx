@@ -167,7 +167,8 @@ export const MobileClubPage: React.FC = () => {
   const saved = isSaved(club.id);
   const schedule = Array.isArray(club.schedule) ? club.schedule : [];
   const generalAmenities = Array.isArray(club.generalAmenities) ? club.generalAmenities : [];
-  const logoSrc = club.logoImageUrl || club.mediaAssets?.some((asset) => asset.role === 'logo') ? getListingLogoUrl(club) : null;
+  const resolvedClubLogo = getListingLogoUrl(club, index);
+  const logoSrc = resolvedClubLogo !== '/swingsphere-logo_2.png' ? resolvedClubLogo : null;
   const streetViewSourceListingId = privateLocation ? null : resolveStreetViewSourceListingId(club, locationCollections);
   const openLocationView = () => {
     if (streetViewSourceListingId) {
@@ -190,7 +191,7 @@ export const MobileClubPage: React.FC = () => {
             </div>
           ) : null}
           <div className="relative z-10">
-          <Hero src={getListingHeroUrl(club)} logoSrc={logoSrc} name={club.name} type="Club" location={location} monochrome={club.mediaPresentation === 'monochrome' || club.id === 'club-epicure-cape-town'} />
+          <Hero src={getListingHeroUrl(club, index)} logoSrc={logoSrc} name={club.name} type="Club" location={location} monochrome={club.mediaPresentation === 'monochrome' || club.id === 'club-epicure-cape-town'} />
           <div className={`${isTablet ? 'space-y-4 px-5 pt-4' : 'space-y-3 px-3 pt-4'}`}>
             <div className={isTablet ? 'flex items-start justify-between gap-5' : ''}>
               <div className="min-w-0 flex-1">
@@ -271,7 +272,8 @@ export const MobileEventPage: React.FC = () => {
   const saved = isSaved(event.id);
   const tags = Array.isArray(event.tags) ? event.tags : [];
   const website = event.website?.trim();
-  const logoSrc = event.logoImageUrl || event.mediaAssets?.some((asset) => asset.role === 'logo') ? getListingLogoUrl(event) : null;
+  const resolvedEventLogo = getListingLogoUrl(event, index);
+  const logoSrc = resolvedEventLogo !== '/swingsphere-logo_2.png' ? resolvedEventLogo : null;
   const streetViewSourceListingId = privateLocation ? null : resolveStreetViewSourceListingId(event, locationCollections);
   const openLocationView = () => {
     if (streetViewSourceListingId) {
@@ -285,7 +287,7 @@ export const MobileEventPage: React.FC = () => {
       <div className="flex h-full min-h-0 flex-col">
         <MobileHeader title={event.name} eyebrow="Event" onSave={() => void toggleSaved(event.id, 'event')} saved={saved} onShare={() => shareListing(event.name)} />
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6">
-          <Hero src={getListingHeroUrl(event)} logoSrc={logoSrc} name={event.name} type="Event" location={location} />
+          <Hero src={getListingHeroUrl(event, index)} logoSrc={logoSrc} name={event.name} type="Event" location={location} />
           <div className="space-y-3 px-3 pt-4">
             <StatusBadges status={event.status} privateLocation={privateLocation} />
             <Section title="Event essentials" icon={<Sparkles className="h-4 w-4" />}>

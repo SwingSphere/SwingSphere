@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { EventData, EventSeriesData, OrganizationData, VenueData } from '../../types';
 import { AdminView } from './AdminPanel';
 import * as api from '../../lib/api';
@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/appStore';
 import { exportToCsv } from '../../lib/utils';
 import AdminEntityIdentity from './AdminEntityIdentity';
 import { brandMediaSourceLabel, resolveBrandLogo, type BrandMediaCatalog } from '../../lib/entityBrandMedia';
+import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 type AdminManageEventsProps = {
   events: EventData[];
@@ -15,6 +16,8 @@ type AdminManageEventsProps = {
   mediaCatalog: BrandMediaCatalog;
   setView: (view: AdminView) => void;
   onDataChange: () => void;
+  filterSpec?: AdminQueueFilterSpec | null;
+  onClearFilter?: () => void;
 };
 
 type EventsAdminMode = 'series' | 'occurrences';
@@ -36,14 +39,34 @@ const AdminManageEvents: React.FC<AdminManageEventsProps> = ({
   mediaCatalog,
   setView,
   onDataChange,
+  filterSpec,
+  onClearFilter,
 }) => {
-  const [mode, setMode] = useState<EventsAdminMode>('series');
-  const [occurrenceFilter, setOccurrenceFilter] = useState<OccurrenceFilter>('upcoming');
+  const activeFilter = filterSpec?.target === 'events' ? filterSpec : null;
+  const [mode, setMode] = useState<EventsAdminMode>(
+    activeFilter?.mode === 'occurrences' || activeFilter?.ids?.length ? 'occurrences' : 'series',
+  );
+  const [occurrenceFilter, setOccurrenceFilter] = useState<OccurrenceFilter>(
+    activeFilter?.ids?.length ? 'all' : 'upcoming',
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedSeriesIds, setExpandedSeriesIds] = useState<Set<string>>(new Set());
   const { addToast } = useAppStore();
+
+  useEffect(() => {
+    if (activeFilter?.mode === 'occurrences' || activeFilter?.ids?.length) {
+      setMode('occurrences');
+      setOccurrenceFilter('all');
+      setCurrentPage(1);
+    }
+  }, [activeFilter]);
+
+  const filterIdSet = useMemo(
+    () => (activeFilter?.ids?.length ? new Set(activeFilter.ids) : null),
+    [activeFilter],
+  );
 
   const organizationById = useMemo(() => new Map(organizations.map((item) => [item.id, item])), [organizations]);
   const venueById = useMemo(() => new Map(venues.map((item) => [item.id, item])), [venues]);
@@ -81,6 +104,7 @@ const AdminManageEvents: React.FC<AdminManageEventsProps> = ({
     const query = searchTerm.trim().toLowerCase();
     const now = Date.now();
     return [...events]
+      .filter((event) => !filterIdSet || filterIdSet.has(event.id))
       .filter((event) => occurrenceFilter === 'all'
         || (occurrenceFilter === 'past' ? Date.parse(event.time.end) < now : Date.parse(event.time.end) >= now))
       .filter((event) => {
@@ -91,7 +115,7 @@ const AdminManageEvents: React.FC<AdminManageEventsProps> = ({
           || series?.name.toLowerCase().includes(query);
       })
       .sort((a, b) => Date.parse(b.time.start) - Date.parse(a.time.start));
-  }, [eventSeries, events, occurrenceFilter, searchTerm]);
+  }, [eventSeries, events, filterIdSet, occurrenceFilter, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOccurrences.length / ITEMS_PER_PAGE));
   const paginatedEvents = filteredOccurrences.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -151,6 +175,23 @@ const AdminManageEvents: React.FC<AdminManageEventsProps> = ({
           <button onClick={() => setView('add-event')} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">Add occurrence</button>
         </div>
       </div>
+
+      {activeFilter && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-3 text-sm text-indigo-950">
+          <div>
+            <span className="font-bold">Filtered from Operational Queue:</span> {activeFilter.label} ({filteredOccurrences.length} matching record{filteredOccurrences.length === 1 ? '' : 's'})
+          </div>
+          {onClearFilter && (
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="rounded-lg border border-indigo-300 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Clear filter · Show all
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mb-5 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="inline-flex w-fit rounded-lg bg-gray-100 p-1">

@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FolderOpen } from 'lucide-react';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import {
+  computeFileSha256Hex,
+  saveStoredUploadMetadata,
+  validateExternalImageUrl,
+} from '../../lib/media/canonicalAssetModel';
 import { supabase } from '../../lib/supabase';
 import { ALLOWED_MEDIA_MIME_TYPES, formatMaxUploadSize, getMediaRule } from '../../lib/media/mediaRules';
 import type { MediaAsset, MediaOwnerType, MediaRole } from '../../lib/media/types';
 import ImageCropDialog from './ImageCropDialog';
 import MediaImage from './MediaImage';
+import MediaLibraryPickerModal from './MediaLibraryPickerModal';
 
 type MediaUploaderProps = {
   ownerType: MediaOwnerType;
@@ -22,6 +29,7 @@ type MediaUploaderProps = {
   managedEntityId?: string;
   externalFile?: File | null;
   onExternalImageUrl?: (url: string) => void;
+  allowLibraryPick?: boolean;
 };
 
 type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
@@ -63,6 +71,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   managedEntityId,
   externalFile,
   onExternalImageUrl,
+  allowLibraryPick = true,
 }) => {
   const rule = getMediaRule(role);
   const [asset, setAsset] = useState<MediaAsset | null>(existingAsset ?? null);
@@ -71,6 +80,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -103,6 +113,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
 
   const uploadFile = async (file: File) => {
     try {
+      const sha256Promise = computeFileSha256Hex(file).catch(() => undefined);
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error('Please log in before uploading media.');
@@ -133,6 +144,15 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       const uploadPayload = await uploadResponse.json();
       const externalId = extractCloudflareImageId(uploadPayload);
       if (!externalId) throw new Error('Cloudflare upload completed without an image id.');
+
+      const sha256 = await sha256Promise;
+      saveStoredUploadMetadata(externalId, {
+        sha256,
+        fileSizeBytes: file.size,
+        originalFilename: file.name,
+        mimeType: file.type,
+        uploadedAt: new Date().toISOString(),
+      });
 
       setState('saving');
       const completeResponse = await fetch('/api/media/complete-upload', {
@@ -187,17 +207,18 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   };
 
   const acceptExternalUrl = (candidate: string) => {
-    try {
-      const url = new URL(candidate.trim());
-      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Invalid protocol');
-      if (url.username || url.password) throw new Error('Embedded credentials are not allowed');
-      if (!onExternalImageUrl) throw new Error('Linking external images is unavailable here.');
-      onExternalImageUrl(url.href);
-      setImageUrl(url.href);
-      setError('');
-    } catch {
-      reportError('Enter or drop a valid public HTTP(S) image URL.');
+    const check = validateExternalImageUrl(candidate);
+    if (!check.valid || !check.normalizedUrl) {
+      reportError(check.error ?? 'Enter or drop a valid public HTTP(S) image URL.');
+      return;
     }
+    if (!onExternalImageUrl) {
+      reportError('Linking external images is unavailable here.');
+      return;
+    }
+    onExternalImageUrl(check.normalizedUrl);
+    setImageUrl(check.normalizedUrl);
+    setError('');
   };
 
   const onDropImage = (event: React.DragEvent<HTMLDivElement>) => {
@@ -268,7 +289,25 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       onDrop={onDropImage}
       className={[isLight ? 'rounded-xl border bg-gray-50 p-4' : 'rounded-2xl border bg-black/25 p-4', dragActive ? 'border-red-400 ring-2 ring-red-400/50' : isLight ? 'border-gray-200' : 'border-white/10'].join(' ')}
     >
-      <p className={isLight ? 'mb-3 text-xs text-gray-600' : 'mb-3 text-xs text-gray-300'}>Drag an image here from your computer or another website.</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className={isLight ? 'text-xs text-gray-600' : 'text-xs text-gray-300'}>
+          Drag an image here, upload a file, or select an existing canonical asset.
+        </p>
+        {allowLibraryPick ? (
+          <button
+            type="button"
+            onClick={() => setIsLibraryOpen(true)}
+            className={
+              isLight
+                ? 'inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50'
+                : 'inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition hover:bg-white/[0.12] hover:text-white'
+            }
+          >
+            <FolderOpen className="h-3.5 w-3.5 text-red-400" />
+            Choose From Media Library
+          </button>
+        ) : null}
+      </div>
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="min-w-0 flex-1">
           <label className="block">
@@ -309,8 +348,23 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       </div>
 
       {cropDialog}
+      {allowLibraryPick ? (
+        <MediaLibraryPickerModal
+          isOpen={isLibraryOpen}
+          onClose={() => setIsLibraryOpen(false)}
+          targetRole={role}
+          targetOwnerType={ownerType}
+          targetOwnerId={ownerId}
+          onSelectCanonicalAsset={({ syntheticMediaAsset, resolvedUrl }) => {
+            setAsset(syntheticMediaAsset);
+            onUploaded?.(syntheticMediaAsset);
+            onExternalImageUrl?.(resolvedUrl);
+          }}
+        />
+      ) : null}
     </div>
   );
 };
 
 export default MediaUploader;
+

@@ -41,7 +41,7 @@ const App: React.FC = () => {
     || /^\/events\/[^/]+$/.test(location.pathname)
     || /^\/(swinger-clubs|lifestyle-clubs|swinger-parties|lifestyle-events|play-parties)\/[^/]+$/.test(location.pathname);
   const isPrivateOrUtilityRoute = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(location.pathname);
-  const seo = resolvePageSeo(location.pathname);
+  const seo = React.useMemo(() => resolvePageSeo(location.pathname), [location.pathname]);
 
   return (
     <AdminEditModeProvider>

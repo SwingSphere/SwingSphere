@@ -278,8 +278,8 @@ const CityDiscoveryPage: React.FC<CityDiscoveryPageProps> = ({ intent = 'clubs' 
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {cityListings.map((item) => {
                   const href = index ? getListingCanonicalPath(item as Listing, index) : `/clubs/${item.id}`;
-                  const image = getListingCardImageUrl(item as Listing);
-                  const logo = getListingLogoUrl(item as Listing);
+                  const image = getListingCardImageUrl(item as Listing, index ?? undefined);
+                  const logo = getListingLogoUrl(item as Listing, index ?? undefined);
                   const address = item.geopoint?.address ?? {};
                   const isPrivateLoc = item.isAddressPrivate === true || item.locationVisibility === 'approximate_public' || item.locationVisibility === 'private';
                   const locString = isPrivateLoc

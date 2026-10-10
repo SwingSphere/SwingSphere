@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  buildFallbackCandidateChain,
+  isMediaUrlKnownFailed,
+  LISTING_IMAGE_FALLBACK,
+  markMediaUrlFailed,
+} from '../../lib/listingImage';
 
 type EventCardCompactProps = {
   title: string;
@@ -24,10 +30,26 @@ const EventCardCompact: React.FC<EventCardCompactProps> = ({
   to,
   isPast = false,
 }) => {
-  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
-  const [failedFlyerUrl, setFailedFlyerUrl] = useState<string | null>(null);
-  const showLogo = Boolean(logoUrl && logoUrl !== failedLogoUrl);
-  const showFlyer = Boolean(flyerUrl && flyerUrl !== failedFlyerUrl);
+  const logoCandidates = useMemo(
+    () => buildFallbackCandidateChain([logoUrl]).filter((url) => url !== LISTING_IMAGE_FALLBACK),
+    [logoUrl],
+  );
+  const flyerCandidates = useMemo(
+    () => buildFallbackCandidateChain([flyerUrl]).filter((url) => url !== LISTING_IMAGE_FALLBACK),
+    [flyerUrl],
+  );
+  const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
+  const [failedFlyerUrls, setFailedFlyerUrls] = useState<string[]>([]);
+  useEffect(() => {
+    setFailedLogoUrls([]);
+  }, [logoUrl]);
+  useEffect(() => {
+    setFailedFlyerUrls([]);
+  }, [flyerUrl]);
+  const activeLogoUrl = logoCandidates.find((url) => !failedLogoUrls.includes(url) && !isMediaUrlKnownFailed(url));
+  const activeFlyerUrl = flyerCandidates.find((url) => !failedFlyerUrls.includes(url) && !isMediaUrlKnownFailed(url));
+  const showLogo = Boolean(activeLogoUrl);
+  const showFlyer = Boolean(activeFlyerUrl);
   const titleClass = isPast ? 'text-gray-300' : 'text-gray-100';
 
   return (
@@ -39,16 +61,33 @@ const EventCardCompact: React.FC<EventCardCompactProps> = ({
           className="absolute inset-0 z-20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-300"
         />
       ) : null}
-      {showFlyer ? (
+      {showFlyer && activeFlyerUrl ? (
         <>
-          <img src={flyerUrl} alt="" aria-hidden="true" onError={() => setFailedFlyerUrl(flyerUrl ?? null)} className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-center opacity-45" />
+          <img
+            src={activeFlyerUrl}
+            alt=""
+            aria-hidden="true"
+            onError={() => {
+              markMediaUrlFailed(activeFlyerUrl, 'EventCardCompact flyer');
+              setFailedFlyerUrls((prev) => (prev.includes(activeFlyerUrl) ? prev : [...prev, activeFlyerUrl]));
+            }}
+            className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-center opacity-45"
+          />
           <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#090b10]/95 via-[#090b10]/80 to-[#090b10]/55" />
         </>
       ) : null}
       <div className="relative z-10 flex items-start gap-4">
-        {showLogo ? (
+        {showLogo && activeLogoUrl ? (
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-black/70 p-1.5 sm:h-20 sm:w-20">
-            <img src={logoUrl} alt={`${logoAlt} logo`} onError={() => setFailedLogoUrl(logoUrl ?? null)} className="h-full w-full object-contain" />
+            <img
+              src={activeLogoUrl}
+              alt={`${logoAlt} logo`}
+              onError={() => {
+                markMediaUrlFailed(activeLogoUrl, 'EventCardCompact logo');
+                setFailedLogoUrls((prev) => (prev.includes(activeLogoUrl) ? prev : [...prev, activeLogoUrl]));
+              }}
+              className="h-full w-full object-contain"
+            />
           </div>
         ) : null}
         <div className="flex min-w-0 flex-1 items-start justify-between gap-4">

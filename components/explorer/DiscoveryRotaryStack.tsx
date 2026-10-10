@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Map } from 'lucide-react';
 import type { Listing } from '../../types';
+import type { EntityIndex } from '../../lib/entityIndex';
 import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import { resolveCountryIsoCodes } from '../../lib/globeEntityAdapter';
@@ -25,6 +26,7 @@ type Props = {
   onSelectListing: (listingId: string) => void;
   onSelectHost?: (host: DiscoveryRotaryHostItem) => void;
   onOpenMap: () => void;
+  entityIndex?: EntityIndex;
 };
 
 const MAX_VISIBLE_CARDS = 5;
@@ -44,6 +46,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
   onSelectListing,
   onSelectHost,
   onOpenMap,
+  entityIndex,
 }) => {
   const items = useMemo(() => [
     ...listings.map((listing) => ({ kind: 'listing' as const, id: listing.id, listing })),
@@ -210,8 +213,8 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
           || listing?.location
           || scopeName;
         const name = listing?.name ?? host?.name ?? scopeName;
-        const logoUrl = listing ? getListingLogoUrl(listing) : host?.logoUrl ?? '';
-        const heroUrl = listing ? getListingCardImageUrl(listing) : host?.heroUrl ?? host?.logoUrl ?? '';
+        const logoUrl = listing ? getListingLogoUrl(listing, entityIndex) : host?.logoUrl ?? '';
+        const heroUrl = listing ? getListingCardImageUrl(listing, entityIndex) : host?.heroUrl ?? host?.logoUrl ?? '';
 
         return (
           <button
@@ -278,7 +281,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
           >
             <img
               src={heroUrl}
-              onError={listing ? handleListingImageError : undefined}
+              onError={handleListingImageError}
               alt=""
               className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.58]"
             />
@@ -286,7 +289,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
             <span className="relative flex h-full items-center gap-3 px-3.5 sm:px-4">
               <img
                 src={logoUrl}
-                onError={listing ? handleListingImageError : undefined}
+                onError={handleListingImageError}
                 alt=""
                 className="h-[72px] w-[72px] shrink-0 rounded-[16px] border border-white/15 bg-black/45 object-cover shadow-lg sm:h-[76px] sm:w-[76px]"
               />

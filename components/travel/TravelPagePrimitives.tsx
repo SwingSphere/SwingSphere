@@ -51,13 +51,8 @@ export const TravelHero: React.FC<{
   tone?: 'resort' | 'cruise';
 }> = ({ typeLabel, title, location, subtitle, imageUrl, badge, tone = 'resort' }) => (
   <section className="relative mt-6 min-h-[25rem] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#080b10] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-    {imageUrl ? <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" /> : null}
-    <div className={tone === 'cruise'
-      ? 'absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(139,92,246,0.30),transparent_32%),linear-gradient(115deg,rgba(10,5,18,0.98)_15%,rgba(31,17,52,0.76)_58%,rgba(6,5,12,0.92))]'
-      : 'absolute inset-0 bg-[radial-gradient(circle_at_72%_20%,rgba(34,197,94,0.24),transparent_32%),linear-gradient(115deg,rgba(4,13,8,0.98)_15%,rgba(9,37,21,0.72)_58%,rgba(5,10,8,0.92))]'}
-    />
-    <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black via-black/70 to-transparent" />
-    <div className="relative flex min-h-[25rem] flex-col justify-end p-6 sm:p-9">
+    {imageUrl ? <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+    <div className="relative flex min-h-[25rem] flex-col justify-end p-6 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)] sm:p-9">
       <div className="flex flex-wrap items-center gap-2">
         <EntityTypePill tone={tone}>{typeLabel}</EntityTypePill>
         <span className={tone === 'cruise' ? 'rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-violet-100 backdrop-blur-xl' : 'rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100 backdrop-blur-xl'}>{badge}</span>

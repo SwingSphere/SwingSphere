@@ -1,4 +1,7 @@
 import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
+import { resolveEventOrganizerOrganizationId, resolveEventVenueId } from './entityCompatibility';
+import { normalizeHostName } from './identityUtils';
+import { mockOrganizations } from '../data/mockOrganizations';
 import type {
   ClubBrandData,
   ClubData,
@@ -80,8 +83,10 @@ const refKey = (ref: EntityRef) => `${ref.type}:${ref.id}`;
 
 export const isPlaceholderMediaUrl = (url?: string | null): boolean => {
   if (!url) return false;
-  const value = url.toLowerCase();
-  return value.includes('picsum.photos')
+  const value = url.toLowerCase().trim();
+  return value === '/swingsphere-logo_2.png'
+    || value.endsWith('/swingsphere-logo_2.png')
+    || value.includes('picsum.photos')
     || value.includes('placehold.co')
     || value.includes('placeholder.com')
     || value.includes('via.placeholder');
@@ -107,10 +112,152 @@ const uniqueRefs = (refs: EntityRef[]): EntityRef[] => {
   });
 };
 
-const buildNodeMaps = (catalog: BrandMediaCatalog) => {
+const mockOrgById = new Map(mockOrganizations.map((org) => [org.id, org]));
+
+export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): OrganizationData[] => {
+  const orgMap = new Map<string, OrganizationData>();
+  for (const org of mockOrganizations) orgMap.set(org.id, { ...org });
+  for (const org of catalog.organizations ?? []) {
+    const existing = orgMap.get(org.id);
+    orgMap.set(org.id, {
+      ...(existing ?? {}),
+      ...org,
+      logoImageUrl: org.logoImageUrl?.trim() || existing?.logoImageUrl,
+      headerImageUrl: org.headerImageUrl?.trim() || existing?.headerImageUrl,
+    });
+  }
+
+  const organizations = Array.from(orgMap.values());
+  const events = (catalog.listings ?? []).filter((item): item is EventData => item.type === 'event');
+  const cruiseSeries = catalog.cruiseSeries ?? [];
+  const eventSeries = catalog.eventSeries ?? [];
+  const clubBrands = catalog.clubBrands ?? [];
+  const collections = {
+    listings: catalog.listings ?? [],
+    venues: catalog.venues ?? [],
+    organizations,
+    relationships: catalog.relationships ?? [],
+  };
+
+  // Pre-group non-overridden events by resolved organizer ID in a single O(events) pass
+  const childEventsByOrgId = new Map<string, EventData[]>();
+  for (const ev of events) {
+    if (ev.logoOverride === true) continue;
+    const orgId = resolveEventOrganizerOrganizationId(ev, collections);
+    if (!orgId) continue;
+    const list = childEventsByOrgId.get(orgId);
+    if (list) list.push(ev);
+    else childEventsByOrgId.set(orgId, [ev]);
+  }
+
+  return organizations.map((org) => {
+    const mockFallbackLogo = mockOrgById.get(org.id)?.logoImageUrl;
+    const mockFallbackHeader = mockOrgById.get(org.id)?.headerImageUrl;
+    const currentLogo = mediaNodeFields(org).logoImageUrl?.trim();
+    const currentHeader = mediaNodeFields(org).headerImageUrl?.trim();
+    const normOrgName = normalizeHostName(org.name);
+
+    const matchesSeriesOrg = (s: EventSeriesData) =>
+      s.organizerOrganizationId === org.id
+      || (!s.organizerOrganizationId && (s.slug === org.slug || normalizeHostName(s.name) === normOrgName));
+
+    const seriesLogo =
+      clubBrands
+        .map((b) => (b.operatorOrganizationId === org.id ? mediaNodeFields(b).logoImageUrl : undefined))
+        .find((url) => isUsableLogo(url))
+      ?? eventSeries
+        .map((s) => (matchesSeriesOrg(s) ? mediaNodeFields(s).logoImageUrl : undefined))
+        .find((url) => isUsableLogo(url))
+      ?? cruiseSeries
+        .map((s) => (s.operatorOrganizationId === org.id ? mediaNodeFields(s).logoImageUrl : undefined))
+        .find((url) => isUsableLogo(url));
+
+    const seriesHeader =
+      clubBrands
+        .map((b) => (b.operatorOrganizationId === org.id ? mediaNodeFields(b).headerImageUrl : undefined))
+        .find((url) => isUsableHeader(url))
+      ?? eventSeries
+        .map((s) => (matchesSeriesOrg(s) ? mediaNodeFields(s).headerImageUrl : undefined))
+        .find((url) => isUsableHeader(url))
+      ?? cruiseSeries
+        .map((s) => (s.operatorOrganizationId === org.id ? mediaNodeFields(s).headerImageUrl : undefined))
+        .find((url) => isUsableHeader(url));
+
+    const childEvents = childEventsByOrgId.get(org.id) ?? [];
+    const sigCounts = new Map<string, { count: number; url: string }>();
+    for (const ev of childEvents) {
+      const candidateUrl = mediaNodeFields(ev).logoImageUrl?.trim();
+      if (!candidateUrl || !isUsableLogo(candidateUrl)) continue;
+      const sig = getCanonicalMediaSignature(candidateUrl);
+      if (!sig) continue;
+      const prev = sigCounts.get(sig);
+      if (prev) prev.count += 1;
+      else sigCounts.set(sig, { count: 1, url: candidateUrl });
+    }
+    let sharedEventLogo: string | undefined;
+    let bestCount = 0;
+    for (const { count, url } of sigCounts.values()) {
+      if (count >= 2 && count > bestCount) {
+        bestCount = count;
+        sharedEventLogo = url;
+      }
+    }
+
+    // If >= 2 child events share the same non-overridden brand logo, that is the active canonical host logo.
+    // Otherwise, only fall back to seriesLogo / mockFallbackLogo when the organization has no usable logo.
+    const inferredLogo = sharedEventLogo || (isUsableLogo(currentLogo) ? currentLogo : (seriesLogo || mockFallbackLogo));
+    const inferredHeader = isUsableHeader(currentHeader) ? currentHeader : (seriesHeader || mockFallbackHeader);
+
+    if (
+      (inferredLogo && inferredLogo !== org.logoImageUrl)
+      || (inferredHeader && inferredHeader !== org.headerImageUrl)
+    ) {
+      return {
+        ...org,
+        ...(inferredLogo ? { logoImageUrl: inferredLogo } : {}),
+        ...(inferredHeader ? { headerImageUrl: inferredHeader } : {}),
+      };
+    }
+    return org;
+  });
+};
+
+type BuiltNodeMaps = {
+  nodeByKey: Map<string, MediaNode>;
+  neighborsByKey: Map<string, EntityRef[]>;
+  clubs: ClubData[];
+  events: EventData[];
+  venues: VenueData[];
+  organizations: OrganizationData[];
+  relationships: OrganizationVenueRelationship[];
+  eventSeries: EventSeriesData[];
+  clubBrands: ClubBrandData[];
+  resorts: ResortData[];
+  cruiseSeries: CruiseSeriesData[];
+  cruiseSailings: CruiseSailingData[];
+};
+
+const NODE_MAPS_CACHE_LIMIT = 6;
+const nodeMapsCache: Array<{ catalog: BrandMediaCatalog; maps: BuiltNodeMaps }> = [];
+
+const isSameCatalogInputs = (a: BrandMediaCatalog, b: BrandMediaCatalog): boolean =>
+  a.listings === b.listings
+  && a.venues === b.venues
+  && a.organizations === b.organizations
+  && a.relationships === b.relationships
+  && a.eventSeries === b.eventSeries
+  && a.clubBrands === b.clubBrands
+  && a.resorts === b.resorts
+  && a.cruiseSeries === b.cruiseSeries
+  && a.cruiseSailings === b.cruiseSailings;
+
+const buildNodeMaps = (catalog: BrandMediaCatalog): BuiltNodeMaps => {
+  const cached = nodeMapsCache.find((entry) => isSameCatalogInputs(entry.catalog, catalog));
+  if (cached) return cached.maps;
+
   const listings = catalog.listings ?? [];
   const venues = catalog.venues ?? [];
-  const organizations = catalog.organizations ?? [];
+  const organizations = hydrateOrganizationsFromCatalog(catalog);
   const eventSeries = catalog.eventSeries ?? [];
   const clubBrands = catalog.clubBrands ?? [];
   const resorts = catalog.resorts ?? [];
@@ -136,8 +283,9 @@ const buildNodeMaps = (catalog: BrandMediaCatalog) => {
   for (const series of cruiseSeries) add({ type: 'cruise_series', id: series.id, name: series.name, ...mediaNodeFields(series) });
   for (const sailing of cruiseSailings) add({ type: 'cruise_sailing', id: sailing.id, name: sailing.name, ...mediaNodeFields(sailing) });
 
-  return {
+  const maps: BuiltNodeMaps = {
     nodeByKey,
+    neighborsByKey: new Map<string, EntityRef[]>(),
     clubs: listings.filter((listing): listing is ClubData => listing.type === 'club'),
     events: listings.filter((listing): listing is EventData => listing.type === 'event'),
     venues,
@@ -149,16 +297,23 @@ const buildNodeMaps = (catalog: BrandMediaCatalog) => {
     cruiseSeries,
     cruiseSailings,
   };
+
+  nodeMapsCache.unshift({ catalog: { ...catalog }, maps });
+  if (nodeMapsCache.length > NODE_MAPS_CACHE_LIMIT) {
+    nodeMapsCache.pop();
+  }
+  return maps;
 };
 
-const getNeighbors = (
+const computeNeighbors = (
   ref: EntityRef,
-  maps: ReturnType<typeof buildNodeMaps>,
+  maps: BuiltNodeMaps,
 ): EntityRef[] => {
   const {
     clubs,
     events,
     venues,
+    organizations,
     relationships,
     eventSeries,
     clubBrands,
@@ -188,13 +343,20 @@ const getNeighbors = (
       ]);
     }
     case 'organization': {
+      const org = organizations.find((item) => item.id === ref.id);
       const primaryRelationships = relationships
         .filter((relationship) => relationship.organizationId === ref.id)
         .sort((a, b) => relationshipPriority(a) - relationshipPriority(b));
       return uniqueRefs([
         ...clubBrands.filter((brand) => brand.operatorOrganizationId === ref.id).map((brand) => ({ type: 'club_brand' as const, id: brand.id })),
         ...clubs.filter((club) => club.ownerOrganizationId === ref.id).map((club) => ({ type: 'club' as const, id: club.id })),
-        ...eventSeries.filter((series) => series.organizerOrganizationId === ref.id).map((series) => ({ type: 'event_series' as const, id: series.id })),
+        ...eventSeries
+          .filter(
+            (series) =>
+              series.organizerOrganizationId === ref.id
+              || (!series.organizerOrganizationId && org && (series.slug === org.slug || normalizeHostName(series.name) === normalizeHostName(org.name))),
+          )
+          .map((series) => ({ type: 'event_series' as const, id: series.id })),
         ...primaryRelationships.map((relationship) => ({ type: 'venue' as const, id: relationship.venueId })),
         ...events.filter((event) => event.organizerOrganizationId === ref.id).map((event) => ({ type: 'event' as const, id: event.id })),
         ...resorts.filter((resort) => resort.operatorOrganizationId === ref.id).map((resort) => ({ type: 'resort' as const, id: resort.id })),
@@ -204,17 +366,30 @@ const getNeighbors = (
     case 'event': {
       const event = events.find((item) => item.id === ref.id);
       if (!event) return [];
+      const collections = {
+        listings: [...clubs, ...events],
+        venues,
+        organizations,
+        relationships,
+      };
+      const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, collections);
+      const venueId = resolveEventVenueId(event, collections);
       return uniqueRefs([
+        ...(organizerOrganizationId ? [{ type: 'organization' as const, id: organizerOrganizationId }] : []),
         ...(event.eventSeriesId ? [{ type: 'event_series' as const, id: event.eventSeriesId }] : []),
-        ...(event.organizerOrganizationId ? [{ type: 'organization' as const, id: event.organizerOrganizationId }] : []),
-        ...(event.venueId ? [{ type: 'venue' as const, id: event.venueId }] : []),
+        ...(venueId ? [{ type: 'venue' as const, id: venueId }] : []),
       ]);
     }
     case 'event_series': {
       const series = eventSeries.find((item) => item.id === ref.id);
       if (!series) return [];
+      const inferredOrganizerId =
+        series.organizerOrganizationId
+        || organizations.find(
+          (org) => org.slug === series.slug || normalizeHostName(org.name) === normalizeHostName(series.name),
+        )?.id;
       return uniqueRefs([
-        ...(series.organizerOrganizationId ? [{ type: 'organization' as const, id: series.organizerOrganizationId }] : []),
+        ...(inferredOrganizerId ? [{ type: 'organization' as const, id: inferredOrganizerId }] : []),
         ...(series.defaultVenueId ? [{ type: 'venue' as const, id: series.defaultVenueId }] : []),
         ...events.filter((event) => event.eventSeriesId === ref.id).map((event) => ({ type: 'event' as const, id: event.id })),
       ]);
@@ -248,11 +423,21 @@ const getNeighbors = (
   }
 };
 
+const getNeighbors = (ref: EntityRef, maps: BuiltNodeMaps): EntityRef[] => {
+  const key = refKey(ref);
+  const cached = maps.neighborsByKey.get(key);
+  if (cached) return cached;
+  const computed = computeNeighbors(ref, maps);
+  maps.neighborsByKey.set(key, computed);
+  return computed;
+};
+
 const searchGraphForRole = (
   target: EntityRef,
   catalog: BrandMediaCatalog,
   role: 'logo' | 'header',
   maxDepth: number,
+  options: { skipTargetMedia?: boolean; excludeTypes?: BrandMediaEntityType[] } = {},
 ): BrandMediaResolution => {
   const maps = buildNodeMaps(catalog);
   const start = maps.nodeByKey.get(refKey(target));
@@ -260,6 +445,8 @@ const searchGraphForRole = (
 
   const queue: Array<{ ref: EntityRef; depth: number }> = [{ ref: target, depth: 0 }];
   const visited = new Set<string>();
+
+  const excludedTypes = new Set(options.excludeTypes ?? []);
 
   while (queue.length) {
     const current = queue.shift()!;
@@ -269,27 +456,149 @@ const searchGraphForRole = (
 
     const node = maps.nodeByKey.get(key);
     if (!node) continue;
-    const candidate = role === 'logo' ? node.logoImageUrl : node.headerImageUrl;
-    const usable = role === 'logo' ? isUsableLogo(candidate) : isUsableHeader(candidate);
-    if (usable && candidate) {
-      return {
-        url: candidate,
-        sourceType: node.type,
-        sourceId: node.id,
-        sourceName: node.name,
-        sourceRole: role,
-        inherited: current.depth > 0,
-        depth: current.depth,
-      };
+    const mayUseNodeMedia = !excludedTypes.has(node.type)
+      && !(options.skipTargetMedia && current.depth === 0);
+    if (mayUseNodeMedia) {
+      const candidate = role === 'logo' ? node.logoImageUrl : node.headerImageUrl;
+      const usable = role === 'logo' ? isUsableLogo(candidate) : isUsableHeader(candidate);
+      if (usable && candidate) {
+        return {
+          url: candidate,
+          sourceType: node.type,
+          sourceId: node.id,
+          sourceName: node.name,
+          sourceRole: role,
+          inherited: current.depth > 0,
+          depth: current.depth,
+        };
+      }
     }
 
     if (current.depth >= maxDepth) continue;
     for (const neighbor of getNeighbors(current.ref, maps)) {
+      if (excludedTypes.has(neighbor.type)) continue;
       if (!visited.has(refKey(neighbor))) queue.push({ ref: neighbor, depth: current.depth + 1 });
     }
   }
 
   return { inherited: false, depth: 0 };
+};
+
+export const extractCloudflareExternalIdFromUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  return url.match(/imagedelivery\.net\/[^/]+\/([^/?#]+)/i)?.[1]?.trim() ?? null;
+};
+
+export const getCanonicalMediaSignature = (url?: string | null, externalId?: string | null): string | null => {
+  if (externalId?.trim()) return `cf:${externalId.trim().toLowerCase()}`;
+  const cfId = extractCloudflareExternalIdFromUrl(url);
+  if (cfId) return `cf:${cfId.toLowerCase()}`;
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return `url:${parsed.origin.toLowerCase()}${parsed.pathname}`;
+  } catch {
+    return `url:${trimmed.toLowerCase()}`;
+  }
+};
+
+export type EventLogoInheritanceMode = 'explicit_override' | 'inherited_host' | 'fallback';
+
+export type EventLogoInheritanceState = {
+  mode: EventLogoInheritanceMode;
+  resolvedLogo: BrandMediaResolution;
+  directEventLogo: BrandMediaResolution;
+  inheritedHostLogo: BrandMediaResolution;
+  hasRedundantOccurrenceCopy: boolean;
+};
+
+export const resolveEventLogoState = (
+  event: EventData,
+  catalog: BrandMediaCatalog,
+): EventLogoInheritanceState => {
+  const target: EntityRef = { type: 'event', id: event.id };
+  const catalogWithEvent: BrandMediaCatalog = {
+    ...catalog,
+    listings: catalog.listings?.some((item) => item.id === event.id)
+      ? catalog.listings
+      : [...(catalog.listings ?? []), event],
+  };
+
+  const directEventLogo = searchGraphForRole(target, catalogWithEvent, 'logo', 0);
+  const inheritedRes = searchGraphForRole(target, catalogWithEvent, 'logo', 4, {
+    skipTargetMedia: true,
+    excludeTypes: ['event'],
+  });
+  const inheritedHostLogo: BrandMediaResolution = inheritedRes.url
+    ? {
+        ...inheritedRes,
+        inherited: true,
+        depth: Math.max(1, inheritedRes.depth),
+      }
+    : { inherited: false, depth: 0 };
+
+  const directLogoAsset = event.mediaAssets?.find((item) => item.role === 'logo' && item.external_id?.trim());
+  const directSig = getCanonicalMediaSignature(directEventLogo.url, directLogoAsset?.external_id);
+  const inheritedSig = getCanonicalMediaSignature(inheritedHostLogo.url);
+
+  const isSameAsInherited = Boolean(directSig && inheritedSig && directSig === inheritedSig);
+  const hasRedundantOccurrenceCopy = Boolean(directEventLogo.url && inheritedHostLogo.url && isSameAsInherited && event.logoOverride !== true);
+
+  // Precedence: Explicit event override -> Parent host/series/venue asset -> Fallback
+  if (event.logoOverride !== false && directEventLogo.url) {
+    const isExplicitOverride =
+      event.logoOverride === true
+      || !inheritedHostLogo.url
+      || (Boolean(directSig && inheritedSig) && directSig !== inheritedSig);
+    if (isExplicitOverride) {
+      const resolved: BrandMediaResolution = {
+        ...directEventLogo,
+        inherited: false,
+        depth: 0,
+      };
+      return {
+        mode: 'explicit_override',
+        resolvedLogo: resolved,
+        directEventLogo: resolved,
+        inheritedHostLogo,
+        hasRedundantOccurrenceCopy: false,
+      };
+    }
+  }
+
+  if (inheritedHostLogo.url) {
+    return {
+      mode: 'inherited_host',
+      resolvedLogo: inheritedHostLogo,
+      directEventLogo,
+      inheritedHostLogo,
+      hasRedundantOccurrenceCopy,
+    };
+  }
+
+  if (directEventLogo.url && event.logoOverride !== false) {
+    const resolved: BrandMediaResolution = {
+      ...directEventLogo,
+      inherited: false,
+      depth: 0,
+    };
+    return {
+      mode: 'explicit_override',
+      resolvedLogo: resolved,
+      directEventLogo: resolved,
+      inheritedHostLogo,
+      hasRedundantOccurrenceCopy: false,
+    };
+  }
+
+  return {
+    mode: 'fallback',
+    resolvedLogo: { inherited: false, depth: 0 },
+    directEventLogo,
+    inheritedHostLogo,
+    hasRedundantOccurrenceCopy: false,
+  };
 };
 
 export const resolveBrandLogo = (
@@ -298,12 +607,43 @@ export const resolveBrandLogo = (
   catalog: BrandMediaCatalog,
 ): BrandMediaResolution => {
   const target: EntityRef = { type: targetType, id: targetId };
-  const logo = searchGraphForRole(target, catalog, 'logo', 4);
-  if (logo.url) return logo;
 
-  // Only use a hero/header after exhausting real logos throughout the explicit
-  // relationship graph. Placeholder fixture URLs are intentionally ignored.
-  return searchGraphForRole(target, catalog, 'header', 3);
+  if (targetType === 'event') {
+    const eventEntity = catalog.listings?.find(
+      (item): item is EventData => item.type === 'event' && item.id === targetId,
+    );
+    if (eventEntity) {
+      return resolveEventLogoState(eventEntity, catalog).resolvedLogo;
+    }
+
+    const inheritedLogo = searchGraphForRole(target, catalog, 'logo', 4, {
+      skipTargetMedia: true,
+      excludeTypes: ['event'],
+    });
+    const eventLogo = searchGraphForRole(target, catalog, 'logo', 0);
+    const eventSig = getCanonicalMediaSignature(eventLogo.url);
+    const inheritedSig = getCanonicalMediaSignature(inheritedLogo.url);
+
+    if (eventLogo.url && (!inheritedLogo.url || (eventSig && inheritedSig && eventSig !== inheritedSig))) {
+      return {
+        ...eventLogo,
+        inherited: false,
+        depth: 0,
+      };
+    }
+
+    if (inheritedLogo.url) {
+      return {
+        ...inheritedLogo,
+        inherited: true,
+        depth: Math.max(1, inheritedLogo.depth),
+      };
+    }
+
+    return eventLogo;
+  }
+
+  return searchGraphForRole(target, catalog, 'logo', 4);
 };
 
 export const resolveBrandHeader = (
@@ -316,3 +656,4 @@ export const brandMediaSourceLabel = (resolution: BrandMediaResolution): string 
   if (!resolution.url || !resolution.inherited || !resolution.sourceName) return undefined;
   return `Inherited from ${resolution.sourceName}`;
 };
+

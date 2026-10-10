@@ -271,7 +271,7 @@ const countDescendantElements = (root: Element): number => root.querySelectorAll
 const buildLabel = (selected: boolean) => {
   const element = createVenueLabelElement('', '', '', '', selected) as HTMLDivElement;
   element.replaceChildren();
-  element.style.pointerEvents = 'none';
+  element.style.pointerEvents = selected ? 'auto' : 'none';
   element.style.zIndex = selected ? '26' : '25';
   return element;
 };
@@ -292,9 +292,44 @@ const setLabelContent = (element: HTMLDivElement, listing: MapPinEntity, selecte
   ) as HTMLDivElement;
   element.className = template.className;
   element.style.cssText = template.style.cssText;
-  element.style.pointerEvents = 'none';
+  element.style.pointerEvents = selected ? 'auto' : 'none';
   element.style.zIndex = selected ? '26' : '25';
   element.replaceChildren(...Array.from(template.childNodes));
+
+  if (selected) {
+    element.style.minWidth = '240px';
+    element.style.maxWidth = '280px';
+    element.style.height = 'auto';
+    element.style.minHeight = '58px';
+    element.style.padding = '8px 12px';
+    element.style.borderRadius = '14px';
+    element.style.gap = '10px';
+    element.style.boxShadow =
+      'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(60,0,12,0.44), 0 14px 32px rgba(0,0,0,0.52)';
+
+    const numChildren = element.children.length;
+    if (numChildren >= 2) {
+      const logoNode = element.children[numChildren - 2] as HTMLElement;
+      if (logoNode) {
+        logoNode.style.width = '44px';
+        logoNode.style.height = '44px';
+        logoNode.style.borderRadius = '10px';
+      }
+      const textNode = element.children[numChildren - 1] as HTMLElement;
+      if (textNode) {
+        const titleNode = textNode.firstElementChild as HTMLElement | null;
+        if (titleNode) {
+          titleNode.style.fontSize = '13.5px';
+          titleNode.style.lineHeight = '1.2';
+        }
+        const subtitleNode = textNode.lastElementChild as HTMLElement | null;
+        if (subtitleNode) {
+          subtitleNode.style.marginTop = '3px';
+          subtitleNode.style.fontSize = '10.5px';
+        }
+      }
+    }
+  }
 };
 
 export class MapLibreThreePinLayer implements CustomLayerInterface {
@@ -314,6 +349,7 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
   private selectedLabel = buildLabel(true);
   private hoverLabelListingId: string | null = null;
   private selectedLabelListingId: string | null = null;
+  private selectedBuildingHeightMeters = 0;
   private projectedPins = new Map<string, { x: number; y: number; entity: MapPinEntity }>();
   private authoredBuildingListingIds = new Set<string>();
   private hoverChangedAt = 0;
@@ -477,14 +513,28 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
     this.map?.triggerRepaint();
   }
 
-  setSelected(id: string | null) {
-    if (this.selectedId === id) return;
+  setSelected(id: string | null, heightMeters = 0) {
+    if (this.selectedId === id && this.selectedBuildingHeightMeters === heightMeters) return;
     this.selectedId = id;
+    this.selectedBuildingHeightMeters = Math.max(0, heightMeters);
     this.selectionChangedAt = performance.now();
     if (id) {
       const selectedView = this.views.get(id);
       if (selectedView) selectedView.group.visible = true;
+    } else {
+      if (this.selectedLabel) {
+        this.selectedLabel.style.opacity = '0';
+        this.selectedLabel.style.visibility = 'hidden';
+        this.selectedLabelListingId = null;
+      }
     }
+    this.map?.triggerRepaint();
+  }
+
+  setSelectedBuildingHeight(heightMeters: number) {
+    const nextHeight = Math.max(0, heightMeters);
+    if (this.selectedBuildingHeightMeters === nextHeight) return;
+    this.selectedBuildingHeightMeters = nextHeight;
     this.map?.triggerRepaint();
   }
 
@@ -546,7 +596,12 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       view.currentLift = 0;
 
       const scale = baseScale * view.currentScale;
-      view.group.position.set(view.mercator.x, view.mercator.y, 0);
+      const isPitched3D = (this.map?.getPitch() ?? 0) > 10 && (this.map?.getZoom() ?? 0) >= 14;
+      const buildingHeight = selected && isPitched3D
+        ? (this.selectedBuildingHeightMeters > 0 ? this.selectedBuildingHeightMeters : 16)
+        : 0;
+      const altitudeMercator = buildingHeight * view.mercator.meterInMercatorCoordinateUnits();
+      view.group.position.set(view.mercator.x, view.mercator.y, altitudeMercator);
       view.group.scale.set(scale, -scale, scale);
       view.tip.position.z = 0.22;
       const palette = view.type === 'event'
@@ -591,8 +646,8 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
         entity: view.listing,
       });
     });
-    this.updateLabel(this.hoverLabel, this.hoveredId, 12);
-    this.updateLabel(this.selectedLabel, this.selectedId, 16);
+    this.updateLabel(this.hoverLabel, this.hoveredId, 14);
+    this.updateLabel(this.selectedLabel, this.selectedId, 24);
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
     if (hasActiveAnimation || (this.map && typeof this.map.isMoving === 'function' && this.map.isMoving())) {
@@ -628,8 +683,15 @@ export class MapLibreThreePinLayer implements CustomLayerInterface {
       if (isHoverLabel) this.hoverLabelListingId = id;
       else this.selectedLabelListingId = id;
     }
-    element.style.left = `${point.x}px`;
-    element.style.top = `${point.y - clearancePx}px`;
+    const cardWidth = isHoverLabel ? 200 : 270;
+    const cardHeight = isHoverLabel ? 42 : 68;
+    const halfWidth = cardWidth / 2;
+    const clampedX = Math.max(halfWidth + 16, Math.min(canvas.clientWidth - halfWidth - 16, point.x));
+    const clampedY = Math.max(cardHeight + 16, point.y - clearancePx);
+
+    element.style.left = `${Math.round(clampedX)}px`;
+    element.style.top = `${Math.round(clampedY)}px`;
+    element.style.transform = 'translate(-50%, -100%)';
     element.style.opacity = '1';
     element.style.visibility = 'visible';
   }

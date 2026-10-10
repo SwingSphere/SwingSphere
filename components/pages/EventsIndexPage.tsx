@@ -3,7 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, MapPin, Plus } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getEventCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
-import { getEventCardImageUrl, getListingPrimaryHeroUrl } from '../../lib/listingImage';
+import {
+  getEventCardImageUrl,
+  getListingPrimaryHeroUrl,
+  handleListingImageError,
+} from '../../lib/listingImage';
 import { isPlaceholderMediaUrl } from '../../lib/entityBrandMedia';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import { DetailContextNav } from '../navigation/DetailContextNav';
@@ -96,7 +100,7 @@ const EventsIndexPage: React.FC = () => {
         />
         <header className="relative isolate min-h-[220px] overflow-hidden rounded-2xl border border-white/[0.1] bg-gray-950 shadow-2xl">
           {scopedHeroUrl && !isPlaceholderMediaUrl(scopedHeroUrl) ? (
-            <img src={scopedHeroUrl} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />
+            <img src={scopedHeroUrl} onError={handleListingImageError} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />
           ) : null}
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#07090d]/95 via-[#07090d]/78 to-[#07090d]/35" />
           <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#07090d]/90 via-transparent to-black/20" />
@@ -137,12 +141,12 @@ const EventsIndexPage: React.FC = () => {
             {visibleEvents.map((event) => {
               const href = getEventCanonicalPath(event, index);
               const city = event.geopoint?.address?.city || event.location || 'Location TBD';
-              const cardImageUrl = getEventCardImageUrl(event);
+              const cardImageUrl = getEventCardImageUrl(event, index);
               const showImage = Boolean(cardImageUrl && !isPlaceholderMediaUrl(cardImageUrl));
               return (
                 <li key={event.id}>
                   <Link to={href} className="group relative isolate block min-h-[112px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0b0e14] shadow-lg transition duration-200 hover:-translate-y-0.5 hover:border-red-300/35 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300">
-                    {showImage ? <img src={cardImageUrl} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-50 transition duration-300 group-hover:scale-[1.015] group-hover:opacity-60" /> : null}
+                    {showImage ? <img src={cardImageUrl} onError={handleListingImageError} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-50 transition duration-300 group-hover:scale-[1.015] group-hover:opacity-60" /> : null}
                     <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#07090d]/95 via-[#07090d]/82 to-[#07090d]/50" />
                     <div className="flex min-h-[112px] items-center justify-between gap-5 px-5 py-4 sm:px-6">
                       <div className="min-w-0">

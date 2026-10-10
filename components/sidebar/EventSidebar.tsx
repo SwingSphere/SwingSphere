@@ -40,6 +40,7 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
   const hideExactPin = Boolean(event.isAddressPrivate || isApproximateVenue);
   const visibleTags = event.tags.slice(0, 3);
   const remainingTagCount = Math.max(0, event.tags.length - visibleTags.length);
+  const brandLogoImage = getListingLogoUrl(event, entityIndex);
   const shellClass = mode === 'floating'
     ? 'ss-glass ss-glass--liquid flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[24px] text-gray-100'
     : mode === 'embedded'
@@ -49,13 +50,13 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
   return (
     <div className={shellClass}>
       <div className={mode === 'floating' ? 'relative h-44 shrink-0 xl:h-48' : 'relative h-48 shrink-0 xl:h-52'}>
-        <img src={getEventCardImageUrl(event)} onError={handleListingImageError} alt={event.name} className="h-full w-full object-cover" />
+        <img src={getEventCardImageUrl(event, entityIndex)} onError={handleListingImageError} alt={event.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
         <button onClick={onClose} className="ss-glass ss-glass--liquid ss-glass--interactive absolute right-4 top-4 rounded-full p-2 text-white" aria-label="Close event details">
           <X className="h-5 w-5" />
         </button>
         <div className="ss-glass ss-glass--liquid absolute left-4 top-4 h-16 w-16 overflow-hidden rounded-[18px]">
-          <img src={getListingLogoUrl(event)} onError={handleListingImageError} alt={`${event.name} logo`} className="h-full w-full object-contain" />
+          <img src={brandLogoImage} onError={handleListingImageError} alt={`${event.name} logo`} className="h-full w-full object-contain" />
         </div>
         <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-4">
           <div className="min-w-0">

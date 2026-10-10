@@ -461,6 +461,8 @@ export interface EventData {
   locationMeta?: ListingLocationMeta;
   tags: string[];
   logoImageUrl?: string;
+  logoOverride?: boolean;
+  flyerImageUrl?: string;
   headerImageUrl?: string;
   galleryImageUrls?: string[];
   mediaAssets?: import('./lib/media/types').MediaAsset[];
@@ -571,3 +573,10 @@ export type DashboardStats = {
   totalFlagged: number;
   submissionsOverTime: { date: string; clubs: number; events: number; }[];
 };
+
+export type {
+  ManualMassingObject,
+  ManualMassingRole,
+  ReferenceImageState,
+  VenueAmbientMassingSession,
+} from './components/dev/building-inspector/types';

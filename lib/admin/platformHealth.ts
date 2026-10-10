@@ -1,5 +1,11 @@
 import schemaVersion from 'virtual:swingsphere-schema-version';
 import { supabase } from '../supabase';
+import { adminFetchJson } from '../adminApi';
+import {
+  compareMigrationManifests,
+  type MigrationComparisonResult,
+  type ReleasePreflightReport,
+} from './releaseManagement';
 
 export type PlatformStatus =
   | 'Operational'
@@ -86,6 +92,8 @@ export type PlatformHealthSnapshot = {
   remoteMigration: string;
   databaseVersion: string;
   migrationMatches: boolean;
+  migrationSync: MigrationComparisonResult;
+  preflight?: ReleasePreflightReport;
   items: PlatformHealthItem[];
   counts: PlatformHealthRpc['counts'];
 };
@@ -93,12 +101,99 @@ export type PlatformHealthSnapshot = {
 const all = (...values: boolean[]) => values.every(Boolean);
 const any = (...values: boolean[]) => values.some(Boolean);
 
-const buildItems = (health: PlatformHealthRpc): PlatformHealthItem[] => {
+export const deriveMigrationSync = (
+  health: PlatformHealthRpc,
+  preflightReport?: ReleasePreflightReport | null,
+): MigrationComparisonResult => {
+  if (preflightReport?.migration) {
+    return preflightReport.migration;
+  }
+
+  const localVersions = Array.isArray((schemaVersion as any).versions) && (schemaVersion as any).versions.length > 0
+    ? (schemaVersion as any).versions
+    : schemaVersion.version ? [schemaVersion.version] : [];
+
+  const remoteApplied = Array.isArray((health.database as any).appliedMigrations)
+    ? (health.database as any).appliedMigrations
+    : [];
+
+  if (remoteApplied.length > 0) {
+    return compareMigrationManifests(localVersions, remoteApplied);
+  }
+
+  const remoteHead = health.database.latestMigration || '';
+  const localHead = schemaVersion.version || '';
+
+  if (!remoteHead || !localHead) {
+    return {
+      status: 'unknown',
+      statusLabel: 'Unable to verify',
+      localHead,
+      remoteHead,
+      localCount: localVersions.length,
+      remoteCount: 0,
+      pendingLocal: [],
+      missingRemote: [],
+      matchedCount: 0,
+      explanation: 'Could not determine both local and remote migration heads.',
+      safeToMigrate: false,
+    };
+  }
+
+  if (remoteHead === localHead) {
+    return {
+      status: 'synchronized',
+      statusLabel: 'Fully synchronized',
+      localHead,
+      remoteHead,
+      localCount: localVersions.length,
+      remoteCount: localVersions.length,
+      pendingLocal: [],
+      missingRemote: [],
+      matchedCount: localVersions.length,
+      explanation: `Latest local and production migration heads match (${remoteHead}).`,
+      safeToMigrate: true,
+    };
+  }
+
+  if (remoteHead < localHead) {
+    return {
+      status: 'local_pending',
+      statusLabel: 'Local migrations pending',
+      localHead,
+      remoteHead,
+      localCount: localVersions.length,
+      remoteCount: 0,
+      pendingLocal: localVersions.filter((v: string) => v > remoteHead),
+      missingRemote: [],
+      matchedCount: 0,
+      explanation: `Production head (${remoteHead}) is behind local head (${localHead}).`,
+      safeToMigrate: true,
+    };
+  }
+
+  return {
+    status: 'remote_missing',
+    statusLabel: 'Remote migrations missing locally',
+    localHead,
+    remoteHead,
+    localCount: localVersions.length,
+    remoteCount: 0,
+    pendingLocal: [],
+    missingRemote: [remoteHead],
+    matchedCount: 0,
+    explanation: `Production head (${remoteHead}) is ahead of local head (${localHead}). Reconcile checkout.`,
+    safeToMigrate: false,
+  };
+};
+
+const buildItems = (
+  health: PlatformHealthRpc,
+  migrationSync: MigrationComparisonResult,
+): PlatformHealthItem[] => {
   const c = health.capabilities;
   const remote = health.database.latestMigration || 'unknown';
   const local = schemaVersion.version || 'unknown';
-  const migrationMatches = remote === local;
-  const remoteBehind = Boolean(remote !== 'unknown' && local !== 'unknown' && remote < local);
   const cloudflareDeliveryConfigured = Boolean(
     import.meta.env.NEXT_PUBLIC_CLOUDFLARE_IMAGES_ACCOUNT_HASH
       || import.meta.env.VITE_CLOUDFLARE_IMAGES_ACCOUNT_HASH,
@@ -127,14 +222,28 @@ const buildItems = (health: PlatformHealthRpc): PlatformHealthItem[] => {
     {
       key: 'migration-drift',
       title: 'Migration / deployment sync',
-      status: migrationMatches ? 'Operational' : remoteBehind ? 'Pending deploy' : 'Degraded',
-      description: migrationMatches
-        ? 'The newest migration in this checkout exactly matches the newest migration recorded by production Supabase.'
-        : remoteBehind
-          ? 'This checkout contains database migrations that production Supabase has not applied yet.'
-          : 'Production and this checkout report different migration heads. Reconcile before additional schema work.',
-      detail: `Local ${local} · Production ${remote}`,
-      nextStep: migrationMatches ? undefined : 'Run a migration dry-run, review the pending chain, then deploy in order.',
+      status: migrationSync.status === 'synchronized'
+        ? 'Operational'
+        : migrationSync.status === 'local_pending'
+          ? 'Pending deploy'
+          : migrationSync.status === 'unknown'
+            ? 'Partial'
+            : 'Degraded',
+      description: migrationSync.status === 'synchronized'
+        ? 'All database migrations in this checkout are fully synchronized with production Supabase.'
+        : migrationSync.status === 'local_pending'
+          ? `This checkout contains ${migrationSync.pendingLocal.length} database migration(s) that production Supabase has not applied yet.`
+          : migrationSync.status === 'remote_missing'
+            ? `Production contains ${migrationSync.missingRemote.length} migration(s) missing from this local checkout. Reconcile before applying changes.`
+            : migrationSync.status === 'divergent'
+              ? `Divergent migration histories: production has ${migrationSync.missingRemote.length} migration(s) missing locally and local has ${migrationSync.pendingLocal.length} unapplied migration(s). Database push is blocked.`
+              : 'Could not independently verify complete migration history.',
+      detail: `Local ${migrationSync.localHead || local} · Production ${migrationSync.remoteHead || remote}${migrationSync.pendingLocal.length ? ` · ${migrationSync.pendingLocal.length} pending` : ''}${migrationSync.missingRemote.length ? ` · ${migrationSync.missingRemote.length} missing locally` : ''}`,
+      nextStep: migrationSync.status === 'synchronized'
+        ? undefined
+        : migrationSync.status === 'local_pending'
+          ? 'Review the pending migration chain in the Release Manager and deploy when ready.'
+          : 'Reconcile local migration files with production records before pushing schema changes.',
     },
     {
       key: 'user-admin',
@@ -294,13 +403,28 @@ export const getPlatformHealth = async (): Promise<PlatformHealthSnapshot> => {
   const { data, error } = await supabase.rpc('admin_platform_health');
   if (error) throw error;
   const health = data as PlatformHealthRpc;
+
+  let preflightReport: ReleasePreflightReport | null = null;
+  const isLocal = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocal) {
+    try {
+      preflightReport = await adminFetchJson<ReleasePreflightReport>('/api/admin/release/preflight');
+    } catch {
+      // Graceful fallback to RPC when preflight endpoint is unavailable
+    }
+  }
+
+  const migrationSync = deriveMigrationSync(health, preflightReport);
+
   return {
     checkedAt: health.checkedAt,
     localMigration: schemaVersion,
     remoteMigration: health.database.latestMigration,
     databaseVersion: health.database.serverVersion,
-    migrationMatches: health.database.latestMigration === schemaVersion.version,
-    items: buildItems(health),
+    migrationMatches: migrationSync.status === 'synchronized',
+    migrationSync,
+    preflight: preflightReport ?? undefined,
+    items: buildItems(health, migrationSync),
     counts: health.counts,
   };
 };

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MediaAsset } from '../../lib/media/types';
 import MediaImage from '../media/MediaImage';
-import { Expand, ImagePlus, X } from 'lucide-react';
+import { handleListingImageError, serializeFallbackCandidates } from '../../lib/listingImage';
+import { Expand, ImagePlus, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 
 type EventFlyerCardProps = {
@@ -16,11 +17,15 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControl = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
   const flyerButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!isExpanded) return;
+    if (!isExpanded) {
+      setIsZoomed(false);
+      return;
+    }
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -58,9 +63,17 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
             {flyerAsset ? <MediaImage
               asset={flyerAsset}
               variant="flyerpage"
+              fallbackUrl={flyerUrl}
               alt={flyerAsset.alt_text ?? `${eventName} flyer`}
               className="max-h-[680px] w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]"
-            /> : <img src={flyerUrl ?? undefined} alt={`${eventName} flyer`} className="max-h-[680px] w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]" />}
+            /> : <img
+              src={flyerUrl ?? undefined}
+              alt={`${eventName} flyer`}
+              data-media-role="flyer"
+              data-fallback-candidates={serializeFallbackCandidates([flyerUrl])}
+              onError={handleListingImageError}
+              className="max-h-[680px] w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+            />}
             <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
               <Expand size={14} /> Enlarge
             </span>
@@ -78,6 +91,12 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
         ? createPortal(
             <div
               className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm sm:p-6"
+              style={{
+                paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+                paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+                paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+                paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
+              }}
               role="dialog"
               aria-modal="true"
               aria-label={`${eventName} flyer viewer`}
@@ -85,15 +104,26 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
                 if (event.target === event.currentTarget) setIsExpanded(false);
               }}
             >
-              <button
-                ref={closeButtonRef}
-                type="button"
-                onClick={() => setIsExpanded(false)}
-                className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-xl backdrop-blur-md transition hover:border-red-400/60 hover:bg-red-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-                aria-label="Close flyer viewer"
-              >
-                <X size={22} />
-              </button>
+              <div className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] z-10 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed((prev) => !prev)}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-black/75 px-3.5 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition hover:border-white/30"
+                  aria-label={isZoomed ? 'Zoom out flyer' : 'Zoom in flyer'}
+                >
+                  {isZoomed ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
+                  <span>{isZoomed ? '1x' : '2x'}</span>
+                </button>
+                <button
+                  ref={closeButtonRef}
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-xl backdrop-blur-md transition hover:border-red-400/60 hover:bg-red-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                  aria-label="Close flyer viewer"
+                >
+                  <X size={22} />
+                </button>
+              </div>
               <div
                 className="flex h-full w-full items-center justify-center overflow-auto overscroll-contain"
                 onMouseDown={(event) => {
@@ -103,9 +133,26 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
                 {flyerAsset ? <MediaImage
                   asset={flyerAsset}
                   variant="flyerpage"
+                  fallbackUrl={flyerUrl}
                   alt={flyerAsset.alt_text ?? `${eventName} flyer`}
-                  className="h-auto max-h-[calc(100vh-3rem)] w-auto max-w-[calc(100vw-3rem)] select-none object-contain shadow-2xl"
-                /> : <img src={flyerUrl ?? undefined} alt={`${eventName} flyer`} className="h-auto max-h-[calc(100vh-3rem)] w-auto max-w-[calc(100vw-3rem)] select-none object-contain shadow-2xl" />}
+                  className={
+                    isZoomed
+                      ? 'h-auto w-auto max-w-[180vw] cursor-zoom-out select-none object-contain shadow-2xl sm:max-w-[140vw]'
+                      : 'h-auto max-h-[calc(100dvh-4rem)] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-in select-none object-contain shadow-2xl'
+                  }
+                /> : <img
+                  src={flyerUrl ?? undefined}
+                  alt={`${eventName} flyer`}
+                  data-media-role="flyer"
+                  data-fallback-candidates={serializeFallbackCandidates([flyerUrl])}
+                  onError={handleListingImageError}
+                  onClick={() => setIsZoomed((prev) => !prev)}
+                  className={
+                    isZoomed
+                      ? 'h-auto w-auto max-w-[180vw] cursor-zoom-out select-none object-contain shadow-2xl sm:max-w-[140vw]'
+                      : 'h-auto max-h-[calc(100dvh-4rem)] w-auto max-w-[calc(100vw-2rem)] cursor-zoom-in select-none object-contain shadow-2xl'
+                  }
+                />}
               </div>
             </div>,
             document.body,
@@ -116,3 +163,4 @@ const EventFlyerCard: React.FC<EventFlyerCardProps> = ({ eventName, flyerAsset, 
 };
 
 export default EventFlyerCard;
+

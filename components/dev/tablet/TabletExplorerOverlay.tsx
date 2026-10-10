@@ -204,7 +204,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
             <img src={getListingCardImageUrl(selectedListing)} onError={handleListingImageError} alt="" className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#090b10] via-black/10 to-black/30" />
             <div className="absolute left-4 top-4 h-[74px] w-[74px] overflow-hidden rounded-[20px] border border-white/[0.16] bg-black/70 shadow-xl backdrop-blur-md">
-              <img src={getListingLogoUrl(selectedListing)} onError={handleListingImageError} alt={`${selectedListing.name} logo`} className="h-full w-full object-contain" />
+              <img src={getListingLogoUrl(selectedListing, entityIndex)} onError={handleListingImageError} alt={`${selectedListing.name} logo`} className="h-full w-full object-contain" />
             </div>
             <button type="button" onClick={onClearSelection} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full border border-white/[0.12] bg-black/55 text-white backdrop-blur-lg" aria-label="Close listing preview"><X className="h-5 w-5" /></button>
           </div>
@@ -264,7 +264,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
               const selected = listing.id === selectedListingId;
               return (
                 <button key={listing.id} type="button" onClick={() => selected ? openListing(listing) : onSelectListing(listing.id)} className={`flex min-h-[78px] min-w-[150px] max-w-[178px] items-center gap-2.5 rounded-[20px] border p-2.5 text-left ${selected ? 'border-red-400/55 bg-red-500/[0.09]' : 'border-white/[0.07] bg-white/[0.025]'}`}>
-                  <img src={getListingLogoUrl(listing)} onError={handleListingImageError} alt="" className="h-11 w-11 shrink-0 rounded-[13px] bg-black/25 object-contain" />
+                  <img src={getListingLogoUrl(listing, entityIndex)} onError={handleListingImageError} alt="" className="h-11 w-11 shrink-0 rounded-[13px] bg-black/25 object-contain" />
                   <span className="min-w-0"><span className="block line-clamp-2 text-[12px] font-semibold leading-4 text-white">{listing.name}</span><span className="mt-1 block truncate text-[10px] text-gray-500">{listing.type === 'event' ? formatEventTimeRange(listing.time.start, listing.time.end) : listing.location}</span></span>
                 </button>
               );
@@ -287,7 +287,7 @@ const TabletExplorerOverlay: React.FC<TabletExplorerOverlayProps> = ({
           <section className="max-h-[78vh] w-[min(720px,88vw)] overflow-hidden rounded-[30px] border border-white/[0.1] bg-[#0a0d12] shadow-[0_28px_90px_rgba(0,0,0,0.7)]" onClick={(event) => event.stopPropagation()}>
             <header className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4"><div><div className="text-base font-semibold text-white">{activeRegionName || 'Nearby listings'}</div><div className="mt-0.5 text-[11px] text-gray-500">{visibleListings.length} results</div></div><button type="button" onClick={() => setResultsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.05] text-gray-300"><X className="h-4 w-4" /></button></header>
             <div className="grid max-h-[calc(78vh-78px)] grid-cols-2 gap-3 overflow-y-auto p-4">
-              {visibleListings.map((listing) => <button key={listing.id} type="button" onClick={() => { setResultsOpen(false); onSelectListing(listing.id); }} className="flex min-h-[96px] items-center gap-3 rounded-[22px] border border-white/[0.07] bg-white/[0.025] p-3 text-left"><img src={getListingLogoUrl(listing)} onError={handleListingImageError} alt="" className="h-16 w-16 shrink-0 rounded-2xl bg-black/30 object-contain" /><span className="min-w-0"><span className="block line-clamp-2 text-sm font-semibold text-white">{listing.name}</span><span className="mt-1 block text-[11px] text-red-200">{listing.type === 'event' ? 'Event' : 'Club'}</span><span className="mt-1 block truncate text-[11px] text-gray-500">{listing.location}</span></span></button>)}
+              {visibleListings.map((listing) => <button key={listing.id} type="button" onClick={() => { setResultsOpen(false); onSelectListing(listing.id); }} className="flex min-h-[96px] items-center gap-3 rounded-[22px] border border-white/[0.07] bg-white/[0.025] p-3 text-left"><img src={getListingLogoUrl(listing, entityIndex)} onError={handleListingImageError} alt="" className="h-16 w-16 shrink-0 rounded-2xl bg-black/30 object-contain" /><span className="min-w-0"><span className="block line-clamp-2 text-sm font-semibold text-white">{listing.name}</span><span className="mt-1 block text-[11px] text-red-200">{listing.type === 'event' ? 'Event' : 'Club'}</span><span className="mt-1 block truncate text-[11px] text-gray-500">{listing.location}</span></span></button>)}
             </div>
           </section>
         </div>

@@ -4,13 +4,20 @@ import { getAdminSiteIssues, updateAdminSiteIssue, issueCategories, issueStatusL
 import { getPendingWrittenReviews, moderateWrittenReview, type PendingWrittenReview } from '../../lib/feedback/adminFeedbackModeration';
 import { resolveBrandLogo, type BrandMediaCatalog } from '../../lib/entityBrandMedia';
 
-type AdminModerationQueueProps = { onDataChange: () => void; mediaCatalog: BrandMediaCatalog };
+type AdminModerationQueueProps = {
+  onDataChange: () => void;
+  mediaCatalog: BrandMediaCatalog;
+  initialTab?: 'reviews' | 'reports';
+};
 type QueueTab = 'reviews' | 'reports';
 
 const categoryLabel = (value: string) => issueCategories.find((item) => item.value === value)?.label || value;
 
-const AdminModerationQueue: React.FC<AdminModerationQueueProps> = ({ onDataChange, mediaCatalog }) => {
-  const [tab, setTab] = useState<QueueTab>('reviews');
+const AdminModerationQueue: React.FC<AdminModerationQueueProps> = ({ onDataChange, mediaCatalog, initialTab }) => {
+  const [tab, setTab] = useState<QueueTab>(initialTab ?? 'reviews');
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
   return (
     <div className="space-y-5">
       <div>

@@ -17,6 +17,7 @@ import type {
     Review,
     User as UserType,
     VenueData,
+    ManualMassingObject,
 } from '../types';
 import type { User } from '../data/mockUsers';
 import type { AuditLogEntry } from '../data/mockAuditLog';
@@ -118,6 +119,32 @@ const requestAdminJson = async <T>(url: string, init?: RequestInit): Promise<T> 
     },
 });
 
+const catalogMutationListeners = new Set<() => void>();
+
+export const subscribeCatalogMutations = (listener: () => void): (() => void) => {
+    catalogMutationListeners.add(listener);
+    return () => {
+        catalogMutationListeners.delete(listener);
+    };
+};
+
+export const notifyCatalogMutations = () => {
+    catalogMutationListeners.forEach((listener) => {
+        try {
+            listener();
+        } catch {
+            // Ignore listener errors.
+        }
+    });
+};
+
+export const getBundledCatalogSnapshot = () => ({
+    listings: db.listings,
+    venues: db.venues,
+    organizations: db.organizations,
+    organizationVenueRelationships: db.organizationVenueRelationships,
+});
+
 const upsertLocalListing = (listing: Listing) => {
     const index = db.listings.findIndex((item) => item.id === listing.id);
     if (index >= 0) {
@@ -129,11 +156,13 @@ const upsertLocalListing = (listing: Listing) => {
     if (deletedIds.includes(listing.id)) {
         persistDeletedListingIds(deletedIds.filter((id) => id !== listing.id));
     }
+    notifyCatalogMutations();
 };
 
 const removeLocalListing = (id: string) => {
     db.listings = db.listings.filter((listing) => listing.id !== id);
     persistDeletedListingIds(Array.from(new Set([...readDeletedListingIds(), id])));
+    notifyCatalogMutations();
 };
 
 const buildListingLocation = (listing: Pick<Listing, 'type' | 'geopoint' | 'location'>) => {
@@ -273,10 +302,18 @@ export const importLegacyListingsToSupabase = async (): Promise<{ imported: bool
 
 export const getListings = async (): Promise<Listing[]> => {
     try {
-        let state = await getListingStoreState();
-        if (await importLegacyListingsIfNeeded(state)) state = await getListingStoreState();
+        let [state, accessibleResult] = await Promise.all([
+            getListingStoreState(),
+            supabase.rpc('list_accessible_listings'),
+        ]);
+        if (await importLegacyListingsIfNeeded(state)) {
+            [state, accessibleResult] = await Promise.all([
+                getListingStoreState(),
+                supabase.rpc('list_accessible_listings'),
+            ]);
+        }
 
-        const { data, error } = await supabase.rpc('list_accessible_listings');
+        const { data, error } = accessibleResult;
         if (error) throw error;
         const remoteListings = asListings(data);
         db.listings = state?.legacyImportComplete ? remoteListings : mergeLegacyCatalog(remoteListings);
@@ -309,16 +346,24 @@ const persistListingToSupabase = async <T extends Listing>(
 
 export const saveListing = async (listing: Listing): Promise<Listing> => persistListingToSupabase(listing);
 
+const withCatalogInvalidation = <TArgs extends any[], TResult>(
+    fn: (...args: TArgs) => Promise<TResult>,
+) => async (...args: TArgs): Promise<TResult> => {
+    const result = await fn(...args);
+    notifyCatalogMutations();
+    return result;
+};
+
 export const getClubBrands = entityCatalog.getClubBrands;
-export const saveClubBrand = entityCatalog.saveClubBrand;
+export const saveClubBrand = withCatalogInvalidation(entityCatalog.saveClubBrand);
 export const getEventSeries = entityCatalog.getEventSeries;
-export const saveEventSeries = entityCatalog.saveEventSeries;
+export const saveEventSeries = withCatalogInvalidation(entityCatalog.saveEventSeries);
 export const getResorts = entityCatalog.getResorts;
-export const saveResort = entityCatalog.saveResort;
+export const saveResort = withCatalogInvalidation(entityCatalog.saveResort);
 export const getCruiseSeries = entityCatalog.getCruiseSeries;
-export const saveCruiseSeries = entityCatalog.saveCruiseSeries;
+export const saveCruiseSeries = withCatalogInvalidation(entityCatalog.saveCruiseSeries);
 export const getCruiseSailings = entityCatalog.getCruiseSailings;
-export const saveCruiseSailing = entityCatalog.saveCruiseSailing;
+export const saveCruiseSailing = withCatalogInvalidation(entityCatalog.saveCruiseSailing);
 export const getVenues = entityCatalog.getVenues;
 export const getOrganizations = entityCatalog.getOrganizations;
 export const getOrganizationRelationships = entityCatalog.getOrganizationRelationships;
@@ -379,13 +424,13 @@ export const removeOrganizationMember = async (memberId: string): Promise<void> 
     if (error) throw error;
 };
 
-export const saveVenue = entityCatalog.saveVenue;
-export const deleteVenue = entityCatalog.deleteVenue;
-export const saveOrganization = entityCatalog.saveOrganization;
-export const deleteOrganization = entityCatalog.deleteOrganization;
-export const saveOrganizationVenueRelationship = entityCatalog.saveOrganizationVenueRelationship;
-export const saveOrganizationRelationship = entityCatalog.saveOrganizationRelationship;
-export const deleteOrganizationRelationship = entityCatalog.deleteOrganizationRelationship;
+export const saveVenue = withCatalogInvalidation(entityCatalog.saveVenue);
+export const deleteVenue = withCatalogInvalidation(entityCatalog.deleteVenue);
+export const saveOrganization = withCatalogInvalidation(entityCatalog.saveOrganization);
+export const deleteOrganization = withCatalogInvalidation(entityCatalog.deleteOrganization);
+export const saveOrganizationVenueRelationship = withCatalogInvalidation(entityCatalog.saveOrganizationVenueRelationship);
+export const saveOrganizationRelationship = withCatalogInvalidation(entityCatalog.saveOrganizationRelationship);
+export const deleteOrganizationRelationship = withCatalogInvalidation(entityCatalog.deleteOrganizationRelationship);
 
 export const getPendingSubmissions = async (): Promise<Listing[]> => {
     const listings = await getListings();
@@ -574,6 +619,57 @@ export const rollbackBuildingAsset = async (
     else db.buildingAssets.push(saved.asset);
     if (saved.listing) upsertLocalListing(saved.listing);
     return simulateRequest(saved);
+};
+
+export const getAmbientBuildingMassings = async (venueId: string): Promise<ManualMassingObject[]> => {
+    if (!venueId) return [];
+    if (USE_MOCK && isDevPersistenceEnabled()) {
+        try {
+            const data = await requestAdminJson<ManualMassingObject[]>(
+                `/api/admin/ambient-building-massings?venueId=${encodeURIComponent(venueId)}`,
+                { cache: 'no-store' }
+            );
+            return Array.isArray(data) ? data : [];
+        } catch {
+            return [];
+        }
+    }
+    try {
+        const { data, error } = await supabase
+            .from('venue_ambient_building_massings')
+            .select('objects')
+            .eq('venue_id', venueId)
+            .maybeSingle();
+        if (error || !data) return [];
+        return Array.isArray(data.objects) ? (data.objects as ManualMassingObject[]) : [];
+    } catch {
+        return [];
+    }
+};
+
+export const saveAmbientBuildingMassings = async (
+    venueId: string,
+    objects: ManualMassingObject[],
+): Promise<void> => {
+    if (!venueId) return;
+    if (USE_MOCK && isDevPersistenceEnabled()) {
+        await requestAdminJson('/api/admin/ambient-building-massings/save', {
+            method: 'POST',
+            body: JSON.stringify({ venueId, objects }),
+        });
+        return;
+    }
+    const { error } = await supabase
+        .from('venue_ambient_building_massings')
+        .upsert({
+            venue_id: venueId,
+            version: 1,
+            objects,
+            updated_at: new Date().toISOString(),
+        });
+    if (error) {
+        throw new Error(`Failed to save ambient massings: ${error.message}`);
+    }
 };
 
 

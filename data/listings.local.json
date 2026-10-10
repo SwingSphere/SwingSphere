@@ -549,115 +549,115 @@
     "website": "https://clubjoi.com/",
     "mediaAssets": [
       {
-        "id": "fb27b6ab-f8a8-430a-96bc-ce5618cfe327",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "5d38b0aa-953d-4818-f36f-7518d144d200",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "clubjoi_logo",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T04:37:39.99375+00:00",
-        "updated_at": "2026-07-17T04:37:39.99375+00:00"
-      },
-      {
         "id": "eeec3faf-996b-4365-a305-e34800a988c6",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "18c6e6f7-8c75-460c-4fa6-2eb348bc0700",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
         "alt_text": "chrome_NrX2y1Ta7r-cropped",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-07-29T23:19:13.274068+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-29T23:19:13.274068+00:00",
+        "aspect_mode": "cover",
+        "external_id": "18c6e6f7-8c75-460c-4fa6-2eb348bc0700",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T23:19:13.274068+00:00",
-        "updated_at": "2026-07-29T23:19:13.274068+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "d7e2f948-720d-41c9-8ca9-3253c90f8434",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
         "role": "gallery",
-        "storage_provider": "cloudflare_images",
-        "external_id": "7e7a8cc7-fee8-4343-7e17-93a0b6315e00",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "4:3",
         "alt_text": "chrome_nvUekaqkQv-cropped",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-07-29T23:21:08.665684+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-29T23:21:08.665684+00:00",
+        "aspect_mode": "cover",
+        "external_id": "7e7a8cc7-fee8-4343-7e17-93a0b6315e00",
+        "target_ratio": "4:3",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T23:21:08.665684+00:00",
-        "updated_at": "2026-07-29T23:21:08.665684+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "968e371a-f458-438f-804a-e234d2abb577",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
         "role": "gallery",
-        "storage_provider": "cloudflare_images",
-        "external_id": "a913bef4-1373-460b-946f-0822632c1100",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "4:3",
         "alt_text": "chrome_Ir1kfYEnvE-cropped",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-07-29T23:21:16.388351+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-29T23:21:16.388351+00:00",
+        "aspect_mode": "cover",
+        "external_id": "a913bef4-1373-460b-946f-0822632c1100",
+        "target_ratio": "4:3",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T23:21:16.388351+00:00",
-        "updated_at": "2026-07-29T23:21:16.388351+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "693bc5ad-e6b2-449b-96ae-66ca91541b54",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
         "role": "gallery",
-        "storage_provider": "cloudflare_images",
-        "external_id": "bcfd16fe-e778-479a-ca25-56c8c99f1000",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "4:3",
         "alt_text": "chrome_UAirUmQUF9-cropped",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-07-29T23:21:25.59174+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-29T23:21:25.59174+00:00",
+        "aspect_mode": "cover",
+        "external_id": "bcfd16fe-e778-479a-ca25-56c8c99f1000",
+        "target_ratio": "4:3",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T23:21:25.59174+00:00",
-        "updated_at": "2026-07-29T23:21:25.59174+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "68bd4be8-81b8-48c6-ac19-da64641916bb",
-        "owner_type": "club",
-        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
         "role": "gallery",
-        "storage_provider": "cloudflare_images",
-        "external_id": "e8382e63-7dc6-4fdb-4d0d-2fc465e93600",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "4:3",
         "alt_text": "chrome_4TJ5OleU5i-cropped",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-07-29T23:21:33.707441+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-29T23:21:33.707441+00:00",
+        "aspect_mode": "cover",
+        "external_id": "e8382e63-7dc6-4fdb-4d0d-2fc465e93600",
+        "target_ratio": "4:3",
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "ccb0cdaa-fb4c-4c2e-9a73-55aaca8c09d9",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (2)",
+        "owner_id": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+        "created_at": "2026-09-05T02:49:32.692581+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T23:21:33.707441+00:00",
-        "updated_at": "2026-07-29T23:21:33.707441+00:00"
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T02:49:32.692581+00:00",
+        "aspect_mode": "contain",
+        "external_id": "50701b48-242c-48a0-2c28-35abdc8c3500",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5d38b0aa-953d-4818-f36f-7518d144d200/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/50701b48-242c-48a0-2c28-35abdc8c3500/logosquare",
     "galleryImageUrls": [
       "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7e7a8cc7-fee8-4343-7e17-93a0b6315e00/gallerythumb",
       "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a913bef4-1373-460b-946f-0822632c1100/gallerythumb",
@@ -776,60 +776,60 @@
     "mediaAssets": [
       {
         "id": "82d02bcc-5ed6-4ef3-84c0-10541fa58947",
-        "owner_type": "club",
-        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "af84da31-41f7-4910-0f95-e60f8e3f2f00",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
         "alt_text": "lounge-cropped",
+        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+        "created_at": "2026-07-22T02:25:49.046149+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-22T02:25:49.046149+00:00",
+        "aspect_mode": "cover",
+        "external_id": "af84da31-41f7-4910-0f95-e60f8e3f2f00",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-22T02:25:49.046149+00:00",
-        "updated_at": "2026-07-22T02:25:49.046149+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "50942a1d-414e-40ee-b62e-fdaf9b222150",
-        "owner_type": "club",
-        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
         "role": "gallery",
-        "storage_provider": "cloudflare_images",
-        "external_id": "47c60d65-a4b1-4bfa-e2d6-ebeeeebb6e00",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "4:3",
         "alt_text": "lounge_3-cropped",
+        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+        "created_at": "2026-07-22T02:26:26.680559+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-22T02:26:26.680559+00:00",
+        "aspect_mode": "cover",
+        "external_id": "47c60d65-a4b1-4bfa-e2d6-ebeeeebb6e00",
+        "target_ratio": "4:3",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-22T02:26:26.680559+00:00",
-        "updated_at": "2026-07-22T02:26:26.680559+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "6bf364ac-b7e4-4b22-bb64-8ca4ddb6eac5",
-        "owner_type": "club",
-        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+        "id": "079cbd61-079a-438f-a96d-e9fb7852415d",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "9fefcbd1-9686-43b3-d9c6-fe8435044b00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "hiddenagenda-cropped",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_06_58 PM",
+        "owner_id": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+        "created_at": "2026-09-05T03:07:14.896533+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T03:07:14.896533+00:00",
+        "aspect_mode": "contain",
+        "external_id": "3db274b8-d4dd-41d3-d1e4-a2e4e60cce00",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-30T02:07:27.135853+00:00",
-        "updated_at": "2026-07-30T02:07:27.135853+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/107b4b64-3ee8-4596-fdc3-8e391c90c800/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3db274b8-d4dd-41d3-d1e4-a2e4e60cce00/logosquare"
   },
   {
     "id": "event-1782943939781",
@@ -967,7 +967,45 @@
       "BYOB",
       "Food Served"
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4e5f5cdc-d2b9-425e-64c6-9d6268f5b700/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4e5f5cdc-d2b9-425e-64c6-9d6268f5b700/logosquare",
+    "mediaAssets": [
+      {
+        "id": "a7fd4bea-50d7-4bec-8a90-f0674e22c55a",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "c05a2cab-812f-471d-ad41-a2e8f5303f29-cropped",
+        "owner_id": "a7465fa5-2f8b-4fab-a8d8-c91dd2e357c3",
+        "created_at": "2026-09-28T02:50:25.872118+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-28T02:50:25.872118+00:00",
+        "aspect_mode": "cover",
+        "external_id": "67be4683-8087-455c-17a2-56d27415c300",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "a1f23bae-1b54-4bcb-b5f6-e654f298fa1e",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "438cb3bf-03b7-47a1-b693-9dfc01fbba8c",
+        "owner_id": "a7465fa5-2f8b-4fab-a8d8-c91dd2e357c3",
+        "created_at": "2026-09-28T02:55:10.039967+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-28T02:55:10.039967+00:00",
+        "aspect_mode": "contain",
+        "external_id": "745406ec-5a74-4acb-e2c9-2722a38b0600",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-1782957638814",
@@ -1199,108 +1237,132 @@
     "buildingAssetId": "building-asset-club-1783117266680",
     "mediaAssets": [
       {
-        "id": "a4f94694-463c-47b5-905c-ef9d50af2a58",
-        "owner_type": "club",
-        "owner_id": "6da5166c-f252-4342-a379-bef4150804aa",
-        "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "24bf0cb3-b694-4bc9-331a-ae5c450ccf00",
+        "id": "abe2d7da-19de-463a-91ba-209e6a4fee15",
+        "role": "logo",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "chrome_EmP1VU1djF-cropped",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_24_27 PM",
+        "owner_id": "6da5166c-f252-4342-a379-bef4150804aa",
+        "created_at": "2026-09-05T03:24:34.692921+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T03:24:34.692921+00:00",
+        "aspect_mode": "contain",
+        "external_id": "6628177b-9bf3-4810-3f74-aaaa6f31c900",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-16T23:48:55.794682+00:00",
-        "updated_at": "2026-07-16T23:48:55.794682+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "c163cd3e-6cac-41c2-8f65-77c43bfaeb0a",
-        "owner_type": "club",
-        "owner_id": "6da5166c-f252-4342-a379-bef4150804aa",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "d4c229e1-0762-45ad-7dfd-3cdf72439300",
+        "id": "7ecf5368-eff0-4cd9-b2e7-7d9e025c4c37",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_70vaGdndKI",
+        "alt_text": "ChatGPT Image Sep 13, 2026, 12_35_44 PM-cropped",
+        "owner_id": "6da5166c-f252-4342-a379-bef4150804aa",
+        "created_at": "2026-09-13T19:36:17.151933+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-13T19:36:17.151933+00:00",
+        "aspect_mode": "cover",
+        "external_id": "e77965d2-6feb-4729-1fb1-27899da5ca00",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T07:11:04.22626+00:00",
-        "updated_at": "2026-07-17T07:11:04.22626+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d4c229e1-0762-45ad-7dfd-3cdf72439300/logosquare",
-    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/24bf0cb3-b694-4bc9-331a-ae5c450ccf00/heropage"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6628177b-9bf3-4810-3f74-aaaa6f31c900/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/e77965d2-6feb-4729-1fb1-27899da5ca00/heropage"
   },
   {
     "id": "club-ice-lounge-wichita",
-    "location": "8721 S Broadway, Haysville, Kansas 67060, United States",
+    "name": "Ice Lounge - Wichita",
+    "type": "club",
+    "status": "approved",
     "website": "https://icelounge.net/",
-    "contactEmail": "Infamousentertainment@outlook.com",
     "geopoint": {
-      "latitude": 37.478,
-      "longitude": -97.366,
       "address": {
-        "addressLine1": "8721 S Broadway",
         "city": "Haysville",
         "region": "Kansas",
-        "postalCode": "67060",
         "country": "United States",
-        "countrySlug": "us",
-        "admin1Slug": "ks",
         "citySlug": "salem-township",
-        "isCityState": false
-      }
+        "admin1Slug": "ks",
+        "postalCode": "67060",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "8721 S Broadway"
+      },
+      "latitude": 37.536384943826455,
+      "longitude": -97.33434498310089
     },
-    "locationMeta": {
-      "status": "validated",
-      "confidence": 0.9,
-      "normalizedAddress": "8721 S Broadway, Haysville, Kansas 67060, United States",
-      "geocoderSource": "official_venue_page",
-      "warnings": [],
-      "validatedAt": "2026-07-16T00:00:00.000Z"
-    },
-    "galleryImageUrls": [],
-    "postedByUserId": "admin-import",
-    "status": "approved",
-    "type": "club",
-    "name": "Ice Lounge Wichita",
-    "description_short": "Ice Lounge Wichita is an on-premises lifestyle club operated by Ice Lounge / Infamous Entertainment, featuring live DJs, a dance floor, patio space, themed parties, snacks, BYOB service, and consent-focused community events.",
-    "attendancePolicy": "mixed_open",
-    "entryRequirements": [
-      "screening_approval_required"
-    ],
+    "location": "8721 S Broadway, Haysville, Kansas 67060, United States",
     "schedule": [
       {
         "day": "Friday",
-        "isClosed": false,
         "open": "20:00",
         "close": "02:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       },
       {
         "day": "Saturday",
-        "isClosed": false,
         "open": "20:00",
         "close": "02:00",
         "rules": [
           "Single Women Welcome",
           "Single Men Welcome",
           "Newbie Friendly"
-        ]
+        ],
+        "isClosed": false
       }
     ],
-    "specialScheduleNotes": "Hours and admission vary by event. Confirm the current calendar and ticket details on icelounge.net before visiting.",
+    "createdAt": "2026-08-09T07:32:22.24435+00:00",
+    "updatedAt": "2026-10-07T04:12:14.259546+00:00",
+    "clubBrandId": "brand-ice-lounge",
+    "mediaAssets": [
+      {
+        "id": "85119812-a15f-430a-9448-0bbd4e55d78f",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_38_00 PM (1)",
+        "owner_id": "1ecd6df8-85fc-4dee-af9f-d0e0aafacc36",
+        "created_at": "2026-09-05T03:38:17.667925+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T03:38:17.667925+00:00",
+        "aspect_mode": "contain",
+        "external_id": "d95f91af-8701-4b5b-f3e6-e37ebac6fe00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "Infamousentertainment@outlook.com",
+    "locationMeta": {
+      "status": "validated",
+      "warnings": [
+        "low-geocode-confidence"
+      ],
+      "confidence": 0.98,
+      "validatedAt": "2026-10-07T04:11:52.408Z",
+      "geocoderLabel": "8721, South Broadway Avenue, Wego-Waco, Haysville, Salem Township, Sedgwick County, Kansas, 67060, United States",
+      "geocoderSource": "nominatim",
+      "normalizedAddress": "8721, South Broadway Avenue, Haysville, Kansas, 67060, United States",
+      "coordinatePrecision": "address"
+    },
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d95f91af-8701-4b5b-f3e6-e37ebac6fe00/logosquare",
+    "postedByUserId": "admin-import",
+    "buildingAssetId": "building-asset-club-ice-lounge-wichita",
+    "attendancePolicy": "mixed_open",
+    "galleryImageUrls": [],
     "generalAmenities": [
       "Dance Floor",
       "Live DJ",
@@ -1311,27 +1373,11 @@
       "BDSM Equipment",
       "Consent-Focused"
     ],
-    "mediaAssets": [
-      {
-        "id": "f6d5e803-535c-4658-b115-0f4b1f3cf1bf",
-        "owner_type": "club",
-        "owner_id": "1ecd6df8-85fc-4dee-af9f-d0e0aafacc36",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "9346805b-2def-4a63-96ba-771f0ff9ed00",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "Icelounge_wks",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T05:23:38.07432+00:00",
-        "updated_at": "2026-07-17T05:23:38.07432+00:00"
-      }
+    "description_short": "Ice Lounge Wichita is an on-premises lifestyle club operated by Ice Lounge / Infamous Entertainment, featuring live DJs, a dance floor, patio space, themed parties, snacks, BYOB service, and consent-focused community events.",
+    "entryRequirements": [
+      "screening_approval_required"
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9346805b-2def-4a63-96ba-771f0ff9ed00/logosquare"
+    "specialScheduleNotes": "Hours and admission vary by event. Confirm the current calendar and ticket details on icelounge.net before visiting."
   },
   {
     "id": "club-ice-lounge-chicago",
@@ -1556,25 +1602,25 @@
     ],
     "mediaAssets": [
       {
-        "id": "be2e17bc-b126-4c99-bbd9-65c49a2cc904",
-        "owner_type": "club",
-        "owner_id": "d4f800a7-dd9c-41ed-adb3-f6ef802f3015",
+        "id": "9988f02c-fad9-4001-add6-9f9cf9dc5a08",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "bde95eb0-ff28-453f-137d-08eced7dbc00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "Icelounge",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_38_00 PM (3)",
+        "owner_id": "d4f800a7-dd9c-41ed-adb3-f6ef802f3015",
+        "created_at": "2026-09-05T03:38:11.786775+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T03:38:11.786775+00:00",
+        "aspect_mode": "contain",
+        "external_id": "419a4944-2b50-47a5-8ef0-bf98003cda00",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T11:05:38.874431+00:00",
-        "updated_at": "2026-07-17T11:05:38.874431+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bde95eb0-ff28-453f-137d-08eced7dbc00/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/419a4944-2b50-47a5-8ef0-bf98003cda00/logosquare"
   },
   {
     "id": "club-eden-dfw",
@@ -1680,25 +1726,25 @@
     ],
     "mediaAssets": [
       {
-        "id": "8939c601-3d22-4332-aa01-81ca81cb0003",
-        "owner_type": "club",
-        "owner_id": "752b93e4-3009-4f4e-a6f1-fc1c551ada26",
+        "id": "9840d0aa-e6f6-4761-81ba-9901a4846995",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "fbaf428d-e2fe-4cc2-0e6d-901adbdfb300",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "clubeden",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (1)",
+        "owner_id": "752b93e4-3009-4f4e-a6f1-fc1c551ada26",
+        "created_at": "2026-09-02T22:33:44.653798+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-02T22:33:44.653798+00:00",
+        "aspect_mode": "contain",
+        "external_id": "6b293a77-629d-403d-0b43-81a118413800",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T11:07:46.415518+00:00",
-        "updated_at": "2026-07-17T11:07:46.415518+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fbaf428d-e2fe-4cc2-0e6d-901adbdfb300/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6b293a77-629d-403d-0b43-81a118413800/logosquare",
     "buildingAssetId": "building-asset-club-eden-dfw"
   },
   {
@@ -1793,25 +1839,25 @@
     ],
     "mediaAssets": [
       {
-        "id": "076e84ee-bd64-4925-8d28-4693789a3546",
-        "owner_type": "club",
-        "owner_id": "3507cc6c-56e7-41ee-aefe-2174cacbb9d6",
+        "id": "6f50886c-8cfe-4807-be66-bbea651cd79d",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "ccbfa9ad-9b02-4331-1e2e-b7c18aa18b00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "clubeden",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (3)",
+        "owner_id": "3507cc6c-56e7-41ee-aefe-2174cacbb9d6",
+        "created_at": "2026-09-02T22:34:06.857015+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-02T22:34:06.857015+00:00",
+        "aspect_mode": "contain",
+        "external_id": "9dbd3a62-e072-4774-ff03-a670837f8200",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T11:08:17.77904+00:00",
-        "updated_at": "2026-07-17T11:08:17.77904+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ccbfa9ad-9b02-4331-1e2e-b7c18aa18b00/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9dbd3a62-e072-4774-ff03-a670837f8200/logosquare",
     "buildingAssetId": "building-asset-club-eden-san-antonio"
   },
   {
@@ -1894,25 +1940,25 @@
     ],
     "mediaAssets": [
       {
-        "id": "5579253b-49db-4a89-9d9f-d4e47a005bdd",
-        "owner_type": "club",
-        "owner_id": "54f1d061-59f9-4663-a9fc-ebc9849f116b",
+        "id": "9c36e4ab-c6f3-4f57-b970-ae98ffc72a1a",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "01a9777d-dbc8-4cd2-1a0c-cc37aa1d9f00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "clubeden",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (2)",
+        "owner_id": "54f1d061-59f9-4663-a9fc-ebc9849f116b",
+        "created_at": "2026-09-02T22:33:56.841882+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-02T22:33:56.841882+00:00",
+        "aspect_mode": "contain",
+        "external_id": "663f0dcf-dbfe-4d86-6a13-f0d6db68d300",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T11:08:03.16459+00:00",
-        "updated_at": "2026-07-17T11:08:03.16459+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/01a9777d-dbc8-4cd2-1a0c-cc37aa1d9f00/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/663f0dcf-dbfe-4d86-6a13-f0d6db68d300/logosquare",
     "buildingAssetId": "building-asset-club-eden-oklahoma-city"
   },
   {
@@ -2015,7 +2061,47 @@
       "Non-Smoking",
       "Private Rooms"
     ],
-    "buildingAssetId": "building-asset-club-colette-dallas"
+    "buildingAssetId": "building-asset-club-colette-dallas",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/b6455dc0-b751-4fc9-15ba-1015fd813c00/heropage",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/19f436cb-39ba-4cfb-04b5-c1ef680a1c00/logosquare",
+    "mediaAssets": [
+      {
+        "id": "a916f392-cd8c-4428-a219-b1699aec215f",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "colette",
+        "owner_id": "97439bf8-9610-43b2-a18b-9260fed8493a",
+        "created_at": "2026-09-19T21:50:40.866659+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-19T21:50:40.866659+00:00",
+        "aspect_mode": "contain",
+        "external_id": "19f436cb-39ba-4cfb-04b5-c1ef680a1c00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "288544ea-5700-427b-bffe-0b38584f34b4",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "colette_banner-cropped",
+        "owner_id": "97439bf8-9610-43b2-a18b-9260fed8493a",
+        "created_at": "2026-09-19T21:51:13.438867+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-19T21:51:13.438867+00:00",
+        "aspect_mode": "cover",
+        "external_id": "b6455dc0-b751-4fc9-15ba-1015fd813c00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-colette-austin",
@@ -2243,25 +2329,43 @@
     ],
     "mediaAssets": [
       {
-        "id": "3ec94d29-d9f1-4ce0-823a-bdbe116a3461",
-        "owner_type": "club",
-        "owner_id": "18a937bf-06d6-43d1-ab09-cc378d3deae9",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "d45818fb-0862-469a-1a2a-cee7df966f00",
+        "id": "980a416b-8e57-443f-ab67-38cae5ad4d30",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "colette",
+        "alt_text": "collethouston-cropped",
+        "owner_id": "18a937bf-06d6-43d1-ab09-cc378d3deae9",
+        "created_at": "2026-08-17T02:43:54.048797+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-08-17T02:43:54.048797+00:00",
+        "aspect_mode": "cover",
+        "external_id": "97e327da-cffa-467c-eb5b-c9051d2a5d00",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "80db227d-b2aa-44b0-b07d-e95ee773ae83",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_27_55 PM (2)",
+        "owner_id": "18a937bf-06d6-43d1-ab09-cc378d3deae9",
+        "created_at": "2026-09-02T22:28:58.238208+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T03:43:45.633615+00:00",
-        "updated_at": "2026-07-29T03:43:45.633615+00:00"
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T22:28:58.238208+00:00",
+        "aspect_mode": "contain",
+        "external_id": "4a3b2b66-ab74-48be-1d2b-5a3e4bf63200",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d45818fb-0862-469a-1a2a-cee7df966f00/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4a3b2b66-ab74-48be-1d2b-5a3e4bf63200/logosquare",
     "buildingAssetId": "building-asset-club-colette-houston"
   },
   {
@@ -2362,7 +2466,47 @@
       "Dress Code",
       "Non-Smoking"
     ],
-    "buildingAssetId": "building-asset-club-colette-new-orleans"
+    "buildingAssetId": "building-asset-club-colette-new-orleans",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/63902e94-8154-4426-d052-767d5b846700/heropage",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d082c559-8c19-44ff-e7b9-a4abb3f93d00/logosquare",
+    "mediaAssets": [
+      {
+        "id": "d63c9ad2-b539-46e7-aef0-d7ea748d1c77",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_27_56 PM (3)",
+        "owner_id": "3d79d1bc-b8ad-4bfe-a2dc-be049c31cd26",
+        "created_at": "2026-09-02T22:29:08.883271+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T22:29:08.883271+00:00",
+        "aspect_mode": "contain",
+        "external_id": "d082c559-8c19-44ff-e7b9-a4abb3f93d00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "c4f9f91e-bbe4-4881-b250-fb814caa97ee",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "94cc1e79-f092-4827-add2-152a2fef14ac-cropped",
+        "owner_id": "3d79d1bc-b8ad-4bfe-a2dc-be049c31cd26",
+        "created_at": "2026-09-08T05:16:03.147765+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T05:16:03.147765+00:00",
+        "aspect_mode": "cover",
+        "external_id": "63902e94-8154-4426-d052-767d5b846700",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-colette-san-antonio",
@@ -2450,7 +2594,46 @@
       "Dress Code",
       "Non-Smoking"
     ],
-    "buildingAssetId": "building-asset-club-colette-san-antonio"
+    "buildingAssetId": "building-asset-club-colette-san-antonio",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/18aaf042-d4dd-49f2-1284-531a1a957900/logosquare",
+    "mediaAssets": [
+      {
+        "id": "995f1e0f-5b66-4176-98e4-932de43df34a",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "colette_banner-cropped",
+        "owner_id": "994318c6-0add-4870-a2fd-384ee0dff458",
+        "created_at": "2026-08-11T05:18:32.30498+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-08-11T05:18:32.30498+00:00",
+        "aspect_mode": "cover",
+        "external_id": "c937b497-a809-4f48-e8f5-0a8d2ae6f500",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "969c2cb8-058e-4e3d-ac54-eb43b61c7427",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_27_56 PM (4)",
+        "owner_id": "994318c6-0add-4870-a2fd-384ee0dff458",
+        "created_at": "2026-09-02T22:29:20.697001+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T22:29:20.697001+00:00",
+        "aspect_mode": "contain",
+        "external_id": "18aaf042-d4dd-49f2-1284-531a1a957900",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-voluptuous-tokyo",
@@ -2579,43 +2762,43 @@
     ],
     "mediaAssets": [
       {
-        "id": "194aa8ad-b389-464d-81de-3ab74b1adb5e",
-        "owner_type": "club",
-        "owner_id": "5966a0ef-1499-4f19-af4b-df873f877951",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "017b5e50-6f6f-4466-6225-4eba7260c000",
+        "id": "969bd529-4d74-4a3e-bc33-08825d7a876c",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "voluptuous",
+        "alt_text": "0e72356a-aefa-41c1-b5f3-88098be73fce (1)-cropped",
+        "owner_id": "5966a0ef-1499-4f19-af4b-df873f877951",
+        "created_at": "2026-07-30T01:54:30.36147+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-30T01:54:30.36147+00:00",
+        "aspect_mode": "cover",
+        "external_id": "0d278b0c-bb9d-44b0-5c7c-9bbf08586700",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-17T06:07:16.27843+00:00",
-        "updated_at": "2026-07-17T06:07:16.27843+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "969bd529-4d74-4a3e-bc33-08825d7a876c",
-        "owner_type": "club",
-        "owner_id": "5966a0ef-1499-4f19-af4b-df873f877951",
-        "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "0d278b0c-bb9d-44b0-5c7c-9bbf08586700",
+        "id": "68f9a9ab-b109-45f3-ba40-938398f316c8",
+        "role": "logo",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "0e72356a-aefa-41c1-b5f3-88098be73fce (1)-cropped",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (3)",
+        "owner_id": "5966a0ef-1499-4f19-af4b-df873f877951",
+        "created_at": "2026-09-05T02:49:58.190137+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T02:49:58.190137+00:00",
+        "aspect_mode": "contain",
+        "external_id": "80089f4a-a0b9-4a81-4e36-0c3abf097900",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-30T01:54:30.36147+00:00",
-        "updated_at": "2026-07-30T01:54:30.36147+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/017b5e50-6f6f-4466-6225-4eba7260c000/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/80089f4a-a0b9-4a81-4e36-0c3abf097900/logosquare"
   },
   {
     "id": "club-2a2-rio-de-janeiro",
@@ -2916,12 +3099,50 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "logoImageUrl": "https://www.fetishhavensa.co.za/wp-content/uploads/2021/12/FHlogo1.png",
-    "headerImageUrl": "https://www.fetishhavensa.co.za/wp-content/uploads/2026/08/Friday.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/62347a83-cf3a-4404-e0b6-11918ee85a00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3f0a475f-2151-480b-8b5b-3de827173200/heropage",
     "galleryImageUrls": [
       "https://www.fetishhavensa.co.za/wp-content/uploads/2026/08/IMG-20260815-WA0000.jpg"
     ],
-    "buildingAssetId": "building-asset-club-fetish-haven-sa-johannesburg"
+    "buildingAssetId": "building-asset-club-fetish-haven-sa-johannesburg",
+    "mediaAssets": [
+      {
+        "id": "db3ba818-7ad8-4a72-bef5-e108dd8ac19c",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "108396ed-cb6c-44a9-ade2-647e93122b47-cropped",
+        "owner_id": "5282fa58-6dde-460a-a32c-45908f07fe02",
+        "created_at": "2026-09-09T08:44:56.541654+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-09T08:44:56.541654+00:00",
+        "aspect_mode": "cover",
+        "external_id": "3f0a475f-2151-480b-8b5b-3de827173200",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "9adbfde1-da31-4e83-ad45-a118a7c95eb3",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 06_03_11 PM",
+        "owner_id": "5282fa58-6dde-460a-a32c-45908f07fe02",
+        "created_at": "2026-09-25T01:03:21.761447+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:03:21.761447+00:00",
+        "aspect_mode": "contain",
+        "external_id": "62347a83-cf3a-4404-e0b6-11918ee85a00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-kiwiklub-durban",
@@ -2986,25 +3207,25 @@
     ],
     "mediaAssets": [
       {
-        "id": "77f433a8-2c28-464a-ac64-8c4b63d2ff93",
-        "owner_type": "club",
-        "owner_id": "77cb631f-94f5-4015-a972-57374446ca8d",
+        "id": "988b963f-b776-47c8-8a2e-3f35fc4859ce",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "ce254355-b64e-4404-6ef1-33d25b201000",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "kiwi_logo_small",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_57_54 PM",
+        "owner_id": "77cb631f-94f5-4015-a972-57374446ca8d",
+        "created_at": "2026-09-05T02:58:08.182865+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T02:58:08.182865+00:00",
+        "aspect_mode": "contain",
+        "external_id": "27181551-cd4d-4a60-414a-9d398aac5900",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-24T23:30:03.207783+00:00",
-        "updated_at": "2026-07-24T23:30:03.207783+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ce254355-b64e-4404-6ef1-33d25b201000/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/27181551-cd4d-4a60-414a-9d398aac5900/logosquare",
     "buildingAssetId": "building-asset-club-kiwiklub-durban"
   },
   {
@@ -3081,44 +3302,45 @@
     "attendancePolicy": "varies_by_event",
     "mediaAssets": [
       {
-        "id": "67144d40-26b5-4016-955d-665d4d8ac0ff",
-        "owner_type": "club",
-        "owner_id": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+        "id": "4d566dd7-4de6-4772-9a2f-b233d4dd1364",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "6f87a14f-7b55-43fa-8816-3f0294613600",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_tsYNjeyBzS",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 06_21_20 PM",
+        "owner_id": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+        "created_at": "2026-09-25T01:21:29.359759+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-25T01:21:29.359759+00:00",
+        "aspect_mode": "contain",
+        "external_id": "081d6d77-c567-46b9-7074-6455a6b1e400",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-22T02:59:27.342664+00:00",
-        "updated_at": "2026-07-22T02:59:27.342664+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "40705ed3-b3e9-429d-8203-320db4ded04c",
-        "owner_type": "club",
-        "owner_id": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+        "id": "b9121b4e-6bdb-4508-887a-d306e50db6d2",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "eab44d66-1e29-4f64-136a-9466dfc28900",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "chrome_QIJgqGDJq9-cropped",
+        "alt_text": "a763e36f-3ebf-487f-b1c9-bbeea0b6b4ec-cropped",
+        "owner_id": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+        "created_at": "2026-09-25T01:24:24.469077+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-25T01:24:24.469077+00:00",
+        "aspect_mode": "cover",
+        "external_id": "f2357991-5c27-452b-0e22-e7f46d267b00",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-30T02:06:34.453075+00:00",
-        "updated_at": "2026-07-30T02:06:34.453075+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f87a14f-7b55-43fa-8816-3f0294613600/logosquare",
-    "buildingAssetId": "building-asset-club-dungeon-tel-aviv"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/081d6d77-c567-46b9-7074-6455a6b1e400/logosquare",
+    "buildingAssetId": "building-asset-club-dungeon-tel-aviv",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f2357991-5c27-452b-0e22-e7f46d267b00/heropage"
   },
   {
     "id": "event-little-black-dress-santa-cruz-2026-08-29",
@@ -3354,28 +3576,46 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "headerImageUrl": "https://www.taken-club.fr/fr/banniere/2025/001.avif",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9701b8b2-c54b-4314-244a-f3d30669f400/heropage",
     "mediaAssets": [
       {
-        "id": "2b92bf01-ff6f-461d-9024-10daa51f21f7",
-        "owner_type": "club",
-        "owner_id": "f05ad989-7525-41c3-a911-c9b1871b3fab",
+        "id": "02a42a8c-7e2c-424d-b70f-fa8ff83e2bae",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "6800a11e-4819-45e6-0258-60c519a12900",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "taken club fr",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 09_58_40 PM",
+        "owner_id": "f05ad989-7525-41c3-a911-c9b1871b3fab",
+        "created_at": "2026-09-20T04:59:13.083441+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-20T04:59:13.083441+00:00",
+        "aspect_mode": "contain",
+        "external_id": "3109f3c4-d6e2-4371-7388-de833f606c00",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "89083b3e-5794-4cbd-ae50-c1e67dbf474f",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 10_03_39 PM-cropped",
+        "owner_id": "f05ad989-7525-41c3-a911-c9b1871b3fab",
+        "created_at": "2026-09-20T05:03:52.324506+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-22T03:43:23.06484+00:00",
-        "updated_at": "2026-07-22T03:43:23.06484+00:00"
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T05:03:52.324506+00:00",
+        "aspect_mode": "cover",
+        "external_id": "9701b8b2-c54b-4314-244a-f3d30669f400",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6800a11e-4819-45e6-0258-60c519a12900/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3109f3c4-d6e2-4371-7388-de833f606c00/logosquare",
     "buildingAssetId": "building-asset-club-taken-paris"
   },
   {
@@ -3462,9 +3702,47 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://blackdiamondclub.net/wp-content/uploads/2022/08/black-diamond-logo-hero-no-line.png",
-    "headerImageUrl": "https://blackdiamondclub.net/wp-content/uploads/2022/09/slika-1.jpeg",
-    "buildingAssetId": "building-asset-club-black-diamond-belgrade"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3e1ff419-2911-4bd5-c33d-e4f2be778400/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/30bac3a0-c4bd-4219-b640-b763f1873100/heropage",
+    "buildingAssetId": "building-asset-club-black-diamond-belgrade",
+    "mediaAssets": [
+      {
+        "id": "40681238-2700-4780-9d9a-93330dce6948",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "be3acb16-1024-4238-bd5a-60c1a0d41d36",
+        "owner_id": "61dc774b-844b-42e1-a92c-2173e1b1cae9",
+        "created_at": "2026-09-25T01:10:41.650244+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:10:41.650244+00:00",
+        "aspect_mode": "contain",
+        "external_id": "3e1ff419-2911-4bd5-c33d-e4f2be778400",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "ea2813bd-0f11-4c5e-8799-4d04704b1e76",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "d3fbc08d-6803-4e2e-8f39-aa011f60ffc2-cropped",
+        "owner_id": "61dc774b-844b-42e1-a92c-2173e1b1cae9",
+        "created_at": "2026-09-25T01:33:52.575336+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:33:52.575336+00:00",
+        "aspect_mode": "cover",
+        "external_id": "30bac3a0-c4bd-4219-b640-b763f1873100",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-sweet-buenos-aires",
@@ -3544,9 +3822,47 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://sweetsw.com/wp-content/uploads/2019/09/djo-logo-2.webp",
-    "headerImageUrl": "https://sweetsw.com/wp-content/uploads/2026/07/Flyer-24-07-VIERNES-LUJURIA-768x1365.jpg",
-    "buildingAssetId": "building-asset-club-sweet-buenos-aires"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/339972a9-211d-419a-f8c1-14d947181700/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fe3e566c-0ae0-4fca-185e-e5b87b293200/heropage",
+    "buildingAssetId": "building-asset-club-sweet-buenos-aires",
+    "mediaAssets": [
+      {
+        "id": "94077510-e182-4d89-935e-54cd569dbb67",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_23_48 PM (1)",
+        "owner_id": "c0a22456-0090-40cc-abeb-7f3ee526ab34",
+        "created_at": "2026-09-20T03:23:58.18281+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:23:58.18281+00:00",
+        "aspect_mode": "contain",
+        "external_id": "339972a9-211d-419a-f8c1-14d947181700",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "d542c5c8-92b1-4d7b-81cf-409b3c07567c",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_23_49 PM (2)-cropped",
+        "owner_id": "c0a22456-0090-40cc-abeb-7f3ee526ab34",
+        "created_at": "2026-09-20T03:24:12.458181+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:24:12.458181+00:00",
+        "aspect_mode": "cover",
+        "external_id": "fe3e566c-0ae0-4fca-185e-e5b87b293200",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-dalliance-columbia",
@@ -3624,9 +3940,47 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://images.squarespace-cdn.com/content/v1/5c3e907755b02cbca8aff6bb/1548732493796-4LBHANROOZ3NXXZD9U3G/Dalliance+Banner.png",
-    "headerImageUrl": "https://images.squarespace-cdn.com/content/v1/5c3e907755b02cbca8aff6bb/1547609944421-FS0A9FD8TW56W6PJ88I4/sls_bannera_2b.jpg",
-    "buildingAssetId": "building-asset-club-dalliance-columbia"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8d7e1b78-d459-457a-6d8b-251b1d784f00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2e1c12d6-f084-4898-94d8-687e5e559300/heropage",
+    "buildingAssetId": "building-asset-club-dalliance-columbia",
+    "mediaAssets": [
+      {
+        "id": "76e69eeb-e5fa-41a2-ada9-9be4c621b0ae",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_09_54 PM",
+        "owner_id": "88eaa044-266c-4abe-aac5-0e6cdf890226",
+        "created_at": "2026-09-05T03:10:00.908481+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T03:10:00.908481+00:00",
+        "aspect_mode": "contain",
+        "external_id": "8d7e1b78-d459-457a-6d8b-251b1d784f00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "d364bf7b-d47c-422c-a368-3d5f9cb8a5e0",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "7920c42e-78fe-45a4-b166-3bf15e195093-cropped",
+        "owner_id": "88eaa044-266c-4abe-aac5-0e6cdf890226",
+        "created_at": "2026-09-08T05:45:16.252219+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T05:45:16.252219+00:00",
+        "aspect_mode": "cover",
+        "external_id": "2e1c12d6-f084-4898-94d8-687e5e559300",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-zcretclub-lima",
@@ -3894,9 +4248,47 @@
       "LGBTQ+ Respect"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://static.wixstatic.com/media/5ae087_3b47e08e41604d2ca9f5caa627b082fc%7Emv2.png",
-    "headerImageUrl": "https://static.wixstatic.com/media/5ae087_3d5a0d8d7d92448ea8154c3713cd50c4~mv2.jpg",
-    "buildingAssetId": "building-asset-club-lorage-montreal"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/53a1cbd8-5e51-4e8b-a403-d494044a3a00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4e2d2755-5f74-4168-da04-858559e63300/heropage",
+    "buildingAssetId": "building-asset-club-lorage-montreal",
+    "mediaAssets": [
+      {
+        "id": "aad00322-d859-4a0f-8e92-fdb529e87a20",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "2af755f3-f40a-4573-ad45-6b039e005c39-cropped",
+        "owner_id": "549873b9-84a7-41cb-a0a6-a9513c3b0bc3",
+        "created_at": "2026-09-09T08:53:26.464295+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-09T08:53:26.464295+00:00",
+        "aspect_mode": "cover",
+        "external_id": "4e2d2755-5f74-4168-da04-858559e63300",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "dd826b57-1ce2-4e15-bceb-13c52a72ca28",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "a1ea62e5-30ba-4f99-9e7c-5a0c52eef892",
+        "owner_id": "549873b9-84a7-41cb-a0a6-a9513c3b0bc3",
+        "created_at": "2026-09-25T01:11:05.219551+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:11:05.219551+00:00",
+        "aspect_mode": "contain",
+        "external_id": "53a1cbd8-5e51-4e8b-a403-d494044a3a00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-the-69-las-vegas",
@@ -4212,11 +4604,31 @@
       "advance_ticket_required",
       "valid_id_required"
     ],
-    "logoImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/1601824/3fba0c28-9f60-4715-a482-35c5caedaeb1/original.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/b29ed32b-de39-4f3b-6871-130567fcfc00/logosquare",
     "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/2291118/c320b83a-4eaf-4dd2-92db-b3391e6b6989/original.png",
     "galleryImageUrls": [
       "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/2291119/222c70cb-e07c-4621-a1d7-47d95b412fb9/original.png",
       "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/2291117/ddd09c63-6f88-4833-aef4-9b7554a16315/original.png"
+    ],
+    "mediaAssets": [
+      {
+        "id": "1ec354f5-1971-4b1b-8706-2cef17b78299",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "52885457-723e-4383-9933-428b09797ed8",
+        "owner_id": "0ab5ecab-910e-4f65-ab5c-04837f2575dd",
+        "created_at": "2026-09-25T01:11:39.88653+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:11:39.88653+00:00",
+        "aspect_mode": "contain",
+        "external_id": "b29ed32b-de39-4f3b-6871-130567fcfc00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
     ]
   },
   {
@@ -4318,43 +4730,43 @@
     "attendancePolicy": "varies_by_night",
     "mediaAssets": [
       {
-        "id": "3f493957-d2fd-4017-a5ff-0e563b786ef0",
-        "owner_type": "club",
-        "owner_id": "0b55c2ac-d307-40e2-a081-b62432f1999a",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "8f1589cd-1db2-4265-2b97-9723a8d2e500",
+        "id": "c4ce7631-df16-426f-b87a-5afae6b048c7",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "logo-ins-cropped",
+        "alt_text": "chrome_dAIn6LUAX6-cropped",
+        "owner_id": "0b55c2ac-d307-40e2-a081-b62432f1999a",
+        "created_at": "2026-07-30T01:23:49.227135+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-07-30T01:23:49.227135+00:00",
+        "aspect_mode": "cover",
+        "external_id": "f6689383-90fc-4ba1-d1c0-42fe97d53000",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-30T01:22:46.422032+00:00",
-        "updated_at": "2026-07-30T01:22:46.422032+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "c4ce7631-df16-426f-b87a-5afae6b048c7",
-        "owner_type": "club",
-        "owner_id": "0b55c2ac-d307-40e2-a081-b62432f1999a",
-        "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "f6689383-90fc-4ba1-d1c0-42fe97d53000",
+        "id": "6dac5560-98e9-4522-b50b-18438fc12de9",
+        "role": "logo",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "chrome_dAIn6LUAX6-cropped",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 03_40_29 PM",
+        "owner_id": "0b55c2ac-d307-40e2-a081-b62432f1999a",
+        "created_at": "2026-09-02T22:40:45.770947+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-02T22:40:45.770947+00:00",
+        "aspect_mode": "contain",
+        "external_id": "5dbaa725-0fd7-4f22-9166-4e0b257b8500",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-30T01:23:49.227135+00:00",
-        "updated_at": "2026-07-30T01:23:49.227135+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/13be0d6a-4304-4f17-eb36-05591a3a9000/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5dbaa725-0fd7-4f22-9166-4e0b257b8500/logosquare",
     "buildingAssetId": "building-asset-club-insolitam-spa-bogota"
   },
   {
@@ -4417,7 +4829,7 @@
       "normalizedAddress": "47 Blaauwberg Road, Table View, Cape Town, 7441, South Africa",
       "coordinatePrecision": "poi"
     },
-    "logoImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/08/Logo-200-png.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7de7e086-ef6a-4d3f-b863-51ca1c0b6700/logosquare",
     "headerImageUrl": "https://lizaslounge.com/wp-content/uploads/2022/10/BG0.jpeg",
     "postedByUserId": "user1",
     "attendancePolicy": "varies_by_night",
@@ -4445,7 +4857,27 @@
       "Consent-Focused"
     ],
     "description_short": "A permanent lifestyle club in Table View, Cape Town, offering weekly themed parties, social spaces, a dance floor, cash bar, jacuzzi, and a variety of private and open play rooms.",
-    "buildingAssetId": "building-asset-club-lizas-lounge-cape-town"
+    "buildingAssetId": "building-asset-club-lizas-lounge-cape-town",
+    "mediaAssets": [
+      {
+        "id": "f7abcf7e-169f-4657-b3e7-aa5d2cc9e7fd",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "c9c42abd-9a01-4c38-af93-cc865e97d003",
+        "owner_id": "463246bb-dbf9-4f8d-a6ea-bd03b8db0815",
+        "created_at": "2026-09-25T01:12:25.455462+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:12:25.455462+00:00",
+        "aspect_mode": "contain",
+        "external_id": "7de7e086-ef6a-4d3f-b863-51ca1c0b6700",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-coliseum-mexico-city",
@@ -4540,8 +4972,47 @@
       "Consent-Focused"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://coliseum.com.mx/sw/wp-content/uploads/2024/08/Coliseum-White-2.png",
-    "buildingAssetId": "building-asset-club-coliseum-mexico-city"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/1e83bf5c-4ddd-4c95-a7c9-8ef6a17bec00/logosquare",
+    "buildingAssetId": "building-asset-club-coliseum-mexico-city",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4ae0c453-c192-4152-4585-401386932100/heropage",
+    "mediaAssets": [
+      {
+        "id": "986a5f11-1ecb-4fe8-9b41-cbf86205b7f7",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 06_59_26 PM-cropped",
+        "owner_id": "259cbfdf-a039-41ed-a78f-72379ea12c45",
+        "created_at": "2026-09-23T02:00:22.637878+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:00:22.637878+00:00",
+        "aspect_mode": "cover",
+        "external_id": "4ae0c453-c192-4152-4585-401386932100",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "f6aef847-7e17-4771-a694-d615fa56ab90",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 07_04_34 PM",
+        "owner_id": "259cbfdf-a039-41ed-a78f-72379ea12c45",
+        "created_at": "2026-09-23T02:04:43.979819+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T02:04:43.979819+00:00",
+        "aspect_mode": "contain",
+        "external_id": "1e83bf5c-4ddd-4c95-a7c9-8ef6a17bec00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-privata-portland",
@@ -4853,13 +5324,33 @@
       "members_only",
       "valid_id_required"
     ],
-    "logoImageUrl": "https://oasisaqualounge.com/wp-content/uploads/2013/12/Oasis-logo-on-white-bitmap-300x172.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f8c758a8-1953-4851-4726-b3fda3854800/logosquare",
     "headerImageUrl": "https://oasisaqualounge.com/wp-content/uploads/2020/09/pool.jpg",
     "galleryImageUrls": [
       "https://oasisaqualounge.com/wp-content/uploads/2020/09/drinks.jpg",
       "https://oasisaqualounge.com/wp-content/uploads/2022/05/sex-in-the-pool-cocktail-scaled.jpg"
     ],
-    "buildingAssetId": "building-asset-club-oasis-aqualounge-toronto"
+    "buildingAssetId": "building-asset-club-oasis-aqualounge-toronto",
+    "mediaAssets": [
+      {
+        "id": "7dd72796-7092-4888-88e3-05a137ae10ca",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "7cb79628-19dc-4273-9316-2af90f69302b",
+        "owner_id": "ec3f768e-c9fa-4d40-a8ec-9f16f0540ba8",
+        "created_at": "2026-09-25T01:14:31.377084+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:14:31.377084+00:00",
+        "aspect_mode": "contain",
+        "external_id": "f8c758a8-1953-4851-4726-b3fda3854800",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-trapeze-atlanta",
@@ -4986,7 +5477,7 @@
       "nightly_fee_required",
       "dress_code_required"
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6cb33a09-db47-43f4-5b5c-b832d8eb6b00/logosquare",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/afd5c06d-def3-4277-ae98-6c2ad53f6900/logosquare",
     "headerImageUrl": "https://trapezeclubs.com/psemtugh/2023/01/Screen-Shot-2023-01-02-at-2.28.54-PM.png",
     "galleryImageUrls": [
       "https://trapezeclubs.com/psemtugh/2022/11/shutterstock_61171168.jpg",
@@ -4995,22 +5486,22 @@
     "buildingAssetId": "building-asset-club-trapeze-atlanta",
     "mediaAssets": [
       {
-        "id": "b03eb095-5d24-499c-b481-c39cd295ca5b",
-        "owner_type": "club",
-        "owner_id": "3bc2b6a5-4014-419b-a305-cdad03117763",
+        "id": "5e3d0cb2-b8e3-4697-bc04-f86612bf607f",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "6cb33a09-db47-43f4-5b5c-b832d8eb6b00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "Trapeze_Logo-Horiz-copy",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_52_47 PM",
+        "owner_id": "3bc2b6a5-4014-419b-a305-cdad03117763",
+        "created_at": "2026-09-05T02:52:56.467382+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T02:52:56.467382+00:00",
+        "aspect_mode": "contain",
+        "external_id": "afd5c06d-def3-4277-ae98-6c2ad53f6900",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T03:05:56.312283+00:00",
-        "updated_at": "2026-07-29T03:05:56.312283+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ]
   },
@@ -5076,61 +5567,61 @@
     "postedByUserId": "user1",
     "mediaAssets": [
       {
-        "id": "38cb26f9-184d-4ce5-ae7a-abf41d25a981",
-        "owner_type": "event",
-        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "7de8e990-4746-4fd3-e44a-3e5b52841800",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_2oeH7NBn64",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-28T20:52:20.560296+00:00",
-        "updated_at": "2026-07-28T20:52:20.560296+00:00"
-      },
-      {
         "id": "d4205ef8-8dc1-4611-b29c-5718e18b84c6",
-        "owner_type": "event",
-        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
         "role": "flyer",
-        "storage_provider": "cloudflare_images",
-        "external_id": "2efd2b8e-f5d8-4565-cf0a-6568edceec00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": null,
         "alt_text": "original (1)",
+        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
+        "created_at": "2026-07-29T09:56:35.832505+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-07-29T09:56:35.832505+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2efd2b8e-f5d8-4565-cf0a-6568edceec00",
+        "target_ratio": null,
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T09:56:35.832505+00:00",
-        "updated_at": "2026-07-29T09:56:35.832505+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "0a456601-4239-4fea-902c-69acb436c7ca",
-        "owner_type": "event",
-        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "e2e26eb9-5017-41ea-5a10-9bce7bdd9500",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
         "alt_text": "original (1)-cropped",
+        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
+        "created_at": "2026-07-29T09:57:09.244042+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-07-29T09:57:09.244042+00:00",
+        "aspect_mode": "cover",
+        "external_id": "e2e26eb9-5017-41ea-5a10-9bce7bdd9500",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "203b61e8-3f12-4bd1-b0cb-23c26602a8e4",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 11_25_49 PM",
+        "owner_id": "32cac153-c422-4831-a184-e94b4e540e49",
+        "created_at": "2026-09-03T06:27:49.531415+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T09:57:09.244042+00:00",
-        "updated_at": "2026-07-29T09:57:09.244042+00:00"
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T06:27:49.531415+00:00",
+        "aspect_mode": "contain",
+        "external_id": "276286f6-ed72-4a22-cdde-fb751cc88f00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7de8e990-4746-4fd3-e44a-3e5b52841800/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/276286f6-ed72-4a22-cdde-fb751cc88f00/logosquare"
   },
   {
     "id": "event-her-fantasy-back-to-school-twist-2026-08-16",
@@ -5162,40 +5653,40 @@
     "galleryImageUrls": [],
     "mediaAssets": [
       {
-        "id": "e208fc94-bbc8-4bd1-8b6a-f268e2dd4206",
-        "owner_type": "event",
-        "owner_id": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "bbfa15b0-8a1e-4f31-92c0-389ef54b6800",
+        "id": "b8a7ae5c-39a4-4f03-97fa-2cfc109f0489",
+        "role": "flyer",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_2oeH7NBn64",
+        "alt_text": "aug16",
+        "owner_id": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
+        "created_at": "2026-08-05T16:31:52.585804+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-08-05T16:31:52.585804+00:00",
+        "aspect_mode": "contain",
+        "external_id": "625e15fb-0c8d-4001-c2aa-38a3b30dcd00",
+        "target_ratio": null,
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-28T20:50:35.969313+00:00",
-        "updated_at": "2026-07-28T20:50:35.969313+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "b8a7ae5c-39a4-4f03-97fa-2cfc109f0489",
-        "owner_type": "event",
-        "owner_id": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
-        "role": "flyer",
-        "storage_provider": "cloudflare_images",
-        "external_id": "625e15fb-0c8d-4001-c2aa-38a3b30dcd00",
+        "id": "6be667bc-c81f-4d45-8f6e-682f55b2d859",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": null,
-        "alt_text": "aug16",
+        "alt_text": "aug16-cropped",
+        "owner_id": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
+        "created_at": "2026-08-11T05:16:57.501099+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-08-11T05:16:57.501099+00:00",
+        "aspect_mode": "cover",
+        "external_id": "9e0566b6-069b-46c1-5cc7-a568d6609200",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-08-05T16:31:52.585804+00:00",
-        "updated_at": "2026-08-05T16:31:52.585804+00:00"
+        "storage_provider": "cloudflare_images"
       }
     ],
     "postedByUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
@@ -5301,61 +5792,61 @@
     "postedByUserId": "user1",
     "mediaAssets": [
       {
-        "id": "0643d456-ed51-4a71-a9b1-8c4f34e97db1",
-        "owner_type": "event",
-        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "9381180a-ca3f-4ea4-6a7d-e6c5aa037400",
-        "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "chrome_2oeH7NBn64",
-        "sort_order": 0,
-        "focal_point_x": null,
-        "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-28T20:52:47.059911+00:00",
-        "updated_at": "2026-07-28T20:52:47.059911+00:00"
-      },
-      {
         "id": "18966f00-c164-49d5-81b2-bd0ed33c1f4c",
-        "owner_type": "event",
-        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "43b11c0a-c229-4369-16c0-fe7f6eea9500",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
         "alt_text": "aug30-cropped",
+        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
+        "created_at": "2026-08-05T16:30:10.868331+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-08-05T16:30:10.868331+00:00",
+        "aspect_mode": "cover",
+        "external_id": "43b11c0a-c229-4369-16c0-fe7f6eea9500",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-08-05T16:30:10.868331+00:00",
-        "updated_at": "2026-08-05T16:30:10.868331+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
         "id": "c9f847d1-9783-4b6d-97a7-2204359c7cb0",
-        "owner_type": "event",
-        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
         "role": "flyer",
-        "storage_provider": "cloudflare_images",
-        "external_id": "358d3786-037f-42de-3cfe-e356582c7a00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": null,
         "alt_text": "aug30",
+        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
+        "created_at": "2026-08-05T16:30:50.281413+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-08-05T16:30:50.281413+00:00",
+        "aspect_mode": "contain",
+        "external_id": "358d3786-037f-42de-3cfe-e356582c7a00",
+        "target_ratio": null,
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "7c014acd-ba60-4d4e-81ca-4de2a11a17f3",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 11_25_49 PM",
+        "owner_id": "1531907d-572b-4f0b-a388-46655d8b3273",
+        "created_at": "2026-09-03T06:26:43.871175+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-08-05T16:30:50.281413+00:00",
-        "updated_at": "2026-08-05T16:30:50.281413+00:00"
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T06:26:43.871175+00:00",
+        "aspect_mode": "contain",
+        "external_id": "05a092d5-7150-4b98-b8bf-9d2523391a00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
-    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9381180a-ca3f-4ea4-6a7d-e6c5aa037400/logosquare"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/05a092d5-7150-4b98-b8bf-9d2523391a00/logosquare"
   },
   {
     "id": "event-bronze-very-little-black-dress-twist-2026-09-06",
@@ -5390,39 +5881,57 @@
     "mediaAssets": [
       {
         "id": "924ce79f-ade8-4aed-b473-1b5e027d1384",
-        "owner_type": "event",
-        "owner_id": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
         "role": "flyer",
-        "storage_provider": "cloudflare_images",
-        "external_id": "82471f52-6229-44a3-d7f2-28449abfed00",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": null,
         "alt_text": "original",
+        "owner_id": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+        "created_at": "2026-07-29T08:51:44.647255+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-07-29T08:51:44.647255+00:00",
+        "aspect_mode": "contain",
+        "external_id": "82471f52-6229-44a3-d7f2-28449abfed00",
+        "target_ratio": null,
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T08:51:44.647255+00:00",
-        "updated_at": "2026-07-29T08:51:44.647255+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "bcd2c9c2-f937-4e7c-af90-b7711d562dfa",
-        "owner_type": "event",
-        "owner_id": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
-        "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "8fe4d2da-d29c-4242-124d-226531259100",
+        "id": "6e2d32d1-11f0-4033-87ce-d4eeb9f5d829",
+        "role": "hero",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "original-cropped",
+        "alt_text": "sep6-cropped",
+        "owner_id": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+        "created_at": "2026-08-11T05:15:33.930183+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
         "sort_order": 0,
+        "updated_at": "2026-08-11T05:15:33.930183+00:00",
+        "aspect_mode": "cover",
+        "external_id": "fa3be4f7-a551-4e3e-a6cb-60ac0687c500",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "c90b7697-4ab1-4cac-8212-93627f85db41",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 11_28_48 PM",
+        "owner_id": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+        "created_at": "2026-09-03T06:29:00.077328+00:00",
         "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-07-29T09:32:53.774835+00:00",
-        "updated_at": "2026-07-29T09:32:53.774835+00:00"
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T06:29:00.077328+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2e9aa2c9-9319-4fd3-1985-844a301b9100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
       }
     ],
     "postedByUserId": "user1",
@@ -5464,7 +5973,8 @@
       "BYOB",
       "Safer Sex Supplies",
       "Food Served"
-    ]
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2e9aa2c9-9319-4fd3-1985-844a301b9100/logosquare"
   },
   {
     "id": "event-bronze-halloween-kickoff-twist-2026-10-24",
@@ -5523,10 +6033,67 @@
       "Consent-Focused",
       "Privacy-Focused"
     ],
-    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6901119/bd6fdb42-1f62-4593-8b92-4d626a7511c4/small_thumb.jpg?v=tgcunn",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/33a97bb1-eda3-416b-770a-9e9983558100/heropage",
     "status": "approved",
     "postedByUserId": "user1",
-    "buildingAssetId": "building-asset-event-bronze-halloween-kickoff-twist-2026-10-24"
+    "buildingAssetId": "building-asset-event-bronze-halloween-kickoff-twist-2026-10-24",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
+    "mediaAssets": [
+      {
+        "id": "2f0acdea-23b0-419e-b8be-cda1c148902e",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "event-bronze-halloween-kickoff-twist",
+        "owner_id": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+        "created_at": "2026-08-09T08:59:30.513535+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-08-09T08:59:30.513535+00:00",
+        "aspect_mode": "contain",
+        "external_id": "0812ac96-018c-43a9-aad2-75c6057f9400",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "f930839f-f974-4d22-9261-9fd36975c88a",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "event-bronze-halloween-kickoff-twist-cropped",
+        "owner_id": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+        "created_at": "2026-08-09T08:59:51.4425+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-08-09T08:59:51.4425+00:00",
+        "aspect_mode": "cover",
+        "external_id": "33a97bb1-eda3-416b-770a-9e9983558100",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "1954204a-b372-46b5-94fe-5a60600d96ff",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 2, 2026, 11_28_48 PM",
+        "owner_id": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+        "created_at": "2026-09-03T06:29:25.861462+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T06:29:25.861462+00:00",
+        "aspect_mode": "contain",
+        "external_id": "0f60d544-550f-4fcf-0cc1-30d705b30e00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-lussuria-bangkok",
@@ -5559,7 +6126,7 @@
       "manualAdjustment": true,
       "normalizedAddress": "785/5 Pracha Uthit Road, Samsen Nok, Huai Khwang, Bangkok 10310, Thailand"
     },
-    "logoImageUrl": "https://lussuria.co.th/wp-content/uploads/2025/01/Lussuria-Logo-NOBG.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7afe15c1-b929-4efe-beba-c347cede1f00/logosquare",
     "postedByUserId": "user1",
     "attendancePolicy": "varies_by_event",
     "description_full": "Lussuria Club is a permanent private lifestyle social club in Bangkok serving members of the lifestyle and LGBTQ+ communities. The club hosts recurring Saturday events and selected special gatherings, including couples-focused nights, mixed-attendance events, erotic masquerades, poolside celebrations and educational experiences. Its on-premise spaces include open play areas and private lockable rooms, while a swimming pool and additional private rooms can be booked through a lifestyle-friendly partner hotel on the same grounds. Advance registration, membership approval and valid photo identification are required. Attendance categories vary by event, and guests should confirm the current theme, admission policy and schedule before visiting.",
@@ -5604,7 +6171,45 @@
       }
     ],
     "specialScheduleNotes": "The official rules state that Lussuria hosts events every Saturday night plus selected special events. Exact hours and attendance categories vary by event and require advance registration.",
-    "buildingAssetId": "building-asset-club-lussuria-bangkok"
+    "buildingAssetId": "building-asset-club-lussuria-bangkok",
+    "mediaAssets": [
+      {
+        "id": "6bb82aa3-cd92-4c48-a553-129e5294ff4b",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "97e318aa-6d7c-44ad-9882-450e13979b18",
+        "owner_id": "c1bdbe68-4f20-493a-ac91-0190e6cb1002",
+        "created_at": "2026-09-25T01:11:51.855691+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:11:51.855691+00:00",
+        "aspect_mode": "contain",
+        "external_id": "7afe15c1-b929-4efe-beba-c347cede1f00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "81729902-3dd2-409b-ab15-061ae7add1b9",
+        "role": "hero",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Sep 25, 2026, 06_51_23 PM-cropped",
+        "owner_id": "c1bdbe68-4f20-493a-ac91-0190e6cb1002",
+        "created_at": "2026-09-26T01:51:37.046209+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-26T01:51:37.046209+00:00",
+        "aspect_mode": "cover",
+        "external_id": "55af055e-f50a-486a-388a-325de3b18400",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-soho-graz",
@@ -5686,12 +6291,50 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "logoImageUrl": "https://soho-graz.at/wp-content/uploads/2025/04/soho-club-quer_gold-3d.png",
-    "headerImageUrl": "https://soho-graz.at/wp-content/uploads/2025/03/eventlocation_header.webp",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/da4e9874-35f3-405a-bab7-75094d73ec00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7517e3b1-2410-48cc-deb1-d34bf3b09800/heropage",
     "galleryImageUrls": [
       "https://soho-graz.at/wp-content/uploads/2025/03/was-ziehe-ich-an-02.jpg"
     ],
-    "buildingAssetId": "building-asset-club-soho-graz"
+    "buildingAssetId": "building-asset-club-soho-graz",
+    "mediaAssets": [
+      {
+        "id": "1777d43c-1395-4cfc-9620-2f4e1db307e8",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 09_06_07 PM (1)",
+        "owner_id": "3db57ca0-f174-4772-aa9b-1cb8582358ca",
+        "created_at": "2026-09-20T04:06:15.561668+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T04:06:15.561668+00:00",
+        "aspect_mode": "contain",
+        "external_id": "da4e9874-35f3-405a-bab7-75094d73ec00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "25706b52-38d6-495d-9093-fe2a96ce1d86",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 09_06_07 PM (2)-cropped",
+        "owner_id": "3db57ca0-f174-4772-aa9b-1cb8582358ca",
+        "created_at": "2026-09-20T04:06:30.04036+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T04:06:30.04036+00:00",
+        "aspect_mode": "cover",
+        "external_id": "7517e3b1-2410-48cc-deb1-d34bf3b09800",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-attraction-bucharest",
@@ -5783,9 +6426,47 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "logoImageUrl": "https://club.attractionclub.ro/wp-content/uploads/attraction-club-logo.png",
-    "headerImageUrl": "https://club.attractionclub.ro/wp-content/uploads/Romantic-ambiance-Attraction-Club.jpg",
-    "buildingAssetId": "building-asset-club-attraction-bucharest"
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/27676b4b-21ef-4d4e-7cc8-d25b60127d00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d86625ea-ed4f-4545-df7a-0394ed62e300/heropage",
+    "buildingAssetId": "building-asset-club-attraction-bucharest",
+    "mediaAssets": [
+      {
+        "id": "0bf58094-c45a-4e4b-a227-135c3a69a2c4",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 05_17_40 PM-1",
+        "owner_id": "7c61a7af-84a7-409d-a2f7-e097e28c1a45",
+        "created_at": "2026-09-25T00:18:12.535828+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T00:18:12.535828+00:00",
+        "aspect_mode": "contain",
+        "external_id": "27676b4b-21ef-4d4e-7cc8-d25b60127d00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "7218922a-c489-4f24-a284-74de9d0ab037",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 05_17_40 PM-2-cropped",
+        "owner_id": "7c61a7af-84a7-409d-a2f7-e097e28c1a45",
+        "created_at": "2026-09-25T00:18:22.820244+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T00:18:22.820244+00:00",
+        "aspect_mode": "cover",
+        "external_id": "d86625ea-ed4f-4545-df7a-0394ed62e300",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-fun4two-moordrecht",
@@ -6055,12 +6736,50 @@
       "High Hygiene Standards"
     ],
     "attendancePolicy": "couples_and_single_women",
-    "logoImageUrl": "https://www.fata-morgana.nl/wp-content/uploads/2020/09/fata-morgana-logo-2020-wit.png",
-    "headerImageUrl": "https://www.fata-morgana.nl/wp-content/uploads/2020/09/danszaal.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2477ee16-0a37-4732-1770-71e92bc91900/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8da47896-1eb4-4622-c75d-af261971f600/heropage",
     "galleryImageUrls": [
       "https://www.fata-morgana.nl/wp-content/uploads/2024/10/nieuwebar-okt2024.jpg"
     ],
-    "buildingAssetId": "building-asset-club-fata-morgana-muiden"
+    "buildingAssetId": "building-asset-club-fata-morgana-muiden",
+    "mediaAssets": [
+      {
+        "id": "c24d2b55-c8d5-4344-a5c8-f0e60eca9dc8",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_21_55 PM",
+        "owner_id": "62e8404f-e044-4569-a790-51f74912d071",
+        "created_at": "2026-09-05T03:22:22.8082+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T03:22:22.8082+00:00",
+        "aspect_mode": "contain",
+        "external_id": "2477ee16-0a37-4732-1770-71e92bc91900",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "9c1d5205-934c-4641-9059-e183059e1583",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "8218271e-b226-4380-bbc0-831531a4c766-cropped",
+        "owner_id": "62e8404f-e044-4569-a790-51f74912d071",
+        "created_at": "2026-09-25T02:24:21.534451+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T02:24:21.534451+00:00",
+        "aspect_mode": "cover",
+        "external_id": "8da47896-1eb4-4622-c75d-af261971f600",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-swingland-ishoj",
@@ -6200,12 +6919,50 @@
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://swingland.dk/wp-content/uploads/2020/03/logo.png",
-    "headerImageUrl": "https://swingland.dk/wp-content/uploads/2020/08/116849647_374940753488909_5480733183463034935_n.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d3d53db5-3154-48c9-5d00-953a57f35800/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3f57384d-da60-49bf-95a5-6254dfd8a700/heropage",
     "galleryImageUrls": [
       "https://swingland.dk/wp-content/uploads/2020/08/116895034_625410881439213_7466061617006457974_n.jpg"
     ],
-    "buildingAssetId": "building-asset-club-swingland-ishoj"
+    "buildingAssetId": "building-asset-club-swingland-ishoj",
+    "mediaAssets": [
+      {
+        "id": "86359f58-0490-4c16-9741-d66a292ba2a0",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_29_31 PM (1)",
+        "owner_id": "e2cdd5cb-20b4-47a5-a109-9e83eb70d71d",
+        "created_at": "2026-09-20T03:29:45.726094+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:29:45.726094+00:00",
+        "aspect_mode": "contain",
+        "external_id": "d3d53db5-3154-48c9-5d00-953a57f35800",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "b1e1bed8-3370-4468-9c5c-5db2b54d993b",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_29_31 PM (2)-cropped",
+        "owner_id": "e2cdd5cb-20b4-47a5-a109-9e83eb70d71d",
+        "created_at": "2026-09-20T03:29:57.788103+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:29:57.788103+00:00",
+        "aspect_mode": "cover",
+        "external_id": "3f57384d-da60-49bf-95a5-6254dfd8a700",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-more-helsinki",
@@ -6288,12 +7045,50 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "logoImageUrl": "https://club-more.com/wp-content/uploads/2024/12/cropped-more.png",
-    "headerImageUrl": "https://i0.wp.com/club-more.com/wp-content/uploads/2026/01/1000036813_edited.jpeg?fit=1200%2C897&ssl=1",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c95b3161-dcdf-4866-09ae-08c2b709bc00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/09c2ad81-ad83-4558-ad73-a46d16776b00/heropage",
     "galleryImageUrls": [
       "https://i0.wp.com/club-more.com/wp-content/uploads/2025/07/gridart_20250722_121649135.jpg?fit=768%2C1024&ssl=1"
     ],
-    "buildingAssetId": "building-asset-club-more-helsinki"
+    "buildingAssetId": "building-asset-club-more-helsinki",
+    "mediaAssets": [
+      {
+        "id": "40e46eeb-83fa-4acd-95fa-11f4a69a1d2a",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_12_48 PM",
+        "owner_id": "549c81b9-159f-443f-aa94-f2115e7278f7",
+        "created_at": "2026-09-05T03:13:04.129263+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T03:13:04.129263+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c95b3161-dcdf-4866-09ae-08c2b709bc00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "f034b9a0-98ac-4902-ade5-53dc831cf894",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "942afc59-9bc6-440f-8415-4048a5ceeca4-cropped",
+        "owner_id": "549c81b9-159f-443f-aa94-f2115e7278f7",
+        "created_at": "2026-09-25T01:57:30.432923+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:57:30.432923+00:00",
+        "aspect_mode": "cover",
+        "external_id": "09c2ad81-ad83-4558-ad73-a46d16776b00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "resort-hedonism-ii-negril",
@@ -6507,12 +7302,50 @@
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://trapezeclubs.com/psemtugh/2024/09/Main-Logo-1.png",
-    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2023/01/Screen-Shot-2023-01-02-at-2.28.54-PM.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ba75270c-1385-45b8-1b73-11d1bc6fe600/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/28eed6c5-62fb-4182-61cb-91cad63e1600/heropage",
     "galleryImageUrls": [
       "https://trapezeclubs.com/psemtugh/2022/11/people-celebrating-party.jpg"
     ],
-    "buildingAssetId": "building-asset-club-trapeze-fort-lauderdale"
+    "buildingAssetId": "building-asset-club-trapeze-fort-lauderdale",
+    "mediaAssets": [
+      {
+        "id": "b83fb9de-982d-4a22-a862-5fb1da180909",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "Trapeze - FTL",
+        "owner_id": "6db0fd5b-b97e-4a85-a81d-21e39baf9bad",
+        "created_at": "2026-09-01T23:24:07.696007+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-01T23:24:07.696007+00:00",
+        "aspect_mode": "contain",
+        "external_id": "ba75270c-1385-45b8-1b73-11d1bc6fe600",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "89fa4ea4-7cfb-4e75-bd07-1713a0732b73",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 13, 2026, 12_27_28 PM-cropped",
+        "owner_id": "6db0fd5b-b97e-4a85-a81d-21e39baf9bad",
+        "created_at": "2026-09-13T19:28:58.054863+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-13T19:28:58.054863+00:00",
+        "aspect_mode": "cover",
+        "external_id": "28eed6c5-62fb-4182-61cb-91cad63e1600",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-sauna-paradise-tel-aviv",
@@ -6656,7 +7489,27 @@
     "attendancePolicy": "varies_by_event",
     "headerImageUrl": "https://images8.webydo.com/93/9329343/3958/BC5E1CD4-7590-0B07-78FB-4097861BCE60.jpg",
     "galleryImageUrls": [],
-    "buildingAssetId": "building-asset-club-sauna-paradise-tel-aviv"
+    "buildingAssetId": "building-asset-club-sauna-paradise-tel-aviv",
+    "mediaAssets": [
+      {
+        "id": "2c53803d-169b-4c5b-b6a2-0d2785e79db6",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "4f37e922-2f8d-480a-9d72-2ec49da517c2-cropped",
+        "owner_id": "76d9d66f-c8e3-4ba1-a279-d38781675599",
+        "created_at": "2026-09-08T07:17:54.414536+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T07:17:54.414536+00:00",
+        "aspect_mode": "contain",
+        "external_id": "34f8f8a6-43a0-4b57-9427-32cba24cf100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-sauna-club-tel-aviv",
@@ -6732,10 +7585,48 @@
       "Discreet Basement Entrance"
     ],
     "attendancePolicy": "men_only",
-    "headerImageUrl": "https://ciqsrxtduuhhrclxeyiv.supabase.co/storage/v1/render/image/public/uploads/images/img_HyZqVn7g6iZlCXpi5i6PhX/original.png?width=1200&resize=contain&quality=80&format=webp",
-    "logoImageUrl": "https://ciqsrxtduuhhrclxeyiv.supabase.co/storage/v1/render/image/public/uploads/images/img_HyZqVn7g6iZlCXpi5i6PhX/original.png?width=1200&resize=contain&quality=80&format=webp",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8189db0d-1dd2-4ec0-16f8-69ba13462400/heropage",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/76e0b1e8-b7d8-4c54-40ef-3a6aaa736200/logosquare",
     "galleryImageUrls": [],
-    "buildingAssetId": "building-asset-club-sauna-club-tel-aviv"
+    "buildingAssetId": "building-asset-club-sauna-club-tel-aviv",
+    "mediaAssets": [
+      {
+        "id": "9e6f7886-5da0-44b1-8ad7-226f280df48c",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "92500703-3d51-496d-aca8-3ff8438b4100",
+        "owner_id": "24c1d8b8-b406-4dea-a2f7-59d04505dcc2",
+        "created_at": "2026-09-05T04:00:15.299464+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-05T04:00:15.299464+00:00",
+        "aspect_mode": "contain",
+        "external_id": "76e0b1e8-b7d8-4c54-40ef-3a6aaa736200",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "78a0f75a-668c-45ea-89bf-c3107c60ce15",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "2f7c1d2d-0055-4fa9-ba56-0fbb96ce1324-cropped",
+        "owner_id": "24c1d8b8-b406-4dea-a2f7-59d04505dcc2",
+        "created_at": "2026-09-08T07:07:45.29232+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T07:07:45.29232+00:00",
+        "aspect_mode": "cover",
+        "external_id": "8189db0d-1dd2-4ec0-16f8-69ba13462400",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-rich-moscow",
@@ -6787,9 +7678,47 @@
       "screening_approval_required",
       "members_only"
     ],
-    "logoImageUrl": "https://sw-sw.ru/img/indexlogo.png",
-    "headerImageUrl": "https://sw-sw.ru/img/indexlogo.png",
-    "galleryImageUrls": []
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5907e674-dbb1-4bf4-1b58-78b8a6b68300/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3510ed5a-472f-4d0c-813d-8da38cc0a100/heropage",
+    "galleryImageUrls": [],
+    "mediaAssets": [
+      {
+        "id": "98c92dd1-0e9f-4917-a829-c3a7a4b14aba",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "Club_Rich",
+        "owner_id": "8fe1a3a5-a096-4bdb-ae45-510d79bc11e3",
+        "created_at": "2026-09-01T23:27:51.000407+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-01T23:27:51.000407+00:00",
+        "aspect_mode": "contain",
+        "external_id": "5907e674-dbb1-4bf4-1b58-78b8a6b68300",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "7786016b-8d4b-4d36-8358-70fc396ae7e4",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 07_14_20 PM-cropped",
+        "owner_id": "8fe1a3a5-a096-4bdb-ae45-510d79bc11e3",
+        "created_at": "2026-09-25T02:14:41.381928+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T02:14:41.381928+00:00",
+        "aspect_mode": "cover",
+        "external_id": "3510ed5a-472f-4d0c-813d-8da38cc0a100",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-day-ognya-saint-petersburg",
@@ -6844,8 +7773,28 @@
       "screening_approval_required"
     ],
     "logoImageUrl": "https://www.dayognyaclub.ru/user/pages/01.home/05._callout/Untitled_logo_1_free-file.jpg",
-    "headerImageUrl": "https://www.dayognyaclub.ru/user/themes/on-fire/images/logo/photo_5271582141613995452_y.jpg",
-    "galleryImageUrls": []
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a8c56bfc-4730-4b74-c55d-dd666fb48700/heropage",
+    "galleryImageUrls": [],
+    "mediaAssets": [
+      {
+        "id": "704e9a63-2aaa-4b9c-ab0d-70c1528ced16",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "24218bd8-3579-4d56-82c9-31f93cfafbb1-cropped",
+        "owner_id": "deaae57d-4eaa-4833-a81c-14c58818c21b",
+        "created_at": "2026-09-08T07:02:26.126317+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-08T07:02:26.126317+00:00",
+        "aspect_mode": "cover",
+        "external_id": "a8c56bfc-4730-4b74-c55d-dd666fb48700",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-zona-x-costa-rica",
@@ -6920,46 +7869,47 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "headerImageUrl": "https://img1.wsimg.com/isteam/ip/76f372af-fa0f-4511-b305-339fec8d25a7/IMG_0017.jpeg/:/cr=t:0%25,l:12.54%25,w:74.92%25,h:100%25/rs=w:814,h:612.0300751879699,cg:true",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3d4f63f2-da7a-4db9-7de7-4a1c56e5c700/heropage",
     "galleryImageUrls": [],
     "mediaAssets": [
       {
-        "id": "3d039c89-41b1-4830-9e28-07b22b3eaace",
-        "owner_type": "club",
-        "owner_id": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+        "id": "c4cefb45-5fb8-4da9-b3d0-47478de197b3",
         "role": "logo",
-        "storage_provider": "cloudflare_images",
-        "external_id": "b37835a0-88ee-49f6-3dd9-fc7e4178b700",
         "status": "pending_review",
-        "aspect_mode": "contain",
-        "target_ratio": "1:1",
-        "alt_text": "clubzonax-cropped",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 07_44_03 PM",
+        "owner_id": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+        "created_at": "2026-09-05T02:44:20.749127+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-05T02:44:20.749127+00:00",
+        "aspect_mode": "contain",
+        "external_id": "ba0c4f1e-4986-402c-9419-d6c16f7eb000",
+        "target_ratio": "1:1",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-08-03T19:20:32.995393+00:00",
-        "updated_at": "2026-08-03T19:20:32.995393+00:00"
+        "storage_provider": "cloudflare_images"
       },
       {
-        "id": "41f701ef-2cb3-415e-9d51-3aae6f43624d",
-        "owner_type": "club",
-        "owner_id": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+        "id": "474f7e9e-a612-44cc-ac51-81885d7de1a5",
         "role": "hero",
-        "storage_provider": "cloudflare_images",
-        "external_id": "ee41fd97-dcca-459c-7848-f47a6e0f1f00",
         "status": "pending_review",
-        "aspect_mode": "cover",
-        "target_ratio": "16:9",
-        "alt_text": "chrome_oqizDrqreP-cropped",
+        "alt_text": "Club-Zona-X-hero-source-cropped",
+        "owner_id": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+        "created_at": "2026-09-19T21:30:08.002657+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
         "sort_order": 0,
+        "updated_at": "2026-09-19T21:30:08.002657+00:00",
+        "aspect_mode": "cover",
+        "external_id": "3d4f63f2-da7a-4db9-7de7-4a1c56e5c700",
+        "target_ratio": "16:9",
         "focal_point_x": null,
         "focal_point_y": null,
-        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
-        "created_at": "2026-08-03T19:21:13.512584+00:00",
-        "updated_at": "2026-08-03T19:21:13.512584+00:00"
+        "storage_provider": "cloudflare_images"
       }
-    ]
+    ],
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ba0c4f1e-4986-402c-9419-d6c16f7eb000/logosquare"
   },
   {
     "id": "club-la-casa-de-eros-lima",
@@ -7036,9 +7986,47 @@
     "entryRequirements": [
       "screening_approval_required"
     ],
-    "logoImageUrl": "https://cb7fae356e.clvaw-cdnwnd.com/5921ecdf09463bd3b8b45a6707373173/200000259-8d7518d754/lacasadeeros-logo-swinger-peru.jpg?ph=cb7fae356e",
-    "headerImageUrl": "https://cb7fae356e.clvaw-cdnwnd.com/5921ecdf09463bd3b8b45a6707373173/200005831-0c6ce0c6d1/WhatsApp%20Image%202026-07-27%20at%2010.26.31%20PM.jpeg?ph=cb7fae356e",
-    "galleryImageUrls": []
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6c13db1f-729b-4b9f-c9c0-a7392db09300/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2f9f4bb8-49b5-43cb-2b9e-a1112f99f900/heropage",
+    "galleryImageUrls": [],
+    "mediaAssets": [
+      {
+        "id": "3e3d2e10-769a-4273-a43b-1c6a49dfec73",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_57_44 PM (1)",
+        "owner_id": "7f33ff8e-7557-4390-a6de-e036b19c4a38",
+        "created_at": "2026-09-20T03:57:54.322598+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:57:54.322598+00:00",
+        "aspect_mode": "contain",
+        "external_id": "6c13db1f-729b-4b9f-c9c0-a7392db09300",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "aea24d59-f6d8-4d56-b491-0fd001cdb87d",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 19, 2026, 08_57_44 PM (2)-cropped",
+        "owner_id": "7f33ff8e-7557-4390-a6de-e036b19c4a38",
+        "created_at": "2026-09-20T03:58:03.4464+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-20T03:58:03.4464+00:00",
+        "aspect_mode": "cover",
+        "external_id": "2f9f4bb8-49b5-43cb-2b9e-a1112f99f900",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-interspa-bogota",
@@ -7096,10 +8084,48 @@
       "Zona Rosa Location"
     ],
     "attendancePolicy": "varies_by_event",
-    "logoImageUrl": "https://www.intersw.com/images/logo.png",
-    "headerImageUrl": "https://www.intersw.com/images/Banners/2021/Banner-2_2.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/87b06404-4dce-4f4a-2aec-21c5f67e4700/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/1a14e934-fc5c-4f20-6262-3c94dd978000/heropage",
     "galleryImageUrls": [],
-    "buildingAssetId": "building-asset-club-interspa-bogota"
+    "buildingAssetId": "building-asset-club-interspa-bogota",
+    "mediaAssets": [
+      {
+        "id": "74fcce65-5207-42d8-a312-9224e0220642",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 11_11_33 PM (1)",
+        "owner_id": "7fe0fead-a848-48bb-abd8-cbe56a8f6813",
+        "created_at": "2026-09-23T06:11:39.412747+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T06:11:39.412747+00:00",
+        "aspect_mode": "contain",
+        "external_id": "87b06404-4dce-4f4a-2aec-21c5f67e4700",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "b007116a-4a59-431d-b9e1-4a6f774b0ddb",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 22, 2026, 11_11_33 PM (2)-cropped",
+        "owner_id": "7fe0fead-a848-48bb-abd8-cbe56a8f6813",
+        "created_at": "2026-09-23T06:11:54.272314+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-23T06:11:54.272314+00:00",
+        "aspect_mode": "cover",
+        "external_id": "1a14e934-fc5c-4f20-6262-3c94dd978000",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-cupids-swinton",
@@ -7251,7 +8277,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19088",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19088",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7277,7 +8303,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "a2b827f3-cc74-4954-80a2-cbbe6d30f5b6",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "2ottobre-700x316",
+        "owner_id": "afac8627-c4f9-4971-a073-7b3f4a16a029",
+        "created_at": "2026-10-01T10:58:24.534626+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T10:58:24.534626+00:00",
+        "aspect_mode": "contain",
+        "external_id": "e6d141d1-3f88-442e-e6af-bde6c410a200",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-03",
@@ -7291,7 +8337,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19090",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19090",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c59f62e8-b7cd-4677-14af-6bb608b98000/logosquare",
     "attendancePolicy": "couples_only",
     "entryRequirements": [
       "members_only"
@@ -7317,7 +8363,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "4965550e-21bb-40fd-b2eb-b90bb41173ab",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "3ottobre-700x315",
+        "owner_id": "aeac8494-c3f9-47de-af73-79ac49169e96",
+        "created_at": "2026-10-01T11:01:03.913619+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:01:03.913619+00:00",
+        "aspect_mode": "contain",
+        "external_id": "47786f7b-3638-499f-78e6-d41ed5b24e00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "6bfc0f29-7b3a-4756-bd6f-3bf2a1a9857a",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image",
+        "owner_id": "aeac8494-c3f9-47de-af73-79ac49169e96",
+        "created_at": "2026-10-08T00:13:45.791399+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-08T00:13:45.791399+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c59f62e8-b7cd-4677-14af-6bb608b98000",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-09",
@@ -7331,7 +8415,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19102",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19102",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7357,7 +8441,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "046a366d-4117-4a6b-84bf-d03ffbfb6089",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "9ottobre-700x316",
+        "owner_id": "a8ac7b22-b9f9-4820-a973-896a4f16a808",
+        "created_at": "2026-10-01T11:01:26.329457+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:01:26.329457+00:00",
+        "aspect_mode": "contain",
+        "external_id": "f9f8c777-a4a2-414e-a244-de0cbb46ff00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "3204320a-8a5b-45d4-8b84-3ab4ba38940f",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image-cropped",
+        "owner_id": "a8ac7b22-b9f9-4820-a973-896a4f16a808",
+        "created_at": "2026-10-08T00:15:01.596957+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-08T00:15:01.596957+00:00",
+        "aspect_mode": "contain",
+        "external_id": "a09b0337-d5ed-47d4-4919-dfe90a373400",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-10",
@@ -7371,8 +8493,8 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19112",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19112",
-    "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/10ottobre-700x316.jpg",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c3801d4f-252c-4853-f18f-b385213fa500/flyerpage",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7398,7 +8520,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "ccf186e4-8aca-4a68-862f-c8e63baceb91",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "10ottobre-700x316",
+        "owner_id": "abaa4144-bcf7-4e42-ac71-365c6214875a",
+        "created_at": "2026-10-01T11:01:43.25271+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:01:43.25271+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c3801d4f-252c-4853-f18f-b385213fa500",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-16",
@@ -7412,7 +8554,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19125",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19125",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7438,7 +8580,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "502bae71-7493-4d39-a145-847e4504763f",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "16ottobre-700x316",
+        "owner_id": "a9aa3e1e-b6f7-44d0-aa71-33365c147de8",
+        "created_at": "2026-10-01T11:02:00.492063+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:02:00.492063+00:00",
+        "aspect_mode": "contain",
+        "external_id": "d2add40b-97d0-4e0a-e828-1848d18b1700",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-17",
@@ -7452,7 +8614,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19127",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19127",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a0762971-0922-49ac-8878-9e58cb2ec700/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7478,7 +8640,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "913841a5-d4aa-48b0-b2c1-2307b4ae5bcc",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "17ottobre-700x316",
+        "owner_id": "aaaa3fb1-b7f7-4663-ab71-34c95d147f7b",
+        "created_at": "2026-10-01T11:02:49.894081+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:02:49.894081+00:00",
+        "aspect_mode": "contain",
+        "external_id": "197eeac2-e85c-4aee-f797-40f7f5408b00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "37a42d5c-2152-4226-9f11-a2aec02ed3fa",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image",
+        "owner_id": "aaaa3fb1-b7f7-4663-ab71-34c95d147f7b",
+        "created_at": "2026-10-08T00:12:38.354968+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-08T00:12:38.354968+00:00",
+        "aspect_mode": "contain",
+        "external_id": "a0762971-0922-49ac-8878-9e58cb2ec700",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-23",
@@ -7492,7 +8692,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19139",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19139",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7518,7 +8718,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "e41ec459-a3c9-4934-bd5f-1414477e1ff7",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "23ottobre-700x316",
+        "owner_id": "1eb1b212-33f4-4800-af78-100ad9117118",
+        "created_at": "2026-10-01T11:05:09.891426+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:05:09.891426+00:00",
+        "aspect_mode": "contain",
+        "external_id": "1b5fa2fc-83f5-4674-dd8b-df707c69a200",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "db3305ac-fc86-4f66-82e4-f08f88acb135",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image-cropped",
+        "owner_id": "1eb1b212-33f4-4800-af78-100ad9117118",
+        "created_at": "2026-10-07T10:12:14.451795+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-07T10:12:14.451795+00:00",
+        "aspect_mode": "contain",
+        "external_id": "22660bf0-f02a-4367-2db8-447cb596de00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-24",
@@ -7532,7 +8770,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19148",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19148",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7558,7 +8796,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "978e27ae-be35-4640-8652-0012397b1d3b",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "24ottobre-700x316",
+        "owner_id": "19b1aa33-3af4-4305-aa78-082be0117c1d",
+        "created_at": "2026-10-01T11:04:53.854437+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:04:53.854437+00:00",
+        "aspect_mode": "contain",
+        "external_id": "c11bbb5c-4be8-4216-530a-a955b0cbda00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-30",
@@ -7572,7 +8830,7 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19156",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19156",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/65a213e5-265d-498d-8cd2-2b6f05c7c800/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7598,7 +8856,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "15a7f64d-b76f-49c8-9487-c31a53fddb03",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "warmup-1-700x316",
+        "owner_id": "17af6876-30f1-44b0-a875-c66ed60f2dc8",
+        "created_at": "2026-10-01T11:05:26.362618+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:05:26.362618+00:00",
+        "aspect_mode": "contain",
+        "external_id": "7ad1a98e-bb50-4933-eeaa-fa9030b5f700",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "b71db3f3-339f-4ea4-9101-30dd35fcb868",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image",
+        "owner_id": "17af6876-30f1-44b0-a875-c66ed60f2dc8",
+        "created_at": "2026-10-08T00:13:32.52835+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-08T00:13:32.52835+00:00",
+        "aspect_mode": "contain",
+        "external_id": "65a213e5-265d-498d-8cd2-2b6f05c7c800",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-krystal-vicenza-2026-10-31",
@@ -7612,8 +8908,8 @@
     "location": "Krystal Club Privè, Via Ludovico Lazzaro Zamenhof 432-442, 36100 Vicenza, Veneto, Italy",
     "website": "https://www.krystal-club.it/en/?p=19160",
     "sourceEventUrl": "https://www.krystal-club.it/en/?p=19160",
-    "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/HALLOWEEN-700x316.png",
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d6279f28-f220-4d3c-b12f-af18dbbcf100/flyerpage",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a09b0337-d5ed-47d4-4919-dfe90a373400/logosquare",
     "attendancePolicy": "varies_by_event",
     "entryRequirements": [
       "members_only"
@@ -7639,7 +8935,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@krystal-club.it"
+    "contactEmail": "info@krystal-club.it",
+    "mediaAssets": [
+      {
+        "id": "f2bf1049-82eb-4c99-a51b-1da4d56b05ed",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "31ottobre-2-700x316",
+        "owner_id": "18af6a09-31f1-4643-a975-c801d70f2f5b",
+        "created_at": "2026-10-01T11:03:58.096044+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-10-01T11:03:58.096044+00:00",
+        "aspect_mode": "contain",
+        "external_id": "d6279f28-f220-4d3c-b12f-af18dbbcf100",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-krystal-vicenza",
@@ -7716,12 +9032,50 @@
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://www.krystal-club.it/wp-content/uploads/2014/05/logo-krystal-club-vicenza2.png",
-    "headerImageUrl": "https://www.krystal-club.it/wp-content/uploads/2026/08/19settembre-3-920x415.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a8bfa2ff-c978-483c-a53f-01952be5b300/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/14280825-8e92-4b10-944a-6306920ac300/heropage",
     "galleryImageUrls": [
       "https://www.krystal-club.it/wp-content/uploads/2026/08/26settembre-920x415.jpg"
     ],
-    "buildingAssetId": "building-asset-club-krystal-vicenza"
+    "buildingAssetId": "building-asset-club-krystal-vicenza",
+    "mediaAssets": [
+      {
+        "id": "6daa2a20-0ba9-41ee-aa2f-14c0f839e968",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "krystal-image",
+        "owner_id": "2da9ee87-dade-48fd-a897-347f5722a9f5",
+        "created_at": "2026-09-02T22:02:04.557469+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T22:02:04.557469+00:00",
+        "aspect_mode": "contain",
+        "external_id": "a8bfa2ff-c978-483c-a53f-01952be5b300",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "d037d4a7-7bd2-471f-971d-7ded564b8cd2",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "9e20e5f1-b72d-4cd3-8d84-2e28f3739782-cropped",
+        "owner_id": "2da9ee87-dade-48fd-a897-347f5722a9f5",
+        "created_at": "2026-09-25T03:12:23.321323+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T03:12:23.321323+00:00",
+        "aspect_mode": "cover",
+        "external_id": "14280825-8e92-4b10-944a-6306920ac300",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-syn-tulsa",
@@ -7796,10 +9150,48 @@
       "screening_approval_required",
       "members_only"
     ],
-    "logoImageUrl": "https://www.syntulsa.com/assets/images/image01.png?v=f35f546e",
-    "headerImageUrl": "https://www.syntulsa.com/assets/images/image03.jpg?v=f35f546e",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3211ab01-9526-4adf-95e1-254197b9ce00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/3f07a6c8-74ad-4d04-35ba-da6446223a00/heropage",
     "galleryImageUrls": [
       "https://www.syntulsa.com/assets/images/image04.jpg?v=f35f546e"
+    ],
+    "mediaAssets": [
+      {
+        "id": "604fc6b9-089e-4c34-a647-630f406b8706",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "0955c116-39c2-428f-b624-803db2a1a967",
+        "owner_id": "1bb2156e-962a-4c7c-a4ae-6d565edf1364",
+        "created_at": "2026-09-25T01:12:03.554273+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:12:03.554273+00:00",
+        "aspect_mode": "contain",
+        "external_id": "3211ab01-9526-4adf-95e1-254197b9ce00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "a6f0f94b-f045-49e9-a92a-899306948e1f",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 06_30_11 PM-cropped",
+        "owner_id": "1bb2156e-962a-4c7c-a4ae-6d565edf1364",
+        "created_at": "2026-09-25T01:30:21.625348+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:30:21.625348+00:00",
+        "aspect_mode": "cover",
+        "external_id": "3f07a6c8-74ad-4d04-35ba-da6446223a00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
     ]
   },
   {
@@ -7904,10 +9296,48 @@
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://contents.sixshop.com/thumbnails/uploadedFiles/91948/default/image_1766476730950_1000.png",
-    "headerImageUrl": "https://contents.sixshop.com/thumbnails/uploadedFiles/91948/default/image_1730908828417_1000.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bf1499e5-1727-4891-dce3-30139098e800/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/1bff276e-fdfa-474d-09cb-09d25518d800/heropage",
     "galleryImageUrls": [
       "https://contents.sixshop.com/thumbnails/uploadedFiles/91948/default/image_1730909328478_1000.png"
+    ],
+    "mediaAssets": [
+      {
+        "id": "95cb7634-8272-46a6-9db7-d8bbbd3d8c38",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "Idiza Lounge Club Desire",
+        "owner_id": "c76cfba8-802f-4836-a533-3bd06188595e",
+        "created_at": "2026-09-02T21:59:40.723335+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-02T21:59:40.723335+00:00",
+        "aspect_mode": "contain",
+        "external_id": "bf1499e5-1727-4891-dce3-30139098e800",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "93f8ff69-23f4-4b07-989c-980e226ba3c0",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "67dd55fc-c7f2-4fbd-a2ee-67527750c0bb-cropped",
+        "owner_id": "c76cfba8-802f-4836-a533-3bd06188595e",
+        "created_at": "2026-09-09T08:58:42.704106+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-09T08:58:42.704106+00:00",
+        "aspect_mode": "cover",
+        "external_id": "1bff276e-fdfa-474d-09cb-09d25518d800",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
     ]
   },
   {
@@ -7999,14 +9429,52 @@
     "entryRequirements": [
       "members_only"
     ],
-    "logoImageUrl": "https://epicure.club/sites/default/files/epicure-club-logo-2.png",
-    "headerImageUrl": "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-04/epicure-club-cape-town-8020.webp",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/62a4cc93-c2f4-4bd0-2cec-5b912561bf00/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/da176e5d-9847-4480-c85c-fa3b063a4d00/heropage",
     "mediaPresentation": "monochrome",
     "galleryImageUrls": [
       "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-05/epicure-club-cape-town-pool.webp",
       "https://epicure.club/sites/default/files/styles/carousel_768x320/public/2026-05/epicure-dj-shuggah.webp"
     ],
-    "buildingAssetId": "building-asset-club-epicure-cape-town"
+    "buildingAssetId": "building-asset-club-epicure-cape-town",
+    "mediaAssets": [
+      {
+        "id": "c0eebbb1-becb-48fe-816e-36cda59484ad",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "epicure_club_black_white_logo",
+        "owner_id": "99d686d2-a973-41a4-a124-0e2a839dcabc",
+        "created_at": "2026-09-03T07:34:06.679364+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T07:34:06.679364+00:00",
+        "aspect_mode": "contain",
+        "external_id": "62a4cc93-c2f4-4bd0-2cec-5b912561bf00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "0bd86aac-7b33-499a-8ad9-d0b4c94b13b0",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "epicure_club_black_white_hero-cropped",
+        "owner_id": "99d686d2-a973-41a4-a124-0e2a839dcabc",
+        "created_at": "2026-09-03T07:35:05.574929+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-03T07:35:05.574929+00:00",
+        "aspect_mode": "cover",
+        "external_id": "da176e5d-9847-4480-c85c-fa3b063a4d00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-insomnia-berlin",
@@ -8112,13 +9580,33 @@
       "Door Discretion Applies"
     ],
     "attendancePolicy": "varies_by_event",
-    "logoImageUrl": "https://www.insomnia-berlin.de/img/logo_insomnia.png",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/de8a41c5-2647-4ede-70ac-ff3ead996500/logosquare",
     "headerImageUrl": "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000952.jpg",
     "galleryImageUrls": [
       "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000959.jpg",
       "https://www.insomnia-berlin.de/galpics/galleries/location/large/0000000938.jpg"
     ],
-    "buildingAssetId": "building-asset-club-insomnia-berlin"
+    "buildingAssetId": "building-asset-club-insomnia-berlin",
+    "mediaAssets": [
+      {
+        "id": "a127c658-24ca-40f7-8b8a-86d6feac744c",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "Golden Insomnia Crest on Burgundy Silk",
+        "owner_id": "5404c40b-5fb0-4109-af8b-2713e411ef51",
+        "created_at": "2026-09-13T19:15:13.695654+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-13T19:15:13.695654+00:00",
+        "aspect_mode": "contain",
+        "external_id": "de8a41c5-2647-4ede-70ac-ff3ead996500",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-casa-swinger-cdmx",
@@ -8226,13 +9714,51 @@
       "No Visible Intoxication"
     ],
     "attendancePolicy": "varies_by_night",
-    "logoImageUrl": "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/casaswinger-logo.png",
-    "headerImageUrl": "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/casaswinger-mexico.jpg",
+    "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5ba545fc-64aa-4abb-34e1-42dc7677e100/logosquare",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7568b9bf-1afb-429e-b2a0-2ac083e38700/heropage",
     "galleryImageUrls": [
       "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/club-swinger-viernes-ciudad-de-mexico.png",
       "https://www.casaswinger.com.mx/images/CasaSwingerMexico-2026/club-swinger-sabado-ciudad-de-mexico.jpeg"
     ],
-    "buildingAssetId": "building-asset-club-casa-swinger-cdmx"
+    "buildingAssetId": "building-asset-club-casa-swinger-cdmx",
+    "mediaAssets": [
+      {
+        "id": "72a1ecdd-537e-46ba-9270-d4e250f8a357",
+        "role": "logo",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 4, 2026, 08_56_10 PM",
+        "owner_id": "ac6879b9-7f66-48fb-a4d8-1aa1ba7be0a3",
+        "created_at": "2026-09-06T06:23:53.832046+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-06T06:23:53.832046+00:00",
+        "aspect_mode": "contain",
+        "external_id": "5ba545fc-64aa-4abb-34e1-42dc7677e100",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "ba8b99a5-8b58-4197-800f-e75a50aa0755",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 24, 2026, 06_48_14 PM-cropped",
+        "owner_id": "ac6879b9-7f66-48fb-a4d8-1aa1ba7be0a3",
+        "created_at": "2026-09-25T01:48:28.471151+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T01:48:28.471151+00:00",
+        "aspect_mode": "cover",
+        "external_id": "7568b9bf-1afb-429e-b2a0-2ac083e38700",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-swingers-oase-ammerzoden",
@@ -8521,7 +10047,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "4b2ad1fd-4522-421d-a19f-c16122455bc6",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (2)",
+        "owner_id": "fd63683e-5b29-4680-a903-2006c576baa8",
+        "created_at": "2026-09-25T05:53:30.924953+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:53:30.924953+00:00",
+        "aspect_mode": "contain",
+        "external_id": "a5ad31a9-7af2-421f-bab9-9584d4e62b00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-bronze-96234-2026-10-02",
@@ -8578,7 +10124,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "dd65733c-306d-4975-8c6b-54df664f076f",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original",
+        "owner_id": "e4f9c0a1-903a-4d5b-a989-f1c9d4893aa3",
+        "created_at": "2026-09-25T05:49:44.495947+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:49:44.495947+00:00",
+        "aspect_mode": "contain",
+        "external_id": "20776f9d-f7c8-4d93-3377-97fd0f063f00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-her-fantasy-96825-2026-10-04",
@@ -8635,7 +10201,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "b5799498-b336-424d-a36b-c0e021a7e401",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (3)",
+        "owner_id": "4cbb94c7-0140-4c11-a087-5dbf5a56b6a9",
+        "created_at": "2026-09-25T05:53:45.508705+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:53:45.508705+00:00",
+        "aspect_mode": "contain",
+        "external_id": "4487d18d-e5f1-44d1-bfbb-f22512a64c00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-her-fantasy-93358-2026-10-11",
@@ -8692,7 +10278,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "bcbd1124-b23e-47d3-8313-75a3cbcd219b",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (4)",
+        "owner_id": "4debf70d-06ef-4fe7-a6ac-e185af9f23bf",
+        "created_at": "2026-09-25T05:54:45.823691+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:54:45.823691+00:00",
+        "aspect_mode": "contain",
+        "external_id": "e0082874-1315-4460-0ce8-ac8b049d2400",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-her-fantasy-90347-2026-10-25",
@@ -8749,7 +10355,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "52e6ddd2-29dd-46af-86bf-3ce7f0971552",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (5)",
+        "owner_id": "5f1d472f-d68f-404d-a973-21176c11c815",
+        "created_at": "2026-09-25T05:54:10.145252+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:54:10.145252+00:00",
+        "aspect_mode": "contain",
+        "external_id": "7680774c-a3cb-42b6-218a-13ec0d6bf500",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-bronze-93500-2026-10-31",
@@ -8890,7 +10516,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "e4dcf4ec-228d-465a-a0de-6633dc7ab862",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (6)",
+        "owner_id": "480862b4-9190-46c2-a1e5-4abc82992d2a",
+        "created_at": "2026-09-25T05:54:25.23551+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:54:25.23551+00:00",
+        "aspect_mode": "contain",
+        "external_id": "dd34b85c-6a14-4103-e57b-5e8b1e6e3b00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-her-fantasy-90349-2026-11-22",
@@ -8947,7 +10593,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "5bebb0e9-5f64-42bd-8dd1-fedb6c2faeef",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (7)",
+        "owner_id": "fb6e1a4d-2882-485b-addc-5f253ad6d433",
+        "created_at": "2026-09-25T05:55:07.623154+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:55:07.623154+00:00",
+        "aspect_mode": "contain",
+        "external_id": "afb8ea1f-043f-45cc-4de9-8479fd296f00",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-bronze-93356-2026-11-25",
@@ -9004,7 +10670,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "a9807305-4bf4-4265-88df-fe78300cf0d5",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (8)",
+        "owner_id": "d5b0ab8d-c3c8-487f-af4b-a8b5d205f4e7",
+        "created_at": "2026-09-25T05:52:18.420684+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:52:18.420684+00:00",
+        "aspect_mode": "contain",
+        "external_id": "90b4e3b5-9222-4508-976f-1b7a4430b300",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-her-fantasy-90355-2026-12-06",
@@ -9061,7 +10747,27 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "c48e5fff-ffac-44f7-8b8e-466f5a0becab",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original (9)",
+        "owner_id": "a8693957-2afc-4bd5-af16-43bf685d5f7d",
+        "created_at": "2026-09-25T05:56:04.385352+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:56:04.385352+00:00",
+        "aspect_mode": "contain",
+        "external_id": "b0b2fa8a-b4a4-4a9a-84b7-a83a2771c200",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "event-bronze-90365-2026-12-12",
@@ -9076,7 +10782,7 @@
     "location": "Twist SF, 387 Bay Street, San Francisco, California 94133, United States",
     "website": "https://bronzeparty.com/events/90365/orders/new",
     "sourceEventUrl": "https://bronzeparty.com/events/90365",
-    "headerImageUrl": "https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/6660229/0f53f9fc-6526-4686-9375-ced5b11dd1bd/original.jpeg?v=tcli83",
+    "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4ca4353c-13c0-47e1-c3c3-224e9726d700/heropage",
     "logoImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare",
     "attendancePolicy": "couples_and_single_women",
     "entryRequirements": [
@@ -9118,7 +10824,45 @@
     ],
     "status": "approved",
     "postedByUserId": "user1",
-    "contactEmail": "info@bronzeparty.com"
+    "contactEmail": "info@bronzeparty.com",
+    "mediaAssets": [
+      {
+        "id": "b38f8ac3-6f58-452d-af51-5fac265b323f",
+        "role": "flyer",
+        "status": "pending_review",
+        "alt_text": "original",
+        "owner_id": "b932f07f-b904-4ca9-a4bf-2927c4eb8711",
+        "created_at": "2026-09-25T05:52:36.564313+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-25T05:52:36.564313+00:00",
+        "aspect_mode": "contain",
+        "external_id": "6076c946-b3c1-4db1-a944-5d163bdc9900",
+        "target_ratio": null,
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "ff0fa3ae-eaee-463e-ba07-f22dabd3fc2c",
+        "role": "hero",
+        "status": "pending_review",
+        "alt_text": "ChatGPT Image Sep 26, 2026, 07_35_36 PM-cropped",
+        "owner_id": "b932f07f-b904-4ca9-a4bf-2927c4eb8711",
+        "created_at": "2026-09-27T02:35:43.091486+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "event",
+        "sort_order": 0,
+        "updated_at": "2026-09-27T02:35:43.091486+00:00",
+        "aspect_mode": "cover",
+        "external_id": "4ca4353c-13c0-47e1-c3c3-224e9726d700",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
   },
   {
     "id": "club-tucan-club-almind",
@@ -11319,5 +13063,289 @@
     "headerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/95a29452-76c4-492e-6d91-78acbcb72500/flyerpage",
     "flyerImageUrl": "https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/95a29452-76c4-492e-6d91-78acbcb72500/flyerpage",
     "ticketUrl": "https://luminasocialclub.com/events/masquerade-party-brooklyn-ny-11-21-26/"
+  },
+  {
+    "id": "club-ohio-swings-new-carlisle",
+    "name": "Ohio Swings",
+    "type": "club",
+    "status": "approved",
+    "website": "https://ohioswings.com/",
+    "geopoint": {
+      "address": {
+        "city": "New Carlisle",
+        "region": "Ohio",
+        "country": "United States",
+        "citySlug": "new-carlisle",
+        "admin1Slug": "oh",
+        "postalCode": "45344",
+        "countrySlug": "us",
+        "isCityState": false,
+        "addressLine1": "12225 Gerlaugh Rd"
+      },
+      "latitude": 39.878366944039925,
+      "longitude": -84.04598620691401
+    },
+    "location": "12225 Gerlaugh Rd, New Carlisle, Ohio 45344, United States",
+    "schedule": [
+      {
+        "day": "Wednesday",
+        "open": "20:00",
+        "close": "10:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "21+. Doors open 8 PM–midnight; guests may stay until 10 AM. Cash donation: couples 0, single men 0, single women free. Special events may differ.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Friday",
+        "open": "20:00",
+        "close": "10:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "21+. Doors open 8 PM–midnight; guests may stay until 10 AM. Cash donation: couples 0, single men 0, single women free. Special events may differ.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Saturday",
+        "open": "20:00",
+        "close": "10:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "21+. Doors open 8 PM–midnight; guests may stay until 10 AM. Cash donation: couples 0, single men 0, single women free. Special events may differ.",
+        "attendancePolicy": "mixed_open"
+      }
+    ],
+    "createdAt": "2026-10-07T07:20:16.981777+00:00",
+    "updatedAt": "2026-10-07T08:47:31.485154+00:00",
+    "locationMeta": {
+      "status": "manual",
+      "warnings": [
+        "Exact street address verified; coordinates manually corrected from Google Maps."
+      ],
+      "confidence": 0.9,
+      "validatedAt": "2026-10-07T08:47:30.550Z",
+      "geocoderLabel": "12225 Gerlaugh Rd, New Carlisle, Ohio 45344, United States",
+      "geocoderSource": "google-maps-manual",
+      "manualAdjustment": true,
+      "coordinatePrecision": "address"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "primaryVenueId": "venue-ohio-swings-new-carlisle",
+    "buildingAssetId": "building-asset-club-ohio-swings-new-carlisle",
+    "attendancePolicy": "mixed_open",
+    "generalAmenities": [
+      "Private Rooms",
+      "Lockers",
+      "Showers",
+      "Parking",
+      "BYOB",
+      "Food Served",
+      "Safer Sex Supplies",
+      "Overnight Stay"
+    ],
+    "description_short": "A recurring private lifestyle house-party venue near Dayton for couples and singles 21+, with private play rooms, lockers, showers, BYOB service and overnight stays after play hours.",
+    "entryRequirements": [],
+    "locationVisibility": "exact_public",
+    "ownerOrganizationId": "org-ohio-swings-new-carlisle",
+    "specialScheduleNotes": "Ohio Swings describes itself as a private house party rather than a traditional commercial club, while its rules also identify it as an adult lifestyle club with on-premise play. Regular nights are Wednesday, Friday and Saturday. Doors open 8 PM–midnight and guests may remain until 10 AM. Special-event donations can differ.",
+    "mediaAssets": [
+      {
+        "id": "1b598f9b-4b89-4958-b1b9-364b74542437",
+        "role": "logo",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 7, 2026, 02_04_23 AM-1-cropped",
+        "owner_id": "7af99e18-a971-4b06-ac2e-1420874750ae",
+        "created_at": "2026-10-07T09:07:24.590247+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-07T09:07:24.590247+00:00",
+        "aspect_mode": "contain",
+        "external_id": "a66278fd-7cab-4d88-ef92-8d2704271a00",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "c2c581d6-7c51-4d06-81b3-48c33a2ba08d",
+        "role": "hero",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 7, 2026, 02_04_25 AM-2-cropped",
+        "owner_id": "7af99e18-a971-4b06-ac2e-1420874750ae",
+        "created_at": "2026-10-07T09:07:37.001429+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-07T09:07:37.001429+00:00",
+        "aspect_mode": "cover",
+        "external_id": "9d9935e9-e7b9-4431-21b9-ca6d26ac0c00",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ]
+  },
+  {
+    "id": "club-libert-swinger-club-barcelona",
+    "name": "Libert Barcelona",
+    "type": "club",
+    "status": "approved",
+    "website": "https://www.libertbcn.com/",
+    "geopoint": {
+      "address": {
+        "city": "Barcelona",
+        "region": "Catalonia",
+        "country": "Spain",
+        "citySlug": "barcelona",
+        "admin1Slug": "catalonia",
+        "postalCode": "08015",
+        "countrySlug": "es",
+        "isCityState": false,
+        "addressLine1": "Carrer de Sepúlveda 31-35"
+      },
+      "latitude": 41.3766797,
+      "longitude": 2.1536698
+    },
+    "location": "Carrer de Sepúlveda 31-35, 08015 Barcelona, Spain",
+    "schedule": [
+      {
+        "day": "Monday",
+        "open": "15:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Couples €36, single men €30, single women €10. Admission subject to house rules and capacity.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Tuesday",
+        "open": "15:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Couples €36, single men €30, single women €10. Admission subject to house rules and capacity.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Wednesday",
+        "open": "11:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Morning session 11:00–15:00; couples €26, single men €50, single women €10. From 15:00: couples €36, men €30, women €10.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Thursday",
+        "open": "15:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Tardeo 15:00–22:00; Lingerie Night from 22:00. Couples €40; single men €30 then €40; single women €10.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Friday",
+        "open": "15:00",
+        "close": "05:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Tardeo 15:00–22:00. Couples €40; single men €30 then €40 after 22:00; single women €10.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Saturday",
+        "open": "16:00",
+        "close": "05:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Al Desnudo 16:00–21:00: couples €30, single men €50, single women €10. From 21:00: couples €40, men €40, women €15.",
+        "attendancePolicy": "mixed_open"
+      },
+      {
+        "day": "Sunday",
+        "open": "17:00",
+        "close": "03:00",
+        "isClosed": false,
+        "occurrence": "weekly",
+        "entryConditions": "Couples €36, single men €30, single women €10. Last Sunday of the month may feature Bisexual Day programming.",
+        "attendancePolicy": "mixed_open"
+      }
+    ],
+    "createdAt": "2026-10-09T02:21:53.044746+00:00",
+    "updatedAt": "2026-10-09T03:26:20.340522+00:00",
+    "mediaAssets": [
+      {
+        "id": "e4d714ae-3263-4b0f-af88-60414360076b",
+        "role": "logo",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 8, 2026, 08_19_26 PM-1-cropped",
+        "owner_id": "8d712f5f-f515-4521-a501-2b1772ec36b9",
+        "created_at": "2026-10-09T03:19:48.710157+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-09T03:19:48.710157+00:00",
+        "aspect_mode": "contain",
+        "external_id": "246b3d75-8182-4eed-8113-ec537d788500",
+        "target_ratio": "1:1",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      },
+      {
+        "id": "ed8c0776-c80d-40ef-9cef-995e2b0e9156",
+        "role": "hero",
+        "status": "approved",
+        "alt_text": "ChatGPT Image Oct 8, 2026, 08_19_26 PM-2-cropped",
+        "owner_id": "8d712f5f-f515-4521-a501-2b1772ec36b9",
+        "created_at": "2026-10-09T03:20:01.57851+00:00",
+        "created_by": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+        "owner_type": "club",
+        "sort_order": 0,
+        "updated_at": "2026-10-09T03:20:01.57851+00:00",
+        "aspect_mode": "cover",
+        "external_id": "fed3cd21-60ca-431e-8a54-debd588d1000",
+        "target_ratio": "16:9",
+        "focal_point_x": null,
+        "focal_point_y": null,
+        "storage_provider": "cloudflare_images"
+      }
+    ],
+    "contactEmail": "manulibert31@gmail.com",
+    "locationMeta": {
+      "status": "manual",
+      "warnings": [
+        "low-geocode-confidence"
+      ],
+      "confidence": 0.98,
+      "validatedAt": "2026-10-09T03:26:19.556Z",
+      "geocoderLabel": "31-35, Carrer de Sepúlveda, Sant Antoni, l'Eixample, Barcelona, Barcelonès, Barcelona, Catalonia, 08015, Spain",
+      "geocoderSource": "nominatim",
+      "manualAdjustment": true,
+      "normalizedAddress": "31-35, Carrer de Sepúlveda, Barcelona, Catalonia, 08015, Spain",
+      "coordinatePrecision": "address"
+    },
+    "postedByUserId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+    "primaryVenueId": "venue-libert-swinger-club-barcelona",
+    "buildingAssetId": "building-asset-club-libert-swinger-club-barcelona",
+    "attendancePolicy": "mixed_open",
+    "generalAmenities": [
+      "Bar",
+      "Lounge",
+      "Dark Rooms",
+      "Play Rooms",
+      "Showers",
+      "Lockers",
+      "Parking Nearby",
+      "Alcohol Available"
+    ],
+    "description_short": "A private Barcelona lifestyle club open every day to couples, women and men, with bar/lounge areas, dark rooms, bed areas, showers and recurring themed programming.",
+    "entryRequirements": [],
+    "locationVisibility": "exact_public",
+    "ownerOrganizationId": "org-libert-swinger-club-barcelona",
+    "specialScheduleNotes": "Official site says the club is open every day of the year. Eve-of-holiday pricing follows Saturday-night rates; public holidays open at 17:00. Couples receive locker service in admission; single guests pay €6 for locker service. House rules require respectful conduct, appropriate attire and hygiene; cameras/video/phones are restricted outside the bar area."
   }
 ]

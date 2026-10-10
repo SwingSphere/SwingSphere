@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BrowseDirectoryButton from './BrowseDirectoryButton';
 import LandingHeroGlobe from './LandingHeroGlobe';
@@ -69,23 +69,46 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeDiscoveryTab, setActiveDiscoveryTab] = useState<DiscoveryTab>('featured');
   const [isReturningLandingVisit] = useState(() => hasPlayedLandingHeroIntro);
+  const [isMdUp, setIsMdUp] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
+  );
   const { index: entityIndex, listings, venues, organizations, organizationVenueRelationships, eventSeries, isLoading } = useEntityIndex();
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const syncViewport = () => setIsMdUp(media.matches);
+    syncViewport();
+    media.addEventListener('change', syncViewport);
+    return () => media.removeEventListener('change', syncViewport);
+  }, []);
+
   const featuredListings = useMemo(() => buildFeaturedListings(listings), [listings]);
   const recentlyAddedListings = useMemo(() => buildRecentlyAddedListings(listings), [listings]);
   const discoveryListings = activeDiscoveryTab === 'featured' ? featuredListings : recentlyAddedListings;
-  const discoveryCarouselItems = useMemo(() => discoveryListings.map((listing) => ({
-    listing,
-    logoUrl: resolveBrandLogo(listing.type, listing.id, {
+  const discoveryCarouselItems = useMemo(() => {
+    const mediaCatalog = {
       listings,
       venues,
       organizations,
       relationships: organizationVenueRelationships,
       eventSeries,
-    }).url,
-  })), [discoveryListings, listings, venues, organizations, organizationVenueRelationships, eventSeries]);
-  const openGlobeExperience = () => {
+    };
+    return discoveryListings.map((listing) => ({
+      listing,
+      logoUrl: resolveBrandLogo(listing.type, listing.id, mediaCatalog).url,
+    }));
+  }, [discoveryListings, listings, venues, organizations, organizationVenueRelationships, eventSeries]);
+
+  const openGlobeExperience = useCallback(() => {
     navigate('/globe');
-  };
+  }, [navigate]);
+
+  const handleOpenListing = useCallback(
+    (listing: Listing) => {
+      navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`);
+    },
+    [entityIndex, navigate],
+  );
 
   useEffect(() => {
     const introCompleteTimer = window.setTimeout(() => {
@@ -101,9 +124,11 @@ const LandingPage: React.FC = () => {
         <SavedLivingLowPolyBackground className="ss-homepage-living-art" />
       {/* Hero Section */}
       <section className="ss-homepage-hero relative min-h-screen overflow-hidden">
-        <div className="pointer-events-none absolute bottom-0 right-[-17vw] top-[-14vh] z-0 hidden w-[94vw] md:block [mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [mask-composite:intersect] [-webkit-mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [-webkit-mask-composite:source-in]">
-          <LandingHeroGlobe />
-        </div>
+        {isMdUp ? (
+          <div className="pointer-events-none absolute bottom-0 right-[-17vw] top-[-14vh] z-0 hidden w-[94vw] md:block [mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [mask-composite:intersect] [-webkit-mask-image:radial-gradient(circle_at_58%_44%,black_0%,black_55%,transparent_79%),linear-gradient(to_bottom,black_0%,black_76%,transparent_100%)] [-webkit-mask-composite:source-in]">
+            <LandingHeroGlobe />
+          </div>
+        ) : null}
         <div className="relative z-10 container mx-auto flex min-h-[calc(100vh-11rem)] items-center px-6 pt-28 lg:px-8">
           <div className={`ss-landing-hero-intro flex max-w-3xl flex-col items-center text-center md:items-start md:text-left ${isReturningLandingVisit ? 'ss-landing-hero-intro--returning' : 'ss-landing-hero-intro--first'}`}>
             <h1 className="mb-5 text-5xl font-bold leading-[0.98] tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
@@ -155,12 +180,12 @@ const LandingPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              {!isLoading ? (
+              {(!isLoading || discoveryCarouselItems.length > 0) ? (
                 <>
                   <HomepageDiscoveryCarousel
                     items={discoveryCarouselItems}
                     resetKey={activeDiscoveryTab}
-                    onOpen={(listing) => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
+                    onOpen={handleOpenListing}
                   />
                   <div className="hidden gap-4 lg:grid lg:grid-cols-5">
                     {discoveryCarouselItems.map(({ listing, logoUrl }) => (
@@ -168,7 +193,8 @@ const LandingPage: React.FC = () => {
                         key={listing.id}
                         listing={listing}
                         resolvedLogoUrl={logoUrl}
-                        onClick={() => navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`)}
+                        imagePriority="high"
+                        onClick={() => handleOpenListing(listing)}
                       />
                     ))}
                   </div>

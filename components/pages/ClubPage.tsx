@@ -5,7 +5,7 @@ import { parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
 import { getEventCardImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl, isPlaceholderMediaUrl } from '../../lib/listingImage';
-import { resolveBrandLogo } from '../../lib/entityBrandMedia';
+import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import ClubDetailTemplate from '../club/ClubDetailTemplate';
 import ClubPageAdminEditor from '../admin-edit/ClubPageAdminEditor';
@@ -46,13 +46,19 @@ const ClubPage: React.FC = () => {
   const club = clubOverride ?? resolvedClub;
   const presentationClub = useMemo(() => {
     if (!club) return null;
-    const resolvedLogo = resolveBrandLogo('club', club.id, {
+    const mediaCatalog = {
       listings,
       venues,
       organizations,
       relationships: organizationVenueRelationships,
-    }).url;
-    return resolvedLogo && resolvedLogo !== club.logoImageUrl ? { ...club, logoImageUrl: resolvedLogo } : club;
+    };
+    const resolvedLogo = resolveBrandLogo('club', club.id, mediaCatalog).url;
+    const resolvedHeader = resolveBrandHeader('club', club.id, mediaCatalog).url;
+    return {
+      ...club,
+      ...(resolvedLogo && resolvedLogo !== club.logoImageUrl ? { logoImageUrl: resolvedLogo } : {}),
+      ...(!club.headerImageUrl && resolvedHeader ? { headerImageUrl: resolvedHeader } : {}),
+    };
   }, [club, listings, organizationVenueRelationships, organizations, venues]);
   const clubKey = club && index?.clubKeyById.get(club.id) ? index.clubKeyById.get(club.id)! : key;
   const ownerOrganization = club?.ownerOrganizationId
@@ -71,7 +77,7 @@ const ClubPage: React.FC = () => {
       const organizer = organizations.find((organization) => organization.id === event.organizerOrganizationId);
       const organizerLogo = organizer?.logoImageUrl;
       const seriesLogo = event.eventSeriesId ? index.eventSeriesById.get(event.eventSeriesId)?.logoImageUrl : undefined;
-      const flyerUrl = getEventCardImageUrl(event);
+      const flyerUrl = getEventCardImageUrl(event, index);
       return {
         id: event.id,
         name: event.name,
@@ -90,7 +96,7 @@ const ClubPage: React.FC = () => {
     });
   }, [club, clubKey, index, organizations]);
 
-  if (isLoading) {
+  if (isLoading && !club) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
         Loading club...

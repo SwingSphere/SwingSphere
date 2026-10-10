@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import HeroContainer from '../entity/HeroContainer';
 import HeroTagRow from '../entity/HeroTagRow';
 import { uiTokens } from '../../lib/uiTokens';
+import { buildFallbackCandidateChain, markMediaUrlFailed } from '../../lib/listingImage';
 import PublicFeedbackHeroBadge from '../feedback/PublicFeedbackHeroBadge';
 import { Pencil } from 'lucide-react';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
@@ -40,13 +41,25 @@ const ClubHero: React.FC<ClubHeroProps> = ({
 }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControls = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
-  const hasLogo = Boolean(logoImageUrl);
+  const logoCandidates = useMemo(
+    () => buildFallbackCandidateChain([logoImageUrl], false),
+    [logoImageUrl],
+  );
+  const [logoIdx, setLogoIdx] = useState(0);
+
+  useEffect(() => {
+    setLogoIdx(0);
+  }, [logoCandidates]);
+
+  const activeLogoUrl = logoCandidates[logoIdx] ?? null;
+  const hasLogo = Boolean(activeLogoUrl);
   const monochrome = mediaPresentation === 'monochrome' || clubId === 'club-epicure-cape-town';
 
   return (
     <HeroContainer
       title={clubName}
       imageUrl={backgroundImageUrl}
+      fallbackImageUrls={[logoImageUrl]}
       imageClassName={monochrome ? 'grayscale contrast-[1.08]' : ''}
       heightClassName={uiTokens.hero.clubHeight}
     >
@@ -63,8 +76,17 @@ const ClubHero: React.FC<ClubHeroProps> = ({
             hasLogo ? 'h-20 w-20 sm:h-24 sm:w-24' : 'h-16 w-16 sm:h-20 sm:w-20'
           }`}
         >
-          {logoImageUrl ? (
-            <img src={logoImageUrl} alt={`${clubName} logo`} className={`h-full w-full object-contain ${monochrome ? 'grayscale contrast-[1.12]' : ''}`} />
+          {activeLogoUrl ? (
+            <img
+              src={activeLogoUrl}
+              alt={`${clubName} logo`}
+              className={`h-full w-full object-contain ${monochrome ? 'grayscale contrast-[1.12]' : ''}`}
+              onError={() => {
+                const nextUrl = logoCandidates[logoIdx + 1] ?? null;
+                markMediaUrlFailed(activeLogoUrl, { entityId: clubId, role: 'logo', nextUrl });
+                setLogoIdx((prev) => prev + 1);
+              }}
+            />
           ) : (
             <span>{initials(clubName)}</span>
           )}

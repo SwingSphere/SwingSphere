@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LISTING_IMAGE_FALLBACK,
+  buildFallbackCandidateChain,
+  getCloudflareAlternateVariantUrls,
   getEventCardImageUrl,
   getListingCardImageUrl,
   getListingFlyerUrl,
@@ -9,7 +11,13 @@ import {
   getListingImageUrl,
   getListingPrimaryFlyerUrl,
   getListingPrimaryHeroUrl,
+  isMediaUrlKnownFailed,
+  markMediaUrlFailed,
+  resetKnownFailedMediaUrls,
 } from '../lib/listingImage';
+import { buildEntityIndex } from '../lib/entityIndex';
+import { eventSeries as mockEventSeries } from '../data/eventSeries';
+import { mockOrganizations } from '../data/mockOrganizations';
 import type { ClubData, EventData } from '../types';
 
 const createMockEvent = (overrides: Partial<EventData> = {}): EventData => ({
@@ -152,7 +160,6 @@ test('event with neither → default', () => {
 test('event with direct flyerImageUrl alias + headerImageUrl hero → flyer', () => {
   const event = createMockEvent({
     headerImageUrl: 'https://images.example.com/events/hero-banner.jpg',
-    // @ts-expect-error test alias
     flyerImageUrl: 'https://images.example.com/events/official-flyer.jpg',
   });
 
@@ -163,7 +170,6 @@ test('event with direct flyerImageUrl alias + headerImageUrl hero → flyer', ()
 test('event with empty flyer + valid hero → hero fallback', () => {
   const event = createMockEvent({
     headerImageUrl: 'https://images.example.com/events/hero-fallback.jpg',
-    // @ts-expect-error test alias
     flyerImageUrl: '   ',
   });
 
@@ -174,7 +180,6 @@ test('event with empty flyer + valid hero → hero fallback', () => {
 test('event with placeholder flyer + valid hero → hero fallback', () => {
   const event = createMockEvent({
     headerImageUrl: 'https://images.example.com/events/hero-fallback.jpg',
-    // @ts-expect-error test alias
     flyerImageUrl: 'https://picsum.photos/seed/placeholder/500/500',
   });
 
@@ -184,7 +189,6 @@ test('event with placeholder flyer + valid hero → hero fallback', () => {
 
 test('event with placeholder flyer + fallback logo hero → default fallback', () => {
   const event = createMockEvent({
-    // @ts-expect-error test alias
     flyerImageUrl: '/swingsphere-logo_2.png',
     headerImageUrl: '/swingsphere-logo_2.png',
   });
@@ -251,4 +255,55 @@ test('real listing dataset: Trapeze Atlanta club selects hero image', async () =
   const resolved = getListingCardImageUrl(trapeze);
   assert.ok(resolved.includes('Screen-Shot-2023-01-02'));
 });
+
+test('real listing dataset: Connect.Dance.Love Oct 17 resolves portrait flyer and July 25 inherits organizer hero', async () => {
+  resetKnownFailedMediaUrls();
+  const listingsModule = await import('../data/listings.local.json');
+  const listings = (listingsModule.default || listingsModule) as (ClubData | EventData)[];
+  const entityIndex = buildEntityIndex(listings, []);
+
+  const cdlOct = listings.find((item) => item.id === 'event-connect-dance-love-2026-10-17') as EventData | undefined;
+  assert.ok(cdlOct, 'Expected Connect.Dance.Love Oct 17 in listings.local.json');
+  assert.equal(
+    getListingPrimaryFlyerUrl(cdlOct, 'flyerpage'),
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/745406ec-5a74-4acb-e2c9-2722a38b0600/flyerpage',
+  );
+  assert.equal(
+    getListingPrimaryHeroUrl(cdlOct, 'heropage'),
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/67be4683-8087-455c-17a2-56d27415c300/heropage',
+  );
+
+  const cdlJuly = listings.find((item) => item.id === 'event-1782943939781') as EventData | undefined;
+  assert.ok(cdlJuly, 'Expected Connect.Dance.Love July 25 in listings.local.json');
+  assert.equal(
+    getEventCardImageUrl(cdlJuly, entityIndex),
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/herocard',
+  );
+  assert.equal(
+    getListingHeroUrl(cdlJuly, entityIndex),
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/herocard',
+  );
+});
+
+test('Cloudflare alternate variants and session failed-URL deduplication work as expected', () => {
+  resetKnownFailedMediaUrls();
+  const flyerPageUrl = 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/745406ec-5a74-4acb-e2c9-2722a38b0600/flyerpage';
+  const flyerCardUrl = 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/745406ec-5a74-4acb-e2c9-2722a38b0600/flyercard';
+  const flyerPublicUrl = 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/745406ec-5a74-4acb-e2c9-2722a38b0600/public';
+
+  assert.deepEqual(getCloudflareAlternateVariantUrls(flyerPageUrl), [flyerCardUrl, flyerPublicUrl]);
+
+  markMediaUrlFailed(flyerPageUrl, { entityId: 'event-connect-dance-love-2026-10-17', role: 'flyer', nextUrl: flyerCardUrl });
+  assert.equal(isMediaUrlKnownFailed(flyerPageUrl), true);
+
+  const chainAfterFailure = buildFallbackCandidateChain([flyerPageUrl], true);
+  assert.equal(chainAfterFailure.includes(flyerPageUrl), false);
+  assert.equal(chainAfterFailure[0], flyerCardUrl);
+  assert.equal(chainAfterFailure[1], flyerPublicUrl);
+  assert.equal(chainAfterFailure[chainAfterFailure.length - 1], LISTING_IMAGE_FALLBACK);
+
+  resetKnownFailedMediaUrls();
+  assert.equal(isMediaUrlKnownFailed(flyerPageUrl), false);
+});
+
 

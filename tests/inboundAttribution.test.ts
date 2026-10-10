@@ -59,3 +59,19 @@ test('same-origin navigation is not treated as an external referrer', () => {
   assert.equal(result.category, 'direct');
   assert.equal(result.referrerDomain, null);
 });
+
+test('Bluesky and Threads referrers are classified as social traffic', () => {
+  assert.deepEqual(sourceFromInboundHost('bsky.app'), {
+    category: 'social',
+    name: 'bluesky',
+  });
+  assert.deepEqual(sourceFromInboundHost('threads.com'), {
+    category: 'social',
+    name: 'threads',
+  });
+  assert.deepEqual(sourceFromInboundHost('threads.net'), {
+    category: 'social',
+    name: 'threads',
+  });
+});
+

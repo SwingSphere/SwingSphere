@@ -11,7 +11,14 @@ import { DetailContextNav } from '../navigation/DetailContextNav';
 import EventMapCard from '../event/EventMapCard';
 import EventCalendarCard from '../event/EventCalendarCard';
 import EventHostCard from '../event/EventHostCard';
-import { getEventCardImageUrl, getListingImageUrl, getListingPrimaryHeroUrl, getListingPrimaryLogoUrl } from '../../lib/listingImage';
+import {
+  getEventCardImageUrl,
+  getListingImageUrl,
+  getListingPrimaryFlyerUrl,
+  getListingPrimaryHeroUrl,
+  handleListingImageError,
+  withPreferredCloudflareVariant,
+} from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
@@ -30,6 +37,7 @@ import { resolveStreetViewSourceListingId } from '../../lib/streetViewAvailabili
 import { isApproximateLocation } from '../../lib/publicLocation';
 import { getVenueForListing } from '../../lib/entityCompatibility';
 import Seo from '../Seo';
+import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 
 const MOCK_EVENT_SLUG = 'dev-mock-event';
 
@@ -95,7 +103,7 @@ const createMockEvent = (id: string = MOCK_EVENT_SLUG): EventData => {
 const EventPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const key = parsePrettyKeyParam(slug ?? '');
-  const { index, listings, venues, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
+  const { index, listings, venues, eventSeries: eventSeriesCatalog, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
   const isMockRoute = key === MOCK_EVENT_SLUG || key.startsWith('dummy-event-');
 
   const resolvedEvent = index?.eventsByKey.get(key) ?? (isMockRoute ? createMockEvent(key) : null);
@@ -154,11 +162,24 @@ const EventPage: React.FC = () => {
     ) ?? null;
   }, [hostName, index]);
   const presenterName = organizerOrganization?.name || hostName || 'Host TBD';
-  const presenterLogoUrl = organizerOrganization?.logoImageUrl
-    || (organizerOrganization && venue?.ownerOrganizationId === organizerOrganization.id ? getListingPrimaryLogoUrl(venue) : undefined)
-    || hostUser?.avatarUrl;
-  const presenterHeroUrl = organizerOrganization?.headerImageUrl
-    || (organizerOrganization && venue?.ownerOrganizationId === organizerOrganization.id ? getListingImageUrl(venue) : undefined);
+  const presenterLogoUrl = organizerOrganization
+    ? resolveBrandLogo('organization', organizerOrganization.id, {
+        listings,
+        venues,
+        organizations,
+        relationships: organizationVenueRelationships,
+        eventSeries: eventSeriesCatalog,
+      }).url || organizerOrganization.logoImageUrl || hostUser?.avatarUrl
+    : hostUser?.avatarUrl;
+  const presenterHeroUrl = organizerOrganization
+    ? resolveBrandHeader('organization', organizerOrganization.id, {
+        listings,
+        venues,
+        organizations,
+        relationships: organizationVenueRelationships,
+        eventSeries: eventSeriesCatalog,
+      }).url || organizerOrganization.headerImageUrl
+    : undefined;
   const presenterBio = organizerOrganization?.descriptionShort || organizerOrganization?.descriptionFull || hostUser?.bio;
 
   const locationLine = useMemo(() => {
@@ -183,7 +204,7 @@ const EventPage: React.FC = () => {
     ? resolveStreetViewSourceListingId(event, entityCollections)
     : null;
 
-  if (isLoading) {
+  if (isLoading && !event) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
         Loading event...
@@ -204,20 +225,62 @@ const EventPage: React.FC = () => {
   const heroLocationText = isPrivateLocation
     ? 'Private location / disclosed after RSVP'
     : locationLine || 'Location TBD';
-  const eventLogoAsset = event.mediaAssets?.find((asset) => asset.role === 'logo') ?? null;
   const eventHeroAsset = event.mediaAssets?.find((asset) => asset.role === 'hero') ?? null;
   const eventFlyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer') ?? null;
   const eventGalleryAssets = event.mediaAssets?.filter((asset) => asset.role === 'gallery') ?? [];
-  const eventFlyerHeroImage = eventFlyerAsset
-    ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'flyerpage' }) ?? undefined
-    : (event as EventData & { flyerImageUrl?: string }).flyerImageUrl;
-  const eventCoverImage = eventHeroAsset
-    ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event)
-    : getListingPrimaryHeroUrl(event) ?? getEventCardImageUrl(event);
-  const eventLogoImage = eventLogoAsset
-    ? getCloudflareImageUrl({ externalId: eventLogoAsset.external_id, variant: 'logosquare' })
-    : event.logoImageUrl || eventSeries?.logoImageUrl;
-  const venueCoverImage = venue ? getListingImageUrl(venue) : '';
+  const eventFlyerHeroImage =
+    (eventFlyerAsset
+      ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'flyerpage' }) ?? undefined
+      : undefined) ??
+    getListingPrimaryFlyerUrl(event, 'flyerpage');
+  const eventBrandHeader = resolveBrandHeader('event', event.id, {
+    listings,
+    venues,
+    organizations,
+    relationships: organizationVenueRelationships,
+    eventSeries: eventSeriesCatalog,
+  });
+  const directHeroImage =
+    (eventHeroAsset
+      ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? undefined
+      : undefined) ??
+    getListingPrimaryHeroUrl(event, 'heropage');
+  const inheritedHeroImage =
+    (eventBrandHeader.url ? withPreferredCloudflareVariant(eventBrandHeader.url, 'heropage') : null) ??
+    (presenterHeroUrl ? withPreferredCloudflareVariant(presenterHeroUrl, 'heropage') : null) ??
+    (eventSeries?.headerImageUrl ? withPreferredCloudflareVariant(eventSeries.headerImageUrl, 'heropage') : null) ??
+    undefined;
+  const venueCoverImage = venue ? getListingImageUrl(venue, index ?? undefined) : '';
+  const eventCoverImage =
+    directHeroImage ??
+    inheritedHeroImage ??
+    eventFlyerHeroImage ??
+    (venueCoverImage || undefined) ??
+    getEventCardImageUrl(event, index ?? undefined);
+  const flyerFallbackUrls = [
+    eventFlyerAsset ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'flyercard' }) : null,
+    eventFlyerAsset ? getCloudflareImageUrl({ externalId: eventFlyerAsset.external_id, variant: 'public' }) : null,
+    (event as EventData & { flyerImageUrl?: string }).flyerImageUrl,
+  ];
+  const heroFallbackUrls = [
+    directHeroImage,
+    eventHeroAsset ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'herocard' }) : null,
+    inheritedHeroImage,
+    presenterHeroUrl,
+    eventSeries?.headerImageUrl,
+    venueCoverImage || null,
+    eventFlyerHeroImage,
+    ...(event.galleryImageUrls ?? []),
+  ];
+  const eventBrandLogo = resolveBrandLogo('event', event.id, {
+    listings,
+    venues,
+    organizations,
+    relationships: organizationVenueRelationships,
+    eventSeries: eventSeriesCatalog,
+  });
+  const eventLogoImage = eventBrandLogo.url || event.logoImageUrl || eventSeries?.logoImageUrl;
+  const eventLogoInherited = Boolean(eventBrandLogo.url && eventBrandLogo.inherited && eventBrandLogo.sourceType !== 'event');
   const venueLogoAsset = venue?.mediaAssets?.find((asset) => asset.role === 'logo') ?? null;
   const venueLogoImage = venueLogoAsset
     ? getCloudflareImageUrl({ externalId: venueLogoAsset.external_id, variant: 'logosquare' })
@@ -230,7 +293,7 @@ const EventPage: React.FC = () => {
     ...(event.galleryImageUrls ?? []),
     ...(venue?.galleryImageUrls ?? []),
     venueCoverImage,
-  ].filter((url) => Boolean(url) && url !== eventCoverImage);
+  ].filter((url): url is string => Boolean(url) && url !== eventCoverImage);
   const extendedEvent = event as EventData & {
     ticketUrl?: string;
     rsvpUrl?: string;
@@ -251,6 +314,20 @@ const EventPage: React.FC = () => {
   const locationForCalendar = isPrivateLocation
     ? 'Private location / disclosed after RSVP'
     : [city, region].filter(Boolean).join(', ') || event.location || 'Location TBD';
+
+  const calendarCardNode = (
+    <EventCalendarCard
+      compact
+      eventId={event.id}
+      title={event.name}
+      description={event.description_full}
+      startIso={event.time.start}
+      endIso={event.time.end}
+      locationText={locationForCalendar}
+      organizationId={event.organizerOrganizationId}
+      eventSeriesId={event.eventSeriesId}
+    />
+  );
 
   return (
     <>
@@ -294,34 +371,41 @@ const EventPage: React.FC = () => {
             eventId={event.id}
             title={event.name}
             backgroundImageUrl={eventCoverImage}
+            backgroundFallbackUrls={heroFallbackUrls}
             mobileFlyerImageUrl={eventFlyerHeroImage}
+            flyerFallbackUrls={flyerFallbackUrls}
             eventLogoUrl={eventLogoImage}
             clubLogoUrl={venueLogoImage}
             hostLogoUrl={presenterLogoUrl}
             locationText={heroLocationText}
+            timeText={timeRange}
+            venueName={venue?.name}
+            venuePath={venuePath}
+            hostName={presenterName}
+            hostPath={hostPath}
+            attendanceText={attendanceText}
+            accessUrl={accessUrl}
+            accessDestinationType={accessDestinationType}
+            contactEmail={event.contactEmail}
+            calendarActions={calendarCardNode}
             tags={event.tags}
             mediaImages={heroMediaImages}
             onQuickEdit={setQuickEditField}
+            inheritedLogoSourceName={eventLogoInherited ? eventBrandLogo.sourceName : undefined}
           />
           <EventEssentialsSection
+            className="ss-event-essentials-bar"
             timeText={timeRange}
             locationText={heroLocationText}
             venueName={venue?.name}
             venuePath={venuePath}
+            hostName={presenterName}
+            hostPath={hostPath}
             attendanceText={attendanceText}
-            calendarActions={
-              <EventCalendarCard
-                compact
-                eventId={event.id}
-                title={event.name}
-                description={event.description_full}
-                startIso={event.time.start}
-                endIso={event.time.end}
-                locationText={locationForCalendar}
-                organizationId={event.organizerOrganizationId}
-                eventSeriesId={event.eventSeriesId}
-              />
-            }
+            accessUrl={accessUrl}
+            accessDestinationType={accessDestinationType}
+            contactEmail={event.contactEmail}
+            calendarActions={calendarCardNode}
           />
         </>
       }
@@ -358,7 +442,7 @@ const EventPage: React.FC = () => {
                     day: 'numeric',
                     year: 'numeric',
                   }).format(new Date(occurrence.time.start));
-                  const occurrenceCardUrl = getEventCardImageUrl(occurrence);
+                  const occurrenceCardUrl = getEventCardImageUrl(occurrence, index ?? undefined);
                   return (
                     <Link
                       key={occurrence.id}
@@ -372,7 +456,7 @@ const EventPage: React.FC = () => {
                             alt=""
                             aria-hidden="true"
                             loading="lazy"
-                            onError={(error) => { error.currentTarget.style.display = 'none'; }}
+                            onError={handleListingImageError}
                             className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-top opacity-75 transition duration-300 group-hover:scale-105"
                           />
                           <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-[#090b10]/85 via-[#090b10]/65 to-[#090b10]/35" />
@@ -390,10 +474,7 @@ const EventPage: React.FC = () => {
               </div>
             </section>
           ) : null}
-          <div className="space-y-6 lg:hidden">
-            <div className="hidden sm:block">
-              <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} flyerUrl={eventFlyerHeroImage} onQuickEdit={() => setQuickEditField('flyer')} />
-            </div>
+          <div className="ss-event-mobile-only-cards space-y-6">
             <EventMapCard
               eventId={event.id}
               eventName={event.name}

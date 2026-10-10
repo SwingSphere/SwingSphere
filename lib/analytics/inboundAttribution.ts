@@ -75,11 +75,96 @@ export const sourceFromInboundHost = (
     || normalized === 'twitter.com'
     || normalized.endsWith('.twitter.com')
   ) return { category: 'social', name: 'x' };
-  if (normalized === 'threads.net' || normalized.endsWith('.threads.net')) {
+  if (
+    normalized === 'threads.net'
+    || normalized.endsWith('.threads.net')
+    || normalized === 'threads.com'
+    || normalized.endsWith('.threads.com')
+  ) {
     return { category: 'social', name: 'threads' };
+  }
+  if (
+    normalized === 'bsky.app'
+    || normalized.endsWith('.bsky.app')
+    || normalized === 'bsky.social'
+    || normalized.endsWith('.bsky.social')
+  ) {
+    return { category: 'social', name: 'bluesky' };
+  }
+  if (
+    normalized === 'youtube.com'
+    || normalized.endsWith('.youtube.com')
+    || normalized === 'youtu.be'
+  ) {
+    return { category: 'social', name: 'youtube' };
+  }
+  if (
+    normalized === 'linkedin.com'
+    || normalized.endsWith('.linkedin.com')
+    || normalized === 'lnkd.in'
+  ) {
+    return { category: 'social', name: 'linkedin' };
+  }
+  if (
+    normalized === 'discord.com'
+    || normalized.endsWith('.discord.com')
+    || normalized === 'discordapp.com'
+  ) {
+    return { category: 'social', name: 'discord' };
+  }
+  if (
+    normalized === 't.me'
+    || normalized === 'telegram.org'
+    || normalized.endsWith('.telegram.org')
+  ) {
+    return { category: 'social', name: 'telegram' };
   }
 
   return { category: 'referral', name: normalized.slice(0, 120) || 'referral' };
+};
+
+const KNOWN_SOURCE_LABELS: Record<string, string> = {
+  direct: 'Direct',
+  google: 'Google',
+  bing: 'Bing',
+  duckduckgo: 'DuckDuckGo',
+  yahoo: 'Yahoo',
+  reddit: 'Reddit',
+  'com.reddit.frontpage': 'Reddit',
+  bluesky: 'Bluesky',
+  'bsky.app': 'Bluesky',
+  threads: 'Threads',
+  'threads.net': 'Threads',
+  x: 'X / Twitter',
+  twitter: 'X / Twitter',
+  instagram: 'Instagram',
+  'com.instagram.android': 'Instagram',
+  facebook: 'Facebook',
+  'com.facebook.katana': 'Facebook',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  discord: 'Discord',
+  telegram: 'Telegram',
+};
+
+export const formatInboundSourceName = (sourceName?: string | null): string => {
+  const raw = (sourceName || 'unknown').trim();
+  const key = raw.toLowerCase();
+  if (KNOWN_SOURCE_LABELS[key]) return KNOWN_SOURCE_LABELS[key];
+  if (raw.includes('.')) return raw.toLowerCase().replace(/^www\./, '');
+  return raw.replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+export const formatInboundSourceCategory = (category?: string | null): string => {
+  const key = (category || 'other').toLowerCase();
+  if (key === 'direct') return 'Direct';
+  if (key === 'search') return 'Search Engine';
+  if (key === 'social') return 'Social Platform';
+  if (key === 'referral') return 'Website Referral';
+  if (key === 'email') return 'Email / Newsletter';
+  if (key === 'campaign') return 'Campaign / UTM';
+  return 'Other';
 };
 
 const getExternalReferrer = (

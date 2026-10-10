@@ -158,12 +158,14 @@ export const buildEntityIndex = (
     eventKeyById.set(event.id, key);
     if (!eventsByKey.has(key)) eventsByKey.set(key, event);
 
+    const collections = { listings, venues, organizations, relationships };
+    const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, collections);
+
     if (hostName) {
       const slug = hostSlug(hostName);
       const hostEvents = eventsByHostSlug.get(slug) ?? [];
       hostEvents.push(event);
       eventsByHostSlug.set(slug, hostEvents);
-      const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, { listings, venues, organizations, relationships });
       const organizerOrganization = organizerOrganizationId
         ? organizationsById.get(organizerOrganizationId)
         : undefined;
@@ -205,15 +207,19 @@ export const buildEntityIndex = (
     if (event.eventSeriesId) {
       const seriesEvents = eventsBySeriesId.get(event.eventSeriesId) ?? [];
       seriesEvents.push(event);
-      seriesEvents.sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime());
       eventsBySeriesId.set(event.eventSeriesId, seriesEvents);
     }
 
-    const organizationId = resolveEventOrganizerOrganizationId(event, { listings, venues, organizations, relationships });
-    if (organizationId) {
-      const organizationEvents = eventsByOrganizationId.get(organizationId) ?? [];
+    if (organizerOrganizationId) {
+      const organizationEvents = eventsByOrganizationId.get(organizerOrganizationId) ?? [];
       organizationEvents.push(event);
-      eventsByOrganizationId.set(organizationId, organizationEvents);
+      eventsByOrganizationId.set(organizerOrganizationId, organizationEvents);
+    }
+  }
+
+  for (const seriesEvents of eventsBySeriesId.values()) {
+    if (seriesEvents.length > 1) {
+      seriesEvents.sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime());
     }
   }
 

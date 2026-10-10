@@ -41,6 +41,13 @@ declare module 'virtual:swingsphere-schema-version' {
     version: string;
     name: string;
     filename: string;
+    totalMigrations: number;
+    versions: string[];
+    migrations: Array<{
+      version: string;
+      name: string;
+      filename: string;
+    }>;
   };
   export default schemaVersion;
 }

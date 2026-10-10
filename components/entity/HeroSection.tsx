@@ -36,8 +36,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             alt={title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
-          <div className="absolute bottom-5 left-5 right-5">
+          <div className="absolute bottom-5 left-5 right-5 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)]">
             {eyebrow && (
               <span className="inline-flex text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gray-900/70 text-gray-200">
                 {eyebrow}

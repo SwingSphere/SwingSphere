@@ -57,7 +57,23 @@ const EventQuickEditPanel: React.FC<Props> = ({ event, field, onClose, onPreview
     const mediaAssets = role === 'gallery'
       ? [...currentAssets, asset]
       : [...currentAssets.filter((item) => item.role !== role), asset];
-    updateDraft({ ...draft, mediaAssets, ...(role === 'flyer' ? { flyerImageUrl: undefined } : {}) });
+    updateDraft({
+      ...draft,
+      mediaAssets,
+      ...(role === 'logo' ? { logoOverride: true } : {}),
+      ...(role === 'flyer' ? { flyerImageUrl: undefined } : {}),
+    });
+  };
+
+  const handleRemoveLogoOverride = () => {
+    const nextDraft: EventData = {
+      ...draft,
+      logoImageUrl: undefined,
+      logoOverride: false,
+      mediaAssets: (draft.mediaAssets ?? []).filter((asset) => asset.role !== 'logo'),
+    };
+    delete nextDraft.logoImageUrl;
+    updateDraft(nextDraft);
   };
 
   const handleLinkedFlyer = (url: string) => {
@@ -81,6 +97,7 @@ const EventQuickEditPanel: React.FC<Props> = ({ event, field, onClose, onPreview
   };
 
   const mediaRole: MediaRole | null = field === 'logo' || field === 'hero' || field === 'flyer' || field === 'gallery' ? field : null;
+  const hasExplicitLogoOnEvent = Boolean(draft.logoOverride === true || draft.logoImageUrl || existingAsset);
 
   return (
     <aside className="fixed bottom-24 right-4 z-[1500] w-[calc(100%-2rem)] max-w-md rounded-2xl border border-white/15 bg-[#111217]/98 p-4 text-white shadow-2xl shadow-black/60 backdrop-blur-xl" aria-label={`Quick edit ${fieldLabels[field]}`}>
@@ -124,6 +141,27 @@ const EventQuickEditPanel: React.FC<Props> = ({ event, field, onClose, onPreview
             onExternalImageUrl={field === 'flyer' ? handleLinkedFlyer : undefined}
             cropAspectRatioOverride={field === 'logo' ? 1 : undefined}
           />
+        ) : null}
+        {field === 'logo' ? (
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-gray-300">
+            <div className="flex items-center justify-between gap-2">
+              <span>
+                Status:{' '}
+                <strong className="text-white">
+                  {hasExplicitLogoOnEvent ? 'Explicit Event Override' : 'Inherited Host Logo'}
+                </strong>
+              </span>
+              {hasExplicitLogoOnEvent ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogoOverride}
+                  className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/20"
+                >
+                  Remove override & resume inheritance
+                </button>
+              ) : null}
+            </div>
+          </div>
         ) : null}
         {field === 'flyer' && !existingAsset && getListingPrimaryFlyerUrl(draft) ? (
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-3">

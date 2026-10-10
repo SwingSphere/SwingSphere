@@ -114,14 +114,10 @@ export const getCampaignKey = (explicit?: string): string | null => {
   }
 };
 
-export const getDeviceClass = (): 'mobile' | 'tablet' | 'desktop' | 'unknown' => {
-  if (typeof window === 'undefined') return 'unknown';
-  const width = window.innerWidth;
-  if (!Number.isFinite(width)) return 'unknown';
-  if (width < 768) return 'mobile';
-  if (width < 1100) return 'tablet';
-  return 'desktop';
-};
+import { resolveAnalyticsDeviceClass } from './deviceAttribution';
+
+export const getDeviceClass = (): 'mobile' | 'tablet' | 'desktop' | 'unknown' =>
+  resolveAnalyticsDeviceClass();
 
 const inferSurface = (): OutboundSurface => {
   if (typeof window === 'undefined') return 'unknown';

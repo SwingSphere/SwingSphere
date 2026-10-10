@@ -92,11 +92,27 @@ const clubToOrganization = (club: ClubData): OrganizationData => ({
   postedByUserId: club.postedByUserId,
 });
 
+const inferredHostMediaByName: Record<string, { logoImageUrl?: string; headerImageUrl?: string }> = {
+  'connect dance love': {
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9173a390-49ff-423f-2c7e-e95485fbdc00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/heropage',
+  },
+  'the club unhinged': {
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/037e61d1-4ca6-4358-c244-47ac4daa1e00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/671d46e0-b2df-4258-aa0b-59a6146c4a00/heropage',
+  },
+  'krystal club prive': {
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2efe3573-92a8-4f7b-72cc-4224fc2f4c00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fc474aa7-a206-4141-e043-78eb40371600/heropage',
+  },
+};
+
 const hostOrganizationsByNormalizedName = new Map<string, OrganizationData>();
 
 for (const event of mockData.filter(isEvent)) {
   const normalizedHostName = normalizeHostName(event.hostName);
   if (!normalizedHostName || hostOrganizationsByNormalizedName.has(normalizedHostName)) continue;
+  const hostMedia = inferredHostMediaByName[normalizedHostName];
   hostOrganizationsByNormalizedName.set(normalizedHostName, {
     // SEMv2 Phase 1 compatibility ID. Replace with persisted organization IDs when host/promoter records exist.
     id: `org-host-${nameSlug(normalizedHostName)}`,
@@ -104,6 +120,8 @@ for (const event of mockData.filter(isEvent)) {
     name: event.hostName,
     slug: nameSlug(normalizedHostName),
     displayTypes: ['host'],
+    logoImageUrl: hostMedia?.logoImageUrl,
+    headerImageUrl: hostMedia?.headerImageUrl,
     globePresence: inferredHostPresenceByName[normalizedHostName],
     status: 'approved',
   });
@@ -121,6 +139,7 @@ const standaloneOrganizations: OrganizationData[] = [
     descriptionShort: 'A multi-city lifestyle event promoter producing curated private parties and themed social experiences across the United States.',
     website: 'https://weareilluminaughty.com/',
     contactEmail: 'support@weareilluminaughty.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/ae6636d9-f865-4baa-6256-794aa12f8b00/logosquare',
     globePresence: { visibility: 'visible', regions: illuminaughtyRegions },
     status: 'approved',
     postedByUserId: 'user1',
@@ -208,6 +227,7 @@ const standaloneOrganizations: OrganizationData[] = [
     descriptionShort: 'A recurring lifestyle event brand at Twist SF with its own themed editions and audience format.',
     website: 'https://www.herfantasyparty.com/',
     contactEmail: 'support@worldmodern.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bc92daf5-86b5-4d86-01ce-6203f64b1c00/logosquare',
     operatingRegions: ['San Francisco Bay Area'],
     globePresence: {
       visibility: 'visible',
@@ -224,6 +244,7 @@ const standaloneOrganizations: OrganizationData[] = [
     displayTypes: ['event_brand', 'promoter', 'host', 'community'],
     descriptionShort: 'A Bay Area lifestyle event brand producing recurring screened parties, themed nights, private gatherings and major holiday events at Twist SF and other venues.',
     website: 'https://bronzeparty.com/',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0f60d544-550f-4fcf-0cc1-30d705b30e00/logosquare',
     globePresence: {
       visibility: 'visible',
       regions: [hostRegion('san-francisco-bay-area', 'San Francisco', 'CA', 'United States', 37.7749, -122.4194)],
@@ -259,11 +280,52 @@ const standaloneOrganizations: OrganizationData[] = [
     status: 'approved',
     postedByUserId: 'user1',
   },
+  {
+    id: 'org-host-connect-dance-love',
+    type: 'organization',
+    name: 'Connect.Dance.Love',
+    slug: 'connect-dance-love',
+    displayTypes: ['host', 'community'],
+    descriptionShort: 'Connect. Dance. Love. is a welcoming, consent-focused Oakland dance, connection, and sensual exploration community.',
+    website: 'https://www.connectdancelove.com/',
+    contactEmail: 'info@connectdancelove.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5b78c7bd-b4ef-4c69-8872-03bf2a6c4000/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/heropage',
+    globePresence: inferredHostPresenceByName['connect dance love'],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+  {
+    id: 'org-host-krystal-club-prive',
+    type: 'organization',
+    name: 'Krystal Club Privé',
+    slug: 'krystal-club-prive',
+    displayTypes: ['host', 'promoter', 'community'],
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d497f0cd-5534-4391-5839-df2385094800/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/d497f0cd-5534-4391-5839-df2385094800/heropage',
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+  {
+    id: 'org-promoter-the-club-unhinged',
+    type: 'organization',
+    name: 'The Club: UNHINGED',
+    slug: 'the-club-unhinged',
+    displayTypes: ['promoter', 'host', 'community'],
+    descriptionShort: 'Biweekly themed, members-only Oklahoma City lifestyle dance parties.',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/037e61d1-4ca6-4358-c244-47ac4daa1e00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/671d46e0-b2df-4258-aa0b-59a6146c4a00/heropage',
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
 ];
+
+const standaloneSlugs = new Set(standaloneOrganizations.map((org) => org.slug));
+const deduplicatedHostOrganizations = hostOrganizations.filter((org) => !standaloneSlugs.has(org.slug));
 
 export const mockOrganizations: OrganizationData[] = [
   ...mockData.filter(isClub).map(clubToOrganization),
-  ...hostOrganizations,
   ...standaloneOrganizations,
+  ...deduplicatedHostOrganizations,
   communityHostOrganization,
 ];

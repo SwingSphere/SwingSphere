@@ -204,7 +204,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
                     className={`relative h-[96px] min-w-[148px] overflow-hidden rounded-2xl border text-left ${selected ? 'border-red-400/65 bg-red-500/[0.09]' : 'border-white/[0.08] bg-white/[0.035]'}`}
                   >
                     <img
-                      src={getListingLogoUrl(listing)}
+                      src={getListingLogoUrl(listing, entityIndex)}
                       onError={handleListingImageError}
                       alt={`${listing.name} logo`}
                       className="absolute inset-0 h-full w-full object-contain"
@@ -322,7 +322,7 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
             <div className="space-y-2.5">
               {visibleListings.map((listing) => (
                 <button key={listing.id} type="button" onClick={() => openListing(listing)} className="flex w-full gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-2.5 text-left">
-                  <img src={getListingLogoUrl(listing)} onError={handleListingImageError} alt={`${listing.name} logo`} className="h-24 w-24 shrink-0 rounded-xl bg-black/30 object-contain" />
+                  <img src={getListingLogoUrl(listing, entityIndex)} onError={handleListingImageError} alt={`${listing.name} logo`} className="h-24 w-24 shrink-0 rounded-xl bg-black/30 object-contain" />
                   <span className="min-w-0 flex-1 py-1">
                     <span className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-sm font-semibold leading-5 text-white">{listing.name}</span><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-300" /></span>
                     <span className="mt-1 block text-xs font-medium text-red-200">{formatEventDate(listing)}</span>

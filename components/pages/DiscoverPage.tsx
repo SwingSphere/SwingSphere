@@ -17,7 +17,13 @@ import {
 } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getHostCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
-import { getListingCardImageUrl, getListingLogoUrl, handleListingImageError } from '../../lib/listingImage';
+import {
+  buildFallbackCandidateChain,
+  getListingImageCandidates,
+  getListingLogoUrl,
+  handleListingImageError,
+  serializeFallbackCandidates,
+} from '../../lib/listingImage';
 import { isPlaceholderMediaUrl, resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { isActiveDiscoveryListing } from '../../lib/eventLifecycle';
 import EntityTypePill from '../entity/EntityTypePill';
@@ -32,17 +38,29 @@ type Card = {
   key: string;
   kind: Exclude<Kind, 'all'>;
   name: string;
+  alphaRank: number;
   href: string;
   image?: string | null;
+  imageFallbacks?: string;
   logoUrl?: string | null;
+  logoFallbacks?: string;
   city?: string;
   region?: string;
   country?: string;
+  locationText: string;
+  locationKey: string;
   date?: string;
+  dateText: string | null;
+  timestamp: number;
   attendance?: AttendancePolicy;
+  policyText: string | null;
   description?: string;
+  searchTarget: string;
+  suggestionTarget: string;
   globeListing?: Listing;
 };
+
+const NAME_COLLATOR = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 
 const KIND_TABS: { value: Kind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'all', label: 'All', icon: Compass },
@@ -101,15 +119,18 @@ const displayDate = (value?: string): string | null => {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const inDateWindow = (value: string | undefined, filter: DateFilter): boolean => {
-  if (filter === 'all') return true;
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
+const computeDateWindowBounds = (filter: DateFilter): { startMs: number; endMs: number } | null => {
+  if (filter === 'all') return null;
   const now = new Date();
   const end = new Date(now);
-  if (filter === 'today') end.setHours(23, 59, 59, 999);
-  if (filter === '30days') end.setDate(end.getDate() + 30);
+  if (filter === 'today') {
+    end.setHours(23, 59, 59, 999);
+    return { startMs: now.getTime(), endMs: end.getTime() };
+  }
+  if (filter === '30days') {
+    end.setDate(end.getDate() + 30);
+    return { startMs: now.getTime(), endMs: end.getTime() };
+  }
   if (filter === 'weekend') {
     const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
     const start = new Date(now);
@@ -118,9 +139,9 @@ const inDateWindow = (value: string | undefined, filter: DateFilter): boolean =>
     end.setTime(start.getTime());
     end.setDate(end.getDate() + 1);
     end.setHours(23, 59, 59, 999);
-    return date >= start && date <= end;
+    return { startMs: start.getTime(), endMs: end.getTime() };
   }
-  return date >= now && date <= end;
+  return null;
 };
 
 const normalizeCountry = (country?: string): string => {
@@ -141,14 +162,50 @@ const formatCardLocation = (city?: string, region?: string, country?: string): s
   return cleanCountry ? `${cleanCity}, ${cleanCountry}` : cleanCity;
 };
 
+type ClubLookup = {
+  byIdOrVenueId: Map<string, ClubData>;
+  withLowerName: Array<{ club: ClubData; lowerName: string }>;
+};
+
+const buildClubLookup = (listings: Listing[]): ClubLookup => {
+  const byIdOrVenueId = new Map<string, ClubData>();
+  const withLowerName: Array<{ club: ClubData; lowerName: string }> = [];
+  for (const item of listings) {
+    if (item.type !== 'club') continue;
+    byIdOrVenueId.set(item.id, item);
+    if (item.primaryVenueId) byIdOrVenueId.set(item.primaryVenueId, item);
+    if (item.name) withLowerName.push({ club: item, lowerName: item.name.toLowerCase() });
+  }
+  return { byIdOrVenueId, withLowerName };
+};
+
 const getEventHostingLogoUrl = (
   event: Extract<Listing, { type: 'event' }>,
   index: EntityIndex | null,
-  listings: Listing[],
+  clubLookup: ClubLookup,
 ): string | null => {
-  if (!index) return null;
+  const directLogo = event.logoImageUrl && !isPlaceholderMediaUrl(event.logoImageUrl) ? event.logoImageUrl : null;
+  if (event.logoOverride === true && directLogo) {
+    return directLogo;
+  }
 
-  // 1. Through index.eventVenueClubKeyById or venueKey
+  if (!index) return event.logoOverride === false ? null : directLogo;
+
+  // 1. Through organizerOrganizationId or eventSeriesId (canonical host/series identity first)
+  if (event.organizerOrganizationId) {
+    const org = index.organizationsById.get(event.organizerOrganizationId);
+    if (org?.logoImageUrl && !isPlaceholderMediaUrl(org.logoImageUrl)) {
+      return org.logoImageUrl;
+    }
+  }
+  if (event.eventSeriesId) {
+    const series = index.eventSeriesById.get(event.eventSeriesId);
+    if (series?.logoImageUrl && !isPlaceholderMediaUrl(series.logoImageUrl)) {
+      return series.logoImageUrl;
+    }
+  }
+
+  // 2. Through index.eventVenueClubKeyById or venueKey
   const clubKey = index.eventVenueClubKeyById.get(event.id) || event.venueKey;
   if (clubKey) {
     const club = index.clubsByKey.get(clubKey);
@@ -158,14 +215,10 @@ const getEventHostingLogoUrl = (
     }
   }
 
-  // 2. Through event.venueId (e.g. 'venue-club-twist-sf' -> club-twist-sf or venue in venuesById)
+  // 3. Through event.venueId (e.g. 'venue-club-twist-sf' -> club-twist-sf or venue in venuesById)
   if (event.venueId) {
     const rawId = event.venueId.replace(/^venue-/, '');
-    const club = listings.find(
-      (l): l is ClubData =>
-        l.type === 'club' &&
-        (l.id === event.venueId || l.id === rawId || l.primaryVenueId === event.venueId),
-    );
+    const club = clubLookup.byIdOrVenueId.get(event.venueId) || clubLookup.byIdOrVenueId.get(rawId);
     if (club) {
       const logo = getListingLogoUrl(club);
       if (logo && !isPlaceholderMediaUrl(logo)) return logo;
@@ -176,38 +229,191 @@ const getEventHostingLogoUrl = (
     }
   }
 
-  // 3. Through location match with clubs (e.g. "Twist SF" in location text)
+  // 4. Through location match with clubs (e.g. "Twist SF" in location text)
   if (event.location) {
     const locLower = event.location.toLowerCase();
-    const club = listings.find(
-      (l): l is ClubData =>
-        l.type === 'club' && Boolean(l.name) && locLower.includes(l.name.toLowerCase()),
-    );
-    if (club) {
-      const logo = getListingLogoUrl(club);
+    const matched = clubLookup.withLowerName.find(({ lowerName }) => locLower.includes(lowerName));
+    if (matched) {
+      const logo = getListingLogoUrl(matched.club);
       if (logo && !isPlaceholderMediaUrl(logo)) return logo;
     }
   }
 
-  // 4. Through organizerOrganizationId
-  if (event.organizerOrganizationId) {
-    const org = index.organizationsById.get(event.organizerOrganizationId);
-    if (org?.logoImageUrl && !isPlaceholderMediaUrl(org.logoImageUrl)) {
-      return org.logoImageUrl;
-    }
-  }
-
   // 5. Direct event logo fallback if available
-  if (event.logoImageUrl && !isPlaceholderMediaUrl(event.logoImageUrl)) {
-    return event.logoImageUrl;
+  if (event.logoOverride !== false && directLogo) {
+    return directLogo;
   }
 
   return null;
 };
 
+type DirectoryResultCardProps = {
+  card: Card;
+  priority: boolean;
+  onOpenGlobe: (listingId: string) => void;
+};
+
+const OFFSCREEN_CARD_STYLE: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: 'auto 360px',
+};
+
+const DirectoryResultCard: React.FC<DirectoryResultCardProps> = React.memo(({ card, priority, onOpenGlobe }) => {
+  const { image, locationText, dateText, policyText } = card;
+  const cardImgRef = useRef<HTMLImageElement | null>(null);
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
+  const prevKeyRef = useRef(card.key);
+
+  if (prevKeyRef.current !== card.key) {
+    prevKeyRef.current = card.key;
+    if (cardImgRef.current) delete cardImgRef.current.dataset.failedUrls;
+    if (logoImgRef.current) delete logoImgRef.current.dataset.failedUrls;
+  }
+
+  return (
+    <article
+      style={priority ? undefined : OFFSCREEN_CARD_STYLE}
+      className="group relative min-h-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#090c12] transition-all duration-300 hover:-translate-y-1 hover:border-red-500/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.65)]"
+    >
+      <Link
+        to={card.href}
+        className="relative block min-h-[360px] h-full focus:outline-none"
+        aria-label={`Open ${card.name}`}
+      >
+        {image ? (
+          <img
+            ref={cardImgRef}
+            src={image}
+            alt=""
+            data-entity-id={card.key}
+            data-media-role="card"
+            data-fallback-candidates={card.imageFallbacks}
+            onError={handleListingImageError}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchPriority={priority ? 'high' : 'auto'}
+            className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 lg:group-hover:scale-[1.03] ${
+              card.kind === 'event' ? 'object-top' : 'object-center'
+            }`}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#121620] to-[#06080d]">
+            <div
+              className="absolute inset-0 opacity-40"
+              style={{
+                background:
+                  card.kind === 'event'
+                    ? 'radial-gradient(circle at center, rgba(245, 158, 11, 0.2), transparent 70%)'
+                    : card.kind === 'host'
+                    ? 'radial-gradient(circle at center, rgba(6, 182, 212, 0.2), transparent 70%)'
+                    : 'radial-gradient(circle at center, rgba(197, 29, 52, 0.25), transparent 70%)',
+              }}
+            />
+            {card.kind === 'event' ? (
+              <CalendarDays className="h-10 w-10 text-amber-400/25" />
+            ) : card.kind === 'host' ? (
+              <UsersRound className="h-10 w-10 text-cyan-400/25" />
+            ) : (
+              <Building2 className="h-10 w-10 text-red-400/25" />
+            )}
+          </div>
+        )}
+
+        {/* Full-card scrim: preserve the flyer/hero while keeping metadata readable. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/[0.02] via-45% to-[#090c12] to-88%" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-[#090c12] via-[#090c12]/90 to-transparent" />
+
+        {/* Top Badges */}
+        <div className="absolute left-3 top-3 pointer-events-none">
+          <EntityTypePill tone={card.kind} className="shadow-md">
+            {card.kind}
+          </EntityTypePill>
+        </div>
+
+        {/* Identity badge remains useful over full-bleed imagery. */}
+        {card.logoUrl && (
+          <div className="absolute bottom-[132px] left-3 h-[100px] w-[100px] overflow-hidden rounded-2xl border border-white/20 bg-black/85 p-1.5 shadow-lg shadow-black/60 transition-transform duration-300 lg:group-hover:scale-105">
+            <img
+              ref={logoImgRef}
+              src={card.logoUrl}
+              alt=""
+              data-entity-id={card.key}
+              data-media-role="logo"
+              data-fallback-candidates={card.logoFallbacks}
+              onError={handleListingImageError}
+              loading={priority ? 'eager' : 'lazy'}
+              decoding="async"
+              className="h-full w-full rounded-lg object-cover"
+            />
+          </div>
+        )}
+
+        {/* Metadata overlays the lower portion of the image instead of using a separate body/footer. */}
+        <div className="absolute inset-x-0 bottom-0 p-4 pr-14">
+          <h2
+            className="line-clamp-2 text-base font-bold tracking-tight text-white drop-shadow-sm transition-colors group-hover:text-red-200"
+            title={card.name}
+          >
+            {card.name}
+          </h2>
+
+          <div className="mt-2 space-y-1.5">
+            {locationText && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                <span className="truncate">{locationText}</span>
+              </p>
+            )}
+
+            {card.kind === 'event' && dateText && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-gray-200">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                <span className="truncate">{dateText}</span>
+              </p>
+            )}
+
+            {policyText && (
+              <p className="flex items-center gap-1.5 text-xs text-gray-300">
+                <UsersRound className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                <span className="truncate">{policyText}</span>
+              </p>
+            )}
+
+            {card.description && card.kind !== 'event' && (
+              <p className="line-clamp-2 pt-1 text-xs leading-relaxed text-gray-400">
+                {card.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {card.globeListing && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenGlobe(card.globeListing!.id);
+          }}
+          className="absolute bottom-3 right-3 z-20 rounded-xl border border-white/15 bg-black/75 p-2 text-gray-300 shadow-lg transition-colors hover:border-red-400/40 hover:bg-red-500/15 hover:text-white"
+          title="Show on 3D Globe"
+          aria-label={`Show ${card.name} on 3D Globe`}
+        >
+          <Globe2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </article>
+  );
+});
+
 const DiscoverPage: React.FC = () => {
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
+  const [routerParams] = useSearchParams();
+  const [localSearch, setLocalSearch] = useState(() =>
+    typeof window !== 'undefined' ? window.location.search : `?${routerParams.toString()}`,
+  );
+  const params = useMemo(() => new URLSearchParams(localSearch), [localSearch]);
   const { listings, venues, organizations, organizationVenueRelationships, eventSeries, index, isLoading, error } = useEntityIndex();
 
   const [query, setQuery] = useState(params.get('q') ?? '');
@@ -218,16 +424,43 @@ const DiscoverPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsTopRef = useRef<HTMLDivElement>(null);
 
-  const kind = (params.get('type') as Kind) || 'all';
+  const updateParams = React.useCallback((next: URLSearchParams) => {
+    const qs = next.toString();
+    const nextSearch = qs ? `?${qs}` : '';
+    if (typeof window !== 'undefined') {
+      const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+    setLocalSearch(nextSearch);
+  }, []);
+
+  useEffect(() => {
+    const currentSearch = typeof window !== 'undefined' ? window.location.search : `?${routerParams.toString()}`;
+    setLocalSearch(currentSearch);
+  }, [routerParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setLocalSearch(window.location.search);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const rawKind = (params.get('type') ?? '').trim().toLowerCase();
+  const kind: Kind =
+    rawKind === 'events' || rawKind === 'event'
+      ? 'event'
+      : rawKind === 'clubs' || rawKind === 'club'
+        ? 'club'
+        : rawKind === 'hosts' || rawKind === 'host'
+          ? 'host'
+          : 'all';
   const location = params.get('location') ?? 'all';
   const dateFilter = (params.get('date') as DateFilter) || 'all';
   const audienceFilter = params.get('audience') ?? 'all';
   const sortOption = (params.get('sort') as SortOption) || 'default';
   const committedQuery = params.get('q') ?? '';
-
-  useEffect(() => {
-    setQuery(params.get('q') ?? '');
-  }, [params]);
 
   // Click outside listener for search autocomplete
   useEffect(() => {
@@ -271,13 +504,13 @@ const DiscoverPage: React.FC = () => {
       next.set(key, value);
     }
     next.delete('page');
-    setParams(next);
+    updateParams(next);
   };
 
   const clearAllFilters = () => {
     const next = new URLSearchParams();
     if (kind !== 'all') next.set('type', kind);
-    setParams(next);
+    updateParams(next);
     setQuery('');
     setSearchOpen(false);
   };
@@ -316,23 +549,68 @@ const DiscoverPage: React.FC = () => {
       relationships: organizationVenueRelationships,
       eventSeries,
     };
+    const clubLookup = buildClubLookup(listings);
+
     const listingCards: Card[] = approvedListings.map((item) => {
       const inheritedLogo = resolveBrandLogo(item.type, item.id, mediaCatalog).url;
       const inheritedHeader = resolveBrandHeader(item.type, item.id, mediaCatalog).url;
+      const cardCandidates = getListingImageCandidates(item, {
+        role: 'card',
+        entityIndex: index,
+        extraCandidates: [inheritedHeader],
+        includeGenericFallback: false,
+      });
+      const logoCandidates = getListingImageCandidates(item, {
+        role: 'logo',
+        entityIndex: index,
+        extraCandidates: [
+          inheritedLogo,
+          item.type === 'event' ? getEventHostingLogoUrl(item, index, clubLookup) : getListingLogoUrl(item, index),
+        ],
+        includeGenericFallback: false,
+      });
+      const city = item.geopoint?.address?.city;
+      const region = item.geopoint?.address?.region;
+      const country = item.geopoint?.address?.country;
+      const locationText = formatCardLocation(city, region, country);
+      const date = item.type === 'event' ? item.time?.start : undefined;
+      const parsedTimestamp = date ? new Date(date).getTime() : Number.POSITIVE_INFINITY;
+      const timestamp = Number.isNaN(parsedTimestamp) ? Number.POSITIVE_INFINITY : parsedTimestamp;
+      const attendance = item.attendancePolicy;
+      const policyText = attendanceLabel(attendance);
+      const description = item.type === 'club' ? item.description_short : item.hostName;
+      const suggestionTarget = [item.name, city, region, country, description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const searchTarget = policyText ? `${suggestionTarget} ${policyText.toLowerCase()}` : suggestionTarget;
+
+      const primaryImage = cardCandidates[0];
+      const primaryLogo = logoCandidates[0];
+
       return {
         key: `${item.type}:${item.id}`,
         kind: item.type,
         name: item.name,
+        alphaRank: 0,
         href: getListingCanonicalPath(item, index),
-        image: item.type === 'event' ? getListingCardImageUrl(item) : inheritedHeader || getListingCardImageUrl(item),
-        logoUrl: inheritedLogo
-          || (item.type === 'event' ? getEventHostingLogoUrl(item, index, listings) : getListingLogoUrl(item)),
-        city: item.geopoint?.address?.city,
-        region: item.geopoint?.address?.region,
-        country: item.geopoint?.address?.country,
-        date: item.type === 'event' ? item.time?.start : undefined,
-        attendance: item.attendancePolicy,
-        description: item.type === 'club' ? item.description_short : item.hostName,
+        image: primaryImage && !isPlaceholderMediaUrl(primaryImage) ? primaryImage : null,
+        imageFallbacks: serializeFallbackCandidates(cardCandidates.slice(1)),
+        logoUrl: primaryLogo && !isPlaceholderMediaUrl(primaryLogo) ? primaryLogo : null,
+        logoFallbacks: serializeFallbackCandidates(logoCandidates.slice(1)),
+        city,
+        region,
+        country,
+        locationText,
+        locationKey: locationText.toLowerCase(),
+        date,
+        dateText: displayDate(date),
+        timestamp,
+        attendance,
+        policyText,
+        description,
+        searchTarget,
+        suggestionTarget,
         globeListing: item,
       };
     });
@@ -340,18 +618,66 @@ const DiscoverPage: React.FC = () => {
     const hostCards: Card[] = organizations
       .filter((org): org is OrganizationData => org.status === 'active' || org.status === 'approved')
       .filter((org) => org.displayTypes?.some((type) => type === 'host' || type === 'promoter' || type === 'producer'))
-      .map((org) => ({
-        key: `host:${org.id}`,
-        kind: 'host',
-        name: org.name,
-        href: getHostCanonicalPath(org.slug),
-        image: resolveBrandHeader('organization', org.id, mediaCatalog).url || org.headerImageUrl || org.logoImageUrl,
-        logoUrl: resolveBrandLogo('organization', org.id, mediaCatalog).url || org.logoImageUrl,
-        description: org.descriptionShort,
-        region: org.operatingRegions?.[0],
-      }));
+      .map((org) => {
+        const hostImageCandidates = buildFallbackCandidateChain(
+          [
+            resolveBrandHeader('organization', org.id, mediaCatalog).url,
+            org.headerImageUrl,
+            org.logoImageUrl,
+          ],
+          false,
+        );
+        const hostLogoCandidates = buildFallbackCandidateChain(
+          [
+            resolveBrandLogo('organization', org.id, mediaCatalog).url,
+            org.logoImageUrl,
+          ],
+          false,
+        );
+        const primaryImage = hostImageCandidates[0];
+        const primaryLogo = hostLogoCandidates[0];
+        const region = org.operatingRegions?.[0];
+        const locationText = formatCardLocation(undefined, region, undefined);
+        const description = org.descriptionShort;
+        const suggestionTarget = [org.name, region, description].filter(Boolean).join(' ').toLowerCase();
 
-    return [...listingCards, ...hostCards];
+        return {
+          key: `host:${org.id}`,
+          kind: 'host',
+          name: org.name,
+          alphaRank: 0,
+          href: getHostCanonicalPath(org.slug),
+          image: primaryImage && !isPlaceholderMediaUrl(primaryImage) ? primaryImage : null,
+          imageFallbacks: serializeFallbackCandidates(hostImageCandidates.slice(1)),
+          logoUrl: primaryLogo && !isPlaceholderMediaUrl(primaryLogo) ? primaryLogo : null,
+          logoFallbacks: serializeFallbackCandidates(hostLogoCandidates.slice(1)),
+          description,
+          region,
+          locationText,
+          locationKey: locationText.toLowerCase(),
+          dateText: null,
+          timestamp: Number.POSITIVE_INFINITY,
+          policyText: null,
+          searchTarget: suggestionTarget,
+          suggestionTarget,
+        };
+      });
+
+    const combined = [...listingCards, ...hostCards];
+    combined.sort((a, b) => NAME_COLLATOR.compare(a.name, b.name));
+    for (let i = 0; i < combined.length; i += 1) {
+      combined[i].alphaRank = i;
+    }
+    combined.sort((a, b) => {
+      if (a.kind === 'event' && b.kind === 'event') {
+        return a.timestamp - b.timestamp || a.alphaRank - b.alphaRank;
+      }
+      if (a.kind === 'event') return -1;
+      if (b.kind === 'event') return 1;
+      return a.alphaRank - b.alphaRank;
+    });
+
+    return combined;
   }, [approvedListings, eventSeries, index, listings, organizationVenueRelationships, organizations, venues]);
 
   // Category counts
@@ -363,98 +689,87 @@ const DiscoverPage: React.FC = () => {
     return counts;
   }, [allCards]);
 
-  // Filtered and sorted listings
+  // Filtered and sorted listings (single-pass filter + precomputed rank/timestamp sort)
   const filtered = useMemo(() => {
-    const q = (params.get('q') ?? '').trim().toLowerCase();
+    const q = committedQuery.trim().toLowerCase();
+    const dateBounds = computeDateWindowBounds(dateFilter);
 
-    return allCards
-      .filter((card) => kind === 'all' || card.kind === kind)
-      .filter((card) => {
-        if (location === 'all') return true;
-        const loc = formatCardLocation(card.city, card.region, card.country).toLowerCase();
-        return loc === location || loc.includes(location);
-      })
-      .filter((card) => {
-        if (dateFilter === 'all') return true;
+    const matching = allCards.filter((card) => {
+      if (kind !== 'all' && card.kind !== kind) return false;
+      if (location !== 'all' && card.locationKey !== location && !card.locationKey.includes(location)) return false;
+      if (dateBounds) {
         if (card.kind !== 'event') return false;
-        return inDateWindow(card.date, dateFilter);
-      })
-      .filter((card) => {
-        return matchesAudienceFilter(card.attendance, audienceFilter);
-      })
-      .filter((card) => {
-        if (!q) return true;
-        const searchTarget = [
-          card.name,
-          card.city,
-          card.region,
-          card.country,
-          card.description,
-          attendanceLabel(card.attendance),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return searchTarget.includes(q);
-      })
-      .sort((a, b) => {
-        if (sortOption === 'az') return a.name.localeCompare(b.name);
-        if (sortOption === 'za') return b.name.localeCompare(a.name);
-        if (sortOption === 'upcoming') {
-          const timeA = a.date ? new Date(a.date).getTime() : Number.POSITIVE_INFINITY;
-          const timeB = b.date ? new Date(b.date).getTime() : Number.POSITIVE_INFINITY;
-          if (timeA !== timeB) return timeA - timeB;
-          return a.name.localeCompare(b.name);
-        }
-        // Default sort: if both are events, chronological; if kind is 'event', upcoming first; otherwise alphabetical
-        if (a.kind === 'event' && b.kind === 'event') {
-          return new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime();
-        }
-        if (a.kind === 'event' && b.kind !== 'event') return -1;
-        if (b.kind === 'event' && a.kind !== 'event') return 1;
-        return a.name.localeCompare(b.name);
-      });
-  }, [allCards, audienceFilter, dateFilter, kind, location, params, sortOption]);
+        if (card.timestamp < dateBounds.startMs || card.timestamp > dateBounds.endMs) return false;
+      }
+      if (!matchesAudienceFilter(card.attendance, audienceFilter)) return false;
+      if (q && !card.searchTarget.includes(q)) return false;
+      return true;
+    });
+
+    if (sortOption === 'az') {
+      matching.sort((a, b) => a.alphaRank - b.alphaRank);
+    } else if (sortOption === 'za') {
+      matching.sort((a, b) => b.alphaRank - a.alphaRank);
+    } else if (sortOption === 'upcoming') {
+      matching.sort((a, b) => a.timestamp - b.timestamp || a.alphaRank - b.alphaRank);
+    }
+    // When sortOption === 'default', `allCards` is already ordered in default rank.
+
+    return matching;
+  }, [allCards, audienceFilter, committedQuery, dateFilter, kind, location, sortOption]);
 
   // Pagination (28 per page strictly enforced for even 4-column grid)
   const pageSize = 28;
   const page = Math.max(1, Number(params.get('page') || '1') || 1);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
-  const visibleCards = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visibleCards = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, pageSize, safePage],
+  );
+  const [deferredTailCards, setDeferredTailCards] = useState<Card[]>(() => visibleCards);
+
+  useEffect(() => {
+    if (deferredTailCards === visibleCards) return;
+    const timerId = window.setTimeout(() => {
+      React.startTransition(() => {
+        setDeferredTailCards(visibleCards);
+      });
+    }, 48);
+    return () => window.clearTimeout(timerId);
+  }, [deferredTailCards, visibleCards]);
+
+  const handleOpenGlobeListing = React.useCallback(
+    (listingId: string) => {
+      navigate(`/globe?listing=${encodeURIComponent(listingId)}`);
+    },
+    [navigate],
+  );
 
   const setPage = (nextPage: number) => {
     const next = new URLSearchParams(params);
     if (nextPage <= 1) next.delete('page');
     else next.set('page', String(nextPage));
-    setParams(next);
+    updateParams(next);
     if (resultsTopRef.current) {
       resultsTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  // Search Autocomplete Suggestions (Strictly 5 high-relevance matches)
-  const searchSuggestions = useMemo(() => {
+  // Search Autocomplete Suggestions (Strictly 5 high-relevance matches, computed only when dropdown is open)
+  const { searchSuggestions, suggestionCount } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return allCards
-      .filter((card) =>
-        [card.name, card.city, card.region, card.country, card.description].some((value) =>
-          value?.toLowerCase().includes(q),
-        ),
-      )
-      .slice(0, 5);
-  }, [allCards, query]);
-
-  const suggestionCount = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return 0;
-    return allCards.filter((card) =>
-      [card.name, card.city, card.region, card.country, card.description].some((value) =>
-        value?.toLowerCase().includes(q),
-      ),
-    ).length;
-  }, [allCards, query]);
+    if (!q || !searchOpen) return { searchSuggestions: [] as Card[], suggestionCount: 0 };
+    const matches: Card[] = [];
+    let count = 0;
+    for (const card of allCards) {
+      if (card.suggestionTarget.includes(q)) {
+        count += 1;
+        if (matches.length < 5) matches.push(card);
+      }
+    }
+    return { searchSuggestions: matches, suggestionCount: count };
+  }, [allCards, query, searchOpen]);
 
   const handleSearchChange = (value: string) => {
     setQuery(value);
@@ -968,7 +1283,7 @@ const DiscoverPage: React.FC = () => {
 
           {/* Result Count Status */}
           <div className="text-xs font-medium text-gray-400 shrink-0 ml-auto">
-            {isLoading ? (
+            {isLoading && allCards.length === 0 ? (
               'Loading directory…'
             ) : (
               <span>
@@ -984,7 +1299,7 @@ const DiscoverPage: React.FC = () => {
         </div>
 
         {/* Error Notification */}
-        {error && (
+        {error && allCards.length === 0 && (
           <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-950/20 p-6 text-red-200">
             <h2 className="font-bold">Could not load the directory</h2>
             <p className="mt-1 text-xs text-red-300/80">Please check your connection and reload.</p>
@@ -992,7 +1307,7 @@ const DiscoverPage: React.FC = () => {
         )}
 
         {/* Loading Skeletons */}
-        {isLoading && (
+        {isLoading && allCards.length === 0 && (
           <div className="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
@@ -1011,143 +1326,21 @@ const DiscoverPage: React.FC = () => {
         )}
 
         {/* Results Grid */}
-        {!isLoading && !error && visibleCards.length > 0 && (
+        {(allCards.length > 0 || !isLoading) && visibleCards.length > 0 && (
           <div className="mt-6 grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {visibleCards.map((card) => {
-              const image = card.image && !isPlaceholderMediaUrl(card.image) ? card.image : null;
-              const locationText = formatCardLocation(card.city, card.region, card.country);
-              const dateText = displayDate(card.date);
-              const policyText = attendanceLabel(card.attendance);
-
-              return (
-                <article
-                  key={card.key}
-                  className="group relative min-h-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#090c12] transition-all duration-300 hover:-translate-y-1 hover:border-red-500/35 hover:shadow-[0_16px_36px_rgba(0,0,0,0.65)]"
-                >
-                  <Link
-                    to={card.href}
-                    className="relative block min-h-[360px] h-full focus:outline-none"
-                    aria-label={`Open ${card.name}`}
-                  >
-                    {image ? (
-                      <img
-                        src={image}
-                        alt=""
-                        onError={handleListingImageError}
-                        loading="lazy"
-                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] ${
-                          card.kind === 'event' ? 'object-top' : 'object-center'
-                        }`}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#121620] to-[#06080d]">
-                        <div
-                          className="absolute inset-0 opacity-40"
-                          style={{
-                            background:
-                              card.kind === 'event'
-                                ? 'radial-gradient(circle at center, rgba(245, 158, 11, 0.2), transparent 70%)'
-                                : card.kind === 'host'
-                                ? 'radial-gradient(circle at center, rgba(6, 182, 212, 0.2), transparent 70%)'
-                                : 'radial-gradient(circle at center, rgba(197, 29, 52, 0.25), transparent 70%)',
-                          }}
-                        />
-                        {card.kind === 'event' ? (
-                          <CalendarDays className="h-10 w-10 text-amber-400/25" />
-                        ) : card.kind === 'host' ? (
-                          <UsersRound className="h-10 w-10 text-cyan-400/25" />
-                        ) : (
-                          <Building2 className="h-10 w-10 text-red-400/25" />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Full-card scrim: preserve the flyer/hero while keeping metadata readable. */}
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/[0.02] via-45% to-[#090c12] to-88%" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-[#090c12] via-[#090c12]/90 to-transparent" />
-
-                    {/* Top Badges */}
-                    <div className="absolute left-3 top-3 pointer-events-none">
-                      <EntityTypePill tone={card.kind} className="shadow-md">
-                        {card.kind}
-                      </EntityTypePill>
-                    </div>
-
-                    {/* Identity badge remains useful over full-bleed imagery. */}
-                    {card.logoUrl && !isPlaceholderMediaUrl(card.logoUrl) && (
-                      <div className="absolute bottom-[118px] left-3 h-[50px] w-[50px] overflow-hidden rounded-xl border border-white/20 bg-black/80 p-1 shadow-lg shadow-black/60 backdrop-blur-md transition-transform duration-300 group-hover:scale-105">
-                        <img
-                          src={card.logoUrl}
-                          alt=""
-                          onError={handleListingImageError}
-                          className="h-full w-full rounded-lg object-cover"
-                        />
-                      </div>
-                    )}
-
-                    {/* Metadata overlays the lower portion of the image instead of using a separate body/footer. */}
-                    <div className="absolute inset-x-0 bottom-0 p-4 pr-14">
-                      <h2
-                        className="line-clamp-2 text-base font-bold tracking-tight text-white drop-shadow-sm transition-colors group-hover:text-red-200"
-                        title={card.name}
-                      >
-                        {card.name}
-                      </h2>
-
-                      <div className="mt-2 space-y-1.5">
-                        {locationText && (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
-                            <MapPin className="h-3.5 w-3.5 shrink-0 text-red-400" />
-                            <span className="truncate">{locationText}</span>
-                          </p>
-                        )}
-
-                        {card.kind === 'event' && dateText && (
-                          <p className="flex items-center gap-1.5 text-xs font-medium text-gray-200">
-                            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                            <span className="truncate">{dateText}</span>
-                          </p>
-                        )}
-
-                        {policyText && (
-                          <p className="flex items-center gap-1.5 text-xs text-gray-300">
-                            <UsersRound className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                            <span className="truncate">{policyText}</span>
-                          </p>
-                        )}
-
-                        {card.description && card.kind !== 'event' && (
-                          <p className="line-clamp-2 pt-1 text-xs leading-relaxed text-gray-400">
-                            {card.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-
-                  {card.globeListing && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        navigate(`/globe?listing=${encodeURIComponent(card.globeListing!.id)}`);
-                      }}
-                      className="absolute bottom-3 right-3 z-20 rounded-xl border border-white/15 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur-md transition-colors hover:border-red-400/40 hover:bg-red-500/15 hover:text-white"
-                      title="Show on 3D Globe"
-                      aria-label={`Show ${card.name} on 3D Globe`}
-                    >
-                      <Globe2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </article>
-              );
-            })}
+            {visibleCards.map((card, idx) => (
+              <DirectoryResultCard
+                key={idx}
+                card={idx < 4 ? card : deferredTailCards[idx] ?? card}
+                priority={idx < 4}
+                onOpenGlobe={handleOpenGlobeListing}
+              />
+            ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filtered.length === 0 && (
+        {(allCards.length > 0 || !isLoading) && !error && filtered.length === 0 && (
           <div className="mt-12 rounded-3xl border border-dashed border-white/10 bg-[#080b11]/60 p-12 text-center">
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] text-gray-500">
               <Compass className="h-7 w-7" />
@@ -1168,7 +1361,7 @@ const DiscoverPage: React.FC = () => {
         )}
 
         {/* Pagination Controls */}
-        {!isLoading && !error && filtered.length > pageSize && (
+        {(allCards.length > 0 || !isLoading) && filtered.length > pageSize && (
           <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/[0.08] pt-6 sm:flex-row">
             <p className="text-xs text-gray-400">
               Page <strong className="text-white">{safePage}</strong> of{' '}

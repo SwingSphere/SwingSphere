@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 type Rgb = readonly [number, number, number];
 
@@ -222,7 +222,20 @@ export default function LivingLowPolyBackground({
     accentHot: paletteAccentHot,
   };
 
-  const mesh = useMemo(() => buildMesh(density), [density]);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const syncViewport = () => setIsMobileViewport(media.matches);
+    syncViewport();
+    media.addEventListener('change', syncViewport);
+    return () => media.removeEventListener('change', syncViewport);
+  }, []);
+
+  const effectiveDensity = isMobileViewport ? Math.min(density, 56) : density;
+  const mesh = useMemo(() => buildMesh(effectiveDensity), [effectiveDensity]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const faceRefs = useRef<Array<SVGPolygonElement | null>>([]);
   const glowRefs = useRef<Array<SVGPolygonElement | null>>([]);
@@ -232,6 +245,10 @@ export default function LivingLowPolyBackground({
   const pointer = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const reducedMotion = useRef(false);
   const visible = useRef(true);
+  const isGestureActiveRef = useRef(false);
+  const pauseUntilRef = useRef(0);
+  const isMobileRef = useRef(isMobileViewport);
+  isMobileRef.current = isMobileViewport;
   const renderFrameRef = useRef<((time: number) => void) | null>(null);
   const settingsRef = useRef<RuntimeSettings>({
     morphStrength,
@@ -286,8 +303,23 @@ export default function LivingLowPolyBackground({
   }, []);
 
   useEffect(() => {
+    const handlePointerDown = () => {
+      isGestureActiveRef.current = true;
+      pauseUntilRef.current = performance.now() + 260;
+    };
+    const handlePointerUp = () => {
+      isGestureActiveRef.current = false;
+      pauseUntilRef.current = performance.now() + 220;
+    };
+    const handleTouchMoveOrScroll = () => {
+      pauseUntilRef.current = performance.now() + 240;
+    };
     const handlePointerMove = (event: PointerEvent) => {
-      if (!settingsRef.current.interactive || reducedMotion.current) return;
+      if (isGestureActiveRef.current || event.buttons > 0) {
+        pauseUntilRef.current = performance.now() + 240;
+        return;
+      }
+      if (!settingsRef.current.interactive || reducedMotion.current || isMobileRef.current) return;
       pointer.current.tx = event.clientX / Math.max(window.innerWidth, 1) - 0.5;
       pointer.current.ty = event.clientY / Math.max(window.innerHeight, 1) - 0.5;
     };
@@ -296,9 +328,25 @@ export default function LivingLowPolyBackground({
       pointer.current.ty = 0;
     };
 
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
+    window.addEventListener('touchstart', handlePointerDown, { passive: true });
+    window.addEventListener('touchmove', handleTouchMoveOrScroll, { passive: true });
+    window.addEventListener('touchend', handlePointerUp, { passive: true });
+    window.addEventListener('touchcancel', handlePointerUp, { passive: true });
+    window.addEventListener('scroll', handleTouchMoveOrScroll, { passive: true });
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     document.documentElement.addEventListener('mouseleave', handlePointerLeave);
     return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('touchmove', handleTouchMoveOrScroll);
+      window.removeEventListener('touchend', handlePointerUp);
+      window.removeEventListener('touchcancel', handlePointerUp);
+      window.removeEventListener('scroll', handleTouchMoveOrScroll);
       window.removeEventListener('pointermove', handlePointerMove);
       document.documentElement.removeEventListener('mouseleave', handlePointerLeave);
     };
@@ -457,8 +505,8 @@ export default function LivingLowPolyBackground({
           );
         }
 
-        // Only update glow attributes when glow is visibly active
-        if (glowStrengthNow > 0) {
+        // Only update glow attributes when glow is visibly active on tablet/desktop
+        if (glowStrengthNow > 0 && !isMobileRef.current) {
           const glow = glowRefs.current[index];
           if (glow) {
             const glowGradient = smoothstep(0.08, 0.96, gradientPosition);
@@ -487,18 +535,20 @@ export default function LivingLowPolyBackground({
     let frame = 0;
     let last = 0;
     const animate = (now: number) => {
-      if (!document.hidden && visible.current && !reducedMotion.current) {
-        if (now - last >= FRAME_MS) {
+      const isInteracting = isGestureActiveRef.current || now < pauseUntilRef.current;
+      if (!document.hidden && visible.current && !reducedMotion.current && !isInteracting) {
+        const targetFrameMs = isMobileRef.current ? 50 : FRAME_MS;
+        if (now - last >= targetFrameMs) {
           renderFrame(now / 1000);
           last = now;
         }
         frame = requestAnimationFrame(animate);
       } else if (!reducedMotion.current) {
-        // Sleep idle check when hidden or off-screen, check again in 200ms
+        // Sleep idle check when hidden, off-screen, or during active user touch/scroll gesture
         frame = requestAnimationFrame(() => {
           setTimeout(() => {
             frame = requestAnimationFrame(animate);
-          }, 200);
+          }, isInteracting ? 120 : 200);
         });
       }
     };
@@ -535,9 +585,11 @@ export default function LivingLowPolyBackground({
             <stop offset="35%" stopColor="rgba(0,0,0,0)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.42)" />
           </radialGradient>
-          <filter id="living-low-poly-line-glow" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-            <feGaussianBlur ref={glowBlurRef} stdDeviation={1.2 + glowStrength * 2.6} />
-          </filter>
+          {!isMobileViewport ? (
+            <filter id="living-low-poly-line-glow" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur ref={glowBlurRef} stdDeviation={1.2 + glowStrength * 2.6} />
+            </filter>
+          ) : null}
         </defs>
 
         <rect width={VIEW_W} height={VIEW_H} fill="#030405" />
@@ -554,23 +606,25 @@ export default function LivingLowPolyBackground({
           />
         ))}
 
-        <g
-          ref={glowGroupRef}
-          filter="url(#living-low-poly-line-glow)"
-          opacity={glowStrength > 0 ? 0.28 + glowStrength * 0.72 : 0}
-        >
-          {mesh.triangles.map((triangle, index) => (
-            <polygon
-              key={`line-glow-${index}`}
-              ref={(element) => { glowRefs.current[index] = element; }}
-              points={basePointsForTriangle(triangle, mesh.points)}
-              fill="none"
-              stroke="rgba(255, 39, 74, 0)"
-              strokeWidth={1.2 + glowStrength * 1.8}
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-        </g>
+        {!isMobileViewport ? (
+          <g
+            ref={glowGroupRef}
+            filter="url(#living-low-poly-line-glow)"
+            opacity={glowStrength > 0 ? 0.28 + glowStrength * 0.72 : 0}
+          >
+            {mesh.triangles.map((triangle, index) => (
+              <polygon
+                key={`line-glow-${index}`}
+                ref={(element) => { glowRefs.current[index] = element; }}
+                points={basePointsForTriangle(triangle, mesh.points)}
+                fill="none"
+                stroke="rgba(255, 39, 74, 0)"
+                strokeWidth={1.2 + glowStrength * 1.8}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
+        ) : null}
 
         <rect width={VIEW_W} height={VIEW_H} fill="url(#living-low-poly-floor-wash)" />
         <rect width={VIEW_W} height={VIEW_H} fill="url(#living-low-poly-vignette)" />
