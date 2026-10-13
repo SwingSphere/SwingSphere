@@ -3,7 +3,12 @@ import type { Listing, OrganizationData, EventSeriesData } from '../types';
 import type { EntityIndex } from './entityIndex';
 import { hostSlug, normalizeHostName } from './identityUtils';
 import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
-import { getCanonicalMediaSignature } from './entityBrandMedia';
+import {
+  isEventAffirmativelyClubOperated,
+  resolveEventLogoState,
+  type BrandMediaCatalog,
+} from './entityBrandMedia';
+import { resolveEventOrganizerOrganizationId } from './entityCompatibility';
 
 export const LISTING_IMAGE_FALLBACK = '/swingsphere-logo_2.png';
 
@@ -297,33 +302,39 @@ const findSeriesOrganizer = (
   return undefined;
 };
 
-const getIndexedEventInheritedLogoUrl = (
+const catalogByEntityIndex = new WeakMap<EntityIndex, BrandMediaCatalog>();
+
+const getCatalogForEntityIndex = (entityIndex: EntityIndex): BrandMediaCatalog => {
+  const cached = catalogByEntityIndex.get(entityIndex);
+  if (cached) return cached;
+  const catalog: BrandMediaCatalog = {
+    listings: [
+      ...entityIndex.clubsByKey.values(),
+      ...entityIndex.eventsByKey.values(),
+    ],
+    venues: Array.from(entityIndex.venuesById.values()),
+    organizations: Array.from(entityIndex.organizationsById.values()),
+    relationships: Array.from(entityIndex.relationshipsByVenueId.values()).flat(),
+    eventSeries: Array.from(entityIndex.eventSeriesById.values()),
+  };
+  catalogByEntityIndex.set(entityIndex, catalog);
+  return catalog;
+};
+
+const resolveIndexedEventOrganizer = (
   listing: Extract<Listing, { type: 'event' }>,
   entityIndex: EntityIndex,
-): string | null => {
-  if (listing.eventSeriesId) {
-    const series = entityIndex.eventSeriesById.get(listing.eventSeriesId);
-    const seriesLogo = getEntityPrimaryLogoUrl(series);
-    if (seriesLogo) return seriesLogo;
-    const seriesOrgLogo = getEntityPrimaryLogoUrl(findSeriesOrganizer(series, entityIndex));
-    if (seriesOrgLogo) return seriesOrgLogo;
+): OrganizationData | undefined => {
+  const catalog = getCatalogForEntityIndex(entityIndex);
+  const organizerId = resolveEventOrganizerOrganizationId(listing, catalog);
+  if (organizerId) {
+    const byId = entityIndex.organizationsById.get(organizerId);
+    if (byId) return byId;
   }
-
-  const organizer = listing.organizerOrganizationId
-    ? entityIndex.organizationsById.get(listing.organizerOrganizationId)
-    : listing.hostName
-      ? entityIndex.hostsBySlug.get(hostSlug(normalizeHostName(listing.hostName)))?.organization
-      : undefined;
-  const organizerLogo = getEntityPrimaryLogoUrl(organizer);
-  if (organizerLogo) return organizerLogo;
-
-  const venueClubKey = entityIndex.eventVenueClubKeyById.get(listing.id);
-  if (venueClubKey) {
-    const clubLogo = getListingPrimaryLogoUrl(entityIndex.clubsByKey.get(venueClubKey));
-    if (clubLogo) return clubLogo;
+  if (listing.hostName) {
+    return entityIndex.hostsBySlug.get(hostSlug(normalizeHostName(listing.hostName)))?.organization;
   }
-
-  return null;
+  return undefined;
 };
 
 export const getIndexedEventInheritedHeroUrl = (
@@ -341,18 +352,25 @@ export const getIndexedEventInheritedHeroUrl = (
     if (seriesOrgHero) return seriesOrgHero;
   }
 
-  const organizer = listing.organizerOrganizationId
-    ? entityIndex.organizationsById.get(listing.organizerOrganizationId)
-    : listing.hostName
-      ? entityIndex.hostsBySlug.get(hostSlug(normalizeHostName(listing.hostName)))?.organization
-      : undefined;
+  const organizer = resolveIndexedEventOrganizer(listing, entityIndex);
   const organizerHero = getEntityPrimaryHeroUrl(organizer, variant);
   if (organizerHero) return organizerHero;
 
-  const venueClubKey = entityIndex.eventVenueClubKeyById.get(listing.id);
-  if (venueClubKey) {
-    const clubHero = getListingPrimaryHeroUrl(entityIndex.clubsByKey.get(venueClubKey), variant);
-    if (clubHero) return clubHero;
+  const catalog = getCatalogForEntityIndex(entityIndex);
+  const clubOperated = isEventAffirmativelyClubOperated(listing, {
+    clubs: Array.from(entityIndex.clubsByKey.values()),
+    venues: catalog.venues ?? [],
+    organizations: catalog.organizations ?? [],
+    relationships: catalog.relationships ?? [],
+    eventSeries: catalog.eventSeries,
+  });
+
+  if (clubOperated) {
+    const venueClubKey = entityIndex.eventVenueClubKeyById.get(listing.id);
+    if (venueClubKey) {
+      const clubHero = getListingPrimaryHeroUrl(entityIndex.clubsByKey.get(venueClubKey), variant);
+      if (clubHero) return clubHero;
+    }
   }
 
   return null;
@@ -361,30 +379,16 @@ export const getIndexedEventInheritedHeroUrl = (
 export const getListingLogoUrl = (listing: Listing | null | undefined, entityIndex?: EntityIndex): string => {
   if (!listing) return LISTING_IMAGE_FALLBACK;
   if (listing.type === 'event') {
-    const directEventLogo = getListingPrimaryLogoUrl(listing);
-    const inheritedLogo = entityIndex ? getIndexedEventInheritedLogoUrl(listing, entityIndex) : null;
+    if (entityIndex) {
+      const state = resolveEventLogoState(listing, getCatalogForEntityIndex(entityIndex));
+      if (state.resolvedLogo.url) return state.resolvedLogo.url;
+      return LISTING_IMAGE_FALLBACK;
+    }
 
     if (listing.logoOverride === false) {
-      return inheritedLogo ?? LISTING_IMAGE_FALLBACK;
+      return LISTING_IMAGE_FALLBACK;
     }
-
-    if (directEventLogo) {
-      const directSig = getCanonicalMediaSignature(
-        directEventLogo,
-        listing.mediaAssets?.find((item) => item.role === 'logo')?.external_id,
-      );
-      const inheritedSig = getCanonicalMediaSignature(inheritedLogo);
-      if (
-        listing.logoOverride === true
-        || !inheritedLogo
-        || (Boolean(directSig && inheritedSig) && directSig !== inheritedSig)
-      ) {
-        return directEventLogo;
-      }
-    }
-
-    if (inheritedLogo) return inheritedLogo;
-    return directEventLogo ?? LISTING_IMAGE_FALLBACK;
+    return getListingPrimaryLogoUrl(listing) ?? LISTING_IMAGE_FALLBACK;
   }
 
   if (listing.type === 'club' && entityIndex) {
@@ -605,9 +609,10 @@ export const getListingImageCandidates = (
     if (listing.type === 'event') {
       const primaryLogo = getListingLogoUrl(listing, entityIndex);
       rawCandidates.push(primaryLogo);
-      rawCandidates.push(getListingPrimaryLogoUrl(listing));
-      if (entityIndex) {
-        rawCandidates.push(getIndexedEventInheritedLogoUrl(listing, entityIndex));
+      // With a canonical index, do not append raw occurrence or venue logos:
+      // those may be stale copies or belong to a different promoter.
+      if (!entityIndex) {
+        rawCandidates.push(getListingPrimaryLogoUrl(listing));
       }
     } else {
       rawCandidates.push(getListingPrimaryLogoUrl(listing));

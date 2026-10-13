@@ -123,6 +123,10 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
   const clubCoords = approximateCenter
     ? { lat: approximateCenter.latitude, lng: approximateCenter.longitude }
     : physicalClubCoords;
+  const citySlug = (clubAddress.city ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
   return (
     <ClubPageLayout
@@ -132,6 +136,9 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           breadcrumbs={[
             { label: 'Directory', href: '/discover' },
             { label: 'Clubs', href: '/discover?type=clubs' },
+            ...(clubAddress.city && citySlug
+              ? [{ label: clubAddress.city, href: `/swinger-clubs/${citySlug}` }]
+              : []),
             { label: club.name },
           ]}
           listingId={club.id}
@@ -238,6 +245,20 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
                     tracking={{ entityType: 'club', entityId: club.id, destinationType: 'social', placement: `club_page_external_${link.network}`, surface: 'entity_page' }}
                   />
                 ))}
+              </div>
+            </section>
+          ) : null}
+          {clubAddress.city && citySlug ? (
+            <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">City Guide</p>
+              <div className="mt-2.5 flex flex-col gap-2">
+                <Link
+                  to={`/swinger-clubs/${citySlug}`}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs font-semibold text-gray-200 transition hover:border-red-300/35 hover:bg-white/[0.045] hover:text-white"
+                >
+                  <span>Lifestyle &amp; Swinger Clubs in {clubAddress.city}</span>
+                  <ExternalLink size={13} className="shrink-0 text-red-300" />
+                </Link>
               </div>
             </section>
           ) : null}

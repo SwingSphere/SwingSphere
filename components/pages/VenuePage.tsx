@@ -1,16 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUtils';
 import { getClubForOrganization } from '../../lib/entityCompatibility';
+import { isPastEvent } from '../../lib/eventLifecycle';
 import EntityPageShell from '../entity/EntityPageShell';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { hasStreetViewForListing } from '../../lib/streetViewAvailability';
 import DescriptionSection from '../entity/DescriptionSection';
-import VenuePageAdminEditor from '../admin-edit/VenuePageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import Seo from '../Seo';
+
+const VenuePageAdminEditor = React.lazy(() => import('../admin-edit/VenuePageAdminEditor'));
 
 const VenuePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -25,7 +27,24 @@ const VenuePage: React.FC = () => {
   } = useEntityIndex();
   const venue = slug ? index?.venuesBySlug.get(slug) ?? null : null;
   const relationships = venue ? index?.relationshipsByVenueId.get(venue.id) ?? [] : [];
-  const events = venue ? index?.eventsByVenueId.get(venue.id) ?? [] : [];
+  const events = useMemo(
+    () => (venue ? (index?.eventsByVenueId.get(venue.id) ?? []).filter((e) => e.status === 'approved') : []),
+    [index, venue],
+  );
+  const upcomingEvents = useMemo(
+    () =>
+      events
+        .filter((event) => !isPastEvent(event))
+        .sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime()),
+    [events],
+  );
+  const pastEvents = useMemo(
+    () =>
+      events
+        .filter((event) => isPastEvent(event))
+        .sort((a, b) => new Date(b.time.start).getTime() - new Date(a.time.start).getTime()),
+    [events],
+  );
   const { registerPublicPage, clearPublicPage } = useAdminEditMode();
   const { canEdit } = usePublicEditAccess({
     organizationIds: relationships.map((relationship) => relationship.organizationId),
@@ -43,7 +62,7 @@ const VenuePage: React.FC = () => {
     return () => clearPublicPage(venue.id);
   }, [canEdit, clearPublicPage, registerPublicPage, venue]);
 
-  if (isLoading) {
+  if (isLoading && !venue) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
         Loading venue...
@@ -51,11 +70,19 @@ const VenuePage: React.FC = () => {
     );
   }
 
-  if (error || !index || !venue) {
+  if (error || !index || !venue || venue.status !== 'approved') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
-        Venue not found.
-      </div>
+      <>
+        <Seo
+          title="Venue Not Found | SwingSphere"
+          description="The requested venue could not be found on SwingSphere."
+          canonicalPath={window.location.pathname}
+          noIndex
+        />
+        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
+          Venue not found.
+        </div>
+      </>
     );
   }
 
@@ -80,16 +107,21 @@ const VenuePage: React.FC = () => {
         imageUrl={venue.headerImageUrl || venue.logoImageUrl}
         imageAlt={`${venue.name} venue`}
         noIndex={true}
+        robots="noindex, follow"
       />
-      <VenuePageAdminEditor
-        venue={venue}
-        venues={venues}
-        organizations={organizations}
-        relationships={organizationVenueRelationships}
-        listings={listings}
-        entityIndex={index}
-        canEdit={canEdit}
-      />
+      {canEdit ? (
+        <React.Suspense fallback={null}>
+          <VenuePageAdminEditor
+            venue={venue}
+            venues={venues}
+            organizations={organizations}
+            relationships={organizationVenueRelationships}
+            listings={listings}
+            entityIndex={index}
+            canEdit={canEdit}
+          />
+        </React.Suspense>
+      ) : null}
       <EntityPageShell
         contextNav={
           <DetailContextNav
@@ -121,7 +153,7 @@ const VenuePage: React.FC = () => {
           <section className="rounded-xl border border-gray-800 bg-gray-900/70 p-4">
             <h2 className="text-lg font-semibold text-gray-100">Upcoming Events</h2>
             <div className="mt-3 space-y-2">
-              {events.length ? events.map((event) => (
+              {upcomingEvents.length ? upcomingEvents.map((event) => (
                 <Link
                   key={event.id}
                   to={getEventCanonicalPath(event, index)}
@@ -130,10 +162,26 @@ const VenuePage: React.FC = () => {
                   {event.name}
                 </Link>
               )) : (
-                <p className="text-sm text-gray-500">No linked events yet.</p>
+                <p className="text-sm text-gray-500">No upcoming events scheduled.</p>
               )}
             </div>
           </section>
+          {pastEvents.length ? (
+            <section className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">Past Events</h2>
+              <div className="mt-3 space-y-2">
+                {pastEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    to={getEventCanonicalPath(event, index)}
+                    className="block rounded-lg border border-gray-800/80 bg-black/15 px-3 py-2 text-sm text-gray-400 hover:border-gray-700 hover:text-gray-200"
+                  >
+                    {event.name}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </>
       }
       aside={

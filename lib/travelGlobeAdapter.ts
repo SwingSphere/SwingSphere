@@ -1,5 +1,6 @@
 import type { GlobeV1RuntimeEvent } from '../data/globeV1MockData';
 import type { CruiseSailingData, CruiseSeriesData, ResortData } from '../types';
+import type { DiscoveryPoint } from './discoveryPointAdapter';
 import { resolveCountryIsoCodes } from './globeEntityAdapter';
 import { buildCruiseMarkers, buildResortMarkers } from './travelMarkerModel';
 
@@ -43,4 +44,42 @@ export const adaptTravelToGlobeEvents = (
   });
 
   return [...resortEvents, ...cruiseEvents];
+};
+
+export const adaptTravelToDiscoveryPoints = (
+  resorts: ResortData[],
+  series: CruiseSeriesData[],
+  sailings: CruiseSailingData[],
+): DiscoveryPoint[] => {
+  const resortPoints: DiscoveryPoint[] = buildResortMarkers(resorts).map((marker) => ({
+    id: `travel:${marker.id}`,
+    latitude: marker.latitude,
+    longitude: marker.longitude,
+    listingIds: [marker.id],
+    clubIds: [],
+    eventIds: [],
+    hostIds: [],
+    city: marker.resort?.geopoint.address.city ?? '',
+    region: marker.resort?.geopoint.address.region ?? '',
+    country: marker.resort?.geopoint.address.country ?? '',
+    listingName: marker.name,
+    logoImageUrl: marker.resort?.logoImageUrl,
+  }));
+
+  const cruisePoints: DiscoveryPoint[] = buildCruiseMarkers(series, sailings).map((marker) => ({
+    id: `travel:${marker.id}`,
+    latitude: marker.latitude,
+    longitude: marker.longitude,
+    listingIds: [marker.id],
+    clubIds: [],
+    eventIds: [],
+    hostIds: [],
+    city: marker.sailing?.departurePort.city ?? marker.sailing?.departurePort.portName ?? '',
+    region: '',
+    country: marker.sailing?.departurePort.country ?? '',
+    listingName: marker.name,
+    logoImageUrl: marker.sailing?.logoImageUrl ?? marker.cruiseSeries?.logoImageUrl,
+  }));
+
+  return [...resortPoints, ...cruisePoints];
 };

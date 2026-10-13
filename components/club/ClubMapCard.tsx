@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Copy, MapPinned, Pencil } from 'lucide-react';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
-import MiniMapHybrid from '../maps/MiniMapHybrid';
 import { getStreetViewPath } from '../../lib/streetViewAvailability';
+
+const MiniMapHybrid = React.lazy(() => import('../maps/MiniMapHybrid'));
 
 type ClubMapCardProps = {
   listingId: string;
@@ -81,14 +82,16 @@ const ClubMapCard: React.FC<ClubMapCardProps> = ({
       ) : null}
 
       <div className="mt-3 h-52 overflow-hidden rounded-xl border border-gray-800">
-        <MiniMapHybrid
-          center={{ lat: mapLat, lng: mapLng }}
-          cityLabel={city || clubName}
-          districtLabel={region}
-          mapHref={googleUrl}
-          isHidden={isPrivateLocation}
-          showAttributionText={false}
-        />
+        <React.Suspense fallback={<div className="h-full w-full bg-gray-950/60" />}>
+          <MiniMapHybrid
+            center={{ lat: mapLat, lng: mapLng }}
+            cityLabel={city || clubName}
+            districtLabel={region}
+            mapHref={googleUrl}
+            isHidden={isPrivateLocation}
+            showAttributionText={false}
+          />
+        </React.Suspense>
       </div>
 
       {canShowStreetView ? (

@@ -96,8 +96,9 @@ const LandingPage: React.FC = () => {
     return discoveryListings.map((listing) => ({
       listing,
       logoUrl: resolveBrandLogo(listing.type, listing.id, mediaCatalog).url,
+      href: getListingCanonicalPath(listing, entityIndex ?? undefined),
     }));
-  }, [discoveryListings, listings, venues, organizations, organizationVenueRelationships, eventSeries]);
+  }, [discoveryListings, entityIndex, listings, venues, organizations, organizationVenueRelationships, eventSeries]);
 
   const openGlobeExperience = useCallback(() => {
     navigate('/globe');
@@ -105,7 +106,7 @@ const LandingPage: React.FC = () => {
 
   const handleOpenListing = useCallback(
     (listing: Listing) => {
-      navigate(entityIndex ? getListingCanonicalPath(listing, entityIndex) : `/listing/${listing.id}`);
+      navigate(getListingCanonicalPath(listing, entityIndex ?? undefined));
     },
     [entityIndex, navigate],
   );
@@ -188,10 +189,11 @@ const LandingPage: React.FC = () => {
                     onOpen={handleOpenListing}
                   />
                   <div className="hidden gap-4 lg:grid lg:grid-cols-5">
-                    {discoveryCarouselItems.map(({ listing, logoUrl }) => (
+                    {discoveryCarouselItems.map(({ listing, logoUrl, href }) => (
                       <HomepageDiscoveryCard
                         key={listing.id}
                         listing={listing}
+                        href={href}
                         resolvedLogoUrl={logoUrl}
                         imagePriority="high"
                         onClick={() => handleOpenListing(listing)}

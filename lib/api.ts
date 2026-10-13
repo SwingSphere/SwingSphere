@@ -40,6 +40,8 @@ import { mockReviews } from '../data/mockReviews';
 import { mockVenues } from '../data/mockVenues';
 import { mockOrganizations } from '../data/mockOrganizations';
 import { mockOrganizationVenueRelationships } from '../data/mockEntityRelationships';
+import { eventSeries as mockEventSeries } from '../data/eventSeries';
+import { organizationRelationships as mockOrganizationRelationships } from '../data/organizationRelationships';
 import { communityHostEvents } from '../data/communityHostSeed';
 import { getVenueForListing } from './entityCompatibility';
 import publicListings from 'virtual:swingsphere-public-listings';
@@ -92,6 +94,8 @@ let db = {
     venues: [...mockVenues],
     organizations: [...mockOrganizations],
     organizationVenueRelationships: [...mockOrganizationVenueRelationships],
+    eventSeries: [...mockEventSeries],
+    organizationRelationships: [...mockOrganizationRelationships],
 };
 
 const isDevPersistenceEnabled = () => typeof window !== 'undefined' && import.meta.env.DEV;
@@ -143,6 +147,8 @@ export const getBundledCatalogSnapshot = () => ({
     venues: db.venues,
     organizations: db.organizations,
     organizationVenueRelationships: db.organizationVenueRelationships,
+    eventSeries: db.eventSeries,
+    organizationRelationships: db.organizationRelationships,
 });
 
 const upsertLocalListing = (listing: Listing) => {
@@ -356,18 +362,44 @@ const withCatalogInvalidation = <TArgs extends any[], TResult>(
 
 export const getClubBrands = entityCatalog.getClubBrands;
 export const saveClubBrand = withCatalogInvalidation(entityCatalog.saveClubBrand);
-export const getEventSeries = entityCatalog.getEventSeries;
-export const saveEventSeries = withCatalogInvalidation(entityCatalog.saveEventSeries);
+export const getEventSeries = async (): Promise<EventSeriesData[]> => {
+    const rows = await entityCatalog.getEventSeries();
+    if (rows.length > 0) db.eventSeries = rows;
+    return rows;
+};
+export const saveEventSeries = withCatalogInvalidation(async (series: EventSeriesData): Promise<EventSeriesData> => {
+    const saved = await entityCatalog.saveEventSeries(series);
+    const idx = db.eventSeries.findIndex((item) => item.id === saved.id);
+    if (idx >= 0) db.eventSeries[idx] = saved;
+    else db.eventSeries.unshift(saved);
+    return saved;
+});
 export const getResorts = entityCatalog.getResorts;
 export const saveResort = withCatalogInvalidation(entityCatalog.saveResort);
 export const getCruiseSeries = entityCatalog.getCruiseSeries;
 export const saveCruiseSeries = withCatalogInvalidation(entityCatalog.saveCruiseSeries);
 export const getCruiseSailings = entityCatalog.getCruiseSailings;
 export const saveCruiseSailing = withCatalogInvalidation(entityCatalog.saveCruiseSailing);
-export const getVenues = entityCatalog.getVenues;
-export const getOrganizations = entityCatalog.getOrganizations;
-export const getOrganizationRelationships = entityCatalog.getOrganizationRelationships;
-export const getOrganizationVenueRelationships = entityCatalog.getOrganizationVenueRelationships;
+export const getVenues = async (): Promise<VenueData[]> => {
+    const rows = await entityCatalog.getVenues();
+    if (rows.length > 0) db.venues = rows;
+    return rows;
+};
+export const getOrganizations = async (): Promise<OrganizationData[]> => {
+    const rows = await entityCatalog.getOrganizations();
+    if (rows.length > 0) db.organizations = rows;
+    return rows;
+};
+export const getOrganizationRelationships = async (): Promise<OrganizationRelationship[]> => {
+    const rows = await entityCatalog.getOrganizationRelationships();
+    if (rows.length > 0) db.organizationRelationships = rows;
+    return rows;
+};
+export const getOrganizationVenueRelationships = async (): Promise<OrganizationVenueRelationship[]> => {
+    const rows = await entityCatalog.getOrganizationVenueRelationships();
+    if (rows.length > 0) db.organizationVenueRelationships = rows;
+    return rows;
+};
 
 const mapOrganizationMember = (row: {
     id: string;
@@ -424,13 +456,62 @@ export const removeOrganizationMember = async (memberId: string): Promise<void> 
     if (error) throw error;
 };
 
-export const saveVenue = withCatalogInvalidation(entityCatalog.saveVenue);
-export const deleteVenue = withCatalogInvalidation(entityCatalog.deleteVenue);
-export const saveOrganization = withCatalogInvalidation(entityCatalog.saveOrganization);
-export const deleteOrganization = withCatalogInvalidation(entityCatalog.deleteOrganization);
-export const saveOrganizationVenueRelationship = withCatalogInvalidation(entityCatalog.saveOrganizationVenueRelationship);
-export const saveOrganizationRelationship = withCatalogInvalidation(entityCatalog.saveOrganizationRelationship);
-export const deleteOrganizationRelationship = withCatalogInvalidation(entityCatalog.deleteOrganizationRelationship);
+export const saveVenue = withCatalogInvalidation(async (venue: VenueData): Promise<VenueData> => {
+    const saved = await entityCatalog.saveVenue(venue);
+    const idx = db.venues.findIndex((item) => item.id === saved.id);
+    if (idx >= 0) db.venues[idx] = saved;
+    else db.venues.unshift(saved);
+    return saved;
+});
+export const deleteVenue = withCatalogInvalidation(async (venueId: string): Promise<void> => {
+    await entityCatalog.deleteVenue(venueId);
+    db.venues = db.venues.filter((item) => item.id !== venueId);
+});
+export const saveOrganization = withCatalogInvalidation(async (organization: OrganizationData): Promise<OrganizationData> => {
+    const saved = await entityCatalog.saveOrganization(organization);
+    const idx = db.organizations.findIndex((item) => item.id === saved.id);
+    if (idx >= 0) db.organizations[idx] = saved;
+    else db.organizations.unshift(saved);
+
+    if (saved.logoImageUrl) {
+        const ownedClubs = db.listings.filter(
+            (item): item is ClubData => item.type === 'club' && item.ownerOrganizationId === saved.id && !item.clubBrandId,
+        );
+        if (ownedClubs.length === 1 && ownedClubs[0].logoImageUrl !== saved.logoImageUrl) {
+            const updatedClub: ClubData = { ...ownedClubs[0], logoImageUrl: saved.logoImageUrl };
+            const clubIdx = db.listings.findIndex((item) => item.id === updatedClub.id);
+            if (clubIdx >= 0) db.listings[clubIdx] = updatedClub;
+            try {
+                await persistListingToSupabase(updatedClub);
+            } catch {
+                // Best-effort sync; primary organization save already succeeded.
+            }
+        }
+    }
+    return saved;
+});
+export const deleteOrganization = withCatalogInvalidation(async (organizationId: string): Promise<void> => {
+    await entityCatalog.deleteOrganization(organizationId);
+    db.organizations = db.organizations.filter((item) => item.id !== organizationId);
+});
+export const saveOrganizationVenueRelationship = withCatalogInvalidation(async (relationship: OrganizationVenueRelationship): Promise<OrganizationVenueRelationship> => {
+    const saved = await entityCatalog.saveOrganizationVenueRelationship(relationship);
+    const idx = db.organizationVenueRelationships.findIndex((item) => item.id === saved.id);
+    if (idx >= 0) db.organizationVenueRelationships[idx] = saved;
+    else db.organizationVenueRelationships.unshift(saved);
+    return saved;
+});
+export const saveOrganizationRelationship = withCatalogInvalidation(async (relationship: OrganizationRelationship): Promise<OrganizationRelationship> => {
+    const saved = await entityCatalog.saveOrganizationRelationship(relationship);
+    const idx = db.organizationRelationships.findIndex((item) => item.id === saved.id);
+    if (idx >= 0) db.organizationRelationships[idx] = saved;
+    else db.organizationRelationships.unshift(saved);
+    return saved;
+});
+export const deleteOrganizationRelationship = withCatalogInvalidation(async (relationshipId: string, reason: string): Promise<void> => {
+    await entityCatalog.deleteOrganizationRelationship(relationshipId, reason);
+    db.organizationRelationships = db.organizationRelationships.filter((item) => item.id !== relationshipId);
+});
 
 export const getPendingSubmissions = async (): Promise<Listing[]> => {
     const listings = await getListings();
@@ -497,7 +578,28 @@ export const saveClub = async (
         id: club.id || `club-${Date.now()}`,
     };
     try {
-        return await persistListingToSupabase(clubToSave, { requireExisting: options.requireExisting });
+        const saved = await persistListingToSupabase(clubToSave, { requireExisting: options.requireExisting });
+        if (saved.ownerOrganizationId && saved.logoImageUrl && !saved.clubBrandId) {
+            const ownedClubsCount = db.listings.filter(
+                (item): item is ClubData => item.type === 'club' && item.ownerOrganizationId === saved.ownerOrganizationId,
+            ).length;
+            const orgIdx = db.organizations.findIndex((org) => org.id === saved.ownerOrganizationId);
+            if (ownedClubsCount <= 1 && orgIdx >= 0 && db.organizations[orgIdx].logoImageUrl !== saved.logoImageUrl) {
+                const updatedOrg: OrganizationData = {
+                    ...db.organizations[orgIdx],
+                    logoImageUrl: saved.logoImageUrl,
+                };
+                db.organizations[orgIdx] = updatedOrg;
+                try {
+                    const persistedOrg = await entityCatalog.saveOrganization(updatedOrg);
+                    db.organizations[orgIdx] = persistedOrg;
+                } catch {
+                    // Best-effort sync; primary club save already succeeded.
+                }
+                notifyCatalogMutations();
+            }
+        }
+        return saved;
     } catch (error) {
         if (options.requirePersistence) {
             throw error instanceof Error ? error : new Error('Unable to persist this club update.');
@@ -509,11 +611,11 @@ export const saveEvent = async (
     event: EventData,
     options: { requireExisting?: boolean } = {},
 ): Promise<EventData> => {
-    const normalizedHost = normalizeHostName(event.hostName ?? '');
+    const trimmedHost = event.hostName?.trim() || normalizeHostName(event.hostName ?? '');
     const nextEvent: EventData = {
         ...event,
         id: event.id || `event-${Date.now()}`,
-        hostName: normalizedHost,
+        hostName: trimmedHost,
         location: buildListingLocation(event),
     };
     return persistListingToSupabase(nextEvent, { requireExisting: options.requireExisting });

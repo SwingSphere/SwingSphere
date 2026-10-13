@@ -10,6 +10,7 @@ import type {
   DaySchedule,
   EntryRequirement,
   EventData,
+  EventSeriesData,
   Geopoint,
   Listing,
   ListingLocationMeta,
@@ -23,6 +24,8 @@ import { useAppStore } from '../../../store/appStore';
 import * as api from '../../../lib/api';
 import { getPrimaryVenueForClub, getVenueForEvent, resolveEventOrganizerOrganizationId } from '../../../lib/entityCompatibility';
 import { nameSlug } from '../../../lib/identityUtils';
+import { getListingCanonicalPath } from '../../../lib/entityUtils';
+import { getListingImageUrl } from '../../../lib/listingImage';
 import { formatListingAddress, validateListingLocation } from '../../../lib/listingLocationValidation';
 import { swingMapStyle } from '../../maps/mapStyle';
 import EntityRelationshipPanel from '../EntityRelationshipPanel';
@@ -209,6 +212,7 @@ export const AdminEditorPage = ({
   backLabel = 'Back to list',
   archiveLabel = 'Archive',
   isDirty = true,
+  publicPageUrl,
 }: {
   title: string;
   entityType: string;
@@ -226,6 +230,7 @@ export const AdminEditorPage = ({
   backLabel?: string;
   archiveLabel?: string;
   isDirty?: boolean;
+  publicPageUrl?: string;
 }) => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -274,6 +279,13 @@ export const AdminEditorPage = ({
     });
   };
 
+  useEffect(() => {
+    if (window.sessionStorage.getItem('ss-admin-focus-images') !== entityId) return;
+    window.sessionStorage.removeItem('ss-admin-focus-images');
+    const imagesSection = sections.find((section) => section.id === 'images');
+    if (imagesSection) openAndScrollToSection(imagesSection);
+  }, [entityId, sections]);
+
   const runAction = async (action: () => Promise<void | boolean>, successStatus: SaveStatus = 'saved') => {
     setSaveStatus('saving');
     try {
@@ -311,6 +323,7 @@ export const AdminEditorPage = ({
             </dl>
           </div>
           <div className="flex flex-wrap gap-2">
+            {publicPageUrl ? <a href={publicPageUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-800 hover:bg-indigo-100">View Public Page ↗</a> : null}
             <button type="button" onClick={() => runAction(onSave)} disabled={!isDirty || saveStatus === 'saving'} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">{saveStatus === 'saving' ? 'Saving…' : isDirty ? 'Save changes' : 'Saved'}</button>
             {onPublish && status !== 'approved' && <button type="button" onClick={() => runAction(onPublish)} className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-800 hover:bg-green-100">Publish</button>}
             {onArchive && <button type="button" onClick={() => runAction(onArchive)} className="rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm font-semibold text-yellow-800 hover:bg-yellow-100">{archiveLabel}</button>}
@@ -529,6 +542,7 @@ const ImagesSection = ({
   logoImageUrl,
   flyerImageUrl,
   headerImageUrl,
+  effectivePublicImageUrl,
   galleryImageUrls,
   onAssetUploaded,
   onLogoChange,
@@ -545,6 +559,7 @@ const ImagesSection = ({
   logoImageUrl?: string;
   flyerImageUrl?: string;
   headerImageUrl?: string;
+  effectivePublicImageUrl?: string;
   galleryImageUrls?: string[];
   onAssetUploaded: (asset: MediaAsset) => void;
   onLogoChange: (value: string | undefined) => void;
@@ -645,6 +660,7 @@ const ImagesSection = ({
         <MediaUploader triggerOnly tone="light" inputId={inputId('flyer')} ownerType={ownerType} ownerId={mediaOwnerId} role="flyer" existingAsset={flyerAsset} onUploaded={handleUploaded} onError={setUploadError} />
       ) : null}
 
+      {!heroUrl && effectivePublicImageUrl ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950"><strong>Public page fallback currently displayed:</strong> This listing has no assigned hero asset, but the public page can show another image. Assign a hero to resolve the dashboard warning.<img src={effectivePublicImageUrl} alt="Public page fallback preview" className="mt-2 h-32 w-full rounded-lg object-cover" /></div> : null}
       {uploadError ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{uploadError}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -1048,27 +1064,33 @@ const VenueSelect = ({
   value?: string;
   onChange: (venueId: string | undefined) => void;
   onCreateVenue: () => void;
-}) => (
-  <div className="grid gap-2">
-    <Field label={label}>
-      <select className={inputClass} value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
-        <option value="">No venue selected</option>
-        {[...venues].sort((a, b) => a.name.localeCompare(b.name)).map((venue) => (
-          <option key={venue.id} value={venue.id}>
-            {venue.name} ({[venue.address.city, venue.address.region].filter(Boolean).join(', ') || venue.visibility})
-          </option>
-        ))}
-      </select>
-    </Field>
-    <button
-      type="button"
-      onClick={onCreateVenue}
-      className="justify-self-start rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-    >
-      Create venue from current location
-    </button>
-  </div>
-);
+}) => {
+  const hasUnknownVenue = Boolean(value && venues.length > 0 && !venues.some((venue) => venue.id === value));
+  return (
+    <div className="grid gap-2">
+      <Field label={label}>
+        <select className={inputClass} value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
+          <option value="">No venue selected</option>
+          {hasUnknownVenue ? (
+            <option value={value}>⚠️ Unresolved venue ({value})</option>
+          ) : null}
+          {[...venues].sort((a, b) => a.name.localeCompare(b.name)).map((venue) => (
+            <option key={venue.id} value={venue.id}>
+              {venue.name} ({[venue.address.city, venue.address.region].filter(Boolean).join(', ') || venue.visibility})
+            </option>
+          ))}
+        </select>
+      </Field>
+      <button
+        type="button"
+        onClick={onCreateVenue}
+        className="justify-self-start rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+      >
+        Create venue from current location
+      </button>
+    </div>
+  );
+};
 
 export const AdminListingDetailEditor = ({
   listing,
@@ -1076,12 +1098,14 @@ export const AdminListingDetailEditor = ({
   venues,
   organizations,
   clubBrands,
+  eventSeries = [],
   relationships,
   listings,
   buildingAssets,
   entityIndex,
   onVenueSaved,
   onRelationshipSaved,
+  onOrganizationSaved,
   onBack,
   onSaved,
   backLabel = 'Back to listings',
@@ -1091,12 +1115,14 @@ export const AdminListingDetailEditor = ({
   venues: VenueData[];
   organizations: OrganizationData[];
   clubBrands: ClubBrandData[];
+  eventSeries?: EventSeriesData[];
   relationships: OrganizationVenueRelationship[];
   listings: Listing[];
   buildingAssets: BuildingAsset[];
   entityIndex: EntityIndex | null;
   onVenueSaved: (venue: VenueData) => void;
   onRelationshipSaved: (relationship: OrganizationVenueRelationship) => void;
+  onOrganizationSaved?: (organization: OrganizationData) => void;
   onBack: () => void;
   onSaved: (listing: ClubData | EventData) => void;
   backLabel?: string;
@@ -1121,10 +1147,51 @@ export const AdminListingDetailEditor = ({
     venues,
     organizations,
     relationships,
-  }), [listings, organizations, relationships, venues]);
+    eventSeries,
+  }), [eventSeries, listings, organizations, relationships, venues]);
+
+  const validateDraftRelationships = (candidate: ClubData | EventData): string | null => {
+    if (candidate.type === 'club') {
+      if (candidate.primaryVenueId && venues.length > 0 && !venues.some((venue) => venue.id === candidate.primaryVenueId)) {
+        return `Primary venue ID "${candidate.primaryVenueId}" does not match any venue in the catalog. Select a valid venue or clear the link before saving.`;
+      }
+      if (candidate.ownerOrganizationId && organizations.length > 0 && !organizations.some((org) => org.id === candidate.ownerOrganizationId)) {
+        return `Owner organization ID "${candidate.ownerOrganizationId}" does not match any organization in the catalog. Select a valid organization or clear the link before saving.`;
+      }
+      if (candidate.clubBrandId && clubBrands.length > 0 && !clubBrands.some((brand) => brand.id === candidate.clubBrandId)) {
+        return `Club brand ID "${candidate.clubBrandId}" does not match any club brand in the catalog. Select a valid club brand or clear the link before saving.`;
+      }
+      return null;
+    }
+
+    if (candidate.venueId && venues.length > 0 && !venues.some((venue) => venue.id === candidate.venueId)) {
+      return `Venue ID "${candidate.venueId}" does not match any venue in the catalog. Select a valid venue or clear the link before saving.`;
+    }
+    if (candidate.organizerOrganizationId && organizations.length > 0 && !organizations.some((org) => org.id === candidate.organizerOrganizationId)) {
+      return `Organizer organization ID "${candidate.organizerOrganizationId}" does not match any organization in the catalog. Select a valid organizer or clear the link before saving.`;
+    }
+    if (candidate.eventSeriesId && eventSeries.length > 0 && !eventSeries.some((series) => series.id === candidate.eventSeriesId)) {
+      return `Event series ID "${candidate.eventSeriesId}" does not match any event series in the catalog. Select a valid series or clear the link before saving.`;
+    }
+    return null;
+  };
 
   const saveDraft = async (nextDraft = draft) => {
+    const relationshipError = validateDraftRelationships(nextDraft);
+    if (relationshipError) {
+      addToast({ message: relationshipError, type: 'error' });
+      return;
+    }
     const saved = nextDraft.type === 'club' ? await api.saveClub(nextDraft) : await api.saveEvent(nextDraft);
+    if (saved.type === 'club' && saved.ownerOrganizationId && saved.logoImageUrl && !saved.clubBrandId) {
+      const ownedClubsCount = listings.filter(
+        (item): item is ClubData => item.type === 'club' && item.ownerOrganizationId === saved.ownerOrganizationId,
+      ).length;
+      const ownerOrg = organizations.find((org) => org.id === saved.ownerOrganizationId);
+      if (ownedClubsCount <= 1 && ownerOrg && ownerOrg.logoImageUrl !== saved.logoImageUrl) {
+        onOrganizationSaved?.({ ...ownerOrg, logoImageUrl: saved.logoImageUrl });
+      }
+    }
     setDraft(saved);
     setSavedSnapshot(JSON.stringify(saved));
     addToast({ message: `${saved.name} saved.`, type: 'success' });
@@ -1219,6 +1286,10 @@ export const AdminListingDetailEditor = ({
   };
 
   const sections = useMemo<SectionConfig[]>(() => {
+    const sortedOrganizations = [...organizations].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedClubBrands = [...clubBrands].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedEventSeries = [...eventSeries].sort((a, b) => a.name.localeCompare(b.name));
+
     const shared: SectionConfig[] = [
       {
         id: 'basic',
@@ -1266,6 +1337,7 @@ export const AdminListingDetailEditor = ({
             logoImageUrl={draft.logoImageUrl}
             flyerImageUrl={draft.type === 'event' ? draft.flyerImageUrl : undefined}
             headerImageUrl={draft.headerImageUrl}
+            effectivePublicImageUrl={getListingImageUrl(draft) ?? undefined}
             galleryImageUrls={draft.galleryImageUrls}
             onAssetUploaded={(asset) => setDraft((current) => ({
               ...current,
@@ -1299,6 +1371,16 @@ export const AdminListingDetailEditor = ({
     ];
 
     if (draft.type === 'club') {
+      const hasUnknownOwnerOrg = Boolean(
+        draft.ownerOrganizationId
+        && organizations.length > 0
+        && !organizations.some((org) => org.id === draft.ownerOrganizationId),
+      );
+      const hasUnknownClubBrand = Boolean(
+        draft.clubBrandId
+        && clubBrands.length > 0
+        && !clubBrands.some((brand) => brand.id === draft.clubBrandId),
+      );
       shared.push(
         {
           id: 'access',
@@ -1332,6 +1414,11 @@ export const AdminListingDetailEditor = ({
           title: 'Relationships',
           saveLabel: 'Apply relationship changes',
           onSave: async () => {
+            const relationshipError = validateDraftRelationships(draft);
+            if (relationshipError) {
+              addToast({ message: relationshipError, type: 'error' });
+              return;
+            }
             if (draft.type === 'club' && draft.primaryVenueId && draft.ownerOrganizationId) {
               const savedRelationship = await api.saveOrganizationVenueRelationship({
                 id: `rel-${draft.ownerOrganizationId}-${draft.primaryVenueId}`,
@@ -1360,15 +1447,29 @@ export const AdminListingDetailEditor = ({
                   onCreateVenue={() => void createVenueFromDraft()}
                 />
                 <Field label="Owner / operator organization">
-                  <select className={inputClass} value={draft.ownerOrganizationId ?? ''} onChange={(event) => setDraft({ ...draft, ownerOrganizationId: event.target.value })}>
+                  <select className={inputClass} value={draft.ownerOrganizationId ?? ''} onChange={(event) => setDraft({ ...draft, ownerOrganizationId: event.target.value || undefined })}>
                     <option value="">Not linked</option>
-                    {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+                    {hasUnknownOwnerOrg ? (
+                      <option value={draft.ownerOrganizationId}>⚠️ Unresolved organization ({draft.ownerOrganizationId})</option>
+                    ) : null}
+                    {sortedOrganizations.map((organization) => (
+                      <option key={organization.id} value={organization.id}>
+                        {organization.name} ({organization.id})
+                      </option>
+                    ))}
                   </select>
                 </Field>
                 <Field label="Club brand">
-                  <select className={inputClass} value={draft.clubBrandId ?? ''} onChange={(event) => setDraft({ ...draft, clubBrandId: event.target.value })}>
+                  <select className={inputClass} value={draft.clubBrandId ?? ''} onChange={(event) => setDraft({ ...draft, clubBrandId: event.target.value || undefined })}>
                     <option value="">Independent / no brand</option>
-                    {clubBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+                    {hasUnknownClubBrand ? (
+                      <option value={draft.clubBrandId}>⚠️ Unresolved club brand ({draft.clubBrandId})</option>
+                    ) : null}
+                    {sortedClubBrands.map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name} ({brand.id})
+                      </option>
+                    ))}
                   </select>
                 </Field>
               </div>
@@ -1379,6 +1480,8 @@ export const AdminListingDetailEditor = ({
                 listings={listings}
                 venues={venues}
                 organizations={organizations}
+                clubBrands={clubBrands}
+                eventSeries={eventSeries}
                 relationships={relationships}
                 buildingAssets={buildingAssets}
               />
@@ -1387,6 +1490,24 @@ export const AdminListingDetailEditor = ({
         },
       );
     } else {
+      const explicitOrganizerId = draft.organizerOrganizationId ?? '';
+      const inferredOrganizerId = !explicitOrganizerId
+        ? resolveEventOrganizerOrganizationId(draft, semv2Collections)
+        : undefined;
+      const inferredOrganizer = inferredOrganizerId
+        ? organizations.find((org) => org.id === inferredOrganizerId)
+        : undefined;
+      const hasUnknownOrganizer = Boolean(
+        explicitOrganizerId
+        && organizations.length > 0
+        && !organizations.some((org) => org.id === explicitOrganizerId),
+      );
+      const hasUnknownSeries = Boolean(
+        draft.eventSeriesId
+        && eventSeries.length > 0
+        && !eventSeries.some((series) => series.id === draft.eventSeriesId),
+      );
+
       shared.push(
         {
           id: 'access',
@@ -1438,8 +1559,68 @@ export const AdminListingDetailEditor = ({
                   onCreateVenue={() => void createVenueFromDraft()}
                 />
                 <Field label="Private address"><select className={inputClass} value={draft.isAddressPrivate ? 'yes' : 'no'} onChange={(event) => setDraft({ ...draft, isAddressPrivate: event.target.value === 'yes' })}><option value="no">No</option><option value="yes">Yes</option></select></Field>
+                <div className="grid gap-2">
+                  <Field label="Organizer / Host organization">
+                    <select
+                      className={inputClass}
+                      value={explicitOrganizerId}
+                      onChange={(event) => setDraft({ ...draft, organizerOrganizationId: event.target.value || undefined })}
+                    >
+                      <option value="">
+                        {inferredOrganizer
+                          ? `Not explicitly linked (inferred: ${inferredOrganizer.name})`
+                          : 'No organizer linked'}
+                      </option>
+                      {hasUnknownOrganizer ? (
+                        <option value={explicitOrganizerId}>⚠️ Unresolved organization ({explicitOrganizerId})</option>
+                      ) : null}
+                      {sortedOrganizations.map((organization) => (
+                        <option key={organization.id} value={organization.id}>
+                          {organization.name} ({organization.id})
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  {inferredOrganizer && !explicitOrganizerId ? (
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, organizerOrganizationId: inferredOrganizer.id })}
+                      className="justify-self-start rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Pin inferred organizer ({inferredOrganizer.name})
+                    </button>
+                  ) : null}
+                </div>
+                <Field label="Event series">
+                  <select
+                    className={inputClass}
+                    value={draft.eventSeriesId ?? ''}
+                    onChange={(event) => {
+                      const nextSeriesId = event.target.value || undefined;
+                      const selectedSeries = nextSeriesId
+                        ? eventSeries.find((series) => series.id === nextSeriesId)
+                        : undefined;
+                      setDraft({
+                        ...draft,
+                        eventSeriesId: nextSeriesId,
+                        ...(!draft.organizerOrganizationId && selectedSeries?.organizerOrganizationId
+                          ? { organizerOrganizationId: selectedSeries.organizerOrganizationId }
+                          : {}),
+                      });
+                    }}
+                  >
+                    <option value="">Standalone event (no series)</option>
+                    {hasUnknownSeries ? (
+                      <option value={draft.eventSeriesId}>⚠️ Unresolved series ({draft.eventSeriesId})</option>
+                    ) : null}
+                    {sortedEventSeries.map((series) => (
+                      <option key={series.id} value={series.id}>
+                        {series.name} ({series.id})
+                      </option>
+                    ))}
+                  </select>
+                </Field>
                 <Field label="Legacy venue key"><input className={inputClass} value={draft.venueKey ?? ''} onChange={(event) => setDraft({ ...draft, venueKey: event.target.value })} /></Field>
-                <Field label="Organizer ID"><input className={inputClass} value={draft.organizerOrganizationId ?? resolveEventOrganizerOrganizationId(draft, semv2Collections) ?? ''} onChange={(event) => setDraft({ ...draft, organizerOrganizationId: event.target.value || undefined })} /></Field>
               </div>
               <EntityRelationshipPanel
                 entityType="event"
@@ -1448,6 +1629,8 @@ export const AdminListingDetailEditor = ({
                 listings={listings}
                 venues={venues}
                 organizations={organizations}
+                clubBrands={clubBrands}
+                eventSeries={eventSeries}
                 relationships={relationships}
                 buildingAssets={buildingAssets}
               />
@@ -1483,11 +1666,12 @@ export const AdminListingDetailEditor = ({
     );
 
     return shared;
-  }, [buildingAssets, draft, entityIndex, listings, organizations, relationships, semv2Collections, venues]);
+  }, [buildingAssets, clubBrands, draft, entityIndex, eventSeries, listings, organizations, relationships, semv2Collections, venues]);
 
   return (
     <AdminEditorPage
       title={draft.name}
+      publicPageUrl={getListingCanonicalPath(draft, entityIndex ?? undefined)}
       entityType={draft.type === 'club' ? 'Club' : 'Event'}
       entityId={draft.id}
       owner={owner?.displayName}

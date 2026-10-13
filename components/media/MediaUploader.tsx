@@ -34,6 +34,38 @@ type MediaUploaderProps = {
 
 type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
 
+// Preserve the original if re-encoding does not improve its size. Cloudflare still
+// performs browser-specific resizing/format negotiation on delivery.
+const optimizeUploadFile = async (file: File, role: MediaRole): Promise<File> => {
+  if (file.size <= 500 * 1024) return file;
+  const maxDimension = role === 'flyer' ? 1800 : role === 'logo' || role === 'avatar' ? 1024 : 1600;
+  const quality = role === 'flyer' || role === 'logo' ? 0.9 : 0.84;
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '-optimized.webp', {
+      type: 'image/webp',
+      lastModified: file.lastModified,
+    });
+  } catch {
+    // Unsupported image encoders should not block otherwise valid uploads.
+    return file;
+  } finally {
+    bitmap?.close();
+  }
+};
+
 const getUploadError = async (response: Response) => {
   const text = await response.text().catch(() => '');
   if (!text) return `Upload failed with status ${response.status}.`;
@@ -111,8 +143,9 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
     onError?.(message);
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (originalFile: File) => {
     try {
+      const file = await optimizeUploadFile(originalFile, role);
       const sha256Promise = computeFileSha256Hex(file).catch(() => undefined);
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;

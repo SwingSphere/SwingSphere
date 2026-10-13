@@ -47,23 +47,63 @@ const buildCatalogSignature = (
   orgRelationships: OrganizationRelationship[],
 ): string => {
   const listingSig = listings
-    .map(
-      (l) =>
-        `${l.id}:${l.status}:${l.name}:${l.primaryImageUrl ?? ''}:${
-          (l as { flyerImageUrl?: string }).flyerImageUrl ?? ''
-        }:${(l as { logoImageUrl?: string }).logoImageUrl ?? ''}`,
-    )
+    .map((l) => {
+      const ev = l as Listing & {
+        flyerImageUrl?: string;
+        logoImageUrl?: string;
+        headerImageUrl?: string;
+        organizerOrganizationId?: string;
+        ownerOrganizationId?: string;
+        venueId?: string;
+        primaryVenueId?: string;
+        eventSeriesId?: string;
+        clubBrandId?: string;
+        hostName?: string;
+        logoOverride?: boolean;
+      };
+      const mediaSig = (l.mediaAssets ?? []).map((m) => `${m.role}:${m.external_id}`).join(',');
+      return [
+        l.id,
+        l.status,
+        l.name,
+        l.primaryImageUrl ?? '',
+        ev.flyerImageUrl ?? '',
+        ev.logoImageUrl ?? '',
+        ev.headerImageUrl ?? '',
+        ev.organizerOrganizationId ?? '',
+        ev.ownerOrganizationId ?? '',
+        ev.venueId ?? '',
+        ev.primaryVenueId ?? '',
+        ev.eventSeriesId ?? '',
+        ev.clubBrandId ?? '',
+        ev.hostName ?? '',
+        String(ev.logoOverride ?? ''),
+        mediaSig,
+      ].join(':');
+    })
     .join('|');
   const venueSig = venues
-    .map((v) => `${v.id}:${v.name}:${v.logoImageUrl ?? ''}:${v.headerImageUrl ?? ''}`)
+    .map((v) => `${v.id}:${v.slug}:${v.name}:${v.visibility}:${v.logoImageUrl ?? ''}:${v.headerImageUrl ?? ''}`)
     .join('|');
   const orgSig = organizations
-    .map((o) => `${o.id}:${o.status}:${o.name}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}`)
+    .map(
+      (o) =>
+        `${o.id}:${o.slug}:${o.status}:${o.name}:${o.displayTypes.join(',')}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}`,
+    )
     .join('|');
   const seriesSig = eventSeries
-    .map((s) => `${s.id}:${s.name}:${s.logoImageUrl ?? ''}:${s.headerImageUrl ?? ''}`)
+    .map(
+      (s) =>
+        `${s.id}:${s.slug}:${s.status}:${s.name}:${s.organizerOrganizationId ?? ''}:${s.defaultVenueId ?? ''}:${s.logoImageUrl ?? ''}:${s.headerImageUrl ?? ''}`,
+    )
     .join('|');
-  return `${listingSig}#${users.length}#${venueSig}#${orgSig}#${seriesSig}#${relationships.length}#${orgRelationships.length}`;
+  const relSig = relationships
+    .map((r) => `${r.id}:${r.organizationId}:${r.venueId}:${r.relationshipType}:${r.isPrimary ? '1' : '0'}`)
+    .join('|');
+  const orgRelSig = orgRelationships
+    .map((r) => `${r.id}:${r.sourceOrganizationId}:${r.targetOrganizationId}:${r.relationshipType}`)
+    .join('|');
+  return `${listingSig}#${users.length}#${venueSig}#${orgSig}#${seriesSig}#${relSig}#${orgRelSig}`;
 };
 
 const loadCoreModules = () => {
@@ -98,8 +138,8 @@ const ensureBundledSnapshot = async (): Promise<EntityIndexSnapshot> => {
   const venues = bundled.venues;
   const organizations = bundled.organizations;
   const organizationVenueRelationships = bundled.organizationVenueRelationships;
-  const eventSeries: EventSeriesData[] = [];
-  const organizationRelationships: OrganizationRelationship[] = [];
+  const eventSeries: EventSeriesData[] = bundled.eventSeries ?? [];
+  const organizationRelationships: OrganizationRelationship[] = bundled.organizationRelationships ?? [];
 
   const initial: EntityIndexSnapshot = {
     index: buildEntityIndex(
@@ -224,7 +264,14 @@ const fetchRemoteSnapshot = async (): Promise<EntityIndexSnapshot> => {
 };
 
 export const invalidateEntityIndexCache = () => {
-  cachedSnapshot = null;
+  inFlightRemotePromise = null;
+  if (cachedSnapshot) {
+    cachedSnapshot.fetchedAt = 0;
+    void fetchRemoteSnapshot().catch(() => {
+      // Keep current snapshot on background refresh failure.
+    });
+    return;
+  }
   void ensureBundledSnapshot()
     .then(() => fetchRemoteSnapshot())
     .catch(() => {

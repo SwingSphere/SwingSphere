@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ExternalLink, Image as ImageIcon, Layers, Search, Sparkles, X } from 'lucide-react';
 import * as api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
@@ -181,14 +182,14 @@ export const MediaLibraryPickerModal: React.FC<MediaLibraryPickerModalProps> = (
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label="Choose From Media Library"
     >
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b0d11] text-gray-100 shadow-2xl">
+      <div className="flex max-h-[90dvh] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b0d11] text-gray-100 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
           <div>
@@ -249,7 +250,7 @@ export const MediaLibraryPickerModal: React.FC<MediaLibraryPickerModalProps> = (
         </div>
 
         {/* Body */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-white/10 overflow-hidden lg:grid-cols-[minmax(0,1fr)_300px] lg:divide-x lg:divide-y-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-white/10 overflow-hidden md:grid-cols-[minmax(0,1fr)_300px] md:divide-x md:divide-y-0">
           {/* Grid */}
           <div className="overflow-y-auto p-4 sm:p-5">
             {isLoading ? (
@@ -401,7 +402,8 @@ export const MediaLibraryPickerModal: React.FC<MediaLibraryPickerModalProps> = (
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

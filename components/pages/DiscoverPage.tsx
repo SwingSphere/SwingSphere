@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getHostCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
+import { slugify } from '../../lib/identityUtils';
 import {
   buildFallbackCandidateChain,
   getListingImageCandidates,
@@ -27,6 +28,7 @@ import {
 import { isPlaceholderMediaUrl, resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import { isActiveDiscoveryListing } from '../../lib/eventLifecycle';
 import EntityTypePill from '../entity/EntityTypePill';
+import MobileDirectory from '../directory/MobileDirectory';
 import type { AttendancePolicy, ClubData, Listing, OrganizationData } from '../../types';
 import type { EntityIndex } from '../../lib/entityIndex';
 
@@ -615,9 +617,28 @@ const DiscoverPage: React.FC = () => {
       };
     });
 
+    const DEMO_HOST_IDS = new Set(['org-host-discovery-demo-host', 'org-host-community-host']);
     const hostCards: Card[] = organizations
       .filter((org): org is OrganizationData => org.status === 'active' || org.status === 'approved')
-      .filter((org) => org.displayTypes?.some((type) => type === 'host' || type === 'promoter' || type === 'producer'))
+      .filter((org) => {
+        if (!index?.hostsBySlug.has(org.slug)) return false;
+        const hasHostedEvents = (index?.eventsByOrganizationId.get(org.id) ?? []).some(
+          (event) => event.status === 'approved',
+        );
+        if (DEMO_HOST_IDS.has(org.id) && !hasHostedEvents) return false;
+        const hasHostDisplayType = org.displayTypes?.some(
+          (type) =>
+            type === 'host'
+            || type === 'promoter'
+            || type === 'producer'
+            || type === 'event_brand'
+            || type === 'community',
+        );
+        const hasHostedSeries = eventSeries.some(
+          (series) => series.status === 'approved' && series.organizerOrganizationId === org.id,
+        );
+        return Boolean(hasHostDisplayType || hasHostedEvents || hasHostedSeries);
+      })
       .map((org) => {
         const hostImageCandidates = buildFallbackCandidateChain(
           [
@@ -699,7 +720,10 @@ const DiscoverPage: React.FC = () => {
       if (location !== 'all' && card.locationKey !== location && !card.locationKey.includes(location)) return false;
       if (dateBounds) {
         if (card.kind !== 'event') return false;
-        if (card.timestamp < dateBounds.startMs || card.timestamp > dateBounds.endMs) return false;
+        const endIso = card.globeListing?.type === 'event' ? card.globeListing.time?.end : undefined;
+        const parsedEnd = endIso ? new Date(endIso).getTime() : Number.NaN;
+        const effectiveEndMs = Number.isFinite(parsedEnd) ? parsedEnd : card.timestamp;
+        if (effectiveEndMs < dateBounds.startMs || card.timestamp > dateBounds.endMs) return false;
       }
       if (!matchesAudienceFilter(card.attendance, audienceFilter)) return false;
       if (q && !card.searchTarget.includes(q)) return false;
@@ -746,6 +770,14 @@ const DiscoverPage: React.FC = () => {
     [navigate],
   );
 
+  const buildPageHref = (nextPage: number): string => {
+    const next = new URLSearchParams(params);
+    if (nextPage <= 1) next.delete('page');
+    else next.set('page', String(nextPage));
+    const qs = next.toString();
+    return `/discover${qs ? `?${qs}` : ''}`;
+  };
+
   const setPage = (nextPage: number) => {
     const next = new URLSearchParams(params);
     if (nextPage <= 1) next.delete('page');
@@ -755,6 +787,23 @@ const DiscoverPage: React.FC = () => {
       resultsTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  const cityHubs = useMemo(() => {
+    const map = new Map<string, { city: string; slug: string; clubCount: number; eventCount: number }>();
+    approvedListings.forEach((item) => {
+      const rawCity = item.geopoint?.address?.city?.trim();
+      if (!rawCity) return;
+      const slug = slugify(rawCity);
+      if (!slug || slug === 'item') return;
+      const existing = map.get(slug) ?? { city: rawCity, slug, clubCount: 0, eventCount: 0 };
+      if (item.type === 'club') existing.clubCount += 1;
+      else if (item.type === 'event') existing.eventCount += 1;
+      map.set(slug, existing);
+    });
+    return [...map.values()].sort(
+      (a, b) => b.clubCount + b.eventCount - (a.clubCount + a.eventCount) || a.city.localeCompare(b.city),
+    );
+  }, [approvedListings]);
 
   // Search Autocomplete Suggestions (Strictly 5 high-relevance matches, computed only when dropdown is open)
   const { searchSuggestions, suggestionCount } = useMemo(() => {
@@ -825,6 +874,14 @@ const DiscoverPage: React.FC = () => {
     searchInputRef.current?.focus();
   };
 
+  const [isMobileDirectory, setIsMobileDirectory] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const listener = () => setIsMobileDirectory(mq.matches);
+    mq.addEventListener('change', listener);
+    return () => mq.removeEventListener('change', listener);
+  }, []);
+
   const hasActiveFilters = Boolean(
     committedQuery ||
       location !== 'all' ||
@@ -832,6 +889,10 @@ const DiscoverPage: React.FC = () => {
       audienceFilter !== 'all' ||
       sortOption !== 'default',
   );
+
+  if (isMobileDirectory) {
+    return <MobileDirectory cards={allCards} filterKind={kind} onKindChange={(next) => setFilter('type', next)} />;
+  }
 
   return (
     <div className="relative min-h-screen bg-[#05070a] text-gray-100">
@@ -858,24 +919,22 @@ const DiscoverPage: React.FC = () => {
 
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <span className="text-gray-500 text-[11px] font-medium hidden sm:inline">Other modes:</span>
-                <button
-                  type="button"
-                  onClick={() => navigate('/globe')}
+                <Link
+                  to="/globe"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
                   title="Explore in 3D on the interactive globe"
                 >
                   <Globe2 className="h-3.5 w-3.5 text-red-400" />
                   <span>3D Globe</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/map')}
+                </Link>
+                <Link
+                  to="/map"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors"
                   title="Explore on the flat map"
                 >
                   <MapPin className="h-3.5 w-3.5 text-amber-400" />
                   <span>2D Map</span>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -1362,23 +1421,38 @@ const DiscoverPage: React.FC = () => {
 
         {/* Pagination Controls */}
         {(allCards.length > 0 || !isLoading) && filtered.length > pageSize && (
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/[0.08] pt-6 sm:flex-row">
+          <nav
+            aria-label="Directory pagination"
+            className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/[0.08] pt-6 sm:flex-row"
+          >
             <p className="text-xs text-gray-400">
               Page <strong className="text-white">{safePage}</strong> of{' '}
               <strong className="text-white">{pageCount}</strong> ({filtered.length} total results)
             </p>
 
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={safePage === 1}
-                onClick={() => setPage(safePage - 1)}
-                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Previous</span>
-              </button>
+              {safePage === 1 ? (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex cursor-not-allowed items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Previous</span>
+                </span>
+              ) : (
+                <Link
+                  to={buildPageHref(safePage - 1)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage(safePage - 1);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/[0.08]"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Previous</span>
+                </Link>
+              )}
 
               <div className="hidden sm:flex items-center gap-1">
                 {Array.from({ length: pageCount }).map((_, i) => {
@@ -1391,18 +1465,22 @@ const DiscoverPage: React.FC = () => {
                   ) {
                     const isCurrent = pageNum === safePage;
                     return (
-                      <button
+                      <Link
                         key={pageNum}
-                        type="button"
-                        onClick={() => setPage(pageNum)}
-                        className={`h-8 w-8 rounded-xl text-xs font-bold transition ${
+                        to={buildPageHref(pageNum)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNum);
+                        }}
+                        aria-current={isCurrent ? 'page' : undefined}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold transition ${
                           isCurrent
                             ? 'border border-red-500/40 bg-red-500/20 text-white shadow-[0_0_12px_rgba(225,29,72,0.25)]'
                             : 'border border-white/5 bg-white/[0.02] text-gray-400 hover:bg-white/[0.06] hover:text-white'
                         }`}
                       >
                         {pageNum}
-                      </button>
+                      </Link>
                     );
                   }
                   if (pageNum === 2 && safePage > 3) {
@@ -1423,18 +1501,66 @@ const DiscoverPage: React.FC = () => {
                 })}
               </div>
 
-              <button
-                type="button"
-                disabled={safePage === pageCount}
-                onClick={() => setPage(safePage + 1)}
-                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Next page"
-              >
-                <span>Next</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              {safePage === pageCount ? (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex cursor-not-allowed items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 opacity-30"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              ) : (
+                <Link
+                  to={buildPageHref(safePage + 1)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage(safePage + 1);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/[0.08]"
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
-          </div>
+          </nav>
+        )}
+
+        {/* Regional City Discovery Hubs */}
+        {cityHubs.length > 0 && (
+          <section
+            aria-label="Browse by city"
+            className="mt-12 border-t border-white/[0.08] pt-8"
+          >
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+              Browse by City
+            </h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {cityHubs.map((hub) => (
+                <React.Fragment key={hub.slug}>
+                  {hub.clubCount > 0 && (
+                    <Link
+                      to={`/swinger-clubs/${hub.slug}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-gray-300 transition hover:border-red-500/35 hover:bg-white/[0.07] hover:text-white"
+                    >
+                      <span>{hub.city} Clubs</span>
+                      <span className="text-[10px] text-gray-500">({hub.clubCount})</span>
+                    </Link>
+                  )}
+                  {hub.eventCount > 0 && (
+                    <Link
+                      to={`/swinger-parties/${hub.slug}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-gray-300 transition hover:border-amber-500/35 hover:bg-white/[0.07] hover:text-white"
+                    >
+                      <span>{hub.city} Parties</span>
+                      <span className="text-[10px] text-gray-500">({hub.eventCount})</span>
+                    </Link>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

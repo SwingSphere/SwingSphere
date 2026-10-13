@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, Globe2 } from 'lucide-react';
 
 type ExploreGlobeButtonProps = {
-  onActivate: () => void;
+  onActivate?: () => void;
+  to?: string;
   className?: string;
 };
 
@@ -55,7 +57,7 @@ const getRandomEdgePlacement = (): EdgePlacement => {
   };
 };
 
-const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate, className = '' }) => {
+const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate, to = '/globe', className = '' }) => {
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const particleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const animationsRef = useRef<Array<Animation | null>>([]);
@@ -194,14 +196,23 @@ const ExploreGlobeButton: React.FC<ExploreGlobeButtonProps> = ({ onActivate, cla
         })}
       </span>
 
-      <button type="button" className="ss-explore-globe-cta__button" onClick={onActivate}>
+      <Link
+        to={to}
+        className="ss-explore-globe-cta__button"
+        onClick={(e) => {
+          if (onActivate) {
+            e.preventDefault();
+            onActivate();
+          }
+        }}
+      >
         <span className="ss-explore-globe-cta__glass" aria-hidden="true" />
         <span className="ss-explore-globe-cta__content">
           <Globe2 className="ss-explore-globe-cta__icon" size={20} strokeWidth={1.9} aria-hidden="true" />
           <span className="ss-explore-globe-cta__label">Explore the Globe</span>
           <ArrowRight className="ss-explore-globe-cta__arrow" size={18} strokeWidth={2} aria-hidden="true" />
         </span>
-      </button>
+      </Link>
     </span>
   );
 };

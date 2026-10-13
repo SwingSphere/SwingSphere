@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import type { Listing } from '../types';
 import {
   getListingCardImageUrl,
@@ -13,6 +14,7 @@ import EntityTypePill from './entity/EntityTypePill';
 type HomepageDiscoveryCardProps = {
   listing: Listing;
   onClick: () => void;
+  href?: string;
   resolvedLogoUrl?: string;
   imagePriority?: 'high' | 'low';
   className?: string;
@@ -40,6 +42,7 @@ const formatCardLocation = (listing: Listing) => {
 const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = React.memo(({
   listing,
   onClick,
+  href,
   resolvedLogoUrl,
   imagePriority = 'low',
   className = '',
@@ -79,13 +82,10 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = React.memo((
   const monochrome = listing.type === 'club' && (listing.mediaPresentation === 'monochrome' || listing.id === 'club-epicure-cape-town');
   const loadingMode = imagePriority === 'high' ? 'eager' : 'lazy';
   const fetchPriorityMode = imagePriority === 'high' ? 'high' : 'low';
+  const cardClasses = `group relative block h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_30%,#461920,#090b10_70%)] text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full ${className}`;
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group relative h-[320px] w-[236px] flex-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_35%_30%,#461920,#090b10_70%)] text-left shadow-xl shadow-black/35 transition hover:-translate-y-1 hover:border-red-500/45 hover:shadow-red-950/25 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-black lg:h-[336px] lg:w-full ${className}`}
-    >
+  const innerContent = (
+    <>
       {backgroundUrl ? (
         <img
           src={backgroundUrl}
@@ -143,6 +143,31 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = React.memo((
           </div>
         )}
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        to={href}
+        onClick={(e) => {
+          e.preventDefault();
+          onClick();
+        }}
+        className={cardClasses}
+      >
+        {innerContent}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cardClasses}
+    >
+      {innerContent}
     </button>
   );
 });

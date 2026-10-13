@@ -47,8 +47,16 @@ const VERIFIED_VENUE_SOURCE_IDS = new Set([
   'club-club-joi-la',
 ]);
 
+const VERIFIED_VENUE_SLUGS = new Set([
+  'twist-sf',
+  'power-exchange',
+  'the-power-exchange',
+  'club-joi',
+]);
+
 export const mockVenues: VenueData[] = mockData
   .filter(isClub)
-  .filter((club) => VERIFIED_VENUE_SOURCE_IDS.has(club.id))
+  .filter((club) => VERIFIED_VENUE_SOURCE_IDS.has(club.id) || VERIFIED_VENUE_SLUGS.has(nameSlug(club.name)))
   .map(listingToVenue)
   .filter(hasVerifiedStreetAddress);
+

@@ -234,6 +234,8 @@ const EventHero: React.FC<EventHeroProps> = ({
                 src={activePrimaryVisualUrl}
                 alt=""
                 aria-hidden="true"
+                loading="lazy"
+                decoding="async"
                 className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl"
               />
             ) : null}
@@ -254,6 +256,7 @@ const EventHero: React.FC<EventHeroProps> = ({
                 src={activePrimaryVisualUrl}
                 onError={() => recordCandidateFailure(activePrimaryVisualUrl, 'flyer')}
                 alt={activeVisualIsFlyer ? `${title} flyer` : title}
+                decoding="async"
                 className={
                   activeVisualIsFlyer
                     ? 'max-h-[72vh] w-full object-contain'
@@ -319,6 +322,8 @@ const EventHero: React.FC<EventHeroProps> = ({
           onError={() => recordCandidateFailure(activeHeroUrl, 'hero')}
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-2xl"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#07090d]/92 via-[#090c12]/88 to-[#07090d]/95" />
@@ -381,6 +386,8 @@ const EventHero: React.FC<EventHeroProps> = ({
                 src={activePrimaryVisualUrl}
                 onError={() => recordCandidateFailure(activePrimaryVisualUrl, 'flyer')}
                 alt={activeVisualIsFlyer ? `${title} flyer` : title}
+                loading="lazy"
+                decoding="async"
                 className="max-h-[460px] w-full rounded-xl object-contain transition duration-300 group-hover:scale-[1.01]"
               />
               {canOpenViewer ? (

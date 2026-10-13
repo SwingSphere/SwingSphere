@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import Button from './Button';
 import { useAppStore } from '../store/appStore';
 import { DEV_TOOLS_ENABLED } from '../lib/devTools';
@@ -48,17 +48,27 @@ export const Header: React.FC<HeaderProps> = ({
       }`}
     >
       <div className="container mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-6">
-        <div onClick={onHomeClick} className="flex items-center gap-2 sm:gap-3 cursor-pointer justify-self-start shrink-0">
+        <Link
+          to="/"
+          onClick={(e) => {
+            e.preventDefault();
+            onHomeClick();
+          }}
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer justify-self-start shrink-0"
+        >
           <img src="/swingsphere-logo_2.png" alt="SwingSphere Logo" className="h-8 w-auto sm:h-10" />
           <span className="inline whitespace-nowrap font-bold text-[13px] min-[390px]:text-[14px] sm:text-xl tracking-wider text-white">
             <span className="text-red-500">SWING</span>SPHERE
           </span>
-        </div>
+        </Link>
         {explorerSurface ? (
           <div className="ss-glass ss-glass--liquid flex items-center gap-0.5 sm:gap-1 rounded-full p-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.14em] sm:tracking-[0.22em] text-gray-300 justify-self-center">
-            <button
-              type="button"
-              onClick={onGlobeClick}
+            <Link
+              to="/globe"
+              onClick={(e) => {
+                e.preventDefault();
+                onGlobeClick();
+              }}
               className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
                 explorerSurface === 'globe'
                   ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
@@ -69,10 +79,13 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Globe2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="hidden min-[440px]:inline">Globe</span>
-            </button>
-            <button
-              type="button"
-              onClick={onMapClick}
+            </Link>
+            <Link
+              to="/map"
+              onClick={(e) => {
+                e.preventDefault();
+                onMapClick();
+              }}
               className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
                 explorerSurface === 'map'
                   ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
@@ -83,10 +96,13 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="hidden min-[440px]:inline">Map</span>
-            </button>
-            <button
-              type="button"
-              onClick={onDirectoryClick}
+            </Link>
+            <Link
+              to="/discover"
+              onClick={(e) => {
+                e.preventDefault();
+                onDirectoryClick();
+              }}
               className={`ss-glass--interactive flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-1.5 sm:px-3 transition-colors ${
                 explorerSurface === 'directory'
                   ? 'ss-glass--crimson bg-red-500/15 text-white shadow-sm shadow-red-500/20'
@@ -97,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="hidden min-[440px]:inline">Directory</span>
-            </button>
+            </Link>
           </div>
         ) : (
           <span aria-hidden="true" />

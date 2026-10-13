@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import EventHero from '../entity/eventHero/EventHero';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange, resolveCountryFlagEmoji } from '../../lib/formatting';
 import { parsePrettyKeyParam, hostSlug, normalizeHostName } from '../../lib/identityUtils';
-import { getClubCanonicalPath, getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
+import {
+  getClubCanonicalPath,
+  getEventCanonicalPath,
+  getHostCanonicalPath,
+  resolveEventFromParam,
+} from '../../lib/entityUtils';
 import type { EventData } from '../../types';
 import EventPageLayout from '../event/EventPageLayout';
 import { DetailContextNav } from '../navigation/DetailContextNav';
@@ -20,7 +25,12 @@ import {
   withPreferredCloudflareVariant,
 } from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
-import { getListingPhysicalAddress } from '../../lib/entityCompatibility';
+import {
+  getListingPhysicalAddress,
+  getListingPhysicalCoords,
+  getVenueForListing,
+  resolveEventOrganizerOrganizationId,
+} from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
 import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
 import EventFeedbackSection from '../feedback/EventFeedbackSection';
@@ -28,16 +38,17 @@ import EventOverviewSection from '../event/EventOverviewSection';
 import EventEssentialsSection from '../event/EventEssentialsSection';
 import EventAccessCard from '../event/EventAccessCard';
 import EventFlyerCard from '../event/EventFlyerCard';
-import EventPageAdminEditor from '../admin-edit/EventPageAdminEditor';
-import EventQuickEditPanel, { type EventQuickEditField } from '../admin-edit/EventQuickEditPanel';
+import type { EventQuickEditField } from '../admin-edit/EventQuickEditPanel';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import { isPastEvent } from '../../lib/eventLifecycle';
 import { resolveStreetViewSourceListingId } from '../../lib/streetViewAvailability';
 import { isApproximateLocation } from '../../lib/publicLocation';
-import { getVenueForListing } from '../../lib/entityCompatibility';
 import Seo from '../Seo';
 import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
+
+const EventPageAdminEditor = React.lazy(() => import('../admin-edit/EventPageAdminEditor'));
+const EventQuickEditPanel = React.lazy(() => import('../admin-edit/EventQuickEditPanel'));
 
 const MOCK_EVENT_SLUG = 'dev-mock-event';
 
@@ -106,7 +117,11 @@ const EventPage: React.FC = () => {
   const { index, listings, venues, eventSeries: eventSeriesCatalog, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
   const isMockRoute = key === MOCK_EVENT_SLUG || key.startsWith('dummy-event-');
 
-  const resolvedEvent = index?.eventsByKey.get(key) ?? (isMockRoute ? createMockEvent(key) : null);
+  const resolvedLookup = useMemo(
+    () => (!isMockRoute && index && slug ? resolveEventFromParam(slug, index) : null),
+    [index, isMockRoute, slug],
+  );
+  const resolvedEvent = resolvedLookup?.event ?? (isMockRoute ? createMockEvent(key) : null);
   const { registerPublicPage, clearPublicPage } = useAdminEditMode();
   const { canEdit } = usePublicEditAccess({
     postedByUserId: resolvedEvent?.postedByUserId,
@@ -114,6 +129,19 @@ const EventPage: React.FC = () => {
   });
   const [eventOverride, setEventOverride] = useState<EventData | null>(null);
   const [quickEditField, setQuickEditField] = useState<EventQuickEditField | null>(null);
+  const [isDesktopRail, setIsDesktopRail] = useState<boolean>(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 1024px)').matches
+      : true,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => setIsDesktopRail(e.matches);
+    setIsDesktopRail(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
   useEffect(() => {
     setEventOverride(null);
     setQuickEditField(null);
@@ -130,7 +158,17 @@ const EventPage: React.FC = () => {
     return () => clearPublicPage(resolvedEvent.id);
   }, [canEdit, clearPublicPage, isMockRoute, registerPublicPage, resolvedEvent]);
   const event = eventOverride ?? resolvedEvent;
-  const venueKey = event?.venueKey ?? '';
+  const entityCollections = useMemo(
+    () => ({
+      listings,
+      venues,
+      organizations,
+      relationships: organizationVenueRelationships,
+      eventSeries: eventSeriesCatalog,
+    }),
+    [listings, venues, organizations, organizationVenueRelationships, eventSeriesCatalog],
+  );
+  const venueKey = (event && index?.eventVenueClubKeyById.get(event.id)) ?? event?.venueKey ?? '';
   const mockLinkedVenue =
     isMockRoute && key.includes('has-venue') && index
       ? Array.from(index.clubsByKey.values())[0] ?? null
@@ -138,22 +176,50 @@ const EventPage: React.FC = () => {
   const venue = (venueKey ? index?.clubsByKey.get(venueKey) ?? null : null) ?? mockLinkedVenue;
   const venuePath = venue ? getClubCanonicalPath(venue, index) : undefined;
   const hostName = event?.hostName ?? '';
-  const organizerOrganization = event?.organizerOrganizationId
-    ? index?.organizationsById.get(event.organizerOrganizationId) ?? null
+  const resolvedOrganizerId = event ? resolveEventOrganizerOrganizationId(event, entityCollections) : undefined;
+  const organizerOrganization = resolvedOrganizerId
+    ? index?.organizationsById.get(resolvedOrganizerId) ?? null
     : null;
   const hostSlugValue = hostName ? hostSlug(normalizeHostName(hostName)) : '';
   const hostPath = organizerOrganization
     ? getHostCanonicalPath(organizerOrganization.slug)
     : hostSlugValue ? getHostCanonicalPath(hostSlugValue) : undefined;
   const hostEventsCount = organizerOrganization
-    ? Array.from(index?.eventsByKey.values() ?? []).filter((listing) => listing.organizerOrganizationId === organizerOrganization.id).length
-    : hostSlugValue ? (index?.eventsByHostSlug.get(hostSlugValue)?.length ?? 0) : 0;
-  const eventSeries = event?.eventSeriesId ? index?.eventSeriesById.get(event.eventSeriesId) ?? null : null;
-  const seriesOccurrences = event?.eventSeriesId
-    ? (index?.eventsBySeriesId.get(event.eventSeriesId) ?? [])
-        .filter((candidate) => candidate.id !== event.id && !isPastEvent(candidate))
-        .sort((a, b) => Date.parse(a.time.start) - Date.parse(b.time.start))
-    : [];
+    ? (index?.eventsByOrganizationId.get(organizerOrganization.id)?.filter((listing) => listing.status === 'approved').length ?? 0)
+    : hostSlugValue ? (index?.eventsByHostSlug.get(hostSlugValue)?.filter((listing) => listing.status === 'approved').length ?? 0) : 0;
+  const eventSeries = useMemo(() => {
+    if (!event) return null;
+    if (event.eventSeriesId) {
+      return index?.eventSeriesById.get(event.eventSeriesId) ?? null;
+    }
+    const normalizedTitle = normalizeHostName(event.name);
+    if (!normalizedTitle) return null;
+    return eventSeriesCatalog.find(
+      (series) =>
+        series.status === 'approved'
+        && normalizeHostName(series.name) === normalizedTitle
+        && (!organizerOrganization || !series.organizerOrganizationId || series.organizerOrganizationId === organizerOrganization.id),
+    ) ?? null;
+  }, [event, eventSeriesCatalog, index, organizerOrganization]);
+  const seriesOccurrences = useMemo(() => {
+    if (!event || !eventSeries || !index) return [];
+    const byId = new Map<string, EventData>();
+    for (const candidate of index.eventsBySeriesId.get(eventSeries.id) ?? []) {
+      byId.set(candidate.id, candidate);
+    }
+    const targetNormName = normalizeHostName(eventSeries.name);
+    const orgId = eventSeries.organizerOrganizationId ?? organizerOrganization?.id;
+    if (orgId && targetNormName) {
+      for (const candidate of index.eventsByOrganizationId.get(orgId) ?? []) {
+        if (candidate.status === 'approved' && normalizeHostName(candidate.name) === targetNormName) {
+          byId.set(candidate.id, candidate);
+        }
+      }
+    }
+    return Array.from(byId.values())
+      .filter((candidate) => candidate.id !== event.id && !isPastEvent(candidate))
+      .sort((a, b) => Date.parse(a.time.start) - Date.parse(b.time.start));
+  }, [event, eventSeries, index, organizerOrganization?.id]);
   const hostUser = useMemo(() => {
     if (!index || !hostName) return null;
     const normalized = normalizeHostName(hostName);
@@ -184,18 +250,14 @@ const EventPage: React.FC = () => {
 
   const locationLine = useMemo(() => {
     if (!event) return '';
-    const address = getListingPhysicalAddress(event);
+    const address = getListingPhysicalAddress(event, entityCollections);
     const city = address.city ?? '';
     const region = address.region ?? '';
     const country = address.country ?? '';
     const emoji = resolveCountryFlagEmoji(country);
     const parts = [city, region].filter(Boolean).join(', ');
     return `${parts}${emoji ? ` ${emoji}` : ''}`;
-  }, [event]);
-  const entityCollections = useMemo(
-    () => ({ listings, venues, organizations, relationships: organizationVenueRelationships }),
-    [listings, venues, organizations, organizationVenueRelationships],
-  );
+  }, [entityCollections, event]);
   const physicalVenue = event ? getVenueForListing(event, entityCollections) : null;
   const isPrivateLocation = Boolean(event && (
     isApproximateLocation(event) || (physicalVenue && physicalVenue.visibility !== 'public_exact')
@@ -203,6 +265,10 @@ const EventPage: React.FC = () => {
   const streetViewListingId = event && !isPrivateLocation
     ? resolveStreetViewSourceListingId(event, entityCollections)
     : null;
+
+  if (!isMockRoute && resolvedLookup && !resolvedLookup.isCanonical) {
+    return <Navigate to={resolvedLookup.canonicalPath} replace />;
+  }
 
   if (isLoading && !event) {
     return (
@@ -214,9 +280,17 @@ const EventPage: React.FC = () => {
 
   if (error || !event || (!index && !isMockRoute)) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
-        Event not found.
-      </div>
+      <>
+        <Seo
+          title="Event Not Found | SwingSphere"
+          description="The requested lifestyle event could not be found on SwingSphere."
+          canonicalPath={window.location.pathname}
+          noIndex
+        />
+        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
+          Event not found.
+        </div>
+      </>
     );
   }
 
@@ -279,7 +353,7 @@ const EventPage: React.FC = () => {
     relationships: organizationVenueRelationships,
     eventSeries: eventSeriesCatalog,
   });
-  const eventLogoImage = eventBrandLogo.url || event.logoImageUrl || eventSeries?.logoImageUrl;
+  const eventLogoImage = eventBrandLogo.url || (event.logoOverride !== false ? event.logoImageUrl : undefined);
   const eventLogoInherited = Boolean(eventBrandLogo.url && eventBrandLogo.inherited && eventBrandLogo.sourceType !== 'event');
   const venueLogoAsset = venue?.mediaAssets?.find((asset) => asset.role === 'logo') ?? null;
   const venueLogoImage = venueLogoAsset
@@ -307,7 +381,7 @@ const EventPage: React.FC = () => {
   const accessDestinationType = ticketUrl ? 'ticket' : rsvpUrl ? 'rsvp' : 'website';
 
   const attendanceText = event.tags?.find((tag) => /ticket|rsvp|member|invite|admission/i.test(tag));
-  const eventAddress = getListingPhysicalAddress(event);
+  const eventAddress = getListingPhysicalAddress(event, entityCollections);
   const eventDisplayCoords = getListingDisplayCoords(event) ?? { lat: event.geopoint.latitude, lng: event.geopoint.longitude };
   const city = eventAddress.city ?? '';
   const region = eventAddress.region ?? '';
@@ -329,26 +403,95 @@ const EventPage: React.FC = () => {
     />
   );
 
+  const canonicalPath = isMockRoute
+    ? window.location.pathname
+    : resolvedLookup?.canonicalPath ?? getEventCanonicalPath(event, index ?? undefined);
+  const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
+  const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const country = eventAddress.country ?? '';
+  const exactCoords = !isPrivateLocation ? getListingPhysicalCoords(event, entityCollections) : null;
+  const resolvedVenueName =
+    venue?.name ||
+    physicalVenue?.name ||
+    (!isPrivateLocation && event.location ? event.location : '') ||
+    ([city, region].filter(Boolean).join(', ') || 'Event Venue');
+
+  const structuredData: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    '@id': canonicalUrl,
+    name: event.name,
+    description: event.description_full || `Explore ${event.name} on SwingSphere.`,
+    startDate: event.time.start,
+    endDate: event.time.end,
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    url: canonicalUrl,
+    ...(eventFlyerHeroImage || eventCoverImage ? { image: eventFlyerHeroImage || eventCoverImage } : {}),
+    location: {
+      '@type': 'Place',
+      name: resolvedVenueName,
+      ...(venuePath ? { url: `https://swingsphere.co${venuePath}` } : {}),
+      address: {
+        '@type': 'PostalAddress',
+        ...(!isPrivateLocation && eventAddress.street ? { streetAddress: eventAddress.street } : {}),
+        ...(city ? { addressLocality: city } : {}),
+        ...(region ? { addressRegion: region } : {}),
+        ...(!isPrivateLocation && eventAddress.postalCode ? { postalCode: eventAddress.postalCode } : {}),
+        ...(country ? { addressCountry: country } : {}),
+      },
+      ...(exactCoords
+        ? {
+            geo: {
+              '@type': 'GeoCoordinates',
+              latitude: exactCoords.lat,
+              longitude: exactCoords.lng,
+            },
+          }
+        : {}),
+    },
+    ...(presenterName && presenterName !== 'Host TBD'
+      ? {
+          organizer: {
+            '@type': 'Organization',
+            name: presenterName,
+            ...(hostPath ? { url: `https://swingsphere.co${hostPath}` } : {}),
+          },
+        }
+      : {}),
+  };
+
   return (
     <>
       <Seo
-        title={`${event.name} | Lifestyle Event | SwingSphere`}
-        description={event.description_full || `Explore ${event.name} on SwingSphere. See date, location, host, access details, tickets, and event information.`}
-        canonicalPath={window.location.pathname}
+        title={`${event.name}${city ? ` in ${city}` : ''} | Lifestyle Event | SwingSphere`}
+        description={
+          event.description_full ||
+          `Explore ${event.name} on SwingSphere. See date, location, host, access details, tickets, and event information.`
+        }
+        canonicalPath={canonicalPath}
         imageUrl={eventFlyerHeroImage || eventCoverImage}
         imageAlt={`${event.name} event`}
+        ogType="article"
         noIndex={isMockRoute}
+        structuredData={structuredData}
       />
-      <EventPageAdminEditor event={event} isMockRoute={isMockRoute} />
-      {!isMockRoute ? (
-        <EventQuickEditPanel
-          key={`${event.id}-${quickEditField ?? 'closed'}`}
-          event={event}
-          field={quickEditField}
-          onClose={() => setQuickEditField(null)}
-          onPreview={setEventOverride}
-          onSaved={setEventOverride}
-        />
+      {canEdit ? (
+        <React.Suspense fallback={null}>
+          <EventPageAdminEditor event={event} isMockRoute={isMockRoute} />
+        </React.Suspense>
+      ) : null}
+      {!isMockRoute && canEdit && quickEditField ? (
+        <React.Suspense fallback={null}>
+          <EventQuickEditPanel
+            key={`${event.id}-${quickEditField}`}
+            event={event}
+            field={quickEditField}
+            onClose={() => setQuickEditField(null)}
+            onPreview={setEventOverride}
+            onSaved={setEventOverride}
+          />
+        </React.Suspense>
       ) : null}
       <EventPageLayout
         backgroundImageUrl={eventFlyerHeroImage || eventCoverImage}
@@ -357,6 +500,9 @@ const EventPage: React.FC = () => {
             breadcrumbs={[
               { label: 'Directory', href: '/discover' },
               { label: 'Events', href: '/discover?type=events' },
+              ...(city && citySlug
+                ? [{ label: city, href: `/swinger-parties/${citySlug}` }]
+                : []),
               { label: event.name },
             ]}
             listingId={event.id}
@@ -418,7 +564,7 @@ const EventPage: React.FC = () => {
               <p className="mt-2 text-sm leading-6 text-amber-50/85">
                 This event ended {new Date(event.time.end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. This page remains available as part of the organizer's event history.
               </p>
-              {hostPath && <Link to={hostPath} className="mt-3 inline-flex text-sm font-bold text-amber-200 hover:text-white">See upcoming events from {hostName || 'this organizer'} →</Link>}
+              {hostPath && <Link to={hostPath} className="mt-3 inline-flex text-sm font-bold text-amber-200 hover:text-white">See upcoming events from {presenterName || 'this organizer'} →</Link>}
             </section>
           )}
           <EventOverviewSection description={event.description_full} onQuickEdit={() => setQuickEditField('description')} />
@@ -475,19 +621,21 @@ const EventPage: React.FC = () => {
             </section>
           ) : null}
           <div className="ss-event-mobile-only-cards space-y-6">
-            <EventMapCard
-              eventId={event.id}
-              eventName={event.name}
-              city={city}
-              region={region}
-              lat={eventDisplayCoords.lat}
-              lng={eventDisplayCoords.lng}
-              isPrivateLocation={isPrivateLocation}
-              streetViewListingId={streetViewListingId}
-              organizationId={event.organizerOrganizationId}
-              eventSeriesId={event.eventSeriesId}
-              placementPrefix="event_page_mobile_directions"
-            />
+            {!isDesktopRail ? (
+              <EventMapCard
+                eventId={event.id}
+                eventName={event.name}
+                city={city}
+                region={region}
+                lat={eventDisplayCoords.lat}
+                lng={eventDisplayCoords.lng}
+                isPrivateLocation={isPrivateLocation}
+                streetViewListingId={streetViewListingId}
+                organizationId={event.organizerOrganizationId}
+                eventSeriesId={event.eventSeriesId}
+                placementPrefix="event_page_mobile_directions"
+              />
+            ) : null}
             <EventAccessCard
               eventId={event.id}
               accessUrl={accessUrl}
@@ -513,19 +661,21 @@ const EventPage: React.FC = () => {
       rail={
         <>
           <EventFlyerCard eventName={event.name} flyerAsset={eventFlyerAsset} flyerUrl={eventFlyerHeroImage} onQuickEdit={() => setQuickEditField('flyer')} />
-          <EventMapCard
-            eventId={event.id}
-            eventName={event.name}
-            city={city}
-            region={region}
-            lat={eventDisplayCoords.lat}
-            lng={eventDisplayCoords.lng}
-            isPrivateLocation={isPrivateLocation}
-            streetViewListingId={streetViewListingId}
-            organizationId={event.organizerOrganizationId}
-            eventSeriesId={event.eventSeriesId}
-            placementPrefix="event_page_rail_directions"
-          />
+          {isDesktopRail ? (
+            <EventMapCard
+              eventId={event.id}
+              eventName={event.name}
+              city={city}
+              region={region}
+              lat={eventDisplayCoords.lat}
+              lng={eventDisplayCoords.lng}
+              isPrivateLocation={isPrivateLocation}
+              streetViewListingId={streetViewListingId}
+              organizationId={event.organizerOrganizationId}
+              eventSeriesId={event.eventSeriesId}
+              placementPrefix="event_page_rail_directions"
+            />
+          ) : null}
           <EventAccessCard
             eventId={event.id}
             accessUrl={accessUrl}
@@ -535,6 +685,20 @@ const EventPage: React.FC = () => {
             eventSeriesId={event.eventSeriesId}
             placement="event_page_rail_access"
           />
+          {city && citySlug ? (
+            <section className="rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">City Guide</p>
+              <div className="mt-2.5 flex flex-col gap-2">
+                <Link
+                  to={`/swinger-parties/${citySlug}`}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs font-semibold text-gray-200 transition hover:border-red-300/35 hover:bg-white/[0.045] hover:text-white"
+                >
+                  <span>Swinger Parties &amp; Lifestyle Events in {city}</span>
+                  <span aria-hidden="true" className="text-red-300">→</span>
+                </Link>
+              </div>
+            </section>
+          ) : null}
         </>
       }
       />

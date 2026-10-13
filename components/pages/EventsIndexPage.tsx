@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, MapPin, Plus } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getEventCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
+import { isPastEvent } from '../../lib/eventLifecycle';
 import {
   getEventCardImageUrl,
   getListingPrimaryHeroUrl,
@@ -49,9 +50,8 @@ const EventsIndexPage: React.FC = () => {
       : listings.filter((listing): listing is EventData => listing.type === 'event' && listing.status === 'approved');
     return source
       .filter((event) => event.status === 'approved')
-      .filter((event) => toTimestamp(event.time?.start) >= now)
-      .sort((a, b) => toTimestamp(a.time?.start) - toTimestamp(b.time?.start))
-      .slice(0, 12);
+      .filter((event) => !isPastEvent(event, now))
+      .sort((a, b) => toTimestamp(a.time?.start) - toTimestamp(b.time?.start));
   }, [index, listings, scopedClub]);
 
   const visibleEvents = upcomingEvents;

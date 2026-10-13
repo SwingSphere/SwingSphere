@@ -29,7 +29,7 @@ import { aggregateEventsForSpatialDisplay } from '../lib/spatialEventAggregation
 import { shouldShowDevTools } from '../lib/devTools';
 import { adaptListingsToDiscoveryPoints } from '../lib/discoveryPointAdapter';
 import { adaptOrganizationsToDiscoveryPoints, adaptOrganizationsToGlobeEvents } from '../lib/hostGlobeAdapter';
-import { adaptTravelToGlobeEvents } from '../lib/travelGlobeAdapter';
+import { adaptTravelToDiscoveryPoints, adaptTravelToGlobeEvents } from '../lib/travelGlobeAdapter';
 import { getListingDisplayCoords } from '../lib/explorerMarkers';
 import { isApproximateLocation } from '../lib/publicLocation';
 import { applyDevMobileListingSafetyToAll } from '../lib/devMobileListingSafety';
@@ -1484,6 +1484,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     ),
     [showCruiseMarkers, showResortMarkers, travelCruiseSailings, travelCruiseSeries, travelResorts],
   );
+  const travelDiscoveryPoints = useMemo(
+    () => adaptTravelToDiscoveryPoints(
+      showResortMarkers ? travelResorts : [],
+      showCruiseMarkers ? travelCruiseSeries : [],
+      showCruiseMarkers ? travelCruiseSailings : [],
+    ),
+    [showCruiseMarkers, showResortMarkers, travelCruiseSailings, travelCruiseSeries, travelResorts],
+  );
   const hostMapPins = useMemo(() => hostRuntimeEvents.flatMap((event) => {
     const organization = event.organization;
     if (!organization) return [];
@@ -1583,8 +1591,8 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       ? adaptListingsToDiscoveryPoints(globeListings)
       : fixtureModeEnabled
         ? buildGlobeScaleFixtureDiscoveryPoints(scaleFixtureId)
-        : [...adaptListingsToDiscoveryPoints(globeListings), ...hostDiscoveryPoints],
-    [denseUsPinPrototype, fixtureModeEnabled, globeListings, hostDiscoveryPoints, performanceFixtureEnabled, scaleFixtureId],
+        : [...adaptListingsToDiscoveryPoints(globeListings), ...hostDiscoveryPoints, ...travelDiscoveryPoints],
+    [denseUsPinPrototype, fixtureModeEnabled, globeListings, hostDiscoveryPoints, performanceFixtureEnabled, scaleFixtureId, travelDiscoveryPoints],
   );
   const activityRegionOptions = hybridPrototype
     ? { worldZoom: hybridDiscoveryClusterZoom, radius: hybridDiscoveryClusterRadius }

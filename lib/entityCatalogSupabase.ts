@@ -10,7 +10,9 @@ import type {
   VenueData,
 } from '../types';
 import { mockOrganizations } from '../data/mockOrganizations';
+import { isSyntheticHostOrganization } from './entityCompatibility';
 import { supabase } from './supabase';
+import { VERIFIED_RESORT_PUBLIC_COORDINATES } from './travelMarkerModel';
 
 const mockOrgById = new Map(mockOrganizations.map((org) => [org.id, org]));
 
@@ -137,31 +139,58 @@ const mapClubBrand = (row: any): ClubBrandData => ({
   updatedAt: row.updated_at ?? undefined,
 });
 
-const mapResort = (row: any): ResortData => ({
-  id: row.id,
-  type: 'resort',
-  name: row.name,
-  slug: row.slug,
-  operatorOrganizationId: row.operator_organization_id ?? undefined,
-  descriptionShort: row.description_short ?? '',
-  descriptionFull: row.description_full ?? '',
-  geopoint: row.geopoint ?? { latitude: 0, longitude: 0, address: {} },
-  locationVisibility: row.location_visibility ?? undefined,
-  resortStyle: row.resort_style,
-  audienceLabel: row.audience_label ?? '',
-  accommodationSummary: row.accommodation_summary ?? '',
-  stayLengthSummary: row.stay_length_summary ?? undefined,
-  bookingUrl: row.booking_url ?? undefined,
-  contactEmail: row.contact_email ?? undefined,
-  amenities: row.amenities ?? [],
-  experienceHighlights: row.experience_highlights ?? [],
-  accessNotes: row.access_notes ?? [],
-  transportationNotes: row.transportation_notes ?? [],
-  logoImageUrl: row.logo_image_url ?? undefined,
-  headerImageUrl: row.header_image_url ?? undefined,
-  galleryImageUrls: row.gallery_image_urls ?? [],
-  status: row.status,
-});
+const mapResort = (row: any): ResortData => {
+  const rawGeopoint = row.geopoint ?? { address: {} };
+  const directLat = rawGeopoint.latitude;
+  const directLng = rawGeopoint.longitude;
+  const hasFiniteCoords =
+    typeof directLat === 'number'
+    && Number.isFinite(directLat)
+    && typeof directLng === 'number'
+    && Number.isFinite(directLng)
+    && !(directLat === 0 && directLng === 0);
+  const verifiedCoords = VERIFIED_RESORT_PUBLIC_COORDINATES[row.id];
+  const resolvedVisibility = row.location_visibility
+    ?? (row.id === 'resort-sea-mountain-inn-spa' ? 'approximate' : undefined);
+  return {
+    id: row.id,
+    type: 'resort',
+    name: row.name,
+    slug: row.slug,
+    operatorOrganizationId: row.operator_organization_id ?? undefined,
+    descriptionShort: row.description_short ?? '',
+    descriptionFull: row.description_full ?? '',
+    geopoint: {
+      ...rawGeopoint,
+      latitude: hasFiniteCoords
+        ? directLat
+        : resolvedVisibility === 'private' || resolvedVisibility === 'approximate'
+          ? (directLat ?? undefined)
+          : (verifiedCoords?.latitude ?? directLat ?? undefined),
+      longitude: hasFiniteCoords
+        ? directLng
+        : resolvedVisibility === 'private' || resolvedVisibility === 'approximate'
+          ? (directLng ?? undefined)
+          : (verifiedCoords?.longitude ?? directLng ?? undefined),
+      address: rawGeopoint.address ?? {},
+    },
+    locationVisibility: resolvedVisibility,
+    resortStyle: row.resort_style,
+    audienceLabel: row.audience_label ?? '',
+    accommodationSummary: row.accommodation_summary ?? '',
+    stayLengthSummary: row.stay_length_summary ?? undefined,
+    bookingUrl: row.booking_url ?? undefined,
+    contactEmail: row.contact_email ?? undefined,
+    amenities: row.amenities ?? [],
+    experienceHighlights: row.experience_highlights ?? [],
+    accessNotes: row.access_notes ?? [],
+    transportationNotes: row.transportation_notes ?? [],
+    logoImageUrl: row.logo_image_url ?? undefined,
+    headerImageUrl: row.header_image_url ?? undefined,
+    galleryImageUrls: row.gallery_image_urls ?? [],
+    status: row.status,
+  };
+};
 
 const mapCruiseSeries = (row: any): CruiseSeriesData => ({
   id: row.id,
@@ -207,13 +236,20 @@ export const getOrganizations = async (): Promise<OrganizationData[]> => {
   const remoteOrgs = (data ?? []).map(mapOrganization);
   const byId = new Map<string, OrganizationData>();
   for (const mockOrg of mockOrganizations) {
+    if (remoteOrgs.length > 0 && isSyntheticHostOrganization(mockOrg)) continue;
     byId.set(mockOrg.id, mockOrg);
   }
   for (const remoteOrg of remoteOrgs) {
     const existing = byId.get(remoteOrg.id);
+    const remoteName = typeof remoteOrg.name === 'string' ? remoteOrg.name.trim() : '';
+    const resolvedName =
+      existing?.name && (!remoteName || remoteName === remoteName.toLowerCase())
+        ? existing.name
+        : (remoteName || existing?.name || '');
     byId.set(remoteOrg.id, {
       ...(existing ?? {}),
       ...remoteOrg,
+      name: resolvedName,
       logoImageUrl: remoteOrg.logoImageUrl ?? existing?.logoImageUrl,
       headerImageUrl: remoteOrg.headerImageUrl ?? existing?.headerImageUrl,
     });

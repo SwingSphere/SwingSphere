@@ -47,11 +47,19 @@ export const TravelHero: React.FC<{
   location: string;
   subtitle: string;
   imageUrl?: string;
+  logoImageUrl?: string;
   badge: string;
   tone?: 'resort' | 'cruise';
-}> = ({ typeLabel, title, location, subtitle, imageUrl, badge, tone = 'resort' }) => (
+}> = ({ typeLabel, title, location, subtitle, imageUrl, logoImageUrl, badge, tone = 'resort' }) => (
   <section className="relative mt-6 min-h-[25rem] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#080b10] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
     {imageUrl ? <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+    <div className="absolute left-4 top-4 z-20 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-black/35 shadow-lg backdrop-blur-sm sm:left-6 sm:top-6 sm:h-24 sm:w-24">
+      {logoImageUrl ? (
+        <img src={logoImageUrl} alt={`${title} logo`} className="block h-full w-full object-cover" />
+      ) : (
+        <span className="text-2xl font-black text-white" aria-label={`${title} logo placeholder`}>{title.trim().slice(0, 2).toUpperCase()}</span>
+      )}
+    </div>
     <div className="relative flex min-h-[25rem] flex-col justify-end p-6 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)] sm:p-9">
       <div className="flex flex-wrap items-center gap-2">
         <EntityTypePill tone={tone}>{typeLabel}</EntityTypePill>

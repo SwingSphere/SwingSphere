@@ -1,19 +1,27 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, ListFilter } from 'lucide-react';
 
 type BrowseDirectoryButtonProps = {
-  onClick: () => void;
+  onClick?: () => void;
+  to?: string;
   className?: string;
 };
 
 const BrowseDirectoryButton: React.FC<BrowseDirectoryButtonProps> = ({
   onClick,
+  to = '/discover',
   className = '',
 }) => {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Link
+      to={to}
+      onClick={(e) => {
+        if (onClick) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={`ss-browse-directory-cta ${className}`.trim()}
       aria-label="Browse the Directory"
     >
@@ -23,8 +31,9 @@ const BrowseDirectoryButton: React.FC<BrowseDirectoryButtonProps> = ({
         <span className="ss-browse-directory-cta__label">Browse the Directory</span>
         <ArrowRight className="ss-browse-directory-cta__arrow" size={18} strokeWidth={2} aria-hidden="true" />
       </span>
-    </button>
+    </Link>
   );
 };
 
 export default BrowseDirectoryButton;
+

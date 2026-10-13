@@ -5,6 +5,13 @@
 /
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon/*
+  Cache-Control: public, max-age=86400
+
 /preview/*
   Cache-Control: public, max-age=0, must-revalidate, no-transform
   X-Robots-Tag: noindex, nofollow, noarchive
+

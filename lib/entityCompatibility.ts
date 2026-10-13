@@ -2,22 +2,25 @@ import type {
   BuildingAsset,
   ClubData,
   EventData,
+  EventSeriesData,
   Geopoint,
   Listing,
   OrganizationData,
   OrganizationVenueRelationship,
   VenueData,
 } from '../types';
-import { clubKey, nameSlug, normalizeHostName } from './identityUtils';
+import { clubKey, matchesClubVenueKey, nameSlug, normalizeHostName } from './identityUtils';
 import { mockOrganizations } from '../data/mockOrganizations';
 import { mockOrganizationVenueRelationships } from '../data/mockEntityRelationships';
 import { mockVenues } from '../data/mockVenues';
+import { eventSeries as defaultEventSeries } from '../data/eventSeries';
 
 export type EntityCollections = {
   listings?: Listing[];
   venues?: VenueData[];
   organizations?: OrganizationData[];
   relationships?: OrganizationVenueRelationship[];
+  eventSeries?: EventSeriesData[];
 };
 
 const defaultCollections = (collections: EntityCollections = {}) => ({
@@ -25,12 +28,13 @@ const defaultCollections = (collections: EntityCollections = {}) => ({
   venues: collections.venues && collections.venues.length > 0 ? collections.venues : mockVenues,
   organizations: collections.organizations && collections.organizations.length > 0 ? collections.organizations : mockOrganizations,
   relationships: collections.relationships && collections.relationships.length > 0 ? collections.relationships : mockOrganizationVenueRelationships,
+  eventSeries: collections.eventSeries && collections.eventSeries.length > 0 ? collections.eventSeries : defaultEventSeries,
 });
 
 const findClubByVenueKey = (venueKey: string | undefined, listings: Listing[]): ClubData | null => {
   if (!venueKey) return null;
   return listings.find((listing): listing is ClubData => (
-    listing.type === 'club' && clubKey(listing) === venueKey
+    listing.type === 'club' && matchesClubVenueKey(listing, venueKey)
   )) ?? null;
 };
 
@@ -65,19 +69,69 @@ export const resolveEventVenueId = (
   return findVenueByListingFallback(event, venues)?.id;
 };
 
+export const isSyntheticHostOrganization = (
+  organization:
+    | Pick<
+        OrganizationData,
+        | 'id'
+        | 'createdAt'
+        | 'updatedAt'
+        | 'postedByUserId'
+        | 'descriptionShort'
+        | 'descriptionFull'
+        | 'website'
+        | 'contactEmail'
+        | 'displayTypes'
+      >
+    | null
+    | undefined,
+): boolean => {
+  if (!organization) return false;
+  if (!organization.id.startsWith('org-host-')) return false;
+  if (organization.createdAt || organization.updatedAt || organization.postedByUserId) {
+    return false;
+  }
+  if (
+    organization.descriptionShort ||
+    organization.descriptionFull ||
+    organization.website ||
+    organization.contactEmail
+  ) {
+    return false;
+  }
+  if (organization.displayTypes && organization.displayTypes.some((type) => type !== 'host')) {
+    return false;
+  }
+  return true;
+};
+
 export const resolveEventOrganizerOrganizationId = (
   event: EventData,
   collections: EntityCollections = {},
 ): string | undefined => {
-  const { organizations } = defaultCollections(collections);
-  if (event.organizerOrganizationId && !event.organizerOrganizationId.startsWith('org-host-')) {
+  const { organizations, eventSeries } = defaultCollections(collections);
+  if (event.organizerOrganizationId) {
     const exact = organizations.find((org) => org.id === event.organizerOrganizationId);
     const isProducerOnly =
       exact?.displayTypes?.length === 1 && exact.displayTypes[0] === 'producer';
-    if (exact && !isProducerOnly) return exact.id;
+    if (exact && !isProducerOnly && !isSyntheticHostOrganization(exact)) return exact.id;
+  }
+  if (event.eventSeriesId) {
+    const linkedSeries = eventSeries.find((item) => item.id === event.eventSeriesId);
+    if (linkedSeries?.organizerOrganizationId) {
+      const seriesOrg = organizations.find((org) => org.id === linkedSeries.organizerOrganizationId);
+      if (seriesOrg) return seriesOrg.id;
+      return linkedSeries.organizerOrganizationId;
+    }
   }
   const normalizedHost = normalizeHostName(event.hostName ?? '');
-  if (!normalizedHost) return event.organizerOrganizationId;
+  if (!normalizedHost) {
+    if (event.organizerOrganizationId) {
+      const exact = organizations.find((org) => org.id === event.organizerOrganizationId);
+      if (exact) return exact.id;
+    }
+    return event.organizerOrganizationId;
+  }
   const slug = nameSlug(normalizedHost);
   const matches = organizations.filter((organization) => (
     organization.id === event.organizerOrganizationId ||
@@ -87,8 +141,8 @@ export const resolveEventOrganizerOrganizationId = (
   ));
   if (matches.length === 0) return event.organizerOrganizationId;
   const canonicalMatch =
-    matches.find((org) => Boolean(org.logoImageUrl) && !org.id.startsWith('org-host-'))
-    ?? matches.find((org) => !org.id.startsWith('org-host-'))
+    matches.find((org) => Boolean(org.logoImageUrl) && !isSyntheticHostOrganization(org))
+    ?? matches.find((org) => !isSyntheticHostOrganization(org))
     ?? matches.find((org) => Boolean(org.logoImageUrl))
     ?? matches[0];
   return canonicalMatch.id;
@@ -239,7 +293,7 @@ export const getBuildingAssetForListing = (
     const legacyVenueClub = listings.find((candidate): candidate is ClubData => (
       candidate.type === 'club' && (
         candidate.id === listing.venueId ||
-        (listing.venueKey ? clubKey(candidate) === listing.venueKey : false)
+        matchesClubVenueKey(candidate, listing.venueKey)
       )
     ));
     if (legacyVenueClub) {
@@ -291,8 +345,21 @@ export const formatListingPhysicalAddress = (
   collections: EntityCollections = {},
 ): string => {
   const venue = getVenueForListing(listing, collections);
-  if (!venue && listing.location?.trim()) return listing.location;
+  const privacyAware = listing as Listing & {
+    isAddressPrivate?: boolean;
+    locationVisibility?: string;
+    generalArea?: string;
+  };
+  const isPrivateOrApproximate =
+    privacyAware.isAddressPrivate === true
+    || privacyAware.locationVisibility === 'approximate_public'
+    || Boolean(venue?.visibility && venue.visibility !== 'public_exact');
   const address = getListingPhysicalAddress(listing, collections);
+  if (isPrivateOrApproximate) {
+    if (privacyAware.generalArea?.trim()) return privacyAware.generalArea.trim();
+    return [address.city, address.region, address.country].filter(Boolean).join(', ') || 'Private location';
+  }
+  if (!venue && listing.location?.trim()) return listing.location;
   return [
     address.addressLine1,
     address.addressLine2,

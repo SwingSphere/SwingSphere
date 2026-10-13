@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import { resortsBySlug } from '../../data/travelExperiences';
 import type { CruiseSailingData, CruiseSeriesData, OrganizationData, ResortData } from '../../types';
 import * as api from '../../lib/api';
-import TravelPageAdminEditor from '../admin-edit/TravelPageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import EntityPageShell from '../entity/EntityPageShell';
@@ -12,6 +11,8 @@ import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import Seo from '../Seo';
+
+const TravelPageAdminEditor = React.lazy(() => import('../admin-edit/TravelPageAdminEditor'));
 
 const ResortPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,7 +28,8 @@ const ResortPage: React.FC = () => {
     Promise.all([api.getResorts(), api.getOrganizations(), api.getCruiseSeries(), api.getCruiseSailings()])
       .then(([resorts, organizationRows, seriesRows, sailingRows]) => {
         if (!active) return;
-        setResort(resorts.find((item) => item.slug === slug) ?? null);
+        const matched = resorts.find((item) => item.slug === slug && item.status === 'approved') ?? null;
+        if (matched) setResort(matched);
         setOrganizations(organizationRows);
         setCruiseSeries(seriesRows);
         setSailings(sailingRows);
@@ -48,25 +50,68 @@ const ResortPage: React.FC = () => {
     return () => clearPublicPage(resort.id);
   }, [canEdit, clearPublicPage, registerPublicPage, resort]);
 
-  if (!resort) {
-    return <div className="flex min-h-[60vh] items-center justify-center text-gray-400">Resort not found.</div>;
+  if (!resort || resort.status !== 'approved') {
+    return (
+      <>
+        <Seo
+          title="Resort Not Found | SwingSphere"
+          description="The requested lifestyle resort could not be found on SwingSphere."
+          canonicalPath={window.location.pathname}
+          noIndex
+        />
+        <div className="flex min-h-[60vh] items-center justify-center text-gray-400">Resort not found.</div>
+      </>
+    );
   }
 
-  const location = [resort.geopoint.address.city, resort.geopoint.address.region, resort.geopoint.address.country]
-    .filter(Boolean)
-    .join(', ');
+  const addr = resort.geopoint?.address;
+  const location = [addr?.city, addr?.region, addr?.country].filter(Boolean).join(', ');
+  const isApprox = resort.locationVisibility === 'approximate';
+  const canonicalPath = `/resorts/${resort.slug}`;
+  const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
+  const structuredData: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Resort',
+    '@id': canonicalUrl,
+    name: resort.name,
+    description: resort.descriptionShort || resort.descriptionFull,
+    url: canonicalUrl,
+    ...(resort.headerImageUrl ? { image: resort.headerImageUrl } : {}),
+    address: {
+      '@type': 'PostalAddress',
+      ...(!isApprox && addr?.street ? { streetAddress: addr.street } : {}),
+      ...(addr?.city ? { addressLocality: addr.city } : {}),
+      ...(addr?.region ? { addressRegion: addr.region } : {}),
+      ...(!isApprox && addr?.postalCode ? { postalCode: addr.postalCode } : {}),
+      ...(addr?.country ? { addressCountry: addr.country } : {}),
+    },
+    ...(!isApprox && Number.isFinite(resort.geopoint?.latitude) && Number.isFinite(resort.geopoint?.longitude)
+      ? {
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: resort.geopoint.latitude,
+            longitude: resort.geopoint.longitude,
+          },
+        }
+      : {}),
+    ...(resort.website ? { sameAs: [resort.website] } : {}),
+  };
 
   return (
     <>
       <Seo
-        title={`${resort.name} | Adults-Only Lifestyle Resort in ${location} | SwingSphere`}
-        description={`${resort.name} in ${location}. ${resort.descriptionShort} Explore all-inclusive clothing-optional lifestyle amenities, play spaces, and accommodations on SwingSphere.`}
-        canonicalPath={`/resorts/${resort.slug}`}
+        title={`${resort.name} | Adults-Only Lifestyle Resort${location ? ` in ${location}` : ''} | SwingSphere`}
+        description={`${resort.name}${location ? ` in ${location}` : ''}. ${resort.descriptionShort} Explore all-inclusive clothing-optional lifestyle amenities, play spaces, and accommodations on SwingSphere.`}
+        canonicalPath={canonicalPath}
         imageUrl={resort.headerImageUrl}
         imageAlt={`${resort.name} resort`}
-        noIndex={resort.status !== 'approved'}
+        structuredData={structuredData}
       />
-      <TravelPageAdminEditor entity={resort} organizations={organizations} cruiseSeries={cruiseSeries} sailings={sailings} canEdit={canEdit} />
+      {canEdit ? (
+        <React.Suspense fallback={null}>
+          <TravelPageAdminEditor entity={resort} organizations={organizations} cruiseSeries={cruiseSeries} sailings={sailings} canEdit={canEdit} />
+        </React.Suspense>
+      ) : null}
       <EntityPageShell
         contextNav={
           <DetailContextNav
@@ -85,6 +130,7 @@ const ResortPage: React.FC = () => {
           location={location}
           subtitle={resort.descriptionShort}
           imageUrl={resort.headerImageUrl}
+          logoImageUrl={resort.logoImageUrl}
           badge="Stay + Experience"
         />
       }

@@ -20,6 +20,7 @@ import type { PendingWrittenReview } from '../feedback/adminFeedbackModeration';
 import type { PlatformHealthSnapshot } from './platformHealth';
 import { buildingVerificationNeedsReview } from '../buildingVerification';
 import { resolveBrandLogo, type BrandMediaCatalog } from '../entityBrandMedia';
+import { getListingPrimaryFlyerUrl, getListingPrimaryHeroUrl } from '../listingImage';
 import {
   getBuildingAssetForListing,
   getBuildingAssetForVenue,
@@ -445,7 +446,7 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
 
   for (const club of clubs) {
     const hasLogo = Boolean(resolveBrandLogo('club', club.id, mediaCatalog).url);
-    const hasHero = Boolean(club.headerImageUrl || (club.photos && club.photos.length > 0));
+    const hasHero = Boolean(getListingPrimaryHeroUrl(club));
     if (!hasLogo || !hasHero) {
       mediaClubIds.push(club.id);
       const missingParts = [!hasLogo ? 'brand logo' : null, !hasHero ? 'hero image' : null].filter(Boolean).join(' & ');
@@ -458,7 +459,7 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
           club.geopoint?.address?.region,
           club.geopoint?.address?.country,
         ),
-        reason: `Missing ${missingParts}`,
+        reason: `Missing assigned ${missingParts} (public page may display a fallback)`,
         status: club.status,
         editView: { view: 'edit-club', clubId: club.id },
       });
@@ -467,10 +468,11 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
 
   for (const event of upcomingEvents) {
     const hasLogo = Boolean(resolveBrandLogo('event', event.id, mediaCatalog).url);
-    const hasFlyer = Boolean(event.media?.some((m) => m.role === 'flyer') || event.headerImageUrl);
-    if (!hasLogo || !hasFlyer) {
+    const hasFlyer = Boolean(getListingPrimaryFlyerUrl(event));
+    const hasHero = Boolean(getListingPrimaryHeroUrl(event));
+    if (!hasLogo || (!hasFlyer && !hasHero)) {
       mediaEventIds.push(event.id);
-      const missingParts = [!hasLogo ? 'brand logo' : null, !hasFlyer ? 'event flyer/banner' : null].filter(Boolean).join(' & ');
+      const missingParts = [!hasLogo ? 'brand logo' : null, !hasFlyer && !hasHero ? 'event flyer/hero image' : null].filter(Boolean).join(' & ');
       mediaRecords.push({
         id: event.id,
         name: event.name,

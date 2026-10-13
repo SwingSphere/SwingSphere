@@ -7,6 +7,7 @@ import type { Listing } from '../types';
 type CarouselItem = {
   listing: Listing;
   logoUrl?: string;
+  href?: string;
 };
 
 type HomepageDiscoveryCarouselProps = {
@@ -156,6 +157,7 @@ const HomepageDiscoveryCarousel: React.FC<HomepageDiscoveryCarouselProps> = ({ i
                 {isWithinWindow ? (
                   <HomepageDiscoveryCard
                     listing={item.listing}
+                    href={item.href}
                     resolvedLogoUrl={item.logoUrl}
                     imagePriority={distance <= 1 ? 'high' : 'low'}
                     className="!w-full"

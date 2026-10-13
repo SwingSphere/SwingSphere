@@ -281,6 +281,19 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             next[index] = saved;
             return next;
         });
+        if (saved.logoImageUrl) {
+            setListings((prev) => {
+                const ownedClubs = prev.filter(
+                    (item): item is ClubData => item.type === 'club' && item.ownerOrganizationId === saved.id && !item.clubBrandId,
+                );
+                if (ownedClubs.length !== 1 || ownedClubs[0].logoImageUrl === saved.logoImageUrl) return prev;
+                return prev.map((item) =>
+                    item.id === ownedClubs[0].id
+                        ? ({ ...item, logoImageUrl: saved.logoImageUrl } as ClubData)
+                        : item,
+                );
+            });
+        }
     };
 
     const handleOrganizationDeleted = (organizationId: string) => {
@@ -390,12 +403,14 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         venues={venues}
                         organizations={organizations}
                         clubBrands={clubBrands}
+                        eventSeries={eventSeries}
                         relationships={organizationVenueRelationships}
                         listings={listings}
                         buildingAssets={buildingAssets}
                         entityIndex={entityIndex}
                         onVenueSaved={handleVenueSaved}
                         onRelationshipSaved={handleRelationshipSaved}
+                        onOrganizationSaved={handleOrganizationSaved}
                         onSaved={handleListingSaved}
                         onBack={() => setView('submissions')}
                         backLabel="Back to submissions"
@@ -458,12 +473,14 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         venues={venues}
                         organizations={organizations}
                         clubBrands={clubBrands}
+                        eventSeries={eventSeries}
                         relationships={organizationVenueRelationships}
                         listings={listings}
                         buildingAssets={buildingAssets}
                         entityIndex={entityIndex}
                         onVenueSaved={handleVenueSaved}
                         onRelationshipSaved={handleRelationshipSaved}
+                        onOrganizationSaved={handleOrganizationSaved}
                         onSaved={handleListingSaved}
                         onBack={() => setView('manage-clubs')}
                         backLabel="Back to clubs"
@@ -622,12 +639,14 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         venues={venues}
                         organizations={organizations}
                         clubBrands={clubBrands}
+                        eventSeries={eventSeries}
                         relationships={organizationVenueRelationships}
                         listings={listings}
                         buildingAssets={buildingAssets}
                         entityIndex={entityIndex}
                         onVenueSaved={handleVenueSaved}
                         onRelationshipSaved={handleRelationshipSaved}
+                        onOrganizationSaved={handleOrganizationSaved}
                         onSaved={handleListingSaved}
                         onBack={() => setView('manage-events')}
                         backLabel="Back to events"

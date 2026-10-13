@@ -1,6 +1,6 @@
 import React from 'react';
 import { Instagram } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import TrackedExternalLink from './analytics/TrackedExternalLink';
 
 type SocialIconName = 'x' | 'instagram' | 'bluesky' | 'threads' | 'patreon';
@@ -19,7 +19,24 @@ const socialLinks: Array<{
   { label: 'Patreon', icon: 'patreon', href: 'https://www.patreon.com/c/SwingSphere', placement: 'footer_patreon', destinationType: 'other' },
 ];
 
-const PATREON_ICON_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABKCAYAAAAG7CL/AAAFmElEQVR42u2bT4gcRRTGf92zm+wGowaDq/gHkSBGiCCKCB4MRA8eFC9hj6Ie9CIevIpePHmIB3MNKBL/gigeRCKYRHA9iKgrimh0BUNUsms2mZmdma7u9jCv8G1tz273bM9MzaQ/KGa6Zrqr3tdfvX6vqhoqVKhQocLQEXjQh73AdcCcfJ8FZuQ3AzSB88A5KecnlZiHgAeA24A7gRsVEYHTp1TVJ0ADqAM/AIvAKWBhWGSVjT3APPAJsCIqiMVQWwzQAdpSOkAknx353f6vJd/b8nkJ+Bh4QpTnPfYDR4BVMaCjPuty91tyrImKpMRS7LFR/2lInT225/8OvOIrIXPAMXVHjep821GKNkyXJENRLkFNdb0mcFH99idw2CdS5oFlZVxDfY96kGDUkImd//Qir6PqjPO/jmrrDR9IOarG/oqjFrfDJmN4WPLaGf/JIilxfE0kyomdIfn5KEl5TwxoZDjURGSeOL7GiFGbGW8cZRl1jTjjPOOo05aFUZDyZsZQaWYoJlFPlI5ysIlysvrpk2W0cdRlMoaUrtMqfXeYpLwgjV5QHW5m+JFhF+MQX5e654ZByoOigFV1Bxs9HOywS5ZajUTOc3mMq22DmI+A64GdcpwAU0DoyRMyUdGzkb5dIXUnBtXo88q5GsfpGQ8UE/fwbcsy7HcPSjHvAzukGLmOzWdqHqglcFRj+zcrCl+UfKsn+pH9MzKEZoA1YFrqY5Fr4gExqVKNTUR1DPXwVhfoh5gnpbFI7sCa3I2akxGPWjE15fMCuYF1qTuw1QWmCjZ4ALhLGrMEzMpdCKXUPCEnEUJi6VcCXCl93Vu2Yh5TjQTKudkxnHpCilFKMY6dNeAqKaUp5m5FgM+YEkICNQkWKt8TSfxVimJ2A/eN0QRZquyLlO+Zksmt0obSPuBaYdy3eeMsUqZV36yfsX0/VyYx+x2nFnhKiutrUjWcbED6XZlPpdtVMOc7AqWcQJE0I8enylTMLUJkOgbEJE5kb9OXAPgH+KxMYvY4jsx3x+umPruEsBPkWG4pQszN0uAOTwzXPk77vCTDPvuYDoCX8z7v82LaI2ebKnJSRUaY4QNtZr2L7urFz0WcVB78CtzqUT7kZtGpinYtITvV8VngpiIRYl6EnhGi05FQERSriNcowh6hoLFF745PQylLvTazbslvU8Ah4NtBEZN4FNSlYnxNRbaJ8jGxKCYGDgKnizZQhJiOZ/7FfULZrN/OD31KdyfFF/1ctAgxkfME8IEQ40wrtCSAe5zuLN3KdtLzvFhVTm+7KwHBFupz45Q1uhNi9gZNO/2vS5h/DPiwrHmLvGg6YXaZkelmT57QCe2n5fzv6a5Lnwa+Av4qe0InLy6o9H3QCPl/NXFWRdvfAG/TXdNaGmQHihCznJGxblcxm13HTmYb4CTwoihjKChCzN/S2YjiU6L9xCgh8C/wLPDWsD17EQP/cFL6ssL5LCWFwG9018eXGAGKEHOmj3PykKJXF1KlzvvlcyQICw6llHJn8Hqp5tFRktIPzrJ+d1MZi+52Q4CdHniJMcSXbNzx1C8pejNiS76f8cXQojHJ1yW2rYekDdpeY0wxX5Ji9OZBu1nxJ58MLaqYBZVlb1ctiTO5dJwxx2JJPsZuZEwkI756nBUD8EEJ7bpB4juSi4017ilBMfrcBjl3Uo4DTjqxR+TEJO6bIu4e4I4673UmCIfV3XZ3RmYdN9m4k3JV6vYxYfiR9dvX3e3vLjltVWffLTjCBOJeUYzer99WBLWdIdVk/ZsjvzDBeFUZHbHxlRm76bjDxjfTDjHhOK58TdMZQu0MJxwBT3OZ4Kgioa0SxIsOYQ3gKS4zHKS796TFxneILomy7hgXYwax3HqDOOZr6O42WKI7ib1MhQoVKlSoUKFChQoVKowH/gOkbjI6TYa2nwAAAABJRU5ErkJggg==';
+const featuredCityLinks: Array<{ label: string; to: string }> = [
+  { label: 'San Francisco Clubs', to: '/swinger-clubs/san-francisco' },
+  { label: 'Las Vegas Clubs', to: '/swinger-clubs/las-vegas' },
+  { label: 'Los Angeles Clubs', to: '/swinger-clubs/los-angeles' },
+  { label: 'New York Clubs', to: '/swinger-clubs/new-york' },
+  { label: 'Miami Clubs', to: '/swinger-clubs/miami' },
+  { label: 'Atlanta Clubs', to: '/swinger-clubs/atlanta' },
+  { label: 'Dallas Clubs', to: '/swinger-clubs/dallas' },
+  { label: 'Houston Clubs', to: '/swinger-clubs/houston' },
+  { label: 'London Clubs', to: '/swinger-clubs/london' },
+  { label: 'Barcelona Clubs', to: '/swinger-clubs/barcelona' },
+  { label: 'San Francisco Parties', to: '/swinger-parties/san-francisco' },
+  { label: 'Las Vegas Parties', to: '/swinger-parties/las-vegas' },
+  { label: 'Los Angeles Parties', to: '/swinger-parties/los-angeles' },
+  { label: 'Amsterdam Parties', to: '/swinger-parties/amsterdam' },
+];
+
+const PATREON_ICON_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABKCAYAAAAG7CL/AAAFmElEQVR42u2bT4gcRRTGf92zm+wGowaDq/gHkSBGiCCKCB4MRA8eFC9hj6Ie9CIevIpePHmIB3MNKBL/gigeRCKYRHA9iKgrimh0BUNUsms2mZmdma7u9jCv8G1tz273bM9MzaQ/KGa6Zrqr3tdfvX6vqhoqVKhQocLQEXjQh73AdcCcfJ8FZuQ3AzSB88A5KecnlZiHgAeA24A7gRsVEYHTp1TVJ0ADqAM/AIvAKWBhWGSVjT3APPAJsCIqiMVQWwzQAdpSOkAknx353f6vJd/b8nkJ+Bh4QpTnPfYDR4BVMaCjPuty91tyrImKpMRS7LFR/2lInT225/8OvOIrIXPAMXVHjep821GKNkyXJENRLkFNdb0mcFH99idw2CdS5oFlZVxDfY96kGDUkImd//Qir6PqjPO/jmrrDR9IOarG/oqjFrfDJmN4WPLaGf/JIilxfE0kyomdIfn5KEl5TwxoZDjURGSeOL7GiFGbGW8cZRl1jTjjPOOo05aFUZDyZsZQaWYoJlFPlI5ysIlysvrpk2W0cdRlMoaUrtMqfXeYpLwgjV5QHW5m+JFhF+MQX5e654ZByoOigFV1Bxs9HOywS5ZajUTOc3mMq22DmI+A64GdcpwAU0DoyRMyUdGzkb5dIXUnBtXo88q5GsfpGQ8UE/fwbcsy7HcPSjHvAzukGLmOzWdqHqglcFRj+zcrCl+UfKsn+pH9MzKEZoA1YFrqY5Fr4gExqVKNTUR1DPXwVhfoh5gnpbFI7sCa3I2akxGPWjE15fMCuYF1qTuw1QWmCjZ4ALhLGrMEzMpdCKXUPCEnEUJi6VcCXCl93Vu2Yh5TjQTKudkxnHpCilFKMY6dNeAqKaUp5m5FgM+YEkICNQkWKt8TSfxVimJ2A/eN0QRZquyLlO+Zksmt0obSPuBaYdy3eeMsUqZV36yfsX0/VyYx+x2nFnhKiutrUjWcbED6XZlPpdtVMOc7AqWcQJE0I8enylTMLUJkOgbEJE5kb9OXAPgH+KxMYvY4jsx3x+umPruEsBPkWG4pQszN0uAOTwzXPk77vCTDPvuYDoCX8z7v82LaI2ebKnJSRUaY4QNtZr2L7urFz0WcVB78CtzqUT7kZtGpinYtITvV8VngpiIRYl6EnhGi05FQERSriNcowh6hoLFF745PQylLvTazbslvU8Ah4NtBEZN4FNSlYnxNRNRbaJ8jGxKCYGDgKnizZQhJiOZ/7FfULZrN/OD31KdyfFF/1ctAgxkfME8IEQ40wrtCSAe5zuLN3KdtLzvFhVTm+7KwHBFupz45Q1uhNi9gZNO/2vS5h/DPiwrHmLvGg6YXaZkelmT57QCe2n5fzv6a5Lnwa+Av4qe0InLy6o9H3QCPl/NXFWRdvfAG/TXdNaGmQHihCznJGxblcxm13HTmYb4CTwoihjKChCzN/S2YjiU6L9xCgh8C/wLPDWsD17EQP/cFL6ssL5LCWFwG9018eXGAGKEHOmj3PykKJXF1KlzvvlcyQICw6llHJn8Hqp5tFRktIPzrJ+d1MZi+52Q4CdHniJMcSXbNzx1C8pejNiS76f8cXQojHJ1yW2rYekDdpeY0wxX5Ji9OZBu1nxJ58MLaqYBZVlb1ctiTO5dJwxx2JJPsZuZEwkI756nBUD8EEJ7bpB4juSi4017ilBMfrcBjl3Uo4DTjqxR+TEJO6bIu4e4I4673UmCIfV3XZ3RmYdN9m4k3JV6vYxYfiR9dvX3e3vLjltVWffLTjCBOJeUYzer99WBLWdIdVk/ZsjvzDBeFUZHbHxlRm76bjDxjfTDjHhOK58TdMZQu0MJxwBT3OZ4Kgioa0SxIsOYQ3gKS4zHKS796TFxneILomy7hgXYwax3HqDOOZr6O42WKI7ib1MhQoVKlSoUKFChQoVKowH/gOkbjI6TYa2nwAAAABJRU5ErkJggg==';
 
 const SocialIcon: React.FC<{ name: SocialIconName }> = ({ name }) => {
   if (name === 'instagram') return <Instagram size={20} strokeWidth={1.9} aria-hidden="true" />;
@@ -52,8 +69,6 @@ const SocialIcon: React.FC<{ name: SocialIconName }> = ({ name }) => {
 };
 
 const Footer: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const navigate = useNavigate();
-
   return (
     <footer className={`bg-black/50 text-gray-500 border-t border-gray-800/50 ${compact ? 'py-4' : 'py-12'}`}>
       <div className="container mx-auto px-6 lg:px-8">
@@ -61,22 +76,28 @@ const Footer: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
           ? 'flex flex-col gap-3 text-xs md:flex-row md:items-center md:justify-between'
           : 'grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-sm'}>
           <div className={compact ? 'flex items-center gap-3' : 'col-span-2 md:col-span-1'}>
-            <h4 className={`font-bold text-gray-200 tracking-widest uppercase ${compact ? 'text-sm' : 'mb-3 text-base'}`}><span className="text-red-500">Swing</span>Sphere</h4>
+            <h4 className={`font-bold text-gray-200 tracking-widest uppercase ${compact ? 'text-sm' : 'mb-3 text-base'}`}>
+              <Link to="/" className="hover:text-white transition-colors"><span className="text-red-500">Swing</span>Sphere</Link>
+            </h4>
             {!compact && <p className="pr-4">Discover Your Scene. Connect with Your Community.</p>}
           </div>
           <div className={compact ? 'flex flex-wrap gap-x-5 gap-y-2' : ''}>
             {!compact && <h4 className="font-bold text-gray-300 mb-3">Navigate</h4>}
             <ul className={compact ? 'flex flex-wrap gap-x-4 gap-y-2' : 'space-y-2'}>
-              <li><button type="button" onClick={() => navigate('/about')} className="hover:text-white transition-colors bg-transparent p-0 text-left">About Us</button></li>
-              <li><button type="button" onClick={() => navigate('/faq')} className="hover:text-white transition-colors bg-transparent p-0 text-left">FAQ</button></li>
-              <li><button type="button" onClick={() => navigate('/contact')} className="hover:text-white transition-colors bg-transparent p-0 text-left">Contact</button></li>
+              <li><Link to="/discover" className="hover:text-white transition-colors">Directory</Link></li>
+              <li><Link to="/events" className="hover:text-white transition-colors">Upcoming Events</Link></li>
+              <li><Link to="/travel" className="hover:text-white transition-colors">Resorts &amp; Cruises</Link></li>
+              <li><Link to="/globe" className="hover:text-white transition-colors">3D Globe</Link></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link to="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
             </ul>
           </div>
           <div>
             {!compact && <h4 className="font-bold text-gray-300 mb-3">Legal</h4>}
             <ul className={compact ? 'flex flex-wrap gap-x-4 gap-y-2' : 'space-y-2'}>
-              <li><button type="button" onClick={() => navigate('/privacy')} className="hover:text-white transition-colors bg-transparent p-0 text-left">Privacy Policy</button></li>
-              <li><button type="button" onClick={() => navigate('/tos')} className="hover:text-white transition-colors bg-transparent p-0 text-left">Terms of Service</button></li>
+              <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/tos" className="hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
           {!compact ? (
@@ -106,6 +127,18 @@ const Footer: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
           ) : null}
           {compact && <p className="text-gray-600">&copy; 2026 <span className="text-red-500">Swing</span>Sphere</p>}
         </div>
+        {!compact && (
+          <div className="border-t border-gray-800/80 pt-6 mb-6">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Popular City Destinations</h4>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+              {featuredCityLinks.map((cityLink) => (
+                <Link key={cityLink.to} to={cityLink.to} className="text-gray-500 hover:text-gray-300 transition-colors">
+                  {cityLink.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
         {!compact && (
           <div className="border-t border-gray-800 pt-8 text-center text-sm">
             <p>&copy; 2026 <span className="text-red-500">Swing</span>Sphere. All rights reserved.</p>

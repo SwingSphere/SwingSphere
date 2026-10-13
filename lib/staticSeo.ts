@@ -23,7 +23,7 @@ export const resolveStaticPageSeo = (pathname: string): SeoPayload => {
   const canonicalUrl = `${SITE_ORIGIN}${cleanPath === '/' ? '/' : cleanPath}`;
 
   // 1. Private and utility routes -> noindex, nofollow
-  const isPrivate = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/auth|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(cleanPath);
+  const isPrivate = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/auth|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet|\/users\/|\/street-view)/.test(cleanPath);
   if (isPrivate) {
     return {
       title: 'SwingSphere | Account & Administration',
@@ -136,7 +136,7 @@ export const resolveStaticPageSeo = (pathname: string): SeoPayload => {
     };
   }
 
-  // 6. Informational pages: /about, /faq, /contact, /tos, /privacy, /pricing, /guidelines
+  // 6. Informational pages: /about, /faq, /contact, /tos, /privacy
   if (cleanPath === '/about') {
     return {
       title: 'About SwingSphere | Global Lifestyle Discovery',
@@ -242,41 +242,64 @@ export const resolveStaticPageSeo = (pathname: string): SeoPayload => {
     };
   }
 
-  // 7. Homepage Default: /
+  // 7. Homepage: /
+  if (cleanPath === '/') {
+    return {
+      title: 'SwingSphere | Lifestyle Clubs, Swinger Parties & Events',
+      description: 'Discover lifestyle clubs, swinger parties, play parties, adult nightlife, hosts, luxury lifestyle resorts, and cruises worldwide with SwingSphere.',
+      canonicalUrl: `${SITE_ORIGIN}/`,
+      ogType: 'website',
+      twitterCard: 'summary_large_image',
+      imageUrl: DEFAULT_OG_IMAGE,
+      imageAlt: DEFAULT_OG_IMAGE_ALT,
+      imageWidth: DEFAULT_OG_WIDTH,
+      imageHeight: DEFAULT_OG_HEIGHT,
+      noIndex: false,
+      structuredData: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'SwingSphere',
+          url: `${SITE_ORIGIN}/`,
+          description: 'Discover lifestyle clubs, swinger parties, play parties, events, hosts, resorts, and cruises around the world with SwingSphere.',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: `${SITE_ORIGIN}/discover?query={search_term_string}`,
+            'query-input': 'required name=search_term_string',
+          },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'SwingSphere',
+          url: `${SITE_ORIGIN}/`,
+          logo: `${SITE_ORIGIN}/swingsphere-logo_2.png`,
+          description: 'Global discovery platform for lifestyle clubs, swinger events, and community nightlife.',
+        },
+      ],
+    };
+  }
+
+  // 8. Unknown route fallback: never canonicalize unknown paths to the homepage
   return {
-    title: 'SwingSphere | Lifestyle Clubs, Swinger Parties & Events',
-    description: 'Discover lifestyle clubs, swinger parties, play parties, adult nightlife, hosts, luxury lifestyle resorts, and cruises worldwide with SwingSphere.',
-    canonicalUrl: `${SITE_ORIGIN}/`,
+    title: 'Page Not Found | SwingSphere',
+    description: 'The requested page could not be found on SwingSphere.',
+    canonicalUrl,
     ogType: 'website',
     twitterCard: 'summary_large_image',
     imageUrl: DEFAULT_OG_IMAGE,
     imageAlt: DEFAULT_OG_IMAGE_ALT,
     imageWidth: DEFAULT_OG_WIDTH,
     imageHeight: DEFAULT_OG_HEIGHT,
-    noIndex: false,
-    structuredData: [
-      {
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: 'SwingSphere',
-        url: `${SITE_ORIGIN}/`,
-        description: 'Discover lifestyle clubs, swinger parties, play parties, events, hosts, resorts, and cruises around the world with SwingSphere.',
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: `${SITE_ORIGIN}/discover?query={search_term_string}`,
-          'query-input': 'required name=search_term_string',
-        },
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        name: 'SwingSphere',
-        url: `${SITE_ORIGIN}/`,
-        logo: `${SITE_ORIGIN}/swingsphere-logo_2.png`,
-        description: 'Global discovery platform for lifestyle clubs, swinger events, and community nightlife.',
-      },
-    ],
+    noIndex: true,
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Page Not Found | SwingSphere',
+      url: canonicalUrl,
+    },
   };
 };
 
 export const resolvePageSeo = resolveStaticPageSeo;
+

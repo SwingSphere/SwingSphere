@@ -1892,6 +1892,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="button"
                       onClick={() => {
                         setInspectedQueueItemId(null);
+                        if (inspectedQueueItem.id === 'missing_media' || rec.reason.toLowerCase().includes('missing') && rec.reason.toLowerCase().includes('image')) {
+                          window.sessionStorage.setItem('ss-admin-focus-images', rec.id);
+                        }
                         navigateTo(rec.editView);
                       }}
                       className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"

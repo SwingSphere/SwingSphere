@@ -22,7 +22,7 @@ const createSampleInput = (): DashboardSummaryInput => ({
       location: 'Austin, TX',
       contactEmail: 'info@velvet.test',
       headerImageUrl: 'https://example.com/hero.jpg',
-      brandLogoUrl: 'https://example.com/logo.png',
+      logoImageUrl: 'https://example.com/logo.png',
       geopoint: {
         latitude: 30.2672,
         longitude: -97.7431,
@@ -253,6 +253,20 @@ const createSampleInput = (): DashboardSummaryInput => ({
   const duplicateItem = queue.find((i) => i.id === 'duplicate-listings');
   assert.ok(duplicateItem);
   assert.equal(duplicateItem.count, 2); // club-1 and club-2-dup share "velvet lounge|austin"
+}
+
+// Media audit must use the same resolved image sources as listing editors/pages.
+{
+  const input = createSampleInput();
+  const club = input.listings.find((item) => item.id === 'club-2-dup');
+  const event = input.listings.find((item) => item.id === 'event-1');
+  assert.ok(club && event);
+  club.mediaAssets = [{ role: 'hero', external_id: 'cloudflare-club-hero' } as NonNullable<typeof club.mediaAssets>[number]];
+  (event as Extract<DashboardSummaryInput['listings'][number], { type: 'event' }>).flyerImageUrl = 'https://example.com/event-flyer.jpg';
+  const media = buildOperationalQueue(input).find((item) => item.id === 'missing-media');
+  assert.ok(media);
+  assert.equal(media.records.find((record) => record.id === club.id)?.reason, 'Missing assigned brand logo (public page may display a fallback)');
+  assert.equal(media.records.find((record) => record.id === event.id)?.reason, 'Missing brand logo');
 }
 
 // 3. Test Content & Directory Health Summary

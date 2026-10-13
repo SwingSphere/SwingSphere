@@ -16,13 +16,18 @@ import { eventSeries } from '../data/eventSeries';
 import { organizationRelationships as defaultOrganizationRelationships } from '../data/organizationRelationships';
 import {
   getPrimaryVenueForClub,
+  isSyntheticHostOrganization,
   resolveEventOrganizerOrganizationId,
   resolveEventVenueId,
 } from './entityCompatibility';
 import {
   clubKey,
   eventKey,
+  getCandidateClubKeys,
+  getCandidateEventKeys,
   hostSlug,
+  legacyClubKey,
+  nameSlug,
   normalizeHostName,
 } from './identityUtils';
 
@@ -36,12 +41,17 @@ export type HostProfile = {
 export type EntityIndex = {
   clubsByKey: Map<string, ClubData>;
   eventsByKey: Map<string, EventData>;
+  clubRedirectByKey: Map<string, ClubData>;
+  eventRedirectByKey: Map<string, EventData>;
+  unambiguousClubBySlug: Map<string, ClubData>;
+  unambiguousEventBySlug: Map<string, EventData>;
   clubKeyById: Map<string, string>;
   eventKeyById: Map<string, string>;
   eventVenueClubKeyById: Map<string, string>;
   eventsByVenueClubKey: Map<string, EventData[]>;
   eventsByHostSlug: Map<string, EventData[]>;
   hostsBySlug: Map<string, HostProfile>;
+  hostSlugAliases: Map<string, string>;
   venuesById: Map<string, VenueData>;
   venuesBySlug: Map<string, VenueData>;
   organizationsById: Map<string, OrganizationData>;
@@ -72,19 +82,34 @@ export const buildEntityIndex = (
 
   const usersById = new Map(users.map((user) => [user.id, user]));
   const venuesById = new Map(venues.map((venue) => [venue.id, venue]));
-  const venuesBySlug = new Map(venues.map((venue) => [venue.slug, venue]));
+  const venuesBySlug = new Map<string, VenueData>();
+  for (const venue of venues) {
+    venuesBySlug.set(venue.slug, venue);
+    const shortSlug = nameSlug(venue.name || '');
+    if (shortSlug && !venuesBySlug.has(shortSlug)) {
+      venuesBySlug.set(shortSlug, venue);
+    }
+  }
   const organizationsById = new Map(organizations.map((organization) => [organization.id, organization]));
   const organizationsBySlug = new Map(organizations.map((organization) => [organization.slug, organization]));
   const eventSeriesById = new Map(series.map((item) => [item.id, item]));
   const eventSeriesBySlug = new Map(series.map((item) => [item.slug, item]));
   const clubsByKey = new Map<string, ClubData>();
   const eventsByKey = new Map<string, EventData>();
+  const clubRedirectByKey = new Map<string, ClubData>();
+  const eventRedirectByKey = new Map<string, EventData>();
+  const unambiguousClubBySlug = new Map<string, ClubData>();
+  const unambiguousEventBySlug = new Map<string, EventData>();
+  const clubSlugCounts = new Map<string, number>();
+  const eventSlugCounts = new Map<string, number>();
+  const canonicalClubKeyByCandidateKey = new Map<string, string>();
   const clubKeyById = new Map<string, string>();
   const eventKeyById = new Map<string, string>();
   const eventVenueClubKeyById = new Map<string, string>();
   const eventsByVenueClubKey = new Map<string, EventData[]>();
   const eventsByHostSlug = new Map<string, EventData[]>();
   const hostsBySlug = new Map<string, HostProfile>();
+  const hostSlugAliases = new Map<string, string>();
   const relationshipsByVenueId = new Map<string, OrganizationVenueRelationship[]>();
   const relationshipsByOrganizationId = new Map<string, OrganizationVenueRelationship[]>();
   const organizationRelationshipsBySourceId = new Map<string, OrganizationRelationship[]>();
@@ -129,6 +154,28 @@ export const buildEntityIndex = (
     clubKeyById.set(club.id, key);
     if (!clubsByKey.has(key)) clubsByKey.set(key, club);
 
+    for (const candidateKey of getCandidateClubKeys(club)) {
+      if (!clubRedirectByKey.has(candidateKey)) {
+        clubRedirectByKey.set(candidateKey, club);
+      }
+      if (!canonicalClubKeyByCandidateKey.has(candidateKey)) {
+        canonicalClubKeyByCandidateKey.set(candidateKey, key);
+      }
+    }
+    const slug = nameSlug(club.name || '');
+    if (slug) {
+      if (!canonicalClubKeyByCandidateKey.has(slug)) {
+        canonicalClubKeyByCandidateKey.set(slug, key);
+      }
+      const nextCount = (clubSlugCounts.get(slug) ?? 0) + 1;
+      clubSlugCounts.set(slug, nextCount);
+      if (nextCount === 1) {
+        unambiguousClubBySlug.set(slug, club);
+      } else {
+        unambiguousClubBySlug.delete(slug);
+      }
+    }
+
     const venueIds = new Set([
       `venue-${club.id}`,
       club.primaryVenueId,
@@ -138,19 +185,39 @@ export const buildEntityIndex = (
       const keys = clubKeysByVenueId.get(venueId) ?? new Set<string>();
       keys.add(key);
       clubKeysByVenueId.set(venueId, keys);
+      const linkedVenue = venuesById.get(venueId);
+      if (linkedVenue && slug && !venuesBySlug.has(slug)) {
+        venuesBySlug.set(slug, linkedVenue);
+      }
     }
   }
 
   for (const event of events) {
-    const venueId = resolveEventVenueId(event, { listings, venues, organizations, relationships });
+    const collections = { listings, venues, organizations, relationships, eventSeries: series };
+    const venueId = resolveEventVenueId(event, collections);
     const linkedClubKeys = new Set(venueId ? clubKeysByVenueId.get(venueId) ?? [] : []);
-    // Retain legacy venueKey links when no club can be resolved from the venue ID.
-    if (!linkedClubKeys.size && event.venueKey) linkedClubKeys.add(event.venueKey);
+    // Retain legacy venueKey links when no club can be resolved from the venue ID, mapped to canonical clubKey when known.
+    if (!linkedClubKeys.size && event.venueKey) {
+      const mappedKey = canonicalClubKeyByCandidateKey.get(event.venueKey) ?? event.venueKey;
+      linkedClubKeys.add(mappedKey);
+    }
+    const extraVenueKeys: string[] = [];
     for (const key of linkedClubKeys) {
       eventVenueClubKeyById.set(event.id, key);
       const venueEvents = eventsByVenueClubKey.get(key) ?? [];
       venueEvents.push(event);
       eventsByVenueClubKey.set(key, venueEvents);
+
+      const linkedClub = clubsByKey.get(key);
+      if (linkedClub) {
+        const legacyKey = legacyClubKey(linkedClub);
+        extraVenueKeys.push(key, legacyKey);
+        if (legacyKey && legacyKey !== key) {
+          const legacyVenueEvents = eventsByVenueClubKey.get(legacyKey) ?? [];
+          legacyVenueEvents.push(event);
+          eventsByVenueClubKey.set(legacyKey, legacyVenueEvents);
+        }
+      }
     }
 
     const hostName = normalizeHostName(event.hostName ?? '');
@@ -158,10 +225,40 @@ export const buildEntityIndex = (
     eventKeyById.set(event.id, key);
     if (!eventsByKey.has(key)) eventsByKey.set(key, event);
 
-    const collections = { listings, venues, organizations, relationships };
     const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, collections);
+    const resolvedOrganization = organizerOrganizationId
+      ? organizationsById.get(organizerOrganizationId)
+      : undefined;
 
-    if (hostName) {
+    for (const candidateKey of getCandidateEventKeys(
+      event,
+      resolvedOrganization?.name ?? event.hostName ?? '',
+      [],
+      extraVenueKeys,
+    )) {
+      if (!eventRedirectByKey.has(candidateKey)) {
+        eventRedirectByKey.set(candidateKey, event);
+      }
+    }
+    const evSlug = nameSlug(event.name || '');
+    if (evSlug) {
+      const nextCount = (eventSlugCounts.get(evSlug) ?? 0) + 1;
+      eventSlugCounts.set(evSlug, nextCount);
+      if (nextCount === 1) {
+        unambiguousEventBySlug.set(evSlug, event);
+      } else {
+        unambiguousEventBySlug.delete(evSlug);
+      }
+    }
+
+    // A canonical organization ID wins over text-derived host slugs.
+    // Keep the legacy slug index for unlinked events and record alias redirects for old URLs.
+    if (hostName && resolvedOrganization) {
+      const legacySlug = hostSlug(hostName);
+      if (legacySlug && legacySlug !== resolvedOrganization.slug) {
+        hostSlugAliases.set(legacySlug, resolvedOrganization.slug);
+      }
+    } else if (hostName) {
       const slug = hostSlug(hostName);
       const hostEvents = eventsByHostSlug.get(slug) ?? [];
       hostEvents.push(event);
@@ -191,7 +288,7 @@ export const buildEntityIndex = (
         if (existing) {
           existing.events = hostEvents;
           if (!existing.name) existing.name = editableOrganization.name || event.hostName;
-          if (!existing.organization || (organizerOrganization && existing.organization.id.startsWith('org-host-'))) {
+          if (!existing.organization || (organizerOrganization && isSyntheticHostOrganization(existing.organization))) {
             existing.organization = editableOrganization;
           }
         }
@@ -217,6 +314,49 @@ export const buildEntityIndex = (
     }
   }
 
+  // Populate canonical host profiles from resolved organization relationships.
+  // This also handles different host-name casing and organization slugs with city suffixes.
+  for (const [organizationId, organizationEvents] of eventsByOrganizationId) {
+    const organization = organizationsById.get(organizationId);
+    if (!organization) continue;
+    eventsByHostSlug.set(organization.slug, organizationEvents);
+    const profile = hostsBySlug.get(organization.slug);
+    if (profile) {
+      profile.events = organizationEvents;
+    } else {
+      hostsBySlug.set(organization.slug, {
+        slug: organization.slug,
+        name: organization.name,
+        events: organizationEvents,
+        organization,
+      });
+    }
+  }
+
+  // Ensure organizations that own an approved event series also have a canonical host profile.
+  for (const item of series) {
+    if (item.status !== 'approved' || !item.organizerOrganizationId) continue;
+    const organization = organizationsById.get(item.organizerOrganizationId);
+    if (!organization || hostsBySlug.has(organization.slug)) continue;
+    hostsBySlug.set(organization.slug, {
+      slug: organization.slug,
+      name: organization.name,
+      events: eventsByOrganizationId.get(organization.id) ?? [],
+      organization,
+    });
+  }
+
+  for (const [aliasSlug, targetSlug] of hostSlugAliases.entries()) {
+    if (hostsBySlug.has(aliasSlug)) {
+      hostSlugAliases.delete(aliasSlug);
+    } else {
+      const targetEvents = eventsByHostSlug.get(targetSlug);
+      if (targetEvents && !eventsByHostSlug.has(aliasSlug)) {
+        eventsByHostSlug.set(aliasSlug, targetEvents);
+      }
+    }
+  }
+
   for (const seriesEvents of eventsBySeriesId.values()) {
     if (seriesEvents.length > 1) {
       seriesEvents.sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime());
@@ -226,12 +366,17 @@ export const buildEntityIndex = (
   return {
     clubsByKey,
     eventsByKey,
+    clubRedirectByKey,
+    eventRedirectByKey,
+    unambiguousClubBySlug,
+    unambiguousEventBySlug,
     clubKeyById,
     eventKeyById,
     eventVenueClubKeyById,
     eventsByVenueClubKey,
     eventsByHostSlug,
     hostsBySlug,
+    hostSlugAliases,
     venuesById,
     venuesBySlug,
     organizationsById,

@@ -1,9 +1,10 @@
 import React from 'react';
 import { MapPinned } from 'lucide-react';
 import { getStreetViewPath } from '../../lib/streetViewAvailability';
-import MiniMapHybrid from '../maps/MiniMapHybrid';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import { trackOutboundClick } from '../../lib/analytics/outboundTracking';
+
+const MiniMapHybrid = React.lazy(() => import('../maps/MiniMapHybrid'));
 
 type EventMapCardProps = {
   eventId: string;
@@ -57,20 +58,22 @@ const EventMapCard: React.FC<EventMapCardProps> = ({
       <p className="mt-1 text-xs text-gray-500">{effectiveLabel}</p>
 
       <div className="mt-3 h-52 overflow-hidden rounded-xl border border-gray-800">
-        <MiniMapHybrid
-          center={{ lat: mapLat, lng: mapLng }}
-          cityLabel={city || eventName}
-          districtLabel={region}
-          mapHref={googleUrl}
-          onMapLinkClick={(event) => {
-            void trackOutboundClick(googleUrl, { ...trackingBase, placement: `${placementPrefix}_map` }, event.detail === 0 ? 'keyboard' : 'click');
-          }}
-          onMapLinkAuxClick={() => {
-            void trackOutboundClick(googleUrl, { ...trackingBase, placement: `${placementPrefix}_map` }, 'auxclick');
-          }}
-          isHidden={isPrivateLocation}
-          showAttributionText={false}
-        />
+        <React.Suspense fallback={<div className="h-full w-full bg-gray-950/60" />}>
+          <MiniMapHybrid
+            center={{ lat: mapLat, lng: mapLng }}
+            cityLabel={city || eventName}
+            districtLabel={region}
+            mapHref={googleUrl}
+            onMapLinkClick={(event) => {
+              void trackOutboundClick(googleUrl, { ...trackingBase, placement: `${placementPrefix}_map` }, event.detail === 0 ? 'keyboard' : 'click');
+            }}
+            onMapLinkAuxClick={() => {
+              void trackOutboundClick(googleUrl, { ...trackingBase, placement: `${placementPrefix}_map` }, 'auxclick');
+            }}
+            isHidden={isPrivateLocation}
+            showAttributionText={false}
+          />
+        </React.Suspense>
       </div>
 
       {!isPrivateLocation && streetViewListingId ? (

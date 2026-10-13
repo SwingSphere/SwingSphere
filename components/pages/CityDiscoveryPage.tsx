@@ -86,11 +86,11 @@ const CityDiscoveryPage: React.FC<CityDiscoveryPageProps> = ({ intent = 'clubs' 
     : `Discover upcoming swinger parties, play parties, and lifestyle events in ${locationLabel}. Attendee guidelines, host screening policies, and ticket details on SwingSphere.`;
 
   const structuredData = useMemo(() => {
-    const itemList = cityListings.slice(0, 10).map((item, idx) => ({
+    const itemList = cityListings.slice(0, 20).map((item, idx) => ({
       '@type': 'ListItem',
       position: idx + 1,
       name: item.name,
-      url: `${SITE_ORIGIN}${isClubIntent ? `/clubs/${item.id}` : `/events/${item.id}`}`,
+      url: `${SITE_ORIGIN}${getListingCanonicalPath(item, index ?? undefined)}`,
     }));
 
     return [
@@ -130,7 +130,7 @@ const CityDiscoveryPage: React.FC<CityDiscoveryPageProps> = ({ intent = 'clubs' 
         ],
       },
     ];
-  }, [cityListings, isClubIntent, seoTitle, seoDescription, canonicalPath, locationLabel]);
+  }, [cityListings, index, isClubIntent, seoTitle, seoDescription, canonicalPath, locationLabel]);
 
   const headline = isPlayPartyIntent
     ? `Play Parties & Lifestyle Events in ${locationLabel}`

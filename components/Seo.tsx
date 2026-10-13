@@ -9,7 +9,9 @@ type SeoProps = {
   imageWidth?: number;
   imageHeight?: number;
   ogType?: 'website' | 'article' | 'profile';
+  twitterCard?: 'summary' | 'summary_large_image';
   noIndex?: boolean;
+  robots?: string;
   structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
 };
 
@@ -43,7 +45,9 @@ const Seo: React.FC<SeoProps> = ({
   imageWidth = 1200,
   imageHeight = 630,
   ogType = 'website',
+  twitterCard = 'summary_large_image',
   noIndex = false,
+  robots,
   structuredData,
 }) => {
   useEffect(() => {
@@ -55,7 +59,12 @@ const Seo: React.FC<SeoProps> = ({
     descriptionMeta.setAttribute('content', description);
 
     const robotsMeta = ensureMeta('meta[name="robots"]', { name: 'robots' });
-    robotsMeta.setAttribute('content', noIndex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large');
+    const robotsContent = robots
+      ? robots.replace(/\s+/g, '')
+      : noIndex
+        ? 'noindex,nofollow'
+        : 'index,follow,max-image-preview:large';
+    robotsMeta.setAttribute('content', robotsContent);
 
     let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) {
@@ -74,6 +83,7 @@ const Seo: React.FC<SeoProps> = ({
       ['meta[property="og:image:alt"]', 'property', 'og:image:alt', imageAlt],
       ['meta[property="og:image:width"]', 'property', 'og:image:width', String(imageWidth)],
       ['meta[property="og:image:height"]', 'property', 'og:image:height', String(imageHeight)],
+      ['meta[name="twitter:card"]', 'name', 'twitter:card', twitterCard],
       ['meta[name="twitter:title"]', 'name', 'twitter:title', title],
       ['meta[name="twitter:description"]', 'name', 'twitter:description', description],
       ['meta[name="twitter:image"]', 'name', 'twitter:image', socialImage],
@@ -95,7 +105,8 @@ const Seo: React.FC<SeoProps> = ({
       }
       script.textContent = JSON.stringify(structuredData);
     }
-  }, [canonicalPath, description, imageAlt, imageHeight, imageWidth, imageUrl, noIndex, ogType, structuredData, title]);
+  }, [canonicalPath, description, imageAlt, imageHeight, imageWidth, imageUrl, noIndex, ogType, robots, structuredData, title, twitterCard]);
+
 
   return null;
 };

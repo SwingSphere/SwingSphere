@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   Building2,
   CalendarDays,
@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
-import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUtils';
+import { getClubCanonicalPath, getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
+import { isPastEvent } from '../../lib/eventLifecycle';
 import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import {
   getListingFlyerUrl,
@@ -23,7 +24,7 @@ import {
   handleListingImageError,
   serializeFallbackCandidates,
 } from '../../lib/listingImage';
-import type { CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
+import type { ClubData, CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import HostHero from '../host/HostHero';
@@ -31,8 +32,7 @@ import EventCardCompact from '../host/EventCardCompact';
 import ShowMoreList from '../host/ShowMoreList';
 import HostExternalLinks from '../host/HostExternalLinks';
 import PromoterFeedbackPlaceholder from '../feedback/PromoterFeedbackPlaceholder';
-import HostPageAdminEditor from '../admin-edit/HostPageAdminEditor';
-import HostQuickEditPanel, { type HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
+import type { HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import ListingClaimCard from '../claims/ListingClaimCard';
@@ -40,6 +40,9 @@ import { getPublicOrganizationBadges } from '../../lib/badges/badgeService';
 import * as api from '../../lib/api';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
 import Seo from '../Seo';
+
+const HostPageAdminEditor = React.lazy(() => import('../admin-edit/HostPageAdminEditor'));
+const HostQuickEditPanel = React.lazy(() => import('../admin-edit/HostQuickEditPanel'));
 
 const inferThemes = (events: EventData[]): string[] => {
   const counts = new Map<string, number>();
@@ -91,9 +94,21 @@ const formatScheduleTime = (start: string, end: string): string => {
   return `${formatter.format(new Date(start))} – ${formatter.format(new Date(end))}`;
 };
 
-const getUpcomingStatus = (start: string): { label: string; className: string; dotClassName: string } => {
+const getUpcomingStatus = (start: string, end?: string): { label: string; className: string; dotClassName: string } => {
   const eventDate = new Date(start);
   const now = new Date();
+  const nowMs = now.getTime();
+  const startMs = eventDate.getTime();
+  const endMs = end ? new Date(end).getTime() : Number.NaN;
+
+  if (Number.isFinite(startMs) && startMs <= nowMs && (!Number.isFinite(endMs) || endMs >= nowMs)) {
+    return {
+      label: 'Live now',
+      className: 'border-emerald-400/35 bg-emerald-500/15 text-emerald-200',
+      dotClassName: 'bg-emerald-400',
+    };
+  }
+
   const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const daysAway = Math.round((eventDay - today) / (24 * 60 * 60 * 1000));
@@ -290,10 +305,13 @@ const HostPage: React.FC = () => {
     });
     return () => clearPublicPage(organization.id);
   }, [canEditHostPage, clearPublicPage, hostProfile?.organization, registerPublicPage]);
-  const hostEvents = useMemo(
-    () => (hostProfile?.events ?? []).filter((event) => event.status === 'approved'),
-    [hostProfile?.events],
-  );
+  const hostEvents = useMemo(() => {
+    const organizationId = hostProfile?.organization?.id;
+    const canonicalEvents = organizationId
+      ? index?.eventsByOrganizationId.get(organizationId)
+      : undefined;
+    return (canonicalEvents ?? hostProfile?.events ?? []).filter((event) => event.status === 'approved');
+  }, [hostProfile?.organization?.id, hostProfile?.events, index]);
 
   const hostCruiseSeries = useMemo(() => {
     const organizationId = hostProfile?.organization?.id;
@@ -331,9 +349,8 @@ const HostPage: React.FC = () => {
   const upcomingEvents = useMemo(() => {
     const now = Date.now();
     return hostEvents
-      .filter((event) => toTimestamp(event.time.start) >= now)
+      .filter((event) => !isPastEvent(event, now))
       .sort((a, b) => toTimestamp(a.time.start) - toTimestamp(b.time.start))
-      .slice(0, 6)
       .map((event) => ({
         id: event.id,
         name: event.name,
@@ -345,7 +362,7 @@ const HostPage: React.FC = () => {
           : event.isAddressPrivate
             ? 'Location revealed later'
             : event.location.split(',')[0] || 'Venue TBD',
-        availability: getUpcomingStatus(event.time.start),
+        availability: getUpcomingStatus(event.time.start, event.time.end),
         to: index ? getEventCanonicalPath(event, index) : undefined,
       }));
   }, [hostEvents, index]);
@@ -353,16 +370,15 @@ const HostPage: React.FC = () => {
   const nextEvent = useMemo(() => {
     const now = Date.now();
     return hostEvents
-      .filter((event) => toTimestamp(event.time.start) >= now)
+      .filter((event) => !isPastEvent(event, now))
       .sort((a, b) => toTimestamp(a.time.start) - toTimestamp(b.time.start))[0] ?? null;
   }, [hostEvents]);
 
   const pastEvents = useMemo(() => {
     const now = Date.now();
     return hostEvents
-      .filter((event) => toTimestamp(event.time.start) < now)
+      .filter((event) => isPastEvent(event, now))
       .sort((a, b) => toTimestamp(b.time.start) - toTimestamp(a.time.start))
-      .slice(0, 6)
       .map((event) => ({
         id: event.id,
         name: event.name,
@@ -405,10 +421,12 @@ const HostPage: React.FC = () => {
     return new Date(Math.min(...starts)).getFullYear().toString();
   }, [hostEvents]);
 
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
   const [pastExpanded, setPastExpanded] = useState(false);
   const [quickEditField, setQuickEditField] = useState<HostQuickEditField | null>(null);
 
   useEffect(() => {
+    setUpcomingExpanded(false);
     if (typeof window === 'undefined') return;
     const key = `host:past-expanded:${slug}`;
     const stored = window.localStorage.getItem(key);
@@ -427,7 +445,14 @@ const HostPage: React.FC = () => {
     });
   };
 
-  if (isLoading) {
+  if (!error && index && !hostProfile) {
+    const aliasTargetSlug = index.hostSlugAliases.get(slug);
+    if (aliasTargetSlug) {
+      return <Navigate to={getHostCanonicalPath(aliasTargetSlug)} replace />;
+    }
+  }
+
+  if (isLoading && !hostProfile) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
         Loading host...
@@ -437,37 +462,80 @@ const HostPage: React.FC = () => {
 
   if (error || !index || !hostProfile) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
-        Host not found.
-      </div>
+      <>
+        <Seo
+          title="Host Not Found | SwingSphere"
+          description="The requested lifestyle host or promoter could not be found on SwingSphere."
+          canonicalPath={window.location.pathname}
+          noIndex
+        />
+        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
+          Host not found.
+        </div>
+      </>
     );
   }
+
+  const canonicalPath = getHostCanonicalPath(hostProfile.slug);
+  const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
+  const hostHeroImage = resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined);
+  const hostLogoImage = resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined);
+  const seoImageUrl = hostHeroImage || hostLogoImage;
+  const isLogoOnlyPreview = !hostHeroImage && Boolean(hostLogoImage);
+  const structuredData: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': canonicalUrl,
+    name: hostProfile.name,
+    description:
+      hostProfile.organization?.descriptionShort ||
+      hostProfile.organization?.descriptionFull ||
+      `Explore ${hostProfile.name} on SwingSphere. View upcoming events, venues, and promoter information.`,
+    url: canonicalUrl,
+    ...(hostLogoImage ? { logo: hostLogoImage } : {}),
+    ...(seoImageUrl ? { image: seoImageUrl } : {}),
+    ...(hostExternalLinks.website ? { sameAs: [hostExternalLinks.website] } : {}),
+  };
 
   return (
     <>
     <Seo
       title={`${hostProfile.name} | Lifestyle Host & Promoter | SwingSphere`}
-      description={hostProfile.organization?.descriptionShort || `Explore ${hostProfile.name} on SwingSphere. See upcoming events, venues, destinations, and host information.`}
-      canonicalPath={window.location.pathname}
-      imageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+      description={
+        hostProfile.organization?.descriptionShort ||
+        `Explore ${hostProfile.name} on SwingSphere. See upcoming events, venues, destinations, and host information.`
+      }
+      canonicalPath={canonicalPath}
+      ogType="profile"
+      twitterCard={isLogoOnlyPreview ? 'summary' : 'summary_large_image'}
+      imageUrl={seoImageUrl}
+      imageWidth={isLogoOnlyPreview ? 400 : 1200}
+      imageHeight={isLogoOnlyPreview ? 400 : 630}
       imageAlt={`${hostProfile.name} on SwingSphere`}
+      structuredData={structuredData}
     />
-    {hostProfile.organization ? (
-      <HostQuickEditPanel
-        key={`${hostProfile.organization.id}-${quickEditField ?? 'closed'}`}
-        organization={hostProfile.organization}
-        field={quickEditField}
-        onClose={() => setQuickEditField(null)}
-      />
+    {canEditHostPage && hostProfile.organization && quickEditField ? (
+      <React.Suspense fallback={null}>
+        <HostQuickEditPanel
+          key={`${hostProfile.organization.id}-${quickEditField}`}
+          organization={hostProfile.organization}
+          field={quickEditField}
+          onClose={() => setQuickEditField(null)}
+        />
+      </React.Suspense>
     ) : null}
-    <HostPageAdminEditor
-      organization={hostProfile.organization ?? null}
-      listings={listings}
-      venues={venues}
-      relationships={organizationVenueRelationships}
-      users={users}
-      canEdit={canEditHostPage}
-    />
+    {canEditHostPage ? (
+      <React.Suspense fallback={null}>
+        <HostPageAdminEditor
+          organization={hostProfile.organization ?? null}
+          listings={listings}
+          venues={venues}
+          relationships={organizationVenueRelationships}
+          users={users}
+          canEdit={canEditHostPage}
+        />
+      </React.Suspense>
+    ) : null}
     <HostPageLayout
       backgroundImageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
       contextNav={
@@ -613,7 +681,7 @@ const HostPage: React.FC = () => {
                   <span>Status</span>
                   <span className="sr-only">Open</span>
                 </div>
-                {upcomingEvents.map((item) => (
+                {(upcomingExpanded ? upcomingEvents : upcomingEvents.slice(0, 6)).map((item) => (
                   <Link
                     key={item.id}
                     to={item.to || '#'}
@@ -636,6 +704,20 @@ const HostPage: React.FC = () => {
                     <ChevronRight size={14} className="order-5 hidden text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-red-300 md:block" />
                   </Link>
                 ))}
+                {upcomingEvents.length > 6 ? (
+                  <div className="border-t border-white/10 px-5 py-3 sm:px-6">
+                    <button
+                      type="button"
+                      onClick={() => setUpcomingExpanded((prev) => !prev)}
+                      className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white"
+                    >
+                      {upcomingExpanded
+                        ? 'Show fewer upcoming events'
+                        : `Show all ${upcomingEvents.length} upcoming events (+${upcomingEvents.length - 6} more)`}
+                      <ChevronDown size={14} className={`transition-transform ${upcomingExpanded ? 'rotate-180' : 'rotate-0'}`} />
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p className="border-t border-white/10 px-5 py-6 text-sm text-gray-500 sm:px-6">No upcoming events listed right now.</p>
@@ -734,10 +816,14 @@ const HostPage: React.FC = () => {
               <ul className="mt-3 divide-y divide-white/10">
                 {venueRelationships.map(({ relationship, venue }) => {
                   if (!venue) return null;
-                  const linkedClub = listings.find((listing) => (
+                  const linkedClub = listings.find((listing): listing is ClubData => (
                     listing.type === 'club'
-                    && listing.ownerOrganizationId === hostProfile.organization?.id
-                    && listing.primaryVenueId === venue.id
+                    && listing.status === 'approved'
+                    && (
+                      listing.primaryVenueId === venue.id
+                      || `venue-${listing.id}` === venue.id
+                      || listing.name.trim().toLowerCase() === venue.name.trim().toLowerCase()
+                    )
                   ));
                   const content = (
                     <div className="flex items-start justify-between gap-3">

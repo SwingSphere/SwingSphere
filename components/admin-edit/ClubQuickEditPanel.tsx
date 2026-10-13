@@ -3,6 +3,8 @@ import { Check, Plus, Trash2, X } from 'lucide-react';
 import type { ClubData, SocialLink } from '../../types';
 import type { MediaAsset, MediaRole } from '../../lib/media/types';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
+import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import { getMediaRule } from '../../lib/media/mediaRules';
 import MediaUploader from '../media/MediaUploader';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
@@ -56,11 +58,17 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
   };
 
   const handleUploaded = (asset: MediaAsset) => {
+    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
     const currentAssets = draft.mediaAssets ?? [];
     const mediaAssets = asset.role === 'gallery'
       ? [...currentAssets, asset]
       : [...currentAssets.filter((item) => item.role !== asset.role), asset];
-    updateDraft({ ...draft, mediaAssets });
+    updateDraft({
+      ...draft,
+      mediaAssets,
+      ...(asset.role === 'logo' && url ? { logoImageUrl: url } : {}),
+      ...(asset.role === 'hero' && url ? { headerImageUrl: url } : {}),
+    });
   };
 
   const save = async () => {

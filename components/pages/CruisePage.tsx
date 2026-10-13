@@ -4,7 +4,6 @@ import { Link, useParams } from 'react-router-dom';
 import { cruiseSailingsBySeriesId, cruiseSeriesBySlug } from '../../data/travelExperiences';
 import type { CruiseSailingData, CruiseSeriesData, OrganizationData } from '../../types';
 import * as api from '../../lib/api';
-import TravelPageAdminEditor from '../admin-edit/TravelPageAdminEditor';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import EntityPageShell from '../entity/EntityPageShell';
@@ -13,13 +12,19 @@ import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import Seo from '../Seo';
 
+const TravelPageAdminEditor = React.lazy(() => import('../admin-edit/TravelPageAdminEditor'));
+
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 const CruisePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const initialSeries = slug ? cruiseSeriesBySlug.get(slug) ?? null : null;
   const [series, setSeries] = useState<CruiseSeriesData | null>(initialSeries);
-  const [sailings, setSailings] = useState<CruiseSailingData[]>(() => initialSeries ? cruiseSailingsBySeriesId.get(initialSeries.id) ?? [] : []);
+  const [sailings, setSailings] = useState<CruiseSailingData[]>(() =>
+    initialSeries
+      ? (cruiseSailingsBySeriesId.get(initialSeries.id) ?? []).filter((item) => item.status === 'approved')
+      : [],
+  );
   const [organizations, setOrganizations] = useState<OrganizationData[]>([]);
   const [allSeries, setAllSeries] = useState<CruiseSeriesData[]>(initialSeries ? [initialSeries] : []);
   const { registerPublicPage, clearPublicPage } = useAdminEditMode();
@@ -30,15 +35,22 @@ const CruisePage: React.FC = () => {
     Promise.all([api.getCruiseSeries(), api.getCruiseSailings(), api.getOrganizations()])
       .then(([seriesRows, sailingRows, organizationRows]) => {
         if (!active) return;
-        const matched = seriesRows.find((item) => item.slug === slug) ?? null;
-        setSeries(matched);
+        const matched = seriesRows.find((item) => item.slug === slug && item.status === 'approved') ?? null;
+        if (matched) setSeries(matched);
         setAllSeries(seriesRows);
-        setSailings(matched ? sailingRows.filter((item) => item.cruiseSeriesId === matched.id).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) : []);
+        const activeSeries = matched ?? initialSeries;
+        setSailings(
+          activeSeries
+            ? sailingRows
+                .filter((item) => item.cruiseSeriesId === activeSeries.id && item.status === 'approved')
+                .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+            : [],
+        );
         setOrganizations(organizationRows);
       })
       .catch(() => undefined);
     return () => { active = false; };
-  }, [slug]);
+  }, [initialSeries, slug]);
 
   useEffect(() => {
     if (!series) return;
@@ -52,10 +64,21 @@ const CruisePage: React.FC = () => {
     return () => clearPublicPage(series.id);
   }, [canEdit, clearPublicPage, registerPublicPage, series]);
 
-  const nextSailing = sailings.find((sailing) => Date.parse(sailing.endsAt) >= Date.now()) ?? sailings[0] ?? null;
+  const approvedSailings = sailings.filter((sailing) => sailing.status === 'approved');
+  const nextSailing = approvedSailings.find((sailing) => Date.parse(sailing.endsAt) >= Date.now()) ?? approvedSailings[0] ?? null;
 
-  if (!series) {
-    return <div className="flex min-h-[60vh] items-center justify-center text-gray-400">Cruise not found.</div>;
+  if (!series || series.status !== 'approved') {
+    return (
+      <>
+        <Seo
+          title="Cruise Not Found | SwingSphere"
+          description="The requested lifestyle cruise could not be found on SwingSphere."
+          canonicalPath={window.location.pathname}
+          noIndex
+        />
+        <div className="flex min-h-[60vh] items-center justify-center text-gray-400">Cruise not found.</div>
+      </>
+    );
   }
 
   const dateRange = nextSailing
@@ -64,18 +87,54 @@ const CruisePage: React.FC = () => {
   const departure = nextSailing
     ? [nextSailing.departurePort.portName, nextSailing.departurePort.city, nextSailing.departurePort.country].filter(Boolean).join(', ')
     : 'Departure port pending';
+  const operatorOrg = series.operatorOrganizationId
+    ? organizations.find((org) => org.id === series.operatorOrganizationId) ?? null
+    : null;
+  const canonicalPath = `/cruises/${series.slug}`;
+  const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
+  const structuredData: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    '@id': canonicalUrl,
+    name: series.name,
+    description: series.descriptionShort || series.descriptionFull,
+    url: canonicalUrl,
+    ...(series.headerImageUrl ? { image: series.headerImageUrl } : {}),
+    ...(operatorOrg
+      ? {
+          provider: {
+            '@type': 'Organization',
+            name: operatorOrg.name,
+            url: `https://swingsphere.co/hosts/${operatorOrg.slug}`,
+          },
+        }
+      : {}),
+    ...(approvedSailings.length > 0
+      ? {
+          subTrip: approvedSailings.map((s) => ({
+            '@type': 'TouristTrip',
+            name: s.name,
+            description: s.theme || `${s.durationNights}-night lifestyle cruise aboard ${s.shipName}.`,
+          })),
+        }
+      : {}),
+  };
 
   return (
     <>
       <Seo
         title={`${series.name} | Adults-Only Lifestyle Cruise | SwingSphere`}
         description={`${series.descriptionShort} Discover luxury adults-only swinger cruises, theme sailings, destinations, and entertainment on SwingSphere.`}
-        canonicalPath={`/cruises/${series.slug}`}
+        canonicalPath={canonicalPath}
         imageUrl={series.headerImageUrl}
         imageAlt={`${series.name} cruise`}
-        noIndex={series.status !== 'approved'}
+        structuredData={structuredData}
       />
-      <TravelPageAdminEditor entity={series} organizations={organizations} cruiseSeries={allSeries} sailings={sailings} canEdit={canEdit} />
+      {canEdit ? (
+        <React.Suspense fallback={null}>
+          <TravelPageAdminEditor entity={series} organizations={organizations} cruiseSeries={allSeries} sailings={approvedSailings} canEdit={canEdit} />
+        </React.Suspense>
+      ) : null}
       <EntityPageShell
         contextNav={
           <DetailContextNav
@@ -94,6 +153,7 @@ const CruisePage: React.FC = () => {
           location={nextSailing ? `${dateRange} · ${departure}` : departure}
           subtitle={series.descriptionShort}
           imageUrl={nextSailing?.headerImageUrl ?? series.headerImageUrl}
+          logoImageUrl={series.logoImageUrl ?? nextSailing?.logoImageUrl}
           badge="Sailing series"
           tone="cruise"
         />
@@ -141,7 +201,7 @@ const CruisePage: React.FC = () => {
 
           <TravelSection eyebrow="Future departures" title="Choose a sailing">
             <div className="space-y-3">
-              {sailings.map((sailing) => (
+              {approvedSailings.map((sailing) => (
                 <Link key={sailing.id} to={`/cruises/${series.slug}`} className="ss-glass ss-glass--interactive flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                   <Anchor className="h-5 w-5 shrink-0 text-cyan-200" />
                   <div className="min-w-0 flex-1">
@@ -156,34 +216,45 @@ const CruisePage: React.FC = () => {
         </>
       }
       aside={
-        <TravelSection title="Sailing at a glance">
-          <div className="grid gap-3">
-            <TravelFact icon={<Waves className="h-5 w-5" />} label="Audience" value={series.audienceLabel} />
-            <TravelFact icon={<Ship className="h-5 w-5" />} label="Ship" value={nextSailing?.shipName ?? 'To be announced'} />
-            <TravelFact icon={<Ticket className="h-5 w-5" />} label="Cabins" value={nextSailing?.cabinSummary ?? 'Cabin details pending'} />
-            <TravelFact icon={<Anchor className="h-5 w-5" />} label="Departure" value={departure} />
-          </div>
-          {nextSailing?.bookingUrl ? (
-            <TrackedExternalLink
-              href={nextSailing.bookingUrl}
-              target="_blank"
-              rel="noreferrer"
-              tracking={{
-                entityType: 'cruise_sailing',
-                entityId: nextSailing.id,
-                organizationId: series.operatorOrganizationId,
-                destinationType: 'booking',
-                placement: 'cruise_page_booking_cta',
-                surface: 'entity_page',
-              }}
-              className="ss-glass ss-glass--liquid ss-glass--interactive mt-4 flex min-h-12 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 text-sm font-black text-white"
-            >
-              View cabins and booking
-            </TrackedExternalLink>
-          ) : (
-            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center text-xs text-gray-500">Booking details not yet published</div>
-          )}
-        </TravelSection>
+        <>
+          <TravelSection title="Sailing at a glance">
+            <div className="grid gap-3">
+              <TravelFact icon={<Waves className="h-5 w-5" />} label="Audience" value={series.audienceLabel} />
+              <TravelFact icon={<Ship className="h-5 w-5" />} label="Ship" value={nextSailing?.shipName ?? 'To be announced'} />
+              <TravelFact icon={<Ticket className="h-5 w-5" />} label="Cabins" value={nextSailing?.cabinSummary ?? 'Cabin details pending'} />
+              <TravelFact icon={<Anchor className="h-5 w-5" />} label="Departure" value={departure} />
+            </div>
+            {nextSailing?.bookingUrl ? (
+              <TrackedExternalLink
+                href={nextSailing.bookingUrl}
+                target="_blank"
+                rel="noreferrer"
+                tracking={{
+                  entityType: 'cruise_sailing',
+                  entityId: nextSailing.id,
+                  organizationId: series.operatorOrganizationId,
+                  destinationType: 'booking',
+                  placement: 'cruise_page_booking_cta',
+                  surface: 'entity_page',
+                }}
+                className="ss-glass ss-glass--liquid ss-glass--interactive mt-4 flex min-h-12 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 text-sm font-black text-white"
+              >
+                View cabins and booking
+              </TrackedExternalLink>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center text-xs text-gray-500">Booking details not yet published</div>
+            )}
+            {operatorOrg ? (
+              <Link
+                to={`/hosts/${operatorOrg.slug}`}
+                className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2.5 text-xs font-semibold text-gray-200 transition hover:border-cyan-300/35 hover:bg-white/[0.045] hover:text-white"
+              >
+                <span>Operated by {operatorOrg.name}</span>
+                <span aria-hidden="true" className="text-cyan-300">→</span>
+              </Link>
+            ) : null}
+          </TravelSection>
+        </>
       }
       />
     </>

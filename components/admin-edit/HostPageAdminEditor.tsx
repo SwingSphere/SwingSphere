@@ -3,6 +3,7 @@ import type { Listing, OrganizationData, OrganizationVenueRelationship, VenueDat
 import type { User } from '../../data/mockUsers';
 import { useAppStore } from '../../store/appStore';
 import * as api from '../../lib/api';
+import { isSyntheticHostOrganization } from '../../lib/entityCompatibility';
 import AdminEntityEditorDrawer from './AdminEntityEditorDrawer';
 import { useAdminEditMode } from './AdminEditModeContext';
 import MediaUploader from '../media/MediaUploader';
@@ -60,6 +61,7 @@ const HostPageAdminEditor: React.FC<HostPageAdminEditorProps> = ({ organization,
     );
   }
 
+  const isSyntheticRuntimeHost = isSyntheticHostOrganization(organization);
   const mediaOwnerId = getMediaOwnerId('organization', draft.id);
   const getAsset = (role: MediaRole) => draft.mediaAssets?.find((asset) => asset.role === role) ?? null;
 
@@ -84,8 +86,8 @@ const HostPageAdminEditor: React.FC<HostPageAdminEditorProps> = ({ organization,
         // Public host managers can edit profile content, not lifecycle or identity plumbing.
         id: organization.id,
         slug: organization.slug,
-        displayTypes: organization.displayTypes,
-        status: organization.status,
+        displayTypes: organization.displayTypes?.length ? organization.displayTypes : ['host', 'promoter'],
+        status: organization.status || 'approved',
         postedByUserId: organization.postedByUserId,
       });
       setDraft(saved);
@@ -109,6 +111,11 @@ const HostPageAdminEditor: React.FC<HostPageAdminEditorProps> = ({ organization,
       maxWidthClassName="max-w-[900px]"
     >
       <div className="space-y-6 text-white">
+        {isSyntheticRuntimeHost ? (
+          <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4 text-xs leading-5 text-amber-100">
+            This host profile is currently synthesized from event host text (<code className="font-mono">{organization.id}</code>). Saving will persist a canonical organization record in the catalog.
+          </div>
+        ) : null}
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
           <div className="mb-4">
             <div className="text-[11px] font-black uppercase tracking-[0.18em] text-red-200/80">Public identity</div>

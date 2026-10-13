@@ -1,6 +1,10 @@
 import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
-import { resolveEventOrganizerOrganizationId, resolveEventVenueId } from './entityCompatibility';
-import { normalizeHostName } from './identityUtils';
+import {
+  isSyntheticHostOrganization,
+  resolveEventOrganizerOrganizationId,
+  resolveEventVenueId,
+} from './entityCompatibility';
+import { clubKey, matchesClubVenueKey, normalizeHostName } from './identityUtils';
 import { mockOrganizations } from '../data/mockOrganizations';
 import type {
   ClubBrandData,
@@ -114,20 +118,90 @@ const uniqueRefs = (refs: EntityRef[]): EntityRef[] => {
 
 const mockOrgById = new Map(mockOrganizations.map((org) => [org.id, org]));
 
+const collectForeignClubAndOrgLogoSignatures = (
+  targetOrgId: string | undefined,
+  clubs: ClubData[],
+  organizations: OrganizationData[],
+): Set<string> => {
+  const sigs = new Set<string>();
+  if (!targetOrgId) return sigs;
+  for (const club of clubs) {
+    if (!club.ownerOrganizationId || club.ownerOrganizationId === targetOrgId) continue;
+    const sig = getCanonicalMediaSignature(mediaNodeFields(club).logoImageUrl);
+    if (sig) sigs.add(sig);
+  }
+  for (const org of organizations) {
+    if (org.id === targetOrgId) continue;
+    const sig = getCanonicalMediaSignature(mediaNodeFields(org).logoImageUrl);
+    if (sig) sigs.add(sig);
+  }
+  return sigs;
+};
+
+export const isEventAffirmativelyClubOperated = (
+  event: EventData,
+  collections: {
+    clubs: ClubData[];
+    venues: VenueData[];
+    organizations: OrganizationData[];
+    relationships: OrganizationVenueRelationship[];
+    eventSeries?: EventSeriesData[];
+  },
+): boolean => {
+  const { clubs, venues, organizations, relationships, eventSeries } = collections;
+  const fullCollections = {
+    listings: clubs as Listing[],
+    venues,
+    organizations,
+    relationships,
+    eventSeries,
+  };
+  const venueId = resolveEventVenueId(event, fullCollections);
+  const venueClub = clubs.find(
+    (club) =>
+      (venueId && (club.primaryVenueId === venueId || `venue-${club.id}` === venueId))
+      || matchesClubVenueKey(club, event.venueKey),
+  );
+  if (!venueClub) return false;
+
+  const organizerId = resolveEventOrganizerOrganizationId(event, fullCollections);
+  if (organizerId) {
+    return Boolean(venueClub.ownerOrganizationId && organizerId === venueClub.ownerOrganizationId);
+  }
+
+  if (event.eventSeriesId) return false;
+
+  const normHost = normalizeHostName(event.hostName ?? '');
+  if (!normHost) return false;
+
+  if (normHost === normalizeHostName(venueClub.name)) return true;
+  if (venueClub.ownerOrganizationId) {
+    const clubOrg = organizations.find((org) => org.id === venueClub.ownerOrganizationId);
+    if (clubOrg && normHost === normalizeHostName(clubOrg.name)) return true;
+  }
+  return false;
+};
+
 export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): OrganizationData[] => {
   const orgMap = new Map<string, OrganizationData>();
-  for (const org of mockOrganizations) orgMap.set(org.id, { ...org });
+  const hasExplicitOrgs = Boolean(catalog.organizations && catalog.organizations.length > 0);
+  for (const org of mockOrganizations) {
+    if (hasExplicitOrgs && isSyntheticHostOrganization(org)) continue;
+    orgMap.set(org.id, { ...org });
+  }
   for (const org of catalog.organizations ?? []) {
     const existing = orgMap.get(org.id);
+    const hasExplicitLogoField = Object.prototype.hasOwnProperty.call(org, 'logoImageUrl');
     orgMap.set(org.id, {
       ...(existing ?? {}),
       ...org,
-      logoImageUrl: org.logoImageUrl?.trim() || existing?.logoImageUrl,
+      logoImageUrl: org.logoImageUrl?.trim() || (hasExplicitLogoField && org.logoImageUrl === '' ? undefined : existing?.logoImageUrl),
       headerImageUrl: org.headerImageUrl?.trim() || existing?.headerImageUrl,
     });
   }
 
   const organizations = Array.from(orgMap.values());
+  const clubs = (catalog.listings ?? []).filter((item): item is ClubData => item.type === 'club');
   const events = (catalog.listings ?? []).filter((item): item is EventData => item.type === 'event');
   const cruiseSeries = catalog.cruiseSeries ?? [];
   const eventSeries = catalog.eventSeries ?? [];
@@ -137,6 +211,7 @@ export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): Org
     venues: catalog.venues ?? [],
     organizations,
     relationships: catalog.relationships ?? [],
+    eventSeries,
   };
 
   // Pre-group non-overridden events by resolved organizer ID in a single O(events) pass
@@ -156,6 +231,24 @@ export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): Org
     const currentLogo = mediaNodeFields(org).logoImageUrl?.trim();
     const currentHeader = mediaNodeFields(org).headerImageUrl?.trim();
     const normOrgName = normalizeHostName(org.name);
+    const foreignLogoSigs = collectForeignClubAndOrgLogoSignatures(org.id, clubs, organizations);
+
+    const ownedClubs = clubs.filter((club) => club.ownerOrganizationId === org.id);
+    const singleOwnedClub = ownedClubs.length === 1 && !ownedClubs[0].clubBrandId ? ownedClubs[0] : undefined;
+    const ownedClubLogo = singleOwnedClub ? mediaNodeFields(singleOwnedClub).logoImageUrl?.trim() : undefined;
+    const ownedClubHasMediaLogo = Boolean(singleOwnedClub?.mediaAssets?.some((asset) => asset.role === 'logo'));
+    const orgHasMediaLogo = Boolean(org.mediaAssets?.some((asset) => asset.role === 'logo'));
+    const preferOwnedClubLogo =
+      isUsableLogo(ownedClubLogo)
+      && !orgHasMediaLogo
+      && (ownedClubHasMediaLogo || !isUsableLogo(currentLogo))
+      && (!currentLogo || currentLogo === mockFallbackLogo);
+
+    const isUncontaminatedLogo = (url?: string | null) => {
+      if (!isUsableLogo(url)) return false;
+      const sig = getCanonicalMediaSignature(url);
+      return !(sig && foreignLogoSigs.has(sig));
+    };
 
     const matchesSeriesOrg = (s: EventSeriesData) =>
       s.organizerOrganizationId === org.id
@@ -164,13 +257,13 @@ export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): Org
     const seriesLogo =
       clubBrands
         .map((b) => (b.operatorOrganizationId === org.id ? mediaNodeFields(b).logoImageUrl : undefined))
-        .find((url) => isUsableLogo(url))
+        .find((url) => isUncontaminatedLogo(url))
       ?? eventSeries
         .map((s) => (matchesSeriesOrg(s) ? mediaNodeFields(s).logoImageUrl : undefined))
-        .find((url) => isUsableLogo(url))
+        .find((url) => isUncontaminatedLogo(url))
       ?? cruiseSeries
         .map((s) => (s.operatorOrganizationId === org.id ? mediaNodeFields(s).logoImageUrl : undefined))
-        .find((url) => isUsableLogo(url));
+        .find((url) => isUncontaminatedLogo(url));
 
     const seriesHeader =
       clubBrands
@@ -187,7 +280,7 @@ export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): Org
     const sigCounts = new Map<string, { count: number; url: string }>();
     for (const ev of childEvents) {
       const candidateUrl = mediaNodeFields(ev).logoImageUrl?.trim();
-      if (!candidateUrl || !isUsableLogo(candidateUrl)) continue;
+      if (!candidateUrl || !isUncontaminatedLogo(candidateUrl)) continue;
       const sig = getCanonicalMediaSignature(candidateUrl);
       if (!sig) continue;
       const prev = sigCounts.get(sig);
@@ -203,9 +296,13 @@ export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): Org
       }
     }
 
-    // If >= 2 child events share the same non-overridden brand logo, that is the active canonical host logo.
-    // Otherwise, only fall back to seriesLogo / mockFallbackLogo when the organization has no usable logo.
-    const inferredLogo = sharedEventLogo || (isUsableLogo(currentLogo) ? currentLogo : (seriesLogo || mockFallbackLogo));
+    // An explicit usable organization logo is authoritative unless the organization still holds
+    // an un-updated mock fallback while its 1:1 owned club has a newer canonical logo.
+    const inferredLogo = preferOwnedClubLogo
+      ? ownedClubLogo
+      : isUsableLogo(currentLogo)
+        ? currentLogo
+        : (ownedClubLogo || seriesLogo || sharedEventLogo || mockFallbackLogo);
     const inferredHeader = isUsableHeader(currentHeader) ? currentHeader : (seriesHeader || mockFallbackHeader);
 
     if (
@@ -256,8 +353,11 @@ const buildNodeMaps = (catalog: BrandMediaCatalog): BuiltNodeMaps => {
   if (cached) return cached.maps;
 
   const listings = catalog.listings ?? [];
+  const clubs = listings.filter((listing): listing is ClubData => listing.type === 'club');
+  const events = listings.filter((listing): listing is EventData => listing.type === 'event');
   const venues = catalog.venues ?? [];
   const organizations = hydrateOrganizationsFromCatalog(catalog);
+  const orgById = new Map(organizations.map((org) => [org.id, org]));
   const eventSeries = catalog.eventSeries ?? [];
   const clubBrands = catalog.clubBrands ?? [];
   const resorts = catalog.resorts ?? [];
@@ -268,16 +368,48 @@ const buildNodeMaps = (catalog: BrandMediaCatalog): BuiltNodeMaps => {
   const add = (node: MediaNode) => nodeByKey.set(refKey(node), node);
 
   for (const listing of listings) {
+    const fields = mediaNodeFields(listing);
+    if (listing.type === 'club' && listing.ownerOrganizationId && !listing.clubBrandId) {
+      const ownerOrg = orgById.get(listing.ownerOrganizationId);
+      const ownedCount = clubs.filter((c) => c.ownerOrganizationId === listing.ownerOrganizationId).length;
+      const mockLogo = mockOrgById.get(listing.ownerOrganizationId)?.logoImageUrl;
+      const orgLogo = ownerOrg ? mediaNodeFields(ownerOrg).logoImageUrl?.trim() : undefined;
+      const clubHasMediaLogo = Boolean(listing.mediaAssets?.some((asset) => asset.role === 'logo'));
+      if (
+        ownedCount === 1
+        && isUsableLogo(orgLogo)
+        && (!isUsableLogo(fields.logoImageUrl) || (!clubHasMediaLogo && fields.logoImageUrl === mockLogo && orgLogo !== mockLogo))
+      ) {
+        fields.logoImageUrl = orgLogo;
+      }
+    }
     add({
       type: listing.type,
       id: listing.id,
       name: listing.name,
-      ...mediaNodeFields(listing),
+      ...fields,
     });
   }
   for (const venue of venues) add({ type: 'venue', id: venue.id, name: venue.name, ...mediaNodeFields(venue) });
   for (const organization of organizations) add({ type: 'organization', id: organization.id, name: organization.name, ...mediaNodeFields(organization) });
-  for (const series of eventSeries) add({ type: 'event_series', id: series.id, name: series.name, ...mediaNodeFields(series) });
+  for (const series of eventSeries) {
+    const fields = mediaNodeFields(series);
+    const seriesOrgId =
+      series.organizerOrganizationId
+      || organizations.find(
+        (org) => org.slug === series.slug || normalizeHostName(org.name) === normalizeHostName(series.name),
+      )?.id;
+    const foreignLogoSigs = collectForeignClubAndOrgLogoSignatures(seriesOrgId, clubs, organizations);
+    const seriesLogoSig = getCanonicalMediaSignature(fields.logoImageUrl);
+    const sanitizedLogo = seriesLogoSig && foreignLogoSigs.has(seriesLogoSig) ? undefined : fields.logoImageUrl;
+    add({
+      type: 'event_series',
+      id: series.id,
+      name: series.name,
+      logoImageUrl: sanitizedLogo,
+      headerImageUrl: fields.headerImageUrl,
+    });
+  }
   for (const brand of clubBrands) add({ type: 'club_brand', id: brand.id, name: brand.name, ...mediaNodeFields(brand) });
   for (const resort of resorts) add({ type: 'resort', id: resort.id, name: resort.name, ...mediaNodeFields(resort) });
   for (const series of cruiseSeries) add({ type: 'cruise_series', id: series.id, name: series.name, ...mediaNodeFields(series) });
@@ -286,8 +418,8 @@ const buildNodeMaps = (catalog: BrandMediaCatalog): BuiltNodeMaps => {
   const maps: BuiltNodeMaps = {
     nodeByKey,
     neighborsByKey: new Map<string, EntityRef[]>(),
-    clubs: listings.filter((listing): listing is ClubData => listing.type === 'club'),
-    events: listings.filter((listing): listing is EventData => listing.type === 'event'),
+    clubs,
+    events,
     venues,
     organizations,
     relationships: catalog.relationships ?? [],
@@ -333,19 +465,20 @@ const computeNeighbors = (
       ]);
     }
     case 'venue': {
-      const venueRelationships = relationships
-        .filter((relationship) => relationship.venueId === ref.id)
+      // A venue may only connect to its owner_operator organization and primary club,
+      // never to tenant promoters or recurring series sharing the venue.
+      const ownerRelationships = relationships
+        .filter((relationship) => relationship.venueId === ref.id && relationship.relationshipType === 'owner_operator')
         .sort((a, b) => relationshipPriority(a) - relationshipPriority(b));
       return uniqueRefs([
-        ...venueRelationships.map((relationship) => ({ type: 'organization' as const, id: relationship.organizationId })),
+        ...ownerRelationships.map((relationship) => ({ type: 'organization' as const, id: relationship.organizationId })),
         ...clubs.filter((club) => club.primaryVenueId === ref.id).map((club) => ({ type: 'club' as const, id: club.id })),
-        ...eventSeries.filter((series) => series.defaultVenueId === ref.id).map((series) => ({ type: 'event_series' as const, id: series.id })),
       ]);
     }
     case 'organization': {
       const org = organizations.find((item) => item.id === ref.id);
-      const primaryRelationships = relationships
-        .filter((relationship) => relationship.organizationId === ref.id)
+      const ownerVenueRelationships = relationships
+        .filter((relationship) => relationship.organizationId === ref.id && relationship.relationshipType === 'owner_operator')
         .sort((a, b) => relationshipPriority(a) - relationshipPriority(b));
       return uniqueRefs([
         ...clubBrands.filter((brand) => brand.operatorOrganizationId === ref.id).map((brand) => ({ type: 'club_brand' as const, id: brand.id })),
@@ -357,8 +490,7 @@ const computeNeighbors = (
               || (!series.organizerOrganizationId && org && (series.slug === org.slug || normalizeHostName(series.name) === normalizeHostName(org.name))),
           )
           .map((series) => ({ type: 'event_series' as const, id: series.id })),
-        ...primaryRelationships.map((relationship) => ({ type: 'venue' as const, id: relationship.venueId })),
-        ...events.filter((event) => event.organizerOrganizationId === ref.id).map((event) => ({ type: 'event' as const, id: event.id })),
+        ...ownerVenueRelationships.map((relationship) => ({ type: 'venue' as const, id: relationship.venueId })),
         ...resorts.filter((resort) => resort.operatorOrganizationId === ref.id).map((resort) => ({ type: 'resort' as const, id: resort.id })),
         ...cruiseSeries.filter((series) => series.operatorOrganizationId === ref.id).map((series) => ({ type: 'cruise_series' as const, id: series.id })),
       ]);
@@ -371,13 +503,38 @@ const computeNeighbors = (
         venues,
         organizations,
         relationships,
+        eventSeries,
       };
       const organizerOrganizationId = resolveEventOrganizerOrganizationId(event, collections);
       const venueId = resolveEventVenueId(event, collections);
+      const clubOperated = isEventAffirmativelyClubOperated(event, {
+        clubs,
+        venues,
+        organizations,
+        relationships,
+        eventSeries,
+      });
+
+      const series = event.eventSeriesId ? eventSeries.find((item) => item.id === event.eventSeriesId) : undefined;
+      const organizer = organizerOrganizationId ? organizations.find((item) => item.id === organizerOrganizationId) : undefined;
+      const isDistinctSeriesBrand = Boolean(
+        series
+        && (!organizer || normalizeHostName(series.name) !== normalizeHostName(organizer.name)),
+      );
+
+      const orderedParentRefs: EntityRef[] = isDistinctSeriesBrand
+        ? [
+            ...(event.eventSeriesId ? [{ type: 'event_series' as const, id: event.eventSeriesId }] : []),
+            ...(organizerOrganizationId ? [{ type: 'organization' as const, id: organizerOrganizationId }] : []),
+          ]
+        : [
+            ...(organizerOrganizationId ? [{ type: 'organization' as const, id: organizerOrganizationId }] : []),
+            ...(event.eventSeriesId ? [{ type: 'event_series' as const, id: event.eventSeriesId }] : []),
+          ];
+
       return uniqueRefs([
-        ...(organizerOrganizationId ? [{ type: 'organization' as const, id: organizerOrganizationId }] : []),
-        ...(event.eventSeriesId ? [{ type: 'event_series' as const, id: event.eventSeriesId }] : []),
-        ...(venueId ? [{ type: 'venue' as const, id: venueId }] : []),
+        ...orderedParentRefs,
+        ...(clubOperated && venueId ? [{ type: 'venue' as const, id: venueId }] : []),
       ]);
     }
     case 'event_series': {
@@ -388,10 +545,15 @@ const computeNeighbors = (
         || organizations.find(
           (org) => org.slug === series.slug || normalizeHostName(org.name) === normalizeHostName(series.name),
         )?.id;
+      const venueClub = series.defaultVenueId
+        ? clubs.find((club) => club.primaryVenueId === series.defaultVenueId || `venue-${club.id}` === series.defaultVenueId)
+        : undefined;
+      const isClubOwnedSeries = Boolean(
+        venueClub && inferredOrganizerId && venueClub.ownerOrganizationId === inferredOrganizerId,
+      );
       return uniqueRefs([
         ...(inferredOrganizerId ? [{ type: 'organization' as const, id: inferredOrganizerId }] : []),
-        ...(series.defaultVenueId ? [{ type: 'venue' as const, id: series.defaultVenueId }] : []),
-        ...events.filter((event) => event.eventSeriesId === ref.id).map((event) => ({ type: 'event' as const, id: event.id })),
+        ...(isClubOwnedSeries && series.defaultVenueId ? [{ type: 'venue' as const, id: series.defaultVenueId }] : []),
       ]);
     }
     case 'club_brand': {
@@ -538,20 +700,68 @@ export const resolveEventLogoState = (
       }
     : { inherited: false, depth: 0 };
 
-  const directLogoAsset = event.mediaAssets?.find((item) => item.role === 'logo' && item.external_id?.trim());
-  const directSig = getCanonicalMediaSignature(directEventLogo.url, directLogoAsset?.external_id);
-  const inheritedSig = getCanonicalMediaSignature(inheritedHostLogo.url);
+  const hasRedundantOccurrenceCopy = Boolean(
+    directEventLogo.url && inheritedHostLogo.url && event.logoOverride !== true,
+  );
 
-  const isSameAsInherited = Boolean(directSig && inheritedSig && directSig === inheritedSig);
-  const hasRedundantOccurrenceCopy = Boolean(directEventLogo.url && inheritedHostLogo.url && isSameAsInherited && event.logoOverride !== true);
+  // 1. Intentional event-specific logo override (logoOverride === true) takes priority
+  if (event.logoOverride === true && directEventLogo.url) {
+    const resolved: BrandMediaResolution = {
+      ...directEventLogo,
+      inherited: false,
+      depth: 0,
+    };
+    return {
+      mode: 'explicit_override',
+      resolvedLogo: resolved,
+      directEventLogo: resolved,
+      inheritedHostLogo,
+      hasRedundantOccurrenceCopy: false,
+    };
+  }
 
-  // Precedence: Explicit event override -> Parent host/series/venue asset -> Fallback
-  if (event.logoOverride !== false && directEventLogo.url) {
-    const isExplicitOverride =
-      event.logoOverride === true
-      || !inheritedHostLogo.url
-      || (Boolean(directSig && inheritedSig) && directSig !== inheritedSig);
-    if (isExplicitOverride) {
+  // 2-4. Inherited canonical series / organizer / club-operated logo
+  if (inheritedHostLogo.url) {
+    return {
+      mode: 'inherited_host',
+      resolvedLogo: inheritedHostLogo,
+      directEventLogo,
+      inheritedHostLogo,
+      hasRedundantOccurrenceCopy,
+    };
+  }
+
+  // 5. Preserve existing direct event imagery when safe (never borrow a foreign venue club logo)
+  if (directEventLogo.url && event.logoOverride !== false) {
+    const maps = buildNodeMaps(catalogWithEvent);
+    const clubOperated = isEventAffirmativelyClubOperated(event, {
+      clubs: maps.clubs,
+      venues: maps.venues,
+      organizations: maps.organizations,
+      relationships: maps.relationships,
+      eventSeries: maps.eventSeries,
+    });
+    const directSig = getCanonicalMediaSignature(
+      directEventLogo.url,
+      event.mediaAssets?.find((item) => item.role === 'logo' && item.external_id?.trim())?.external_id,
+    );
+    const venueId = resolveEventVenueId(event, {
+      listings: [...maps.clubs, ...maps.events],
+      venues: maps.venues,
+      organizations: maps.organizations,
+      relationships: maps.relationships,
+      eventSeries: maps.eventSeries,
+    });
+    const venueClub = maps.clubs.find(
+      (club) =>
+        (venueId && (club.primaryVenueId === venueId || `venue-${club.id}` === venueId))
+        || matchesClubVenueKey(club, event.venueKey),
+    );
+    const venueClubLogoSig = venueClub
+      ? getCanonicalMediaSignature(mediaNodeFields(venueClub).logoImageUrl)
+      : null;
+
+    if (!(!clubOperated && directSig && venueClubLogoSig && directSig === venueClubLogoSig)) {
       const resolved: BrandMediaResolution = {
         ...directEventLogo,
         inherited: false,
@@ -565,31 +775,6 @@ export const resolveEventLogoState = (
         hasRedundantOccurrenceCopy: false,
       };
     }
-  }
-
-  if (inheritedHostLogo.url) {
-    return {
-      mode: 'inherited_host',
-      resolvedLogo: inheritedHostLogo,
-      directEventLogo,
-      inheritedHostLogo,
-      hasRedundantOccurrenceCopy,
-    };
-  }
-
-  if (directEventLogo.url && event.logoOverride !== false) {
-    const resolved: BrandMediaResolution = {
-      ...directEventLogo,
-      inherited: false,
-      depth: 0,
-    };
-    return {
-      mode: 'explicit_override',
-      resolvedLogo: resolved,
-      directEventLogo: resolved,
-      inheritedHostLogo,
-      hasRedundantOccurrenceCopy: false,
-    };
   }
 
   return {
@@ -621,22 +806,20 @@ export const resolveBrandLogo = (
       excludeTypes: ['event'],
     });
     const eventLogo = searchGraphForRole(target, catalog, 'logo', 0);
-    const eventSig = getCanonicalMediaSignature(eventLogo.url);
-    const inheritedSig = getCanonicalMediaSignature(inheritedLogo.url);
-
-    if (eventLogo.url && (!inheritedLogo.url || (eventSig && inheritedSig && eventSig !== inheritedSig))) {
-      return {
-        ...eventLogo,
-        inherited: false,
-        depth: 0,
-      };
-    }
 
     if (inheritedLogo.url) {
       return {
         ...inheritedLogo,
         inherited: true,
         depth: Math.max(1, inheritedLogo.depth),
+      };
+    }
+
+    if (eventLogo.url) {
+      return {
+        ...eventLogo,
+        inherited: false,
+        depth: 0,
       };
     }
 

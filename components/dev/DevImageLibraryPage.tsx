@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Trash2,
+  LockKeyhole,
   ExternalLink,
   Eye,
   FileWarning,
@@ -144,8 +146,9 @@ const BADGE_TONES: Record<AssetStatusBadge, string> = {
   'Referenced by Multiple Listings': 'border-sky-500/35 bg-sky-500/12 text-sky-200',
 };
 
+const ORIGINAL_SIZE_WARNING_BYTES = 2 * 1024 * 1024;
 const formatBytes = (bytes?: number | null): string => {
-  if (!bytes || bytes <= 0) return 'Managed variant';
+  if (!bytes || bytes <= 0) return 'Unknown';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -180,6 +183,7 @@ const DevImageLibraryPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<CanonicalAssetCategory>('all');
   const [entityTypeFilter, setEntityTypeFilter] = useState<'all' | CanonicalEntityType>('all');
   const [usageFilter, setUsageFilter] = useState<UsageFilter>('all');
+  const [sizeFilter, setSizeFilter] = useState<'all' | 'over2mb' | 'unknown'>('all');
   const [sortMode, setSortMode] = useState<SortMode>('most_referenced');
   const [searchQuery, setSearchQuery] = useState('');
   const [entityScopeFilter, setEntityScopeFilter] = useState<{ entityType: CanonicalEntityType; entityId: string; entityName: string } | null>(null);
@@ -198,6 +202,7 @@ const DevImageLibraryPage: React.FC = () => {
   const [assignRole, setAssignRole] = useState<'logo' | 'hero' | 'flyer' | 'gallery'>('flyer');
   const [assignEntitySearch, setAssignEntitySearch] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
+  const [isDeletingAsset, setIsDeletingAsset] = useState(false);
 
   // Upload & Quick-Replace Modal state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -370,10 +375,18 @@ const DevImageLibraryPage: React.FC = () => {
     return counts;
   }, [enrichedAssets]);
 
+  const sizeCounts = useMemo(() => ({
+    oversized: enrichedAssets.filter(a => a.fileSizeBytes != null && a.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES).length,
+    unknown: enrichedAssets.filter(a => a.fileSizeBytes == null).length,
+    known: enrichedAssets.filter(a => a.fileSizeBytes != null).length,
+  }), [enrichedAssets]);
+
   const filteredAssets = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     const list = enrichedAssets.filter((asset) => {
+      if (sizeFilter === 'over2mb' && !(asset.fileSizeBytes != null && asset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES)) return false;
+      if (sizeFilter === 'unknown' && asset.fileSizeBytes != null) return false;
       if (categoryFilter !== 'all') {
         const matchesCat =
           asset.primaryCategory === categoryFilter
@@ -455,11 +468,11 @@ const DevImageLibraryPage: React.FC = () => {
     });
 
     return list;
-  }, [categoryFilter, enrichedAssets, entityScopeFilter, entityTypeFilter, searchQuery, sortMode, usageFilter]);
+  }, [categoryFilter, enrichedAssets, entityScopeFilter, entityTypeFilter, searchQuery, sizeFilter, sortMode, usageFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, entityTypeFilter, usageFilter, sortMode, searchQuery, entityScopeFilter, viewMode]);
+  }, [categoryFilter, entityTypeFilter, usageFilter, sizeFilter, sortMode, searchQuery, entityScopeFilter, viewMode]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1197,6 +1210,11 @@ const DevImageLibraryPage: React.FC = () => {
                   <option value="recent">Recently Uploaded / Modified</option>
                 </select>
 
+                <select aria-label="Filter original image size" value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value as typeof sizeFilter)} className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs font-medium text-gray-200 focus:border-red-500/60 focus:outline-none">
+                  <option value="all">All sizes</option>
+                  <option value="over2mb">Over 2 MB (original)</option>
+                  <option value="unknown">Unknown original size</option>
+                </select>
                 <select
                   aria-label="Sort media assets"
                   value={sortMode}
@@ -1228,6 +1246,7 @@ const DevImageLibraryPage: React.FC = () => {
               ) : null}
             </div>
 
+            <p className="px-1 text-xs text-gray-400" aria-live="polite">Original uploads: <strong className="text-red-300">{sizeCounts.oversized} over 2 MB</strong> · {sizeCounts.known} known · {sizeCounts.unknown} unknown. Unknown is not zero.</p>
             {/* Result Count & Top Pagination */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-gray-400">
               <div>
@@ -1277,6 +1296,7 @@ const DevImageLibraryPage: React.FC = () => {
                     setCategoryFilter('all');
                     setEntityTypeFilter('all');
                     setUsageFilter('all');
+                    setSizeFilter('all');
                     setSearchQuery('');
                     setEntityScopeFilter(null);
                   }}
@@ -1340,6 +1360,7 @@ const DevImageLibraryPage: React.FC = () => {
                           <span className="rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-100 backdrop-blur-sm">
                             {asset.primaryCategory}
                           </span>
+                          {asset.fileSizeBytes != null ? <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${asset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? 'bg-red-900/95 text-red-100' : 'bg-black/75 text-gray-200'}`} title="Recorded original upload size">{asset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? '⚠ ' : ''}{formatBytes(asset.fileSizeBytes)}</span> : null}
                           {ratioLabel ? (
                             <span className="rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-gray-300 backdrop-blur-sm">
                               {ratioLabel}
@@ -1392,6 +1413,7 @@ const DevImageLibraryPage: React.FC = () => {
                         <th className="px-4 py-3">Asset</th>
                         <th className="px-3 py-3">Category / Roles</th>
                         <th className="px-3 py-3">Storage</th>
+                        <th className="px-3 py-3">Original size</th>
                         <th className="px-3 py-3">Linked Entities & Inheritance</th>
                         <th className="px-3 py-3">Status</th>
                         <th className="px-4 py-3 text-right">Action</th>
@@ -1433,6 +1455,7 @@ const DevImageLibraryPage: React.FC = () => {
                             <td className="px-3 py-2.5 text-gray-300">
                               <div className="truncate max-w-[180px]">{asset.storageLocationLabel}</div>
                             </td>
+                            <td className={`px-3 py-2.5 font-semibold ${asset.fileSizeBytes != null && asset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? 'text-red-300' : 'text-gray-300'}`}>{asset.fileSizeBytes != null && asset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? '⚠ ' : ''}{formatBytes(asset.fileSizeBytes)}</td>
                             <td className="px-3 py-2.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {primaryEntity ? (
@@ -1988,8 +2011,8 @@ const DevImageLibraryPage: React.FC = () => {
                     <dd className="mt-0.5 font-semibold text-white">{selectedAsset.fileType}</dd>
                   </div>
                   <div>
-                    <dt className="text-gray-500">File Size</dt>
-                    <dd className="mt-0.5 font-semibold text-white">{formatBytes(selectedAsset.fileSizeBytes)}</dd>
+                    <dt className="text-gray-500">Original upload size</dt>
+                    <dd className={`mt-0.5 font-semibold ${selectedAsset.fileSizeBytes != null && selectedAsset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? 'text-red-300' : 'text-white'}`}>{selectedAsset.fileSizeBytes != null && selectedAsset.fileSizeBytes > ORIGINAL_SIZE_WARNING_BYTES ? '⚠ Over 2 MB · ' : ''}{formatBytes(selectedAsset.fileSizeBytes)}</dd>
                   </div>
                   <div>
                     <dt className="text-gray-500">Roles</dt>
@@ -2153,6 +2176,39 @@ const DevImageLibraryPage: React.FC = () => {
                     ))}
                   </ul>
                 )}
+              </div>
+
+              {/* Brand logo management: use the authoritative entity assignment, never an event override by accident. */}
+              {selectedAsset.primaryCategory === 'logo' ? (
+                <div className="rounded-2xl border border-sky-500/25 bg-sky-950/15 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white"><LockKeyhole className="h-4 w-4 text-sky-300" /> Brand logo management</div>
+                  <p className="mt-1 text-xs text-gray-300">Choose the owning club, host, or brand below and assign this image as its logo. Events may inherit that logo through verified relationships. This action does not lock the asset or delete alternate images.</p>
+                  <button type="button" onClick={() => {setAssignRole('logo'); setAssignEntityType('club');}} className="mt-3 rounded-lg border border-sky-400/40 px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/15">Choose Club as Logo Owner</button>
+                  <button type="button" onClick={() => {setAssignRole('logo'); setAssignEntityType('organization');}} className="ml-2 mt-3 rounded-lg border border-sky-400/40 px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/15">Choose Host as Logo Owner</button>
+                </div>
+              ) : null}
+              <div className="rounded-2xl border border-white/10 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white"><Trash2 className="h-4 w-4" /> Delete unused asset</div>
+                <p className="mt-1 text-xs text-gray-400">Only unreferenced, database-managed assets can be deleted. Referenced images must be reassigned first; the server checks references again before deletion.</p>
+                <button type="button"
+                  disabled={isDeletingAsset || selectedAsset.activeReferenceCount !== 0 || selectedAsset.dbRecords.length !== 1 || !selectedAsset.externalId}
+                  onClick={async () => {
+                    const record = selectedAsset.dbRecords[0];
+                    if (!record || !selectedAsset.externalId) return;
+                    if (!window.confirm(`Delete unused media asset "${selectedAsset.title}"? This may also delete its Cloudflare file and cannot be undone.`)) return;
+                    setIsDeletingAsset(true);
+                    try {
+                      await adminFetchJson('/api/media/delete-asset', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({assetId: record.id, externalId: selectedAsset.externalId}) });
+                      setSelectedCanonicalId(null);
+                      await loadCatalog();
+                      setStatusBanner({tone: 'success', message: 'Unused media asset deleted. The catalog has been refreshed.'});
+                    } catch (err) {
+                      setStatusBanner({tone: 'error', message: err instanceof Error ? err.message : 'Delete failed.'});
+                    } finally {setIsDeletingAsset(false);}
+                  }}
+                  className="mt-3 rounded-xl border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-200 enabled:hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                >{isDeletingAsset ? 'Deleting�' : 'Delete Unused Asset'}</button>
+                {selectedAsset.activeReferenceCount > 0 ? <p className="mt-2 text-xs text-amber-300">Protected: {selectedAsset.activeReferenceCount} active reference(s). Reassign them before deleting.</p> : null}
               </div>
 
               {/* Assign This Canonical Asset to Another Listing / Entity */}

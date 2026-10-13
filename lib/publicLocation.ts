@@ -5,8 +5,9 @@ const APPROXIMATE_RADIUS_METERS = 1200;
 const APPROXIMATE_COORDINATE_PRECISION = 2;
 
 type PrivacyAwareListing = Listing & {
-  locationVisibility?: 'exact_public' | 'approximate_public';
+  locationVisibility?: 'exact_public' | 'approximate_public' | 'approximate' | 'private' | 'hidden';
   isAddressPrivate?: boolean;
+  isPrivateLocation?: boolean;
 };
 
 const hasLegacyPrivacyHint = (listing: Listing): boolean => {
@@ -25,9 +26,16 @@ const hasLegacyPrivacyHint = (listing: Listing): boolean => {
 export const isApproximateLocation = (listing: Listing | null | undefined): boolean => {
   if (!listing) return false;
   const privacyAwareListing = listing as PrivacyAwareListing;
+  const geoVis = listing.geopoint?.locationVisibility;
   return (
     privacyAwareListing.locationVisibility === 'approximate_public' ||
+    privacyAwareListing.locationVisibility === 'approximate' ||
+    privacyAwareListing.locationVisibility === 'private' ||
+    privacyAwareListing.locationVisibility === 'hidden' ||
+    geoVis === 'approximate' ||
+    geoVis === 'private' ||
     privacyAwareListing.isAddressPrivate === true ||
+    privacyAwareListing.isPrivateLocation === true ||
     hasLegacyPrivacyHint(listing)
   );
 };
