@@ -500,7 +500,10 @@ begin
     );
   end if;
 
-  select email into v_actor_email from public.profiles where id = v_actor_id;
+  select coalesce(nullif(auth.jwt() ->> 'email', ''), p.display_name, p.handle, v_actor_id::text)
+  into v_actor_email
+  from public.profiles p
+  where p.id = v_actor_id;
 
   insert into public.curator_command_queue (
     idempotency_key,
