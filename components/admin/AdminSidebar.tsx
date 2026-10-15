@@ -16,6 +16,7 @@ import {
   ScanSearch,
   ScrollText,
   Settings,
+  Sparkles,
   Tags,
   UsersRound,
 } from 'lucide-react';
@@ -155,6 +156,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setView, pendi
             isActive={['manage-organizations', 'add-organization', 'edit-organization'].includes(currentView)}
             onClick={() => setView('manage-organizations')}
           />
+          {isAdmin ? (
+            <NavLink
+              icon={<Sparkles {...iconProps} />}
+              label="Content Curator"
+              isActive={currentView === 'content-curator'}
+              onClick={() => setView('content-curator')}
+            />
+          ) : null}
         </NavSection>
 
         {isAdmin ? (

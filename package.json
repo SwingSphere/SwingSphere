@@ -9,6 +9,7 @@
     "test:seo": "node scripts/run-typescript-entry.mjs test tests/seoAndSocialPreviews.test.ts",
     "generate:sitemap": "node scripts/run-typescript-entry.mjs run scripts/generate-sitemap.mjs",
     "test:building-verification": "node scripts/run-typescript-entry.mjs test tests/buildingVerification.test.ts",
+    "test:curator": "node scripts/run-typescript-entry.mjs test tests/contentCuratorAdmin.test.ts",
     "test:mobile": "node scripts/run-typescript-entry.mjs test tests/devMobileRouting.test.ts && node --test tests/mobileGlobeRuntimePolicy.test.mjs",
     "test:sitemap": "node scripts/run-typescript-entry.mjs test tests/devSitemap.test.ts",
     "test:privacy": "node --test tests/publicStreetViewPrivacy.test.mjs tests/publicListingsPrivacy.test.mjs",

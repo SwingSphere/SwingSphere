@@ -24,6 +24,7 @@ import AdminListingClaims from './AdminListingClaims';
 import AdminOutboundAnalytics from './AdminOutboundAnalytics';
 import AdminInboundAnalytics from './AdminInboundAnalytics';
 import AdminBuildingInspector from './AdminBuildingInspector';
+import AdminContentCurator from './AdminContentCurator';
 import { AdminListingDetailEditor } from './editor/AdminDetailPage';
 import { useAppStore } from '../../store/appStore';
 import * as api from '../../lib/api';
@@ -72,6 +73,7 @@ export type AdminView =
     | 'add-venue'
     | 'manage-organizations'
     | 'add-organization'
+    | 'content-curator'
     | 'tags' 
     | 'users' 
     | 'settings' 
@@ -354,7 +356,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
         
         const canAccessBuildingInspector = isAdmin || import.meta.env.DEV;
         if (
-            (!isAdmin && ['users', 'tags', 'settings', 'audit-log', 'listing-claims', 'outbound-analytics', 'inbound-analytics'].includes(currentView)) ||
+            (!isAdmin && ['users', 'tags', 'settings', 'audit-log', 'listing-claims', 'outbound-analytics', 'inbound-analytics', 'content-curator'].includes(currentView)) ||
             (currentView === 'building-inspector' && !canAccessBuildingInspector)
         ) {
             return <div>Access Denied.</div>;
@@ -654,6 +656,14 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                  );
             case 'audit-log':
                 return <AdminAuditLog />;
+            case 'content-curator':
+                return (
+                    <AdminContentCurator
+                        listings={listings}
+                        onDataChange={fetchData}
+                        onOpenSubmissionInEditor={(listingId) => setView({ view: 'review-submission', listingId })}
+                    />
+                );
             case 'building-inspector':
                 return (
                     <AdminBuildingInspector

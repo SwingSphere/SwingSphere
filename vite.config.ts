@@ -21,6 +21,12 @@ import {
   runFullRelease,
   getReleaseAuditLog,
 } from './lib/admin/releaseServer';
+import {
+  getCuratorBridgeSnapshot,
+  executeCuratorBridgeCommand,
+  streamCuratorMediaPreview,
+  sanitizeBridgeError,
+} from './lib/contentCuratorBridgeServer';
 import { BUILDING_PERSISTENCE_POLICY_VERSION, createBuildingVerificationInputSnapshot, guardBuildingAssetPersistence } from './lib/buildingPersistenceGuard';
 import { auditBuildingGeometry } from './lib/buildingGeometry';
 import type { BuildingAssetHistoryEvent } from './lib/buildingAssetHistory';
@@ -3300,6 +3306,59 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       const payload = await runLocalProductionSync(req.headers.authorization);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(payload));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/curator/snapshot')) {
+      try {
+        const snapshot = await getCuratorBridgeSnapshot(req);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.end(JSON.stringify(snapshot));
+      } catch (err: any) {
+        const msg = sanitizeBridgeError(err?.message || 'Unable to load Content Curator snapshot.');
+        res.statusCode = /authentication|expired|invalid|admin access/i.test(msg) ? 401 : 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: msg }));
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/curator/command')) {
+      try {
+        const body = await readJsonBody(req);
+        const result = await executeCuratorBridgeCommand(req, body);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.end(JSON.stringify(result));
+      } catch (err: any) {
+        const msg = sanitizeBridgeError(err?.message || 'Unable to execute Content Curator command.');
+        res.statusCode = /authentication|expired|admin access/i.test(msg)
+          ? 401
+          : /allow-list|required|invalid/i.test(msg)
+            ? 400
+            : 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: msg }));
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && req.url.startsWith('/api/admin/curator/media-preview')) {
+      try {
+        await streamCuratorMediaPreview(req, res);
+      } catch (err: any) {
+        const msg = sanitizeBridgeError(err?.message || 'Unable to stream staged preview media.');
+        res.statusCode = /authentication|expired|admin access/i.test(msg)
+          ? 401
+          : /invalid|outside/i.test(msg)
+            ? 400
+            : 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: msg }));
+      }
       return;
     }
 
