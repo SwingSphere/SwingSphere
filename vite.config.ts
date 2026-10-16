@@ -4923,10 +4923,35 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
   res.end('Not Found');
 };
 
-export default defineConfig(({ mode }) => {
-    const modeEnv = loadEnv(mode, '.', '');
+const resolveMainWorktreeRoot = (dir: string): string | null => {
+  try {
+    const dotGitPath = path.join(dir, '.git');
+    if (!fs.existsSync(dotGitPath) || !fs.statSync(dotGitPath).isFile()) return null;
+    const raw = fs.readFileSync(dotGitPath, 'utf8').trim();
+    const match = raw.match(/^gitdir:\s*(.+)$/i);
+    if (!match) return null;
+    const gitDir = path.resolve(dir, match[1].trim());
+    const candidateRoot = path.resolve(gitDir, '..', '..', '..');
+    return fs.existsSync(candidateRoot) ? candidateRoot : null;
+  } catch {
+    return null;
+  }
+};
+
+export default defineConfig(({ command, mode }) => {
+    const mainWorktreeRoot = resolveMainWorktreeRoot(ROOT_DIR);
+    const fallbackModeEnv = mainWorktreeRoot ? loadEnv(mode, mainWorktreeRoot, '') : {};
+    const fallbackDevSupabaseEnv =
+      mode === 'cloudflare' && mainWorktreeRoot
+        ? loadEnv('development', mainWorktreeRoot, 'VITE_SUPABASE_')
+        : {};
+    const modeEnv = {
+      ...fallbackModeEnv,
+      ...loadEnv(mode, '.', ''),
+    };
     const env = mode === 'cloudflare'
       ? {
+          ...fallbackDevSupabaseEnv,
           ...modeEnv,
           ...loadEnv('development', '.', 'VITE_SUPABASE_'),
         }
@@ -4941,6 +4966,17 @@ export default defineConfig(({ mode }) => {
     // to the browser (that remains controlled by envPrefix below).
     for (const [key, value] of Object.entries(env)) {
       if (process.env[key] === undefined) process.env[key] = value;
+    }
+
+    if (command === 'build' && !publicLandingComingSoon) {
+      const supabaseUrl = (env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+      const supabaseKey = (env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error(
+          'Refusing to build production bundle: Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY. ' +
+          'Ensure .env.development.local or environment variables are present before building.'
+        );
+      }
     }
 
     return {

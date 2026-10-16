@@ -1,4 +1,45 @@
-import type { Listing, TimeLens } from '../types';
+import type { ClubData, EventData, Listing, TimeLens } from '../types';
+
+export const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+export const normalizeListing = (listing: Listing): Listing => {
+  const common = {
+    ...listing,
+    location: typeof listing.location === 'string' ? listing.location : '',
+    mediaAssets: Array.isArray(listing.mediaAssets) ? listing.mediaAssets : [],
+    entryRequirements: Array.isArray(listing.entryRequirements) ? listing.entryRequirements : [],
+    galleryImageUrls: toStringArray(listing.galleryImageUrls),
+  };
+
+  if (listing.type === 'club') {
+    return {
+      ...common,
+      schedule: Array.isArray(listing.schedule) ? listing.schedule : [],
+      generalAmenities: toStringArray(listing.generalAmenities),
+      description_short: typeof listing.description_short === 'string' ? listing.description_short : '',
+    } as ClubData;
+  }
+
+  if (listing.type === 'event') {
+    const start = typeof listing.time?.start === 'string' ? listing.time.start : '';
+    const end = typeof listing.time?.end === 'string' ? listing.time.end : start;
+    const fallbackDesc = typeof (listing as { description_short?: unknown }).description_short === 'string'
+      ? (listing as { description_short: string }).description_short
+      : '';
+    return {
+      ...common,
+      tags: toStringArray(listing.tags),
+      time: { ...listing.time, start, end },
+      description_full: typeof listing.description_full === 'string' ? listing.description_full : fallbackDesc,
+    } as EventData;
+  }
+
+  return common as Listing;
+};
+
+export const normalizeListings = (listings: Listing[]): Listing[] =>
+  Array.isArray(listings) ? listings.map(normalizeListing) : [];
 
 export const EXPLORER_ACCESS_FILTERS = [
   { id: 'couples-focused', label: 'Couples' },
@@ -16,14 +57,17 @@ const normalize = (value: string) => value.trim().toLowerCase();
 const collectAccessValues = (listing: Listing): Set<string> => {
   const values = new Set<string>();
   const add = (value?: string) => {
-    if (value) values.add(normalize(value));
+    if (typeof value === 'string' && value) values.add(normalize(value));
   };
 
   add(listing.attendancePolicy);
-  const listingTags = listing.type === 'club' ? listing.generalAmenities : listing.tags;
-  (listingTags ?? []).forEach(add);
+  const listingTags = listing.type === 'club'
+    ? toStringArray(listing.generalAmenities)
+    : toStringArray(listing.tags);
+  listingTags.forEach(add);
   if (listing.type === 'club') {
-    (listing.schedule ?? []).flatMap((day) => day.rules ?? []).forEach(add);
+    const schedule = Array.isArray(listing.schedule) ? listing.schedule : [];
+    schedule.flatMap((day) => (Array.isArray(day?.rules) ? day.rules : [])).forEach(add);
   }
   return values;
 };
@@ -101,8 +145,10 @@ export const eventOverlapsTimeLens = (listing: Listing, lens: TimeLens, now = ne
   if (listing.type !== 'event') return lens.mode === 'none';
   const range = resolveTimeLensRange(lens, now);
   if (!range) return true;
-  const start = new Date(listing.time.start);
-  const end = new Date(listing.time.end || listing.time.start);
+  const startRaw = listing.time?.start ?? '';
+  const endRaw = listing.time?.end || startRaw;
+  const start = new Date(startRaw);
+  const end = new Date(endRaw);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
   return end >= range.start && start < range.end;
 };

@@ -1,5 +1,5 @@
 export const SITE_ORIGIN = 'https://swingsphere.co';
-export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image-v2.png`;
 export const DEFAULT_OG_IMAGE_ALT = 'SwingSphere | Global Lifestyle Discovery Platform';
 export const DEFAULT_OG_WIDTH = 1200;
 export const DEFAULT_OG_HEIGHT = 630;

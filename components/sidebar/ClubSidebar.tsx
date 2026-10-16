@@ -31,7 +31,8 @@ export const ClubSidebar: React.FC<ClubSidebarProps> = ({
 }) => {
   const listing = listings.find((item) => item.id === selectedListingId) ?? null;
 
-  const tags = listing ? (listing.type === 'club' ? listing.generalAmenities : listing.tags) : [];
+  const rawTags = listing ? (listing.type === 'club' ? listing.generalAmenities : listing.tags) : [];
+  const tags = Array.isArray(rawTags) ? rawTags : [];
   const description = listing
     ? listing.type === 'club'
       ? listing.description_short
@@ -71,7 +72,7 @@ export const ClubSidebar: React.FC<ClubSidebarProps> = ({
   if (listing?.type === 'event' && listing.time) {
     const formatted = formatEventTimeRange(listing.time.start, listing.time.end);
     timeLabel = formatted || 'Hours not available';
-  } else if (listing?.type === 'club' && listing.schedule?.length) {
+  } else if (listing?.type === 'club' && Array.isArray(listing.schedule) && listing.schedule.length) {
     const nextOpen = listing.schedule.find((day) => !day.isClosed && day.open && day.close);
     if (nextOpen) {
       timeLabel = `${nextOpen.day} · ${formatClockTime(nextOpen.open)} – ${formatClockTime(nextOpen.close)}`;

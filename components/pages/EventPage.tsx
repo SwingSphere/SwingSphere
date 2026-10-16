@@ -461,6 +461,14 @@ const EventPage: React.FC = () => {
       : {}),
   };
 
+  const seoSocialImage =
+    eventFlyerHeroImage ||
+    directHeroImage ||
+    inheritedHeroImage ||
+    eventLogoImage ||
+    venueLogoImage ||
+    undefined;
+
   return (
     <>
       <Seo
@@ -470,8 +478,8 @@ const EventPage: React.FC = () => {
           `Explore ${event.name} on SwingSphere. See date, location, host, access details, tickets, and event information.`
         }
         canonicalPath={canonicalPath}
-        imageUrl={eventFlyerHeroImage || eventCoverImage}
-        imageAlt={`${event.name} event`}
+        imageUrl={seoSocialImage}
+        imageAlt={eventFlyerHeroImage ? `${event.name} flyer` : `${event.name} event`}
         ogType="article"
         noIndex={isMockRoute}
         structuredData={structuredData}

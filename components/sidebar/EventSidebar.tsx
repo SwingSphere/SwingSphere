@@ -38,8 +38,9 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
       ? { lat: physicalCoords.lat, lng: physicalCoords.lng }
       : null;
   const hideExactPin = Boolean(event.isAddressPrivate || isApproximateVenue);
-  const visibleTags = event.tags.slice(0, 3);
-  const remainingTagCount = Math.max(0, event.tags.length - visibleTags.length);
+  const eventTags = Array.isArray(event.tags) ? event.tags : [];
+  const visibleTags = eventTags.slice(0, 3);
+  const remainingTagCount = Math.max(0, eventTags.length - visibleTags.length);
   const brandLogoImage = getListingLogoUrl(event, entityIndex);
   const shellClass = mode === 'floating'
     ? 'ss-glass ss-glass--liquid flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[24px] text-gray-100'
@@ -98,7 +99,7 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
           <div className="flex items-center gap-3">
             <CalendarDays className="h-5 w-5 shrink-0 text-amber-300" />
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-white">{formatEventTimeRange(event.time.start, event.time.end)}</div>
+              <div className="text-sm font-semibold text-white">{formatEventTimeRange(event.time?.start ?? '', event.time?.end ?? '')}</div>
               <div className="text-xs text-gray-500">Scheduled event</div>
             </div>
           </div>

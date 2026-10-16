@@ -20,7 +20,7 @@ import { slugifyPlace } from '../../lib/geoNormalize';
 import { VERIFIED_RESORT_PUBLIC_COORDINATES } from '../../lib/travelMarkerModel';
 
 export const SITE_ORIGIN = 'https://swingsphere.co';
-export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image-v2.png`;
 export const DEFAULT_OG_IMAGE_ALT = 'SwingSphere | Global Lifestyle Discovery Platform';
 export const DEFAULT_OG_WIDTH = 1200;
 export const DEFAULT_OG_HEIGHT = 630;
@@ -827,14 +827,136 @@ export const getCityBySlug = (slug: string, catalog: ListingCatalog = staticCata
   return catalog.citiesMap.get(clean) ?? null;
 };
 
-const resolveListingSocialImage = (
+const DEFAULT_CLOUDFLARE_DELIVERY_BASE = 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q';
+
+const resolveCloudflareDeliveryBase = (...urls: Array<unknown>): string => {
+  for (const url of urls) {
+    if (typeof url === 'string') {
+      const match = url.trim().match(/^https:\/\/imagedelivery\.net\/[^/]+/i);
+      if (match) return match[0];
+    }
+  }
+  return DEFAULT_CLOUDFLARE_DELIVERY_BASE;
+};
+
+const extractMediaAssetUrlByRole = (
+  mediaAssets: unknown,
+  role: 'flyer' | 'hero' | 'logo',
+  variant: string,
+  deliveryBase: string,
+): string | undefined => {
+  if (!Array.isArray(mediaAssets)) return undefined;
+  for (const item of mediaAssets) {
+    if (!item || typeof item !== 'object') continue;
+    if (item.role !== role || item.status === 'rejected') continue;
+    const directUrl = (item as any).url || (item as any).src;
+    if (isUsableMediaUrl(directUrl)) {
+      return toAbsoluteUrl(directUrl);
+    }
+    const extId = String((item as any).external_id || (item as any).externalId || (item as any).cloudflareImageId || '').trim();
+    if (extId && (!(item as any).storage_provider || (item as any).storage_provider === 'cloudflare_images')) {
+      return `${deliveryBase}/${encodeURIComponent(extId)}/${encodeURIComponent(variant)}`;
+    }
+  }
+  return undefined;
+};
+
+export const resolveListingSocialImage = (
   listing: any,
   fallbackLogoUrl?: string,
 ): { url: string; width: number; height: number; alt: string; card: 'summary' | 'summary_large_image' } => {
-  const hero = listing.headerImageUrl || listing.coverImage || listing.imageUrl;
-  if (isUsableMediaUrl(hero)) {
+  const bundled = listing?.id ? bundledListingsById.get(listing.id) : null;
+  const deliveryBase = resolveCloudflareDeliveryBase(
+    listing?.flyerImageUrl,
+    listing?.flyer_image_url,
+    listing?.flyerUrl,
+    listing?.headerImageUrl,
+    listing?.header_image_url,
+    listing?.coverImage,
+    listing?.imageUrl,
+    listing?.logoImageUrl,
+    listing?.logo_image_url,
+    listing?.logo,
+    fallbackLogoUrl,
+    bundled?.logoImageUrl,
+    bundled?.headerImageUrl,
+  );
+
+  const directFlyer = listing?.flyerImageUrl || listing?.flyer_image_url || listing?.flyerUrl;
+  const mediaFlyer =
+    extractMediaAssetUrlByRole(listing?.mediaAssets, 'flyer', 'flyercard', deliveryBase) ||
+    extractMediaAssetUrlByRole(bundled?.mediaAssets, 'flyer', 'flyercard', deliveryBase);
+  const bundledFlyer = bundled?.flyerImageUrl || bundled?.flyer_image_url || bundled?.flyerUrl;
+  const resolvedFlyer = isUsableMediaUrl(directFlyer)
+    ? toAbsoluteUrl(directFlyer)
+    : mediaFlyer || (isUsableMediaUrl(bundledFlyer) ? toAbsoluteUrl(bundledFlyer) : undefined);
+
+  const directHero = listing?.headerImageUrl || listing?.header_image_url || listing?.coverImage || listing?.imageUrl;
+  const mediaHero =
+    extractMediaAssetUrlByRole(listing?.mediaAssets, 'hero', 'heropage', deliveryBase) ||
+    extractMediaAssetUrlByRole(bundled?.mediaAssets, 'hero', 'heropage', deliveryBase);
+  const bundledHero = bundled?.headerImageUrl || bundled?.header_image_url || bundled?.coverImage || bundled?.imageUrl;
+  const resolvedHero = isUsableMediaUrl(directHero)
+    ? toAbsoluteUrl(directHero)
+    : mediaHero || (isUsableMediaUrl(bundledHero) ? toAbsoluteUrl(bundledHero) : undefined);
+
+  const directLogo = listing?.logoImageUrl || listing?.logo_image_url || listing?.logo;
+  const mediaLogo =
+    extractMediaAssetUrlByRole(listing?.mediaAssets, 'logo', 'logosquare', deliveryBase) ||
+    extractMediaAssetUrlByRole(bundled?.mediaAssets, 'logo', 'logosquare', deliveryBase);
+  const bundledLogo = bundled?.logoImageUrl || bundled?.logo_image_url || bundled?.logo;
+  const resolvedLogo = isUsableMediaUrl(directLogo)
+    ? toAbsoluteUrl(directLogo)
+    : mediaLogo ||
+      (isUsableMediaUrl(bundledLogo) ? toAbsoluteUrl(bundledLogo) : undefined) ||
+      (isUsableMediaUrl(fallbackLogoUrl) ? toAbsoluteUrl(fallbackLogoUrl) : undefined);
+
+  // Events strictly prioritize:
+  // 1. Event flyer
+  // 2. Event hero image
+  // 3. Event logo
+  // 4. Default SwingSphere social image
+  if (listing?.type === 'event') {
+    if (resolvedFlyer) {
+      return {
+        url: resolvedFlyer,
+        width: 1080,
+        height: 1350,
+        alt: `${listing.name} flyer`,
+        card: 'summary_large_image',
+      };
+    }
+    if (resolvedHero) {
+      return {
+        url: resolvedHero,
+        width: 1280,
+        height: 720,
+        alt: `${listing.name} cover`,
+        card: 'summary_large_image',
+      };
+    }
+    if (resolvedLogo) {
+      return {
+        url: resolvedLogo,
+        width: 800,
+        height: 800,
+        alt: `${listing.name} logo`,
+        card: 'summary',
+      };
+    }
     return {
-      url: toAbsoluteUrl(hero),
+      url: DEFAULT_OG_IMAGE,
+      width: DEFAULT_OG_WIDTH,
+      height: DEFAULT_OG_HEIGHT,
+      alt: `${listing.name} on SwingSphere`,
+      card: 'summary_large_image',
+    };
+  }
+
+  // Club pages retain their existing cover-first behavior.
+  if (resolvedHero) {
+    return {
+      url: resolvedHero,
       width: 1280,
       height: 720,
       alt: `${listing.name} cover`,
@@ -842,21 +964,19 @@ const resolveListingSocialImage = (
     };
   }
 
-  const flyer = listing.flyerImageUrl || listing.flyerUrl;
-  if (isUsableMediaUrl(flyer)) {
+  if (resolvedFlyer) {
     return {
-      url: toAbsoluteUrl(flyer),
+      url: resolvedFlyer,
       width: 1080,
-      height: 1080,
+      height: 1350,
       alt: `${listing.name} flyer`,
-      card: 'summary',
+      card: 'summary_large_image',
     };
   }
 
-  const logo = listing.logoImageUrl || listing.logo || fallbackLogoUrl;
-  if (isUsableMediaUrl(logo)) {
+  if (resolvedLogo) {
     return {
-      url: toAbsoluteUrl(logo),
+      url: resolvedLogo,
       width: 800,
       height: 800,
       alt: `${listing.name} logo`,

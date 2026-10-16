@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   generateSitemapXml,
   resolvePageSeo,
+  resolveListingSocialImage,
   DEFAULT_OG_IMAGE,
 } from '../functions/lib/seoMetadata.ts';
 import {
@@ -27,7 +29,8 @@ test('homepage SEO returns valid branded metadata, summary_large_image, semantic
   assert.equal(seo.canonicalUrl, 'https://swingsphere.co/');
   assert.equal(seo.title, 'SwingSphere | Lifestyle Clubs, Swinger Parties & Events');
   assert.match(seo.description, /lifestyle clubs, swinger parties, play parties/i);
-  assert.equal(seo.imageUrl, DEFAULT_OG_IMAGE);
+  assert.equal(DEFAULT_OG_IMAGE, 'https://swingsphere.co/og-image-v2.png');
+  assert.equal(seo.imageUrl, 'https://swingsphere.co/og-image-v2.png');
   assert.equal(seo.imageWidth, 1200);
   assert.equal(seo.imageHeight, 630);
   assert.equal(seo.twitterCard, 'summary_large_image');
@@ -38,6 +41,14 @@ test('homepage SEO returns valid branded metadata, summary_large_image, semantic
   const types = (seo.structuredData as any[]).map((s) => s['@type']);
   assert.ok(types.includes('WebSite'));
   assert.ok(types.includes('Organization'));
+
+  // Verify generated homepage OG image files exist with valid PNG header and 1200x630 dimensions
+  for (const relPath of ['public/og-image-v2.png', 'public/og-image.png']) {
+    const buf = fs.readFileSync(relPath);
+    assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${relPath} must have valid PNG magic bytes`);
+    assert.equal(buf.readUInt32BE(16), 1200, `${relPath} width must be 1200`);
+    assert.equal(buf.readUInt32BE(20), 630, `${relPath} height must be 630`);
+  }
 });
 
 test('24 real approved public listings across clubs, events, hosts, resorts, cruises, and cities return 200 OK, unique metadata, self-referencing canonical, JSON-LD, semantic bodyHtml, and sitemap inclusion', async () => {
@@ -127,6 +138,144 @@ test('multi-promoter venue (Twist SF + Bronze Party + Her Fantasy Party) resolve
   const twistSeo = await resolvePageSeo(new URL(twistClubUrl!).pathname);
   assert.ok(twistSeo.bodyHtml?.includes(new URL(bronzeEventUrl!).pathname), 'Twist SF club bodyHtml must link to Bronze Party event at Twist');
   assert.ok(twistSeo.bodyHtml?.includes(new URL(hfpEventUrl!).pathname), 'Twist SF club bodyHtml must link to Her Fantasy Party event at Twist');
+});
+
+test('previously shared Connect.Dance.Love Reddit URL redirects permanently to the current event and resolves its flyer', async () => {
+  const seo = await resolvePageSeo('/events/connect-dance-love--01qaisgw');
+  assert.equal(seo.status, 301);
+  assert.equal(seo.redirectUrl, 'https://swingsphere.co/events/connect-dance-love--01hnapur');
+  assert.equal(seo.canonicalUrl, seo.redirectUrl);
+
+  const current = await resolvePageSeo('/events/connect-dance-love--01hnapur');
+  assert.equal(current.status, 200);
+  assert.equal(
+    current.imageUrl,
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/745406ec-5a74-4acb-e2c9-2722a38b0600/flyercard',
+  );
+  assert.equal(current.imageWidth, 1080);
+  assert.equal(current.imageHeight, 1350);
+  assert.equal(current.twitterCard, 'summary_large_image');
+});
+
+test('event social-image selection strictly enforces flyer -> hero -> logo -> default OG image across all media fields and never prioritizes club/host logo over flyer', () => {
+  const hostOrClubLogo = 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/host-logo-id/logosquare';
+
+  // 1a. Flyer via flyerImageUrl beats hero, event logo, and host/club logo
+  const fromFlyerImageUrl = resolveListingSocialImage(
+    {
+      id: 'unit-event-flyer-image-url',
+      type: 'event',
+      name: 'Velvet Masquerade',
+      flyerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/flyer-1/flyercard',
+      headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/hero-1/heropage',
+      logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-1/logosquare',
+    },
+    hostOrClubLogo,
+  );
+  assert.equal(fromFlyerImageUrl.url, 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/flyer-1/flyercard');
+  assert.equal(fromFlyerImageUrl.width, 1080);
+  assert.equal(fromFlyerImageUrl.height, 1350);
+  assert.equal(fromFlyerImageUrl.card, 'summary_large_image');
+
+  // 1b. Flyer via flyerUrl (relative or absolute) beats hero and logos
+  const fromFlyerUrl = resolveListingSocialImage(
+    {
+      id: 'unit-event-flyer-url',
+      type: 'event',
+      name: 'Midnight Soiree',
+      flyerUrl: '/media/midnight-soiree-flyer.jpg',
+      headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/hero-2/heropage',
+      logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-2/logosquare',
+    },
+    hostOrClubLogo,
+  );
+  assert.equal(fromFlyerUrl.url, 'https://swingsphere.co/media/midnight-soiree-flyer.jpg');
+  assert.equal(fromFlyerUrl.width, 1080);
+  assert.equal(fromFlyerUrl.height, 1350);
+  assert.equal(fromFlyerUrl.card, 'summary_large_image');
+
+  // 1c. Flyer via mediaAssets (role: 'flyer') beats hero and logos even when no top-level image URLs exist
+  const fromMediaAssetsFlyer = resolveListingSocialImage(
+    {
+      id: 'unit-event-media-assets-flyer',
+      type: 'event',
+      name: 'Crimson Ball',
+      headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/hero-3/heropage',
+      logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-3/logosquare',
+      mediaAssets: [
+        { role: 'logo', external_id: 'asset-logo-3', storage_provider: 'cloudflare_images' },
+        { role: 'hero', external_id: 'asset-hero-3', storage_provider: 'cloudflare_images' },
+        { role: 'flyer', external_id: 'asset-flyer-3', storage_provider: 'cloudflare_images' },
+      ],
+    },
+    hostOrClubLogo,
+  );
+  assert.equal(
+    fromMediaAssetsFlyer.url,
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/asset-flyer-3/flyercard',
+  );
+  assert.equal(fromMediaAssetsFlyer.width, 1080);
+  assert.equal(fromMediaAssetsFlyer.height, 1350);
+  assert.equal(fromMediaAssetsFlyer.card, 'summary_large_image');
+
+  // 2. When no flyer exists, event hero image (direct or mediaAssets role='hero') beats event/club/host logo
+  const fromHeroMediaAsset = resolveListingSocialImage(
+    {
+      id: 'unit-event-hero-fallback',
+      type: 'event',
+      name: 'After Hours Lounge',
+      logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-4/logosquare',
+      mediaAssets: [
+        { role: 'hero', external_id: 'asset-hero-4', storage_provider: 'cloudflare_images' },
+      ],
+    },
+    hostOrClubLogo,
+  );
+  assert.equal(
+    fromHeroMediaAsset.url,
+    'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/asset-hero-4/heropage',
+  );
+  assert.equal(fromHeroMediaAsset.width, 1280);
+  assert.equal(fromHeroMediaAsset.height, 720);
+  assert.equal(fromHeroMediaAsset.card, 'summary_large_image');
+
+  // 3. When no flyer or hero exists, event logo beats default OG image
+  const fromEventLogo = resolveListingSocialImage(
+    {
+      id: 'unit-event-logo-fallback',
+      type: 'event',
+      name: 'Intimate Mixer',
+      logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-5/logosquare',
+    },
+    hostOrClubLogo,
+  );
+  assert.equal(fromEventLogo.url, 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/logo-5/logosquare');
+  assert.equal(fromEventLogo.width, 800);
+  assert.equal(fromEventLogo.height, 800);
+  assert.equal(fromEventLogo.card, 'summary');
+
+  // 4. When no flyer, hero, or logo exists, falls back to DEFAULT_OG_IMAGE
+  const fromDefaultFallback = resolveListingSocialImage({
+    id: 'unit-event-default-fallback',
+    type: 'event',
+    name: 'New Community Gathering',
+  });
+  assert.equal(fromDefaultFallback.url, DEFAULT_OG_IMAGE);
+  assert.equal(fromDefaultFallback.width, 1200);
+  assert.equal(fromDefaultFallback.height, 630);
+  assert.equal(fromDefaultFallback.card, 'summary_large_image');
+
+  // 5. Clubs preserve cover-first priority (hero beats flyer)
+  const clubCoverFirst = resolveListingSocialImage({
+    id: 'unit-club-cover-first',
+    type: 'club',
+    name: 'Club Sanctuary',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/club-hero/heropage',
+    flyerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/club-flyer/flyercard',
+  });
+  assert.equal(clubCoverFirst.url, 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/club-hero/heropage');
+  assert.equal(clubCoverFirst.width, 1280);
+  assert.equal(clubCoverFirst.height, 720);
 });
 
 test('legacy property-hashed URLs, keyless slugs, host aliases, and city synonym routes return 301 permanent redirects to canonical URLs', async () => {

@@ -34,7 +34,7 @@ const ResortSidebar: React.FC<{
           <div className="flex items-start gap-3"><Sparkles className="mt-0.5 h-5 w-5 text-violet-200" /><div><div className="text-sm font-semibold text-white">{resort.audienceLabel}</div><div className="text-xs text-gray-500">Experience at a glance</div></div></div>
         </section>
         <p className="line-clamp-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-gray-300">{resort.descriptionShort}</p>
-        <div className="flex flex-wrap gap-2">{resort.amenities.slice(0, 5).map((amenity) => <span key={amenity} className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-xs font-semibold text-violet-100">{amenity}</span>)}</div>
+        <div className="flex flex-wrap gap-2">{(Array.isArray(resort.amenities) ? resort.amenities : []).slice(0, 5).map((amenity) => <span key={amenity} className="rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-xs font-semibold text-violet-100">{amenity}</span>)}</div>
         <Link to={`/resorts/${resort.slug}`} className="ss-glass ss-glass--liquid ss-glass--interactive sticky bottom-0 mt-auto flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-violet-300/30 bg-[rgba(30,17,52,.92)] px-5 text-base font-black text-white">Explore Resort <ArrowRight className="h-5 w-5" /></Link>
       </div>
     </div>

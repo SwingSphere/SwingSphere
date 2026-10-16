@@ -7,7 +7,7 @@ const BASELINE_LEGACY_KEYS_BY_ID: Record<string, string[]> = {
   'club-club-joi-la': ['013pxx5n'],
   'club-1782366659742': ['00fft0ta'],
   'event-1782943939781': ['00fivrbn'],
-  'event-connect-dance-love-2026-10-17': ['01y73uxi'],
+  'event-connect-dance-love-2026-10-17': ['01y73uxi', '01qaisgw'],
   'club-1782957638814': ['017m5pn3'],
   'club-1783117266680': ['00lo3f5z'],
   'club-ice-lounge-wichita': ['00wdox3g'],

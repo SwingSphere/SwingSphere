@@ -37,8 +37,8 @@ async function createOgImage() {
       <line x1="280" y1="435" x2="920" y2="435" stroke="url(#line-grad)" stroke-width="2" />
 
       <!-- Brand Name -->
-      <text x="600" y="375" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1" text-anchor="middle">
-        SWINGSPHERE
+      <text x="600" y="375" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="64" font-weight="800" letter-spacing="-1" text-anchor="middle">
+        <tspan fill="#e11d48">SWING</tspan><tspan fill="#ffffff">SPHERE</tspan>
       </text>
 
       <!-- Tagline -->
@@ -64,7 +64,7 @@ async function createOgImage() {
     .resize(200, 200, { fit: 'contain' })
     .toBuffer();
 
-  const finalImage = await sharp(bgSvg)
+  const renderedBuffer = await sharp(bgSvg)
     .composite([
       {
         input: logoBuffer,
@@ -73,9 +73,12 @@ async function createOgImage() {
       }
     ])
     .png({ quality: 95 })
-    .toFile('public/og-image.png');
+    .toBuffer();
 
-  console.log('Created public/og-image.png:', finalImage);
+  fs.writeFileSync('public/og-image-v2.png', renderedBuffer);
+  fs.writeFileSync('public/og-image.png', renderedBuffer);
+
+  console.log('Created public/og-image-v2.png and public/og-image.png:', renderedBuffer.length, 'bytes');
 }
 
 createOgImage().catch(console.error);

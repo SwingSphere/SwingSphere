@@ -44,6 +44,7 @@ import { eventSeries as mockEventSeries } from '../data/eventSeries';
 import { organizationRelationships as mockOrganizationRelationships } from '../data/organizationRelationships';
 import { communityHostEvents } from '../data/communityHostSeed';
 import { getVenueForListing } from './entityCompatibility';
+import { normalizeListing } from './explorerFilters';
 import publicListings from 'virtual:swingsphere-public-listings';
 
 const LATENCY = 250;
@@ -79,13 +80,15 @@ const withCommunityHostSeed = (listings: Listing[]): Listing[] => {
     return [
         ...communityHostEvents
             .filter((event) => !deletedIds.has(event.id))
-            .map((event) => ({ ...event })),
-        ...listings.filter((listing) => !seededIds.has(listing.id) && !deletedIds.has(listing.id)),
+            .map((event) => normalizeListing({ ...event })),
+        ...listings
+            .filter((listing) => !seededIds.has(listing.id) && !deletedIds.has(listing.id))
+            .map((listing) => normalizeListing(listing)),
     ];
 };
 
 let db = {
-    listings: withCommunityHostSeed(publicListings.map((listing) => ({ ...listing })) as Listing[]),
+    listings: withCommunityHostSeed(publicListings.map((listing) => normalizeListing({ ...listing })) as Listing[]),
     users: [] as User[],
     auditLog: [] as AuditLogEntry[],
     flaggedContent: [] as FlaggedContent[],
@@ -245,18 +248,20 @@ export type ListingStoreState = {
 };
 
 const asListings = (value: unknown): Listing[] => Array.isArray(value)
-    ? value.filter((item): item is Listing => Boolean(
-        item
-        && typeof item === 'object'
-        && ['club', 'event'].includes(String((item as Listing).type))
-        && String((item as Listing).id ?? '').trim(),
-    ))
+    ? value
+        .filter((item): item is Listing => Boolean(
+            item
+            && typeof item === 'object'
+            && ['club', 'event'].includes(String((item as Listing).type))
+            && String((item as Listing).id ?? '').trim(),
+        ))
+        .map((item) => normalizeListing(item))
     : [];
 
 const mergeLegacyCatalog = (remoteListings: Listing[]): Listing[] => {
     const merged = new Map<string, Listing>();
-    withCommunityHostSeed(db.listings).forEach((listing) => merged.set(listing.id, listing));
-    remoteListings.forEach((listing) => merged.set(listing.id, listing));
+    withCommunityHostSeed(db.listings).forEach((listing) => merged.set(listing.id, normalizeListing(listing)));
+    remoteListings.forEach((listing) => merged.set(listing.id, normalizeListing(listing)));
     return Array.from(merged.values());
 };
 
@@ -323,10 +328,10 @@ export const getListings = async (): Promise<Listing[]> => {
         if (error) throw error;
         const remoteListings = asListings(data);
         db.listings = state?.legacyImportComplete ? remoteListings : mergeLegacyCatalog(remoteListings);
-        return db.listings.map((listing) => ({ ...listing })) as Listing[];
+        return db.listings.map((listing) => normalizeListing({ ...listing }));
     } catch (error) {
         console.warn('Supabase listing store unavailable; using bundled read-only catalog.', error);
-        return db.listings.map((listing) => ({ ...listing })) as Listing[];
+        return db.listings.map((listing) => normalizeListing({ ...listing }));
     }
 };
 
@@ -345,7 +350,7 @@ const persistListingToSupabase = async <T extends Listing>(
         }
         throw error;
     }
-    const saved = data as T;
+    const saved = normalizeListing(data as T) as T;
     upsertLocalListing(saved);
     return saved;
 };

@@ -30,10 +30,11 @@ const getListingSummary = (listing: Listing) =>
 
 const getListingTiming = (listing: Listing) => {
   if (listing.type === 'event') {
-    return formatEventTimeRange(listing.time.start, listing.time.end) || 'Time to be confirmed';
+    return formatEventTimeRange(listing.time?.start ?? '', listing.time?.end ?? '') || 'Time to be confirmed';
   }
 
-  const openDays = listing.schedule.filter((day) => !day.isClosed && (day.open || day.close));
+  const schedule = Array.isArray(listing.schedule) ? listing.schedule : [];
+  const openDays = schedule.filter((day) => !day.isClosed && (day.open || day.close));
   if (!openDays.length) return 'Hours not published';
   const day = openDays[0];
   const range = [day.open ? formatClockTime(day.open) : '', day.close ? formatClockTime(day.close) : '']
@@ -43,8 +44,8 @@ const getListingTiming = (listing: Listing) => {
 };
 
 const getListingTags = (listing: Listing) => {
-  if (listing.type === 'event') return listing.tags.slice(0, 4);
-  return listing.generalAmenities.slice(0, 4);
+  const raw = listing.type === 'event' ? listing.tags : listing.generalAmenities;
+  return (Array.isArray(raw) ? raw : []).slice(0, 4);
 };
 
 const TabletNearbyPreviewPanel: React.FC<TabletNearbyPreviewPanelProps> = ({

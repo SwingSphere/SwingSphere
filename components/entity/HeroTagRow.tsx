@@ -8,12 +8,13 @@ const TagPill: React.FC<{ tag: string }> = ({ tag }) => (
 );
 
 const HeroTagRow: React.FC<{
-  tags: string[];
+  tags?: string[] | null;
   mobileVisibleCount?: number;
   desktopVisibleCount?: number;
 }> = ({ tags, mobileVisibleCount = 2, desktopVisibleCount = 4 }) => {
   const [expanded, setExpanded] = useState(false);
-  const uniqueTags = Array.from(new Set(tags.filter(Boolean)));
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const uniqueTags = Array.from(new Set(safeTags.filter(Boolean)));
 
   if (!uniqueTags.length) return null;
 

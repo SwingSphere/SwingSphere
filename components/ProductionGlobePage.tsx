@@ -33,6 +33,7 @@ import { adaptTravelToDiscoveryPoints, adaptTravelToGlobeEvents } from '../lib/t
 import { getListingDisplayCoords } from '../lib/explorerMarkers';
 import { isApproximateLocation } from '../lib/publicLocation';
 import { applyDevMobileListingSafetyToAll } from '../lib/devMobileListingSafety';
+import { normalizeListings } from '../lib/explorerFilters';
 import { canScheduleMobileListingHandoff } from '../lib/mobileListingHandoff';
 import type { MapViewportDiscoverySnapshot } from '../lib/mapViewportDiscovery';
 import { createActivityRegions, type ActivityRegion } from '../lib/activityRegionProvider';
@@ -1200,7 +1201,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     return () => { active = false; };
   }, []);
   const mobileSafeListings = useMemo(
-    () => mobilePrototype ? applyDevMobileListingSafetyToAll(listings) : listings,
+    () => mobilePrototype ? applyDevMobileListingSafetyToAll(listings) : normalizeListings(listings),
     [listings, mobilePrototype],
   );
   const listingsRef = useRef(mobileSafeListings);
@@ -4142,7 +4143,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             onSelectListing={selectListingFromRail}
             onNavigate={navigateInCurrentExperience}
             onRecenter={returnToWorld}
-            onFilterChange={mobilePrototype ? (filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter]) : undefined}
+            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter])}
             devMobileMode={mobilePrototype}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}
@@ -4171,7 +4172,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               onClose={closePanel}
               selectedListingId={detailListingId}
               selectedOrganizationId={selectedOrganizationId}
-              listings={listings}
+              listings={mobileSafeListings}
               organizations={organizations}
               entityIndex={entityIndex ?? undefined}
             />

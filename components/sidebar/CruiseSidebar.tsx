@@ -38,7 +38,7 @@ const CruiseSidebar: React.FC<{
           <div className="flex items-start gap-3"><Clock3 className="mt-0.5 h-5 w-5 text-cyan-200" /><div><div className="text-sm font-semibold text-white">{sailing ? `${sailing.durationNights} nights aboard ${sailing.shipName}` : 'Sailing details coming soon'}</div><div className="text-xs text-gray-500">Voyage at a glance</div></div></div>
         </section>
         <p className="line-clamp-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-sm leading-6 text-gray-300">{series.descriptionShort}</p>
-        <div className="flex flex-wrap gap-2">{series.experienceHighlights.slice(0, 5).map((highlight) => <span key={highlight} className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{highlight}</span>)}</div>
+        <div className="flex flex-wrap gap-2">{(Array.isArray(series.experienceHighlights) ? series.experienceHighlights : []).slice(0, 5).map((highlight) => <span key={highlight} className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{highlight}</span>)}</div>
         <Link to={`/cruises/${series.slug}`} className="ss-glass ss-glass--liquid ss-glass--interactive sticky bottom-0 mt-auto flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-cyan-300/30 bg-[rgba(5,31,42,.92)] px-5 text-base font-black text-white">View Cruise Details <ArrowRight className="h-5 w-5" /></Link>
       </div>
     </div>

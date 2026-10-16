@@ -16,7 +16,7 @@ type SeoProps = {
 };
 
 const SITE_ORIGIN = 'https://swingsphere.co';
-const DEFAULT_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+const DEFAULT_IMAGE = `${SITE_ORIGIN}/og-image-v2.png`;
 
 const ensureMeta = (selector: string, attributes: Record<string, string>): HTMLMetaElement => {
   let element = document.head.querySelector<HTMLMetaElement>(selector);

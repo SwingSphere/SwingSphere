@@ -37,7 +37,7 @@ type MobileFilter = 'all' | 'event' | 'club' | 'resort' | 'cruise';
 
 const formatEventDate = (listing: Listing): string => {
   if (listing.type !== 'event') return 'Club';
-  const date = new Date(listing.time.start);
+  const date = new Date(listing.time?.start ?? '');
   if (Number.isNaN(date.getTime())) return 'Upcoming event';
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',

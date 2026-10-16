@@ -21,7 +21,8 @@ export const useExplorerState = (
     const query = searchText.trim().toLowerCase();
     const filtered = listings.filter((listing) => {
       if (listingTypes.length && !listingTypes.includes(listing.type)) return false;
-      const listingTags = listing.type === 'club' ? listing.generalAmenities : listing.tags;
+      const rawTags = listing.type === 'club' ? listing.generalAmenities : listing.tags;
+      const listingTags = Array.isArray(rawTags) ? rawTags : [];
       if (selectedTags.length && !selectedTags.every((filterId) => matchesExplorerAccessFilter(listing, filterId))) {
         return false;
       }
@@ -40,7 +41,7 @@ export const useExplorerState = (
 
     const sorted = [...filtered].sort((a, b) => {
       if (a.type === 'event' && b.type === 'event') {
-        return new Date(a.time.start).getTime() - new Date(b.time.start).getTime();
+        return new Date(a.time?.start ?? '').getTime() - new Date(b.time?.start ?? '').getTime();
       }
       if (a.type === 'event') return -1;
       if (b.type === 'event') return 1;
