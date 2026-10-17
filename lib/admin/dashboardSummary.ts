@@ -201,11 +201,11 @@ export const evaluateTrafficProvenance = (
 ): TrafficProvenanceInfo => {
   if (!summary) {
     return {
-      mode: 'full_pageviews',
-      badgeLabel: 'Page-view tracking active',
-      shortNote: 'Tracking SPA route views and entry sessions',
+      mode: 'session_derived_estimates',
+      badgeLabel: 'Traffic data unavailable',
+      shortNote: 'Tracker configured in code · awaiting analytics summary',
       explanation:
-        'SwingSphere records both entry sessions and in-session SPA route views.',
+        'Client-side tracking code is mounted on public routes, but no analytics summary payload has been loaded for this view yet.',
       sessionDerivedDaysCount: 0,
       multiPageTrackedDaysCount: 0,
     };
@@ -225,9 +225,30 @@ export const evaluateTrafficProvenance = (
     }
   }
 
-  const hasPageViewTable = (summary.byPageView?.length ?? 0) > 0;
+  const hasMultiPageViewRows = (summary.byPageView ?? []).some(
+    (row) => Number(row.views ?? 0) > Number(row.entrySessions ?? 0),
+  );
   const totalViews = Number(summary.totalViews ?? summary.totalSessions ?? 0);
   const totalSessions = Number(summary.totalSessions ?? 0);
+
+  if (activeDays.length === 0 && totalSessions === 0 && totalViews === 0) {
+    const hasAllTimeData =
+      Number(summary.kpis?.sessionsAllTime ?? 0) > 0 || Number(summary.kpis?.viewsAllTime ?? 0) > 0;
+    return {
+      mode: 'session_derived_estimates',
+      badgeLabel: hasAllTimeData
+        ? 'No traffic in selected window'
+        : 'Tracking configured · No data ingested',
+      shortNote: hasAllTimeData
+        ? 'Collection active · 0 visits recorded in this date range'
+        : 'Tracker mounted on public routes · 0 events in storage',
+      explanation: hasAllTimeData
+        ? 'Analytics collection is active on SwingSphere, but no sessions or page views were recorded during the selected date window.'
+        : 'Client-side tracking code is mounted on public routes, but no session or page-view events have been ingested into storage yet.',
+      sessionDerivedDaysCount: 0,
+      multiPageTrackedDaysCount: 0,
+    };
+  }
 
   if (sessionDerivedDaysCount > 0 && multiPageTrackedDaysCount > 0) {
     return {
@@ -241,13 +262,13 @@ export const evaluateTrafficProvenance = (
     };
   }
 
-  if (sessionDerivedDaysCount > 0 && multiPageTrackedDaysCount === 0 && totalViews === totalSessions && !hasPageViewTable) {
+  if (sessionDerivedDaysCount > 0 && multiPageTrackedDaysCount === 0 && totalViews <= totalSessions && !hasMultiPageViewRows) {
     return {
       mode: 'session_derived_estimates',
       badgeLabel: 'Session-derived entry views (1 per session)',
-      shortNote: 'Historical period prior to multi-page route tracking',
+      shortNote: `${sessionDerivedDaysCount} active day${sessionDerivedDaysCount === 1 ? '' : 's'} · 1 entry view recorded per session`,
       explanation:
-        'Records in this window were collected before multi-page SPA route tracking was enabled and represent 1 entry view per inbound session.',
+        'Records in this window reflect verified entry-session ingestion (1 landing view per session). Multi-page in-session SPA route views require the Analytics v3 page-view RPC (record_inbound_page_view) to be active.',
       sessionDerivedDaysCount,
       multiPageTrackedDaysCount: 0,
     };
@@ -255,10 +276,10 @@ export const evaluateTrafficProvenance = (
 
   return {
     mode: 'full_pageviews',
-    badgeLabel: 'Full page-view tracking',
+    badgeLabel: 'Full page-view tracking verified',
     shortNote: 'Includes entry views and subsequent in-session route transitions',
     explanation:
-      'Page views reflect tracked SPA page views across sessions. Historical days prior to the v3 upgrade fall back to 1 entry view per session when included in longer ranges.',
+      'Page views reflect verified SPA page-view ingestion across sessions. Historical days prior to the v3 upgrade fall back to 1 entry view per session when included in longer ranges.',
     sessionDerivedDaysCount,
     multiPageTrackedDaysCount,
   };

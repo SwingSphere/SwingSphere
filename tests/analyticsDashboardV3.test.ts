@@ -235,4 +235,52 @@ test('buildAnalyticsTrendPoints produces continuous buckets and computePercentag
 
   const range24h = resolveRangeDates('24h', '2026-10-08');
   assert.equal(range24h.defaultGranularity, 'hourly');
+  assert.equal(range24h.from, '2026-10-07');
+  assert.equal(range24h.to, '2026-10-08');
+
+  const range7d = resolveRangeDates('7d', '2026-10-08');
+  assert.equal(range7d.defaultGranularity, 'daily');
+  assert.equal(range7d.from, '2026-10-02');
+  assert.equal(range7d.to, '2026-10-08');
+
+  const range30d = resolveRangeDates('30d', '2026-10-08');
+  assert.equal(range30d.defaultGranularity, 'daily');
+  assert.equal(range30d.from, '2026-09-09');
+  assert.equal(range30d.to, '2026-10-08');
+
+  const range90d = resolveRangeDates('90d', '2026-10-08');
+  assert.equal(range90d.defaultGranularity, 'daily');
+  assert.equal(range90d.from, '2026-07-11');
+  assert.equal(range90d.to, '2026-10-08');
+
+  const range12m = resolveRangeDates('12m', '2026-10-08');
+  assert.equal(range12m.defaultGranularity, 'weekly');
+  assert.equal(range12m.from, '2025-10-09');
+  assert.equal(range12m.to, '2026-10-08');
+
+  const rangeAll = resolveRangeDates('all', '2026-10-08', '2026-09-14');
+  assert.equal(rangeAll.defaultGranularity, 'daily');
+  assert.equal(rangeAll.from, '2026-09-14');
+  assert.equal(rangeAll.to, '2026-10-08');
+
+  const weeklyPoints = buildAnalyticsTrendPoints({
+    from: range90d.from,
+    to: range90d.to,
+    granularity: 'weekly',
+    daily: [{ day: '2026-10-08', primary: 42, secondary: 30 }],
+    previousDaily: [{ day: '2026-07-10', primary: 21, secondary: 15 }],
+  });
+  assert.ok(weeklyPoints.length >= 12);
+  assert.equal(weeklyPoints.reduce((acc, p) => acc + p.primary, 0), 42);
+
+  const monthlyPoints = buildAnalyticsTrendPoints({
+    from: range12m.from,
+    to: range12m.to,
+    granularity: 'monthly',
+    daily: [{ day: '2026-10-08', primary: 100, secondary: 80 }],
+    previousDaily: [{ day: '2025-10-08', primary: 50, secondary: 40 }],
+  });
+  assert.ok(monthlyPoints.length >= 12);
+  assert.equal(monthlyPoints.reduce((acc, p) => acc + p.primary, 0), 100);
 });
+

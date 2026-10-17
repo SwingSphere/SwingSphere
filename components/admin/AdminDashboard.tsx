@@ -320,7 +320,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsTrafficLoading(true);
     try {
       const [inbound, outbound] = await Promise.all([
-        getInboundAnalyticsSummary(resolvedRange.from, resolvedRange.to).catch(() => null),
+        getInboundAnalyticsSummary({ from: resolvedRange.from, to: resolvedRange.to }).catch(() => null),
         getOutboundAnalyticsSummary({ from: resolvedRange.from, to: resolvedRange.to }).catch(() => null),
       ]);
       if (inbound) setInboundSummary(inbound);
@@ -477,7 +477,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     const hourly = (inboundSummary?.hourly ?? []).map((h) => ({
       hour: h.hour,
-      primary: Number(h.views ?? h.sessions ?? 0),
+      primary:
+        trafficMetricMode === 'views'
+          ? Number(h.views ?? h.sessions ?? 0)
+          : Number(h.visitors ?? h.sessions ?? 0),
       secondary: Number(h.sessions ?? 0),
     }));
 

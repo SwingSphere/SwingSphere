@@ -36,8 +36,6 @@ const featuredCityLinks: Array<{ label: string; to: string }> = [
   { label: 'Amsterdam Parties', to: '/swinger-parties/amsterdam' },
 ];
 
-const PATREON_ICON_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABKCAYAAAAG7CL/AAAFmElEQVR42u2bT4gcRRTGf92zm+wGowaDq/gHkSBGiCCKCB4MRA8eFC9hj6Ie9CIevIpePHmIB3MNKBL/gigeRCKYRHA9iKgrimh0BUNUsms2mZmdma7u9jCv8G1tz273bM9MzaQ/KGa6Zrqr3tdfvX6vqhoqVKhQocLQEXjQh73AdcCcfJ8FZuQ3AzSB88A5KecnlZiHgAeA24A7gRsVEYHTp1TVJ0ADqAM/AIvAKWBhWGSVjT3APPAJsCIqiMVQWwzQAdpSOkAknx353f6vJd/b8nkJ+Bh4QpTnPfYDR4BVMaCjPuty91tyrImKpMRS7LFR/2lInT225/8OvOIrIXPAMXVHjep821GKNkyXJENRLkFNdb0mcFH99idw2CdS5oFlZVxDfY96kGDUkImd//Qir6PqjPO/jmrrDR9IOarG/oqjFrfDJmN4WPLaGf/JIilxfE0kyomdIfn5KEl5TwxoZDjURGSeOL7GiFGbGW8cZRl1jTjjPOOo05aFUZDyZsZQaWYoJlFPlI5ysIlysvrpk2W0cdRlMoaUrtMqfXeYpLwgjV5QHW5m+JFhF+MQX5e654ZByoOigFV1Bxs9HOywS5ZajUTOc3mMq22DmI+A64GdcpwAU0DoyRMyUdGzkb5dIXUnBtXo88q5GsfpGQ8UE/fwbcsy7HcPSjHvAzukGLmOzWdqHqglcFRj+zcrCl+UfKsn+pH9MzKEZoA1YFrqY5Fr4gExqVKNTUR1DPXwVhfoh5gnpbFI7sCa3I2akxGPWjE15fMCuYF1qTuw1QWmCjZ4ALhLGrMEzMpdCKXUPCEnEUJi6VcCXCl93Vu2Yh5TjQTKudkxnHpCilFKMY6dNeAqKaUp5m5FgM+YEkICNQkWKt8TSfxVimJ2A/eN0QRZquyLlO+Zksmt0obSPuBaYdy3eeMsUqZV36yfsX0/VyYx+x2nFnhKiutrUjWcbED6XZlPpdtVMOc7AqWcQJE0I8enylTMLUJkOgbEJE5kb9OXAPgH+KxMYvY4jsx3x+umPruEsBPkWG4pQszN0uAOTwzXPk77vCTDPvuYDoCX8z7v82LaI2ebKnJSRUaY4QNtZr2L7urFz0WcVB78CtzqUT7kZtGpinYtITvV8VngpiIRYl6EnhGi05FQERSriNcowh6hoLFF745PQylLvTazbslvU8Ah4NtBEZN4FNSlYnxNRNRbaJ8jGxKCYGDgKnizZQhJiOZ/7FfULZrN/OD31KdyfFF/1ctAgxkfME8IEQ40wrtCSAe5zuLN3KdtLzvFhVTm+7KwHBFupz45Q1uhNi9gZNO/2vS5h/DPiwrHmLvGg6YXaZkelmT57QCe2n5fzv6a5Lnwa+Av4qe0InLy6o9H3QCPl/NXFWRdvfAG/TXdNaGmQHihCznJGxblcxm13HTmYb4CTwoihjKChCzN/S2YjiU6L9xCgh8C/wLPDWsD17EQP/cFL6ssL5LCWFwG9018eXGAGKEHOmj3PykKJXF1KlzvvlcyQICw6llHJn8Hqp5tFRktIPzrJ+d1MZi+52Q4CdHniJMcSXbNzx1C8pejNiS76f8cXQojHJ1yW2rYekDdpeY0wxX5Ji9OZBu1nxJ58MLaqYBZVlb1ctiTO5dJwxx2JJPsZuZEwkI756nBUD8EEJ7bpB4juSi4017ilBMfrcBjl3Uo4DTjqxR+TEJO6bIu4e4I4673UmCIfV3XZ3RmYdN9m4k3JV6vYxYfiR9dvX3e3vLjltVWffLTjCBOJeUYzer99WBLWdIdVk/ZsjvzDBeFUZHbHxlRm76bjDxjfTDjHhOK58TdMZQu0MJxwBT3OZ4Kgioa0SxIsOYQ3gKS4zHKS796TFxneILomy7hgXYwax3HqDOOZr6O42WKI7ib1MhQoVKlSoUKFChQoVKowH/gOkbjI6TYa2nwAAAABJRU5ErkJggg==';
-
 const SocialIcon: React.FC<{ name: SocialIconName }> = ({ name }) => {
   if (name === 'instagram') return <Instagram size={20} strokeWidth={1.9} aria-hidden="true" />;
 
@@ -65,7 +63,11 @@ const SocialIcon: React.FC<{ name: SocialIconName }> = ({ name }) => {
     );
   }
 
-  return <img src={PATREON_ICON_DATA_URI} alt="" className="h-5 w-5 object-contain opacity-90 invert transition-opacity group-hover:opacity-100" aria-hidden="true" />;
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <path d="M3 2h4.5v20H3V2Zm12 0a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" />
+    </svg>
+  );
 };
 
 const Footer: React.FC<{ compact?: boolean }> = ({ compact = false }) => {

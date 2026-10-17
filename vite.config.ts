@@ -6,7 +6,6 @@ import react from '@vitejs/plugin-react';
 import * as THREE from 'three';
 import tailwindcss from '@tailwindcss/postcss';
 import autoprefixer from 'autoprefixer';
-import { mockData } from './data/mockData';
 import { normalizeAdmin1, normalizeCountry, normalizePlace, slugifyPlace } from './lib/geoNormalize';
 import { completeMediaUpload, createCloudflareDirectUpload, deleteMediaAsset, moderateMediaAsset } from './lib/media/serverActions';
 import { deleteAuthenticatedAccount } from './lib/accountDeletionServer';
@@ -332,18 +331,21 @@ const comingSoonEntryPlugin = (enabled: boolean) => ({
 
 const loadListingsFromDisk = () => {
   if (!fs.existsSync(LISTINGS_STORE)) {
-    return [...mockData];
+    throw new Error(`Required catalog file is missing: ${LISTINGS_STORE}`);
   }
+  let parsed: unknown;
   try {
     const raw = fs.readFileSync(LISTINGS_STORE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
+    parsed = JSON.parse(raw);
   } catch (error) {
-    console.warn('Failed to read listings.local.json, falling back to mockData.', error);
+    throw new Error(
+      `Failed to parse catalog file ${LISTINGS_STORE}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-  return [...mockData];
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Invalid catalog file ${LISTINGS_STORE}: expected a JSON array of listings.`);
+  }
+  return parsed;
 };
 
 const saveListingsToDisk = (listings: any[]) => {

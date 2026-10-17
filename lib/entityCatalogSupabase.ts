@@ -10,7 +10,6 @@ import type {
   VenueData,
 } from '../types';
 import { mockOrganizations } from '../data/mockOrganizations';
-import { isSyntheticHostOrganization } from './entityCompatibility';
 import { supabase } from './supabase';
 import { VERIFIED_RESORT_PUBLIC_COORDINATES } from './travelMarkerModel';
 
@@ -30,26 +29,31 @@ const currentUserId = async (): Promise<string | null> => {
 
 const mapOrganization = (row: any): OrganizationData => {
   const fallbackOrg = mockOrgById.get(row.id);
+  const remoteName = typeof row.name === 'string' ? row.name.trim() : '';
+  const resolvedName =
+    fallbackOrg?.name && (!remoteName || remoteName === remoteName.toLowerCase())
+      ? fallbackOrg.name
+      : (remoteName || fallbackOrg?.name || '');
   return {
     id: row.id,
     type: 'organization',
-    name: row.name,
+    name: resolvedName,
     slug: row.slug,
-    displayTypes: row.display_types ?? [],
-    descriptionShort: row.description_short ?? undefined,
-    descriptionFull: row.description_full ?? undefined,
-    website: row.website ?? undefined,
-    instagram: row.instagram ?? undefined,
-    fetlife: row.fetlife ?? undefined,
-    contactEmail: row.contact_email ?? undefined,
+    displayTypes: row.display_types?.length ? row.display_types : (fallbackOrg?.displayTypes ?? []),
+    descriptionShort: row.description_short ?? fallbackOrg?.descriptionShort ?? undefined,
+    descriptionFull: row.description_full ?? fallbackOrg?.descriptionFull ?? undefined,
+    website: row.website ?? fallbackOrg?.website ?? undefined,
+    instagram: row.instagram ?? fallbackOrg?.instagram ?? undefined,
+    fetlife: row.fetlife ?? fallbackOrg?.fetlife ?? undefined,
+    contactEmail: row.contact_email ?? fallbackOrg?.contactEmail ?? undefined,
     logoImageUrl: row.logo_image_url ?? fallbackOrg?.logoImageUrl ?? undefined,
     headerImageUrl: row.header_image_url ?? fallbackOrg?.headerImageUrl ?? undefined,
-    galleryImageUrls: row.gallery_image_urls ?? [],
-    operatingRegions: row.operating_regions ?? [],
-    globePresence: row.globe_presence ?? undefined,
-    standards: row.standards ?? [],
+    galleryImageUrls: row.gallery_image_urls?.length ? row.gallery_image_urls : (fallbackOrg?.galleryImageUrls ?? []),
+    operatingRegions: row.operating_regions?.length ? row.operating_regions : (fallbackOrg?.operatingRegions ?? []),
+    globePresence: row.globe_presence ?? fallbackOrg?.globePresence ?? undefined,
+    standards: row.standards?.length ? row.standards : (fallbackOrg?.standards ?? []),
     status: row.status,
-    postedByUserId: row.created_by ?? undefined,
+    postedByUserId: row.created_by ?? fallbackOrg?.postedByUserId ?? undefined,
     createdAt: row.created_at ?? undefined,
     updatedAt: row.updated_at ?? undefined,
   };
@@ -233,28 +237,7 @@ const mapCruiseSailing = (row: any): CruiseSailingData => ({
 export const getOrganizations = async (): Promise<OrganizationData[]> => {
   const { data, error } = await supabase.from('organizations').select('*').order('name');
   if (error) throw error;
-  const remoteOrgs = (data ?? []).map(mapOrganization);
-  const byId = new Map<string, OrganizationData>();
-  for (const mockOrg of mockOrganizations) {
-    if (remoteOrgs.length > 0 && isSyntheticHostOrganization(mockOrg)) continue;
-    byId.set(mockOrg.id, mockOrg);
-  }
-  for (const remoteOrg of remoteOrgs) {
-    const existing = byId.get(remoteOrg.id);
-    const remoteName = typeof remoteOrg.name === 'string' ? remoteOrg.name.trim() : '';
-    const resolvedName =
-      existing?.name && (!remoteName || remoteName === remoteName.toLowerCase())
-        ? existing.name
-        : (remoteName || existing?.name || '');
-    byId.set(remoteOrg.id, {
-      ...(existing ?? {}),
-      ...remoteOrg,
-      name: resolvedName,
-      logoImageUrl: remoteOrg.logoImageUrl ?? existing?.logoImageUrl,
-      headerImageUrl: remoteOrg.headerImageUrl ?? existing?.headerImageUrl,
-    });
-  }
-  return Array.from(byId.values());
+  return (data ?? []).map(mapOrganization);
 };
 
 export const saveOrganization = async (organization: OrganizationData): Promise<OrganizationData> => {

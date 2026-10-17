@@ -1,10 +1,4 @@
-import type { ClubData, EventData, Listing, OrganizationData } from '../types';
-import { nameSlug, normalizeHostName } from '../lib/identityUtils';
-import { mockData } from './mockData';
-import { communityHostOrganization } from './communityHostSeed';
-
-const isClub = (listing: Listing): listing is ClubData => listing.type === 'club';
-const isEvent = (listing: Listing): listing is EventData => listing.type === 'event';
+import type { OrganizationData } from '../types';
 
 const hostRegion = (id: string, city: string, region: string, country: string, latitude: number, longitude: number) => ({
   id,
@@ -67,67 +61,62 @@ const illuminaughtyRegions = [
   hostRegion('washington-dc', 'Washington', 'DC', 'United States', 38.9072, -77.0369),
 ];
 
-const inferredHostPresenceByName: Record<string, OrganizationData['globePresence']> = {
-  illuminaughty: { visibility: 'visible', regions: illuminaughtyRegions },
-  'connect dance love': {
-    visibility: 'visible',
-    regions: [hostRegion('east-bay', 'Oakland', 'CA', 'United States', 37.8044, -122.2712)],
-  },
-};
-
-const clubToOrganization = (club: ClubData): OrganizationData => ({
-  // SEMv2 Phase 1 compatibility ID. Replace with persisted organization IDs when organizations are stored independently.
-  id: `org-${club.id}`,
-  type: 'organization',
-  name: club.name,
-  slug: nameSlug(club.name),
-  displayTypes: ['club'],
-  descriptionShort: club.description_short,
-  website: club.website,
-  contactEmail: club.contactEmail,
-  logoImageUrl: club.logoImageUrl,
-  headerImageUrl: club.headerImageUrl,
-  galleryImageUrls: club.galleryImageUrls,
-  status: club.status,
-  postedByUserId: club.postedByUserId,
-});
-
-const inferredHostMediaByName: Record<string, { logoImageUrl?: string; headerImageUrl?: string }> = {
-  'connect dance love': {
-    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/9173a390-49ff-423f-2c7e-e95485fbdc00/logosquare',
-    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/heropage',
-  },
-  'the club unhinged': {
-    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/037e61d1-4ca6-4358-c244-47ac4daa1e00/logosquare',
-    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/671d46e0-b2df-4258-aa0b-59a6146c4a00/heropage',
-  },
-  'krystal club prive': {
-    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/2efe3573-92a8-4f7b-72cc-4224fc2f4c00/logosquare',
-    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/fc474aa7-a206-4141-e043-78eb40371600/heropage',
-  },
-};
-
-const hostOrganizationsByNormalizedName = new Map<string, OrganizationData>();
-
-for (const event of mockData.filter(isEvent)) {
-  const normalizedHostName = normalizeHostName(event.hostName);
-  if (!normalizedHostName || hostOrganizationsByNormalizedName.has(normalizedHostName)) continue;
-  const hostMedia = inferredHostMediaByName[normalizedHostName];
-  hostOrganizationsByNormalizedName.set(normalizedHostName, {
-    // SEMv2 Phase 1 compatibility ID. Replace with persisted organization IDs when host/promoter records exist.
-    id: `org-host-${nameSlug(normalizedHostName)}`,
+const canonicalClubOrganizations: OrganizationData[] = [
+  {
+    id: 'org-club-twist-sf',
     type: 'organization',
-    name: event.hostName,
-    slug: nameSlug(normalizedHostName),
-    displayTypes: ['host'],
-    logoImageUrl: hostMedia?.logoImageUrl,
-    headerImageUrl: hostMedia?.headerImageUrl,
-    globePresence: inferredHostPresenceByName[normalizedHostName],
+    name: 'Twist SF',
+    slug: 'twist-sf',
+    displayTypes: ['club'],
+    descriptionShort: 'A dedicated on-premise lifestyle venue in San Francisco hosting couples-focused Friday parties, couples-and-single-women Saturdays, selected Her Fantasy Sundays and midweek erotic wellness classes.',
+    website: 'https://www.twist-sf.com/',
+    contactEmail: 'info@twist-sf.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/75478ddd-c63b-48c0-f104-aeac57317f00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f9b5a963-b624-4d23-9502-4aaf2afc8200/heropage',
+    galleryImageUrls: [],
     status: 'approved',
-  });
-}
-
-const hostOrganizations = Array.from(hostOrganizationsByNormalizedName.values());
+    postedByUserId: 'user1',
+  },
+  {
+    id: 'org-club-power-exchange-sf',
+    type: 'organization',
+    name: 'The Power Exchange',
+    slug: 'the-power-exchange',
+    displayTypes: ['club'],
+    descriptionShort: 'An adult lifestyle club with multiple themed rooms and events.',
+    website: 'https://powerexchange.com/',
+    contactEmail: 'info@thepowerexchange.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0fea5efc-22c8-4269-d912-9f9cf4a56700/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f5aec98f-5881-417d-6388-c30c8e393a00/heropage',
+    galleryImageUrls: [
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4a7bd731-2b3b-46fc-5fe1-6e580f11e900/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8e89f1a8-5b44-4fc3-7786-a1645210c400/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c334e84e-a598-4d0a-5cad-a2f6ea911a00/gallerythumb',
+    ],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+  {
+    id: 'org-club-club-joi-la',
+    type: 'organization',
+    name: 'Club Joi',
+    slug: 'club-joi',
+    displayTypes: ['club'],
+    descriptionShort: 'A private members lifestyle club in Downtown Los Angeles with recurring Friday and Saturday events, themed play spaces, and a location disclosed only to ticketed members.',
+    website: 'https://clubjoi.com/',
+    contactEmail: 'hello@clubjoi.com',
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/50701b48-242c-48a0-2c28-35abdc8c3500/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/18c6e6f7-8c75-460c-4fa6-2eb348bc0700/heropage',
+    galleryImageUrls: [
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7e7a8cc7-fee8-4343-7e17-93a0b6315e00/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a913bef4-1373-460b-946f-0822632c1100/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bcfd16fe-e778-479a-ca25-56c8c99f1000/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/e8382e63-7dc6-4fdb-4d0d-2fc465e93600/gallerythumb',
+    ],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+];
 
 const standaloneOrganizations: OrganizationData[] = [
   {
@@ -291,7 +280,10 @@ const standaloneOrganizations: OrganizationData[] = [
     contactEmail: 'info@connectdancelove.com',
     logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/5b78c7bd-b4ef-4c69-8872-03bf2a6c4000/logosquare',
     headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/6f4ac0f9-1c89-4351-b28a-fd644f052b00/heropage',
-    globePresence: inferredHostPresenceByName['connect dance love'],
+    globePresence: {
+      visibility: 'visible',
+      regions: [hostRegion('oakland-bay-area', 'Oakland', 'CA', 'United States', 37.8044, -122.2712)],
+    },
     status: 'approved',
     postedByUserId: 'user1',
   },
@@ -320,12 +312,7 @@ const standaloneOrganizations: OrganizationData[] = [
   },
 ];
 
-const standaloneSlugs = new Set(standaloneOrganizations.map((org) => org.slug));
-const deduplicatedHostOrganizations = hostOrganizations.filter((org) => !standaloneSlugs.has(org.slug));
-
 export const mockOrganizations: OrganizationData[] = [
-  ...mockData.filter(isClub).map(clubToOrganization),
+  ...canonicalClubOrganizations,
   ...standaloneOrganizations,
-  ...deduplicatedHostOrganizations,
-  communityHostOrganization,
 ];

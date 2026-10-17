@@ -1,62 +1,182 @@
-import type { ClubData, Listing, VenueData, VenueVisibility } from '../types';
-import { nameSlug } from '../lib/identityUtils';
-import { mockData } from './mockData';
+import type { VenueData } from '../types';
 
-const toVenueVisibility = (listing: Listing): VenueVisibility => {
-  if (listing.type === 'event' && listing.isAddressPrivate) return 'private';
-  return 'public_exact';
-};
-
-const toVenueName = (listing: Listing): string => {
-  if (listing.type === 'club') return listing.name;
-  return listing.isAddressPrivate ? `${listing.geopoint.address.city || listing.location} private venue` : listing.location || listing.name;
-};
-
-const toVenueSlug = (listing: Listing): string => {
-  const baseSlug = nameSlug(toVenueName(listing));
-  return `${baseSlug}-${listing.id}`;
-};
-
-const listingToVenue = (listing: Listing): VenueData => ({
-  // SEMv2 Phase 1 compatibility ID. Replace with persisted venue IDs when venues are stored independently.
-  id: `venue-${listing.id}`,
-  type: 'venue',
-  name: toVenueName(listing),
-  slug: toVenueSlug(listing),
-  description: listing.type === 'club' ? listing.description_short : undefined,
-  address: listing.geopoint.address,
-  latitude: listing.geopoint.latitude,
-  longitude: listing.geopoint.longitude,
-  locationMeta: listing.locationMeta,
-  visibility: toVenueVisibility(listing),
-  status: listing.status,
-  amenities: listing.type === 'club' ? [...listing.generalAmenities] : [],
-  logoImageUrl: listing.logoImageUrl,
-  headerImageUrl: listing.headerImageUrl,
-  galleryImageUrls: listing.galleryImageUrls,
-  buildingAssetId: listing.buildingAssetId,
-});
-
-const isClub = (listing: Listing): listing is ClubData => listing.type === 'club';
-
-const hasVerifiedStreetAddress = (venue: VenueData) => Boolean(venue.address.addressLine1?.trim());
-
-const VERIFIED_VENUE_SOURCE_IDS = new Set([
-  'club-twist-sf',
-  'club-power-exchange-sf',
-  'club-club-joi-la',
-]);
-
-const VERIFIED_VENUE_SLUGS = new Set([
-  'twist-sf',
-  'power-exchange',
-  'the-power-exchange',
-  'club-joi',
-]);
-
-export const mockVenues: VenueData[] = mockData
-  .filter(isClub)
-  .filter((club) => VERIFIED_VENUE_SOURCE_IDS.has(club.id) || VERIFIED_VENUE_SLUGS.has(nameSlug(club.name)))
-  .map(listingToVenue)
-  .filter(hasVerifiedStreetAddress);
-
+export const mockVenues: VenueData[] = [
+  {
+    id: 'venue-club-twist-sf',
+    type: 'venue',
+    name: 'Twist SF',
+    slug: 'twist-sf-club-twist-sf',
+    description: 'A dedicated on-premise lifestyle venue in San Francisco hosting couples-focused Friday parties, couples-and-single-women Saturdays, selected Her Fantasy Sundays and midweek erotic wellness classes.',
+    address: {
+      city: 'San Francisco',
+      region: 'California',
+      country: 'United States',
+      citySlug: 'san-francisco',
+      admin1Slug: 'ca',
+      postalCode: '94133',
+      countrySlug: 'us',
+      isCityState: false,
+      addressLine1: '387, Bay Street',
+    },
+    latitude: 37.8055766,
+    longitude: -122.4132692,
+    locationMeta: {
+      status: 'validated',
+      warnings: ['low-geocode-confidence'],
+      confidence: 0.95,
+      validatedAt: '2026-06-25T06:03:17.931Z',
+      geocoderLabel: "387, Bay Street, Fisherman's Wharf, North Beach, San Francisco, California, 94133, United States",
+      geocoderSource: 'nominatim',
+      normalizedAddress: '387, Bay Street, San Francisco, California, 94133, United States',
+    },
+    visibility: 'public_exact',
+    status: 'approved',
+    amenities: [
+      'Dedicated Lifestyle Venue',
+      'On-Premise Club',
+      'Private Party',
+      'Front Lounge Areas',
+      'BYOB Bar',
+      'Mixers Provided',
+      'Soft Drinks and Water',
+      'Dance Floor',
+      'VIP Booth',
+      'Small Stage',
+      'Dance Poles',
+      'Open Play Areas',
+      'Private Play Areas',
+      'Reservable VIP Areas',
+      'Reservable Private Room',
+      'Reservable Tables',
+      'Coat Check',
+      'Lockers',
+      'Shower',
+      'Multiple Restrooms',
+      'Safer Sex and Hygiene Supplies',
+      'Couples Welcome',
+      'Single Women Welcome',
+      'Selected Single Men Events',
+      'Newbie Friendly',
+      'Dress to Impress',
+      'Phones Restricted',
+      'Photography Prohibited',
+      'BYOB Only',
+      'No Drugs',
+      'Consent-Focused',
+      'Privacy-Focused',
+    ],
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/75478ddd-c63b-48c0-f104-aeac57317f00/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f9b5a963-b624-4d23-9502-4aaf2afc8200/heropage',
+    galleryImageUrls: [],
+    buildingAssetId: 'building-asset-club-twist-sf',
+  },
+  {
+    id: 'venue-club-power-exchange-sf',
+    type: 'venue',
+    name: 'The Power Exchange',
+    slug: 'the-power-exchange-club-power-exchange-sf',
+    description: 'An adult lifestyle club with multiple themed rooms and events.',
+    address: {
+      addressLine1: '220, Jones Street',
+      city: 'San Francisco',
+      region: 'California',
+      postalCode: '94102',
+      country: 'United States',
+      countrySlug: 'us',
+      admin1Slug: 'ca',
+      citySlug: 'san-francisco',
+      isCityState: false,
+    },
+    latitude: 37.7833969,
+    longitude: -122.4122138,
+    locationMeta: {
+      status: 'validated',
+      confidence: 0.95,
+      normalizedAddress: '220, Jones Street, San Francisco, California, 94102, United States',
+      geocoderLabel: 'Power Exchange, 220, Jones Street, Lower Nob Hill, Tenderloin, South of Market, San Francisco, California, 94102, United States',
+      geocoderSource: 'nominatim',
+      warnings: ['low-geocode-confidence'],
+      validatedAt: '2026-06-28T03:29:46.643Z',
+    },
+    visibility: 'public_exact',
+    status: 'approved',
+    amenities: [
+      'Adults Only',
+      'Theme Rooms',
+      'Casual',
+      'Dungeon / Kink',
+      'Kink / BDSM Friendly',
+      'Lockers',
+      'BYOB',
+    ],
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/0fea5efc-22c8-4269-d912-9f9cf4a56700/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/f5aec98f-5881-417d-6388-c30c8e393a00/heropage',
+    galleryImageUrls: [
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/4a7bd731-2b3b-46fc-5fe1-6e580f11e900/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/8e89f1a8-5b44-4fc3-7786-a1645210c400/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/c334e84e-a598-4d0a-5cad-a2f6ea911a00/gallerythumb',
+    ],
+    buildingAssetId: 'building-asset-club-power-exchange-sf',
+  },
+  {
+    id: 'venue-club-club-joi-la',
+    type: 'venue',
+    name: 'Club Joi',
+    slug: 'club-joi-club-club-joi-la',
+    description: 'A private members lifestyle club in Downtown Los Angeles with recurring Friday and Saturday events, themed play spaces, and a location disclosed only to ticketed members.',
+    address: {
+      addressLine1: 'Private location in ZIP 90015',
+      city: 'Los Angeles',
+      region: 'CA',
+      postalCode: '90015',
+      country: 'USA',
+      countrySlug: 'us',
+      admin1Slug: 'ca',
+      citySlug: 'los-angeles',
+      isCityState: false,
+    },
+    latitude: 34.0391,
+    longitude: -118.2669,
+    locationMeta: {
+      status: 'manual',
+      confidence: 0.95,
+      normalizedAddress: 'Los Angeles, CA 90015',
+      warnings: [
+        'exact-address-visible-to-ticketed-members-only',
+        'older-public-addresses-are-historical',
+        'coordinate-represents-current-90015-area',
+      ],
+      manualAdjustment: true,
+    },
+    visibility: 'public_exact',
+    status: 'approved',
+    amenities: [
+      'Private Members Club',
+      'Approximately 12,000 Square Feet',
+      'Downtown Los Angeles',
+      'Couples Welcome',
+      'Single Women Welcome',
+      'Limited Single Men at Select Events',
+      'Theme Nights',
+      'Social Lounge',
+      'Dance Floor',
+      'Bar',
+      'Open Play Areas',
+      'Private Play Spaces',
+      'On-Premise Lifestyle Venue',
+      'Dress Code',
+      'Privacy-Focused',
+      'Consent-Focused',
+      'Exact Address Provided to Ticketed Members',
+    ],
+    logoImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/50701b48-242c-48a0-2c28-35abdc8c3500/logosquare',
+    headerImageUrl: 'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/18c6e6f7-8c75-460c-4fa6-2eb348bc0700/heropage',
+    galleryImageUrls: [
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/7e7a8cc7-fee8-4343-7e17-93a0b6315e00/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/a913bef4-1373-460b-946f-0822632c1100/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/bcfd16fe-e778-479a-ca25-56c8c99f1000/gallerythumb',
+      'https://imagedelivery.net/0YABV7zDubNpRHPPku3C9Q/e8382e63-7dc6-4fdb-4d0d-2fc465e93600/gallerythumb',
+    ],
+    buildingAssetId: 'building-asset-club-club-joi-la',
+  },
+];

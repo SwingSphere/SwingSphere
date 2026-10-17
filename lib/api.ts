@@ -32,7 +32,6 @@ import { getBuildingAssetHistoryFromSupabase, getBuildingAssetsFromSupabase, rol
 import * as entityCatalog from './entityCatalogSupabase';
 import * as taxonomy from './taxonomySupabase';
 
-import { mockData } from '../data/mockData';
 import { mockUsers } from '../data/mockUsers';
 import { mockAuditLog } from '../data/mockAuditLog';
 import { mockFlaggedContent } from '../data/mockFlaggedContent';
@@ -42,7 +41,6 @@ import { mockOrganizations } from '../data/mockOrganizations';
 import { mockOrganizationVenueRelationships } from '../data/mockEntityRelationships';
 import { eventSeries as mockEventSeries } from '../data/eventSeries';
 import { organizationRelationships as mockOrganizationRelationships } from '../data/organizationRelationships';
-import { communityHostEvents } from '../data/communityHostSeed';
 import { getVenueForListing } from './entityCompatibility';
 import { normalizeListing } from './explorerFilters';
 import publicListings from 'virtual:swingsphere-public-listings';
@@ -74,21 +72,18 @@ const persistDeletedListingIds = (ids: string[]) => {
     window.localStorage.setItem(DELETED_LISTING_IDS_KEY, JSON.stringify(ids));
 };
 
-const withCommunityHostSeed = (listings: Listing[]): Listing[] => {
+const withoutDeletedLocalListings = (listings: Listing[]): Listing[] => {
+    if (!Array.isArray(listings)) {
+        throw new Error('Invalid local listings catalog: expected an array of listings.');
+    }
     const deletedIds = new Set(readDeletedListingIds());
-    const seededIds = new Set(communityHostEvents.map((event) => event.id));
-    return [
-        ...communityHostEvents
-            .filter((event) => !deletedIds.has(event.id))
-            .map((event) => normalizeListing({ ...event })),
-        ...listings
-            .filter((listing) => !seededIds.has(listing.id) && !deletedIds.has(listing.id))
-            .map((listing) => normalizeListing(listing)),
-    ];
+    return listings
+        .filter((listing) => !deletedIds.has(listing.id))
+        .map((listing) => normalizeListing({ ...listing }));
 };
 
 let db = {
-    listings: withCommunityHostSeed(publicListings.map((listing) => normalizeListing({ ...listing })) as Listing[]),
+    listings: withoutDeletedLocalListings(publicListings as Listing[]),
     users: [] as User[],
     auditLog: [] as AuditLogEntry[],
     flaggedContent: [] as FlaggedContent[],
@@ -260,7 +255,7 @@ const asListings = (value: unknown): Listing[] => Array.isArray(value)
 
 const mergeLegacyCatalog = (remoteListings: Listing[]): Listing[] => {
     const merged = new Map<string, Listing>();
-    withCommunityHostSeed(db.listings).forEach((listing) => merged.set(listing.id, normalizeListing(listing)));
+    withoutDeletedLocalListings(db.listings).forEach((listing) => merged.set(listing.id, normalizeListing(listing)));
     remoteListings.forEach((listing) => merged.set(listing.id, normalizeListing(listing)));
     return Array.from(merged.values());
 };
@@ -295,7 +290,7 @@ const importLegacyListingsIfNeeded = async (state: ListingStoreState | null): Pr
     try {
         const legacy = await requestAdminJson<Listing[]>('/api/admin/listings', { cache: 'no-store' });
         if (!Array.isArray(legacy) || !legacy.length) return false;
-        const source = withCommunityHostSeed(legacy);
+        const source = withoutDeletedLocalListings(legacy);
         const { error } = await supabase.rpc('admin_import_legacy_listings', { p_listings: source });
         if (error) throw error;
         return true;

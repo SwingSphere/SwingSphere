@@ -185,12 +185,13 @@ export const isEventAffirmativelyClubOperated = (
 export const hydrateOrganizationsFromCatalog = (catalog: BrandMediaCatalog): OrganizationData[] => {
   const orgMap = new Map<string, OrganizationData>();
   const hasExplicitOrgs = Boolean(catalog.organizations && catalog.organizations.length > 0);
-  for (const org of mockOrganizations) {
-    if (hasExplicitOrgs && isSyntheticHostOrganization(org)) continue;
-    orgMap.set(org.id, { ...org });
+  if (!hasExplicitOrgs) {
+    for (const org of mockOrganizations) {
+      orgMap.set(org.id, { ...org });
+    }
   }
   for (const org of catalog.organizations ?? []) {
-    const existing = orgMap.get(org.id);
+    const existing = orgMap.get(org.id) ?? mockOrgById.get(org.id);
     const hasExplicitLogoField = Object.prototype.hasOwnProperty.call(org, 'logoImageUrl');
     orgMap.set(org.id, {
       ...(existing ?? {}),

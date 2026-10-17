@@ -601,9 +601,13 @@ type EntityMeta = {
 export const buildCanonicalMediaCatalog = (input: CanonicalCatalogInput): CanonicalMediaCatalogResult => {
   const listings = input.listings ?? [];
 
+  const mockVenueById = new Map(mockVenues.map((v) => [v.id, v]));
   const venueMap = new Map<string, VenueData>();
-  for (const v of mockVenues) venueMap.set(v.id, v);
-  for (const v of input.venues ?? []) venueMap.set(v.id, { ...(venueMap.get(v.id) ?? {}), ...v });
+  if (!input.venues || input.venues.length === 0) {
+    for (const v of mockVenues) venueMap.set(v.id, v);
+  } else {
+    for (const v of input.venues) venueMap.set(v.id, { ...(mockVenueById.get(v.id) ?? {}), ...v });
+  }
   const venues = Array.from(venueMap.values());
 
   const relationships =

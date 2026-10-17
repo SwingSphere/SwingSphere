@@ -202,8 +202,95 @@ const createSampleInput = (): DashboardSummaryInput => ({
   ],
 });
 
-// 1. Test Traffic Provenance Evaluation
+// 1. Test Traffic Provenance Evaluation across all collection states
 {
+  // Null summary (e.g., RPC unreachable) must not claim "Page-view tracking active"
+  const unavailableProv = evaluateTrafficProvenance(null);
+  assert.equal(unavailableProv.mode, 'session_derived_estimates');
+  assert.equal(unavailableProv.badgeLabel, 'Traffic data unavailable');
+
+  // Empty storage (0 sessions and 0 all-time views)
+  const emptyStorageProv = evaluateTrafficProvenance({
+    from: '2026-09-10',
+    to: '2026-10-09',
+    totalSessions: 0,
+    totalViews: 0,
+    totalUniqueVisitors: 0,
+    bySource: [],
+    byReferrer: [],
+    byLanding: [],
+    byDevice: [],
+    byCountry: [],
+    byRegion: [],
+    byCampaign: [],
+    daily: [],
+  });
+  assert.equal(emptyStorageProv.mode, 'session_derived_estimates');
+  assert.equal(emptyStorageProv.badgeLabel, 'Tracking configured · No data ingested');
+
+  // Empty selected window when historical all-time data exists
+  const emptyWindowProv = evaluateTrafficProvenance({
+    from: '2026-10-09',
+    to: '2026-10-09',
+    totalSessions: 0,
+    totalViews: 0,
+    totalUniqueVisitors: 0,
+    kpis: {
+      viewsToday: 0,
+      sessionsToday: 0,
+      viewsYesterday: 12,
+      sessionsYesterday: 12,
+      views7d: 85,
+      sessions7d: 85,
+      viewsPrev7d: 90,
+      sessionsPrev7d: 90,
+      views30d: 1236,
+      sessions30d: 1236,
+      viewsPrev30d: 29,
+      sessionsPrev30d: 29,
+      viewsAllTime: 1265,
+      sessionsAllTime: 1265,
+      visitorsAllTime: 1265,
+      firstRecordedDay: '2026-09-14',
+    },
+    bySource: [],
+    byReferrer: [],
+    byLanding: [],
+    byDevice: [],
+    byCountry: [],
+    byRegion: [],
+    byCampaign: [],
+    daily: [],
+  });
+  assert.equal(emptyWindowProv.mode, 'session_derived_estimates');
+  assert.equal(emptyWindowProv.badgeLabel, 'No traffic in selected window');
+
+  // Session-derived-only summary (even when byPageView is populated from byLanding with views === entrySessions)
+  const sessionDerivedProv = evaluateTrafficProvenance({
+    from: '2026-09-10',
+    to: '2026-10-09',
+    totalSessions: 120,
+    totalViews: 120,
+    totalUniqueVisitors: 120,
+    bySource: [],
+    byReferrer: [],
+    byLanding: [{ landingPath: '/', sessions: 120 }],
+    byPageView: [{ pagePath: '/', views: 120, entrySessions: 120, uniqueSessions: 120 }],
+    byDevice: [],
+    byCountry: [],
+    byRegion: [],
+    byCampaign: [],
+    daily: [
+      { day: '2026-09-15', sessions: 40, views: 40, visitors: 40 },
+      { day: '2026-10-08', sessions: 80, views: 80, visitors: 80 },
+    ],
+  });
+  assert.equal(sessionDerivedProv.mode, 'session_derived_estimates');
+  assert.equal(sessionDerivedProv.badgeLabel, 'Session-derived entry views (1 per session)');
+  assert.equal(sessionDerivedProv.sessionDerivedDaysCount, 2);
+  assert.equal(sessionDerivedProv.multiPageTrackedDaysCount, 0);
+
+  // Mixed history (some days session-derived, some days with multi-page views)
   const mixedSummary: InboundAnalyticsSummary = {
     from: '2026-09-10',
     to: '2026-10-09',
@@ -227,6 +314,29 @@ const createSampleInput = (): DashboardSummaryInput => ({
   assert.equal(prov.mode, 'mixed_history');
   assert.equal(prov.sessionDerivedDaysCount, 1);
   assert.equal(prov.multiPageTrackedDaysCount, 1);
+
+  // Full page-view tracking verified
+  const fullTrackedProv = evaluateTrafficProvenance({
+    from: '2026-10-08',
+    to: '2026-10-09',
+    totalSessions: 80,
+    totalViews: 170,
+    totalUniqueVisitors: 62,
+    bySource: [],
+    byReferrer: [],
+    byLanding: [{ landingPath: '/', sessions: 80 }],
+    byPageView: [
+      { pagePath: '/', views: 95, entrySessions: 80, uniqueSessions: 80 },
+      { pagePath: '/globe', views: 75, entrySessions: 0, uniqueSessions: 60 },
+    ],
+    byDevice: [],
+    byCountry: [],
+    byRegion: [],
+    byCampaign: [],
+    daily: [{ day: '2026-10-08', sessions: 80, views: 170, visitors: 62 }],
+  });
+  assert.equal(fullTrackedProv.mode, 'full_pageviews');
+  assert.equal(fullTrackedProv.badgeLabel, 'Full page-view tracking verified');
 }
 
 // 2. Test Operational Queue Generation & Filtered Record IDs

@@ -78,16 +78,25 @@ const createSessionId = (): string => {
   return fallbackUuid();
 };
 
+let memorySessionId: string | null = null;
+
 export const getAnonymousSessionId = (): string => {
   if (typeof window === 'undefined') return createSessionId();
   try {
     const existing = window.sessionStorage.getItem(SESSION_KEY);
-    if (existing && UUID_PATTERN.test(existing)) return existing;
-    const created = createSessionId();
+    if (existing && UUID_PATTERN.test(existing)) {
+      memorySessionId = existing;
+      return existing;
+    }
+    const created = memorySessionId || createSessionId();
+    memorySessionId = created;
     window.sessionStorage.setItem(SESSION_KEY, created);
     return created;
   } catch {
-    return createSessionId();
+    if (!memorySessionId) {
+      memorySessionId = createSessionId();
+    }
+    return memorySessionId;
   }
 };
 

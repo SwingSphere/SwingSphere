@@ -233,6 +233,13 @@ begin
 
   get diagnostics v_inserted = row_count;
   if v_inserted = 0 then
+    perform public.record_inbound_page_view(
+      p_anonymous_session_id,
+      v_landing_path,
+      v_device_class,
+      v_os_family,
+      v_browser_family
+    );
     select id into v_id
     from public.inbound_visit_events
     where anonymous_session_id = p_anonymous_session_id;
@@ -574,7 +581,11 @@ begin
         coalesce((select sum(views)::bigint from public.inbound_page_view_daily_rollups), 0)::bigint,
         coalesce((select sum(sessions)::bigint from public.inbound_visit_daily_rollups), 0)::bigint
       ) as views_all_time,
-      coalesce((select sum(greatest(unique_visitors, sessions))::bigint from public.inbound_visit_daily_rollups), 0)::bigint as visitors_all_time,
+      case
+        when coalesce((select sum(greatest(unique_visitors, 0))::bigint from public.inbound_visit_daily_rollups), 0) > 0
+          then coalesce((select sum(greatest(unique_visitors, 0))::bigint from public.inbound_visit_daily_rollups), 0)::bigint
+        else coalesce((select sum(sessions)::bigint from public.inbound_visit_daily_rollups), 0)::bigint
+      end as visitors_all_time,
       (select min(day) from public.inbound_visit_daily_rollups) as first_recorded_day
   ),
   sources as (
@@ -590,7 +601,10 @@ begin
         source_category,
         source_name,
         sum(sessions)::bigint as sessions,
-        sum(greatest(unique_visitors, sessions))::bigint as visitors,
+        case
+          when sum(greatest(unique_visitors, 0)) > 0 then sum(greatest(unique_visitors, 0))::bigint
+          else sum(sessions)::bigint
+        end as visitors,
         sum(greatest(views, sessions))::bigint as views
       from filtered
       group by source_category, source_name
@@ -747,7 +761,13 @@ begin
         greatest(coalesce(pv.views, 0), coalesce(s.sessions, 0))::bigint as views,
         coalesce(s.visitors, coalesce(s.sessions, 0))::bigint as visitors
       from (
-        select day, sum(sessions)::bigint as sessions, sum(greatest(unique_visitors, sessions))::bigint as visitors
+        select
+          day,
+          sum(sessions)::bigint as sessions,
+          case
+            when sum(greatest(unique_visitors, 0)) > 0 then sum(greatest(unique_visitors, 0))::bigint
+            else sum(sessions)::bigint
+          end as visitors
         from filtered
         group by day
       ) s
@@ -763,15 +783,23 @@ begin
     select coalesce(jsonb_agg(jsonb_build_object(
       'day', day,
       'sessions', sessions,
-      'views', views
+      'views', views,
+      'visitors', visitors
     ) order by day), '[]'::jsonb) as value
     from (
       select
         coalesce(s.day, pv.day) as day,
         coalesce(s.sessions, 0)::bigint as sessions,
-        greatest(coalesce(pv.views, 0), coalesce(s.sessions, 0))::bigint as views
+        greatest(coalesce(pv.views, 0), coalesce(s.sessions, 0))::bigint as views,
+        coalesce(s.visitors, coalesce(s.sessions, 0))::bigint as visitors
       from (
-        select day, sum(sessions)::bigint as sessions
+        select
+          day,
+          sum(sessions)::bigint as sessions,
+          case
+            when sum(greatest(unique_visitors, 0)) > 0 then sum(greatest(unique_visitors, 0))::bigint
+            else sum(sessions)::bigint
+          end as visitors
         from prev_rollups
         group by day
       ) s
@@ -820,7 +848,7 @@ begin
       'to', v_prev_to,
       'totalSessions', prev_totals.prev_sessions,
       'totalViews', prev_totals.prev_views,
-      'totalUniqueVisitors', prev_totals.prev_visitors
+      'totalUniqueVisitors', case when prev_totals.prev_visitors > 0 then prev_totals.prev_visitors else prev_totals.prev_sessions end
     ),
     'kpis', jsonb_build_object(
       'viewsToday', kpi_windows.views_today,

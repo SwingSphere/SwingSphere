@@ -60,17 +60,59 @@ const scheduleLowPriority = (task: () => void): (() => void) => {
   return () => window.clearTimeout(timer);
 };
 
-const recordSubsequentPageView = async (pathname: string) => {
-  if (import.meta.env.DEV || !shouldTrackInboundPath(pathname)) return;
-  const pagePath = pathname.startsWith('/') ? pathname.slice(0, 500) || '/' : '/';
+let memorySessionRecorded = false;
+let memoryLastPath: string | null = null;
+let trackingQueue: Promise<void> = Promise.resolve();
 
+export const normalizeTrackedPagePath = (pathname: string): string => {
+  const raw = pathname.startsWith('/') ? pathname.slice(0, 500) || '/' : '/';
+  if (raw.length > 1 && raw.endsWith('/')) {
+    return raw.replace(/\/+$/, '') || '/';
+  }
+  return raw;
+};
+
+const isTrackingEnabled = (): boolean => {
+  if (!import.meta.env.DEV) return true;
+  if (typeof window !== 'undefined') {
+    const win = window as Window & { __SWINGSPHERE_ENABLE_ANALYTICS_IN_DEV__?: boolean };
+    if (win.__SWINGSPHERE_ENABLE_ANALYTICS_IN_DEV__ === true) return true;
+  }
+  return false;
+};
+
+const getRecordedSessionState = (): { recorded: boolean; lastPath: string | null } => {
   try {
-    const lastPath = window.sessionStorage.getItem(LAST_PATH_KEY);
-    if (lastPath === pagePath) return;
+    const recorded = window.sessionStorage.getItem(SENT_KEY) === '1' || memorySessionRecorded;
+    const lastPath = window.sessionStorage.getItem(LAST_PATH_KEY) ?? memoryLastPath;
+    return { recorded, lastPath };
+  } catch {
+    return { recorded: memorySessionRecorded, lastPath: memoryLastPath };
+  }
+};
+
+const setRecordedSessionState = (pagePath: string, markSessionRecorded = false): void => {
+  if (markSessionRecorded) {
+    memorySessionRecorded = true;
+  }
+  memoryLastPath = pagePath;
+  try {
+    if (markSessionRecorded) {
+      window.sessionStorage.setItem(SENT_KEY, '1');
+    }
     window.sessionStorage.setItem(LAST_PATH_KEY, pagePath);
   } catch {
-    // Proceed even if sessionStorage is restricted.
+    // In-memory state preserves deduplication when sessionStorage is restricted.
   }
+};
+
+const recordSubsequentPageView = async (pathname: string) => {
+  if (!isTrackingEnabled() || !shouldTrackInboundPath(pathname)) return;
+  const pagePath = normalizeTrackedPagePath(pathname);
+
+  const { lastPath } = getRecordedSessionState();
+  if (lastPath === pagePath) return;
+  setRecordedSessionState(pagePath, false);
 
   const sessionId = getAnonymousSessionId();
   const payload = {
@@ -89,16 +131,10 @@ const recordSubsequentPageView = async (pathname: string) => {
 };
 
 const recordInboundSession = async (pathname: string, search: string) => {
-  if (import.meta.env.DEV || !shouldTrackInboundPath(pathname)) return;
+  if (!isTrackingEnabled() || !shouldTrackInboundPath(pathname)) return;
 
-  const pagePath = pathname.startsWith('/') ? pathname.slice(0, 500) || '/' : '/';
-  let alreadyRecordedSession = false;
-
-  try {
-    alreadyRecordedSession = window.sessionStorage.getItem(SENT_KEY) === '1';
-  } catch {
-    // Continue without the optimization when storage is unavailable.
-  }
+  const pagePath = normalizeTrackedPagePath(pathname);
+  const { recorded: alreadyRecordedSession } = getRecordedSessionState();
 
   if (alreadyRecordedSession) {
     await recordSubsequentPageView(pagePath);
@@ -154,15 +190,16 @@ const recordInboundSession = async (pathname: string, search: string) => {
   }
 
   if (!error) {
-    try {
-      window.sessionStorage.setItem(SENT_KEY, '1');
-      window.sessionStorage.setItem(LAST_PATH_KEY, pagePath);
-    } catch {
-      // The database uniqueness constraint still prevents duplicate session rows.
-    }
+    setRecordedSessionState(pagePath, true);
   } else if (import.meta.env.DEV) {
     console.warn('Inbound analytics recording failed:', error.message);
   }
+};
+
+const enqueueInboundTracking = (pathname: string, search: string): void => {
+  trackingQueue = trackingQueue
+    .then(() => recordInboundSession(pathname, search))
+    .catch(() => {});
 };
 
 const InboundAnalyticsTracker: React.FC = () => {
@@ -170,7 +207,7 @@ const InboundAnalyticsTracker: React.FC = () => {
 
   useEffect(() => {
     return scheduleLowPriority(() => {
-      void recordInboundSession(location.pathname, location.search);
+      enqueueInboundTracking(location.pathname, location.search);
     });
   }, [location.pathname, location.search]);
 

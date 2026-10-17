@@ -40,16 +40,25 @@ const createUuid = (): string => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
+let memoryVisitorId: string | null = null;
+
 export const getAnonymousVisitorId = (fallbackSessionId?: string): string => {
   if (typeof window === 'undefined') return fallbackSessionId || createUuid();
   try {
     const existing = window.localStorage.getItem(VISITOR_KEY);
-    if (existing && UUID_PATTERN.test(existing)) return existing;
-    const created = createUuid();
+    if (existing && UUID_PATTERN.test(existing)) {
+      memoryVisitorId = existing;
+      return existing;
+    }
+    const created = memoryVisitorId || fallbackSessionId || createUuid();
+    memoryVisitorId = created;
     window.localStorage.setItem(VISITOR_KEY, created);
     return created;
   } catch {
-    return fallbackSessionId || createUuid();
+    if (!memoryVisitorId) {
+      memoryVisitorId = fallbackSessionId || createUuid();
+    }
+    return memoryVisitorId;
   }
 };
 

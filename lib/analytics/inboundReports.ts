@@ -38,6 +38,7 @@ export type InboundHourlyPoint = {
   hour: string;
   sessions: number;
   views?: number;
+  visitors?: number;
 };
 
 export type InboundPageViewRow = {
@@ -128,6 +129,12 @@ const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
 
 const addDays = (dateStr: string, days: number): string => {
   const base = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) {
+    const fallback = new Date();
+    fallback.setUTCHours(0, 0, 0, 0);
+    fallback.setUTCDate(fallback.getUTCDate() + days);
+    return toIsoDate(fallback);
+  }
   base.setUTCDate(base.getUTCDate() + days);
   return toIsoDate(base);
 };
@@ -149,10 +156,19 @@ const enrichLegacyInboundSummary = async (
   filters: { from: string; to: string },
 ): Promise<InboundAnalyticsSummary> => {
   if (raw.kpis && raw.previousPeriod) {
-    return raw;
+    return {
+      ...raw,
+      previousDaily: (raw.previousDaily ?? []).map((d) => ({
+        ...d,
+        views: d.views ?? d.sessions,
+        visitors: d.visitors ?? d.sessions,
+      })),
+    };
   }
 
   const todayStr = toIsoDate(new Date());
+  const safeTo = filters?.to || raw?.to || todayStr;
+  const safeFrom = filters?.from || raw?.from || addDays(safeTo, -29);
   const yesterdayStr = addDays(todayStr, -1);
   const last7Start = addDays(todayStr, -6);
   const prev7Start = addDays(todayStr, -13);
@@ -161,9 +177,9 @@ const enrichLegacyInboundSummary = async (
   const prev30Start = addDays(todayStr, -59);
   const prev30End = addDays(todayStr, -30);
 
-  const span = diffDaysInclusive(filters.from, filters.to);
-  const prevTo = addDays(filters.from, -1);
-  const prevFrom = addDays(filters.from, -span);
+  const span = diffDaysInclusive(safeFrom, safeTo);
+  const prevTo = addDays(safeFrom, -1);
+  const prevFrom = addDays(safeFrom, -span);
 
   let allDaily: InboundDailyPoint[] = raw.daily ?? [];
   let recentHourly: InboundHourlyPoint[] = raw.hourly ?? [];
@@ -181,12 +197,12 @@ const enrichLegacyInboundSummary = async (
     // Keep raw.daily if secondary query is unavailable (e.g. in unit/browser mock tests).
   }
 
-  // If range is <= 2 days and hourly is missing, derive hourly from recentSessions in detail RPC
-  if (!recentHourly.length && span <= 2) {
+  // If range is <= 7 days and hourly is missing, derive hourly from recentSessions in detail RPC
+  if (!recentHourly.length && span <= 7) {
     try {
       const { data: detailData } = await supabase.rpc('inbound_admin_source_detail', {
-        p_from: addDays(filters.to, -1),
-        p_to: filters.to,
+        p_from: addDays(safeTo, -1),
+        p_to: safeTo,
         p_source_category: null,
         p_source_name: null,
         p_referrer_domain: null,
@@ -202,7 +218,7 @@ const enrichLegacyInboundSummary = async (
         hourCounts.set(bucket, (hourCounts.get(bucket) ?? 0) + 1);
       }
       recentHourly = Array.from(hourCounts.entries())
-        .map(([hour, sessions]) => ({ hour, sessions, views: sessions }))
+        .map(([hour, sessions]) => ({ hour, sessions, views: sessions, visitors: sessions }))
         .sort((a, b) => a.hour.localeCompare(b.hour));
     } catch {
       // Ignore if unavailable.
@@ -227,13 +243,19 @@ const enrichLegacyInboundSummary = async (
   const prevSessions = sumRange(prevFrom, prevTo);
   const previousDaily = allDaily
     .filter((d) => d.day >= prevFrom && d.day <= prevTo)
-    .map((d) => ({ ...d, views: d.views ?? d.sessions }));
+    .map((d) => ({
+      ...d,
+      views: d.views ?? d.sessions,
+      visitors: d.visitors ?? d.sessions,
+    }));
 
   const firstRecordedDay = allDaily.length ? allDaily[0].day : null;
   const totalSessions = Number(raw.totalSessions || 0);
 
   return {
     ...raw,
+    from: raw.from || safeFrom,
+    to: raw.to || safeTo,
     totalSessions,
     totalViews: raw.totalViews ?? totalSessions,
     totalUniqueVisitors: raw.totalUniqueVisitors ?? totalSessions,
@@ -293,10 +315,14 @@ const enrichLegacyInboundSummary = async (
   };
 };
 
-export const getInboundAnalyticsSummary = async (filters: {
-  from: string;
-  to: string;
-}): Promise<InboundAnalyticsSummary> => {
+export const getInboundAnalyticsSummary = async (
+  filtersOrFrom: { from: string; to: string } | string,
+  maybeTo?: string,
+): Promise<InboundAnalyticsSummary> => {
+  const filters =
+    typeof filtersOrFrom === 'string'
+      ? { from: filtersOrFrom, to: maybeTo ?? filtersOrFrom }
+      : filtersOrFrom;
   const { data, error } = await supabase.rpc('inbound_admin_summary', {
     p_from: filters.from,
     p_to: filters.to,

@@ -897,7 +897,7 @@ const DiscoverPage: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-[#05070a] text-gray-100">
       {/* Hero Section — unclipped so dropdowns flow naturally */}
-      <section className="relative isolate border-b border-white/[0.08]">
+      <section className="relative isolate z-10 border-b border-white/[0.08]">
         {/* Nightlife Ambient Glow — constrained internally */}
         <div
           className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
