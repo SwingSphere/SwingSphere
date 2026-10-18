@@ -114,21 +114,23 @@ const MobileExplorerPrototype: React.FC<MobileExplorerPrototypeProps> = ({
   };
 
   return (
-    <div className={`pointer-events-none absolute inset-0 z-[75] ${devMobileMode ? '' : 'md:hidden'}`} aria-label={tabletMode ? 'SwingSphere tablet explorer' : 'SwingSphere mobile explorer'}>
-      <div className={`pointer-events-auto absolute top-[max(1.45rem,env(safe-area-inset-top))] ${tabletMode ? 'left-6 w-[min(360px,calc(100%-3rem))]' : 'inset-x-3'}`}>
-        <button
-          type="button"
-          onClick={() => onNavigate('/')}
-          className={`flex items-center gap-2.5 px-1 text-left ${tabletMode ? 'min-h-12' : 'min-h-11'}`}
-          aria-label="SwingSphere home"
-        >
-          <img src="/swingsphere-logo_2.png" alt="" className={`${tabletMode ? 'h-10 w-10' : 'h-9 w-9'} shrink-0 object-contain`} />
-          <span className={`${tabletMode ? 'text-[19px]' : 'text-[17px]'} font-black uppercase tracking-[0.04em] leading-none`}>
-            <span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span>
-          </span>
-        </button>
+    <div className={`pointer-events-none absolute inset-0 z-[75] ${devMobileMode ? '' : 'min-[480px]:hidden'}`} aria-label={tabletMode ? 'SwingSphere tablet explorer' : 'SwingSphere mobile explorer'}>
+      <div className={`pointer-events-auto absolute ${devMobileMode ? 'top-[max(1.45rem,env(safe-area-inset-top))]' : 'top-[calc(62px+0.75rem)]'} ${tabletMode ? 'left-6 w-[min(360px,calc(100%-3rem))]' : 'inset-x-3'}`}>
+        {devMobileMode ? (
+          <button
+            type="button"
+            onClick={() => onNavigate('/')}
+            className={`flex items-center gap-2.5 px-1 text-left ${tabletMode ? 'min-h-12' : 'min-h-11'}`}
+            aria-label="SwingSphere home"
+          >
+            <img src="/swingsphere-logo_2.png" alt="" className={`${tabletMode ? 'h-10 w-10' : 'h-9 w-9'} shrink-0 object-contain`} />
+            <span className={`${tabletMode ? 'text-[19px]' : 'text-[17px]'} font-black uppercase tracking-[0.04em] leading-none`}>
+              <span className="text-[#ff2d3b]">Swing</span><span className="text-white">Sphere</span>
+            </span>
+          </button>
+        ) : null}
 
-        <div className={`ss-glass ss-glass--liquid mt-3 flex min-w-0 items-center border-white/[0.09] shadow-[0_18px_50px_rgba(0,0,0,0.36)] ${tabletMode ? 'h-[64px] rounded-[22px] px-4' : 'h-[52px] rounded-[18px] px-3'}`}>
+        <div className={`ss-glass ss-glass--liquid ${devMobileMode ? 'mt-3' : ''} flex min-w-0 items-center border-white/[0.09] shadow-[0_18px_50px_rgba(0,0,0,0.36)] ${tabletMode ? 'h-[64px] rounded-[22px] px-4' : 'h-[52px] rounded-[18px] px-3'}`}>
           <div className="min-w-0 flex-1 px-1">
             <div className={`${tabletMode ? 'text-[10px]' : 'text-[9px]'} font-bold uppercase tracking-[0.2em] text-red-300/75`}>
               {surfaceMode === 'map' ? 'Local view' : 'Explore'}

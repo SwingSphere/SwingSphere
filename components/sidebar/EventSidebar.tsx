@@ -48,45 +48,52 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
       ? 'ss-glass ss-glass--liquid flex h-full min-h-0 w-full flex-col overflow-hidden rounded-l-[24px] text-gray-100'
       : 'ss-glass ss-glass--liquid absolute right-0 top-0 z-20 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-l-[24px] text-gray-100 transition-transform duration-300 ease-in-out sm:w-[400px]';
 
+  const heroClass = mode === 'floating'
+    ? 'relative h-40 shrink-0 xl:h-48'
+    : 'relative h-48 shrink-0 xl:h-52';
+  const contentClass = mode === 'embedded' || mode === 'floating'
+    ? 'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 [scrollbar-width:thin]'
+    : 'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 [scrollbar-width:thin]';
+
   return (
     <div className={shellClass}>
-      <div className={mode === 'floating' ? 'relative h-44 shrink-0 xl:h-48' : 'relative h-48 shrink-0 xl:h-52'}>
+      <div className={heroClass}>
         <img src={getEventCardImageUrl(event, entityIndex)} onError={handleListingImageError} alt={event.name} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
-        <button onClick={onClose} className="ss-glass ss-glass--liquid ss-glass--interactive absolute right-4 top-4 rounded-full p-2 text-white" aria-label="Close event details">
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
+        <button onClick={onClose} className="ss-glass ss-glass--liquid ss-glass--interactive absolute right-3.5 top-3.5 rounded-full p-2 text-white" aria-label="Close event details">
           <X className="h-5 w-5" />
         </button>
-        <div className="ss-glass ss-glass--liquid absolute left-4 top-4 h-16 w-16 overflow-hidden rounded-[18px]">
+        <div className="ss-glass ss-glass--liquid absolute left-4 top-3.5 h-12 w-12 xl:h-16 xl:w-16 overflow-hidden rounded-[16px] xl:rounded-[18px]">
           <img src={brandLogoImage} onError={handleListingImageError} alt={`${event.name} logo`} className="h-full w-full object-contain" />
         </div>
-        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-4">
+        <div className="absolute bottom-3.5 left-4 right-4 flex items-end justify-between gap-3">
           <div className="min-w-0">
             <Link
               to={getListingCanonicalPath(event, entityIndex)}
-              className="block truncate text-2xl font-bold text-white transition hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+              className={`${mode === 'floating' ? 'text-xl xl:text-2xl' : 'text-2xl'} block truncate font-bold leading-tight text-white transition hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300`}
             >
               {event.name}
             </Link>
-            <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-gray-300">
-              <MapPin className="h-4 w-4 shrink-0 text-amber-300" />
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs xl:text-sm text-gray-300">
+              <MapPin className="h-3.5 w-3.5 xl:h-4 xl:w-4 shrink-0 text-amber-300" />
               <span className="truncate">{compactLocation || 'Location announced by host'}</span>
-              {physicalAddress.country ? <CountryFlag country={physicalAddress.country} className="h-3 w-[18px]" /> : null}
+              {physicalAddress.country ? <CountryFlag country={physicalAddress.country} className="h-3 w-[18px] shrink-0" /> : null}
             </div>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             {rating !== null ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-yellow-300/20 bg-black/35 px-3 py-1.5 text-sm text-yellow-300 backdrop-blur-md">
+              <div className="flex items-center gap-1 rounded-full border border-yellow-300/20 bg-black/45 px-2.5 py-1 text-xs xl:text-sm text-yellow-300 backdrop-blur-md">
                 <Star className="h-3.5 w-3.5 fill-current" />
                 <span className="font-semibold">{rating.toFixed(1)}</span>
               </div>
             ) : null}
-            <span className="rounded-full border border-amber-300/45 bg-amber-400/16 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 backdrop-blur-md">Event</span>
+            <span className="rounded-full border border-amber-300/45 bg-amber-400/16 px-2.5 py-0.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 backdrop-blur-md">Event</span>
           </div>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
-        <div className="flex h-7 min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+      <div className={contentClass}>
+        <div className="flex h-7 shrink-0 min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
           {visibleTags.map((tag) => (
             <span key={tag} title={tag} className="min-w-0 shrink rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-100">
               <span className="block truncate whitespace-nowrap">{tag}</span>
@@ -121,12 +128,12 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
           </div>
         </section>
 
-        <section className="ss-glass ss-glass--ambient min-h-[88px] flex-1 overflow-hidden rounded-2xl p-4">
-          <p className="line-clamp-4 text-sm leading-6 text-gray-300">{event.description_full}</p>
+        <section className="ss-glass ss-glass--ambient min-h-[88px] shrink-0 rounded-2xl p-4">
+          <p className="whitespace-pre-line text-sm leading-6 text-gray-300">{event.description_full}</p>
         </section>
 
         {mapCenter ? (
-          <div className="ss-glass ss-glass--ambient mt-auto h-32 shrink-0 overflow-hidden rounded-2xl">
+          <div className="ss-glass ss-glass--ambient h-24 shrink-0 overflow-hidden rounded-2xl xl:h-32">
             <MiniMapHybrid
               center={mapCenter}
               cityLabel={physicalAddress.city || event.name}
@@ -136,10 +143,15 @@ const EventSidebar: React.FC<EventSidebarProps> = ({ event, onClose, entityIndex
             />
           </div>
         ) : null}
+      </div>
 
-        <Link to={getListingCanonicalPath(event, entityIndex)} className="ss-glass ss-glass--liquid ss-glass--interactive z-10 mt-1 flex min-h-14 shrink-0 items-center justify-center gap-3 rounded-2xl border border-amber-300/35 bg-[rgba(36,26,4,0.92)] px-5 text-base font-bold text-white shadow-[0_-8px_24px_rgba(0,0,0,0.28)]">
+      <div className="shrink-0 border-t border-white/[0.06] px-4 pb-4 pt-3">
+        <Link
+          to={getListingCanonicalPath(event, entityIndex)}
+          className="ss-glass ss-glass--liquid ss-glass--interactive ss-discovery-next-step ss-discovery-next-step--event relative z-10 flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[rgba(36,24,6,0.94)] px-5 text-base font-bold text-white shadow-[0_-8px_24px_rgba(0,0,0,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-amber-300"
+        >
           View Event Details
-          <ArrowRight className="h-5 w-5" />
+          <ArrowRight className="h-5 w-5" aria-hidden="true" />
         </Link>
       </div>
     </div>

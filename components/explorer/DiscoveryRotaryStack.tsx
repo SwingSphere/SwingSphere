@@ -23,6 +23,7 @@ type Props = {
   hosts?: DiscoveryRotaryHostItem[];
   selectedListingId?: string | null;
   anchor: { x: number; y: number } | null;
+  avoidRightPanel?: boolean;
   onSelectListing: (listingId: string) => void;
   onSelectHost?: (host: DiscoveryRotaryHostItem) => void;
   onOpenMap: () => void;
@@ -43,6 +44,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
   hosts = [],
   selectedListingId = null,
   anchor,
+  avoidRightPanel = false,
   onSelectListing,
   onSelectHost,
   onOpenMap,
@@ -59,10 +61,13 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
   const touchStartYRef = useRef<number | null>(null);
   const rotationTimerRef = useRef<number | null>(null);
 
-  const [viewportWidth, setViewportWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 768,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1024,
+  }));
 
   useEffect(() => {
-    const handleResize = () => setViewportWidth(window.innerWidth);
+    const handleResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
     window.addEventListener('resize', handleResize);
     window.visualViewport?.addEventListener('resize', handleResize);
     return () => {
@@ -77,18 +82,12 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
     setOutgoingIndex(null);
   }, [items, scopeName]);
 
-  // When items load or change and no selectedListingId is provided, initialize to front item
-  useEffect(() => {
-    if (!selectedListingId && items.length > 0) {
-      const first = items[0];
-      if (first.kind === 'listing') onSelectListing(first.listing.id);
-      else if (first.kind === 'host') onSelectHost?.(first.host);
-    }
-  }, [items, onSelectHost, onSelectListing, selectedListingId]);
-
   useEffect(() => {
     if (!selectedListingId || outgoingIndex !== null) return;
-    const selectedIndex = items.findIndex((item) => item.kind === 'listing' && item.listing.id === selectedListingId);
+    const selectedIndex = items.findIndex((item) =>
+      (item.kind === 'listing' && item.listing.id === selectedListingId)
+      || (item.kind === 'host' && (item.host.id === selectedListingId || item.host.organizationId === selectedListingId)),
+    );
     if (selectedIndex < 0) return;
     setCardOrder((current) => {
       if (current[0] === selectedIndex) return current;
@@ -115,16 +114,30 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
   if (!anchor || items.length === 0) return null;
 
   const count = items.length;
-  const isMobile = viewportWidth < 640;
-  const maxAvailableWidth = viewportWidth - 24;
-  const stackWidth = isMobile ? Math.min(350, Math.max(280, maxAvailableWidth)) : 350;
+  const viewportWidth = viewport.width;
+  const viewportHeight = viewport.height;
+  const isMobile = viewportWidth < 480;
+  const rightControlsAllowance = isMobile ? 0 : 48;
+  const rightPanelClearance = avoidRightPanel
+    ? viewportWidth >= 1280
+      ? Math.min(388, Math.max(320, viewportWidth * 0.22)) + 24 + rightControlsAllowance
+      : viewportWidth >= 480
+        ? Math.min(320, viewportWidth * 0.43) + 16 + (viewportWidth >= 1024 ? 56 : 0) + rightControlsAllowance + 8
+        : 0
+    : rightControlsAllowance + 16;
+  const availableLeftWidth = viewportWidth - 16 - rightPanelClearance;
+  const stackWidth = isMobile
+    ? Math.min(340, Math.max(260, viewportWidth - 24))
+    : Math.min(336, Math.max(236, availableLeftWidth));
   const halfWidth = stackWidth / 2;
-  const minX = halfWidth + 12;
-  const maxX = viewportWidth - halfWidth - 12;
-  const clampedX = isMobile
-    ? (minX <= maxX ? Math.max(minX, Math.min(anchor.x, maxX)) : viewportWidth / 2)
-    : anchor.x;
-  const clampedY = isMobile ? Math.max(anchor.y, 290) : anchor.y;
+  const minX = halfWidth + 16;
+  const maxX = viewportWidth - halfWidth - rightPanelClearance;
+  const clampedX = minX <= maxX
+    ? Math.max(minX, Math.min(anchor.x, maxX))
+    : Math.max(minX, maxX);
+  const minY = isMobile ? 290 : 340;
+  const maxY = isMobile ? viewportHeight - 120 : Math.max(minY, viewportHeight - 196);
+  const clampedY = Math.max(minY, Math.min(anchor.y, maxY));
 
   const advance = (delta: number) => {
     if (!count) return;
@@ -168,11 +181,11 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
 
   return (
     <div
-      className="pointer-events-auto absolute z-[80]"
+      className="pointer-events-auto absolute z-[24]"
       style={{
         left: clampedX,
         top: clampedY,
-        width: isMobile ? stackWidth : 'min(350px, calc(100vw - 56px))',
+        width: stackWidth,
         height: 230,
         transform: 'translate(-50%, calc(-100% - 20px))',
         perspective: '950px',
@@ -216,6 +229,17 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
         const logoUrl = listing ? getListingLogoUrl(listing, entityIndex) : host?.logoUrl ?? '';
         const heroUrl = listing ? getListingCardImageUrl(listing, entityIndex) : host?.heroUrl ?? host?.logoUrl ?? '';
 
+        const itemType = listing ? (listing.type as string) : 'promoter';
+        const badgeConfig = itemType === 'event'
+          ? { label: 'Event', className: 'border-amber-300/45 bg-amber-400/18 text-amber-100' }
+          : itemType === 'promoter'
+            ? { label: 'Host', className: 'border-blue-400/50 bg-blue-500/18 text-blue-100' }
+            : itemType === 'resort'
+              ? { label: 'Resort', className: 'border-emerald-300/45 bg-emerald-400/18 text-emerald-100' }
+              : itemType === 'cruise'
+                ? { label: 'Cruise', className: 'border-violet-300/45 bg-violet-400/18 text-violet-100' }
+                : { label: 'Club', className: 'border-red-400/50 bg-red-500/18 text-red-100' };
+
         return (
           <button
             key={item.id}
@@ -248,7 +272,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
             style={{
               position: 'absolute',
               left: isMobile ? `calc((${stackWidth}px - 44px) / 2)` : '50%',
-              width: isMobile ? `calc(100% - 44px)` : 'min(330px, calc(100vw - 104px))',
+              width: isMobile ? 'calc(100% - 44px)' : '100%',
               height: 104,
               zIndex: isOutgoing ? 28 : 20 - depth,
               opacity: isOutgoing ? 1 : isVisible ? [1, 0.8, 0.59, 0.4, 0.25][depth] ?? 0 : 0,
@@ -256,7 +280,7 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
               transformOrigin: '50% 100%',
               transform: [
                 'translate(-50%, -100%)',
-                'translateX(' + (depthOffset * (isMobile ? 6 : 15)) + 'px)',
+                'translateX(' + (depthOffset * (isMobile || stackWidth < 290 ? 6 : 11)) + 'px)',
                 'translateY(' + (-depthOffset * 14) + 'px)',
                 'translateZ(' + (-depthOffset * 38) + 'px)',
                 'scale(' + (1 - depthOffset * 0.022) + ')',
@@ -286,20 +310,25 @@ const DiscoveryRotaryStack: React.FC<Props> = ({
               className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.58]"
             />
             <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/72 via-black/48 to-black/58" />
-            <span className="relative flex h-full items-center gap-3 px-3.5 sm:px-4">
+            <span className="relative flex h-full items-center gap-3 px-3 sm:px-3.5">
               <img
                 src={logoUrl}
                 onError={handleListingImageError}
                 alt=""
-                className="h-[72px] w-[72px] shrink-0 rounded-[16px] border border-white/15 bg-black/45 object-cover shadow-lg sm:h-[76px] sm:w-[76px]"
+                className="h-[68px] w-[68px] shrink-0 rounded-[16px] border border-white/15 bg-black/45 object-cover shadow-lg sm:h-[72px] sm:w-[72px]"
               />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-bold text-white sm:text-[15px]">{name}</span>
-                <span className="mt-1 block truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white/55 sm:text-[11px]">{location}</span>
+                <span className="mt-1 block truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white/60 sm:text-[11px]">{location}</span>
               </span>
               {isActive ? (
-                <span className="shrink-0 rounded-full border border-red-300/25 bg-red-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-red-100">
-                  {activeIndex + 1}/{count}
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`rounded-full border px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-[0.12em] ${badgeConfig.className}`}>
+                    {badgeConfig.label}
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-black/45 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-gray-200">
+                    {activeIndex + 1}/{count}
+                  </span>
                 </span>
               ) : null}
             </span>

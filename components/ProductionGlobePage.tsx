@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  Building2,
   CalendarDays,
   Clock3,
   Crosshair,
@@ -8,8 +9,12 @@ import {
   LockKeyhole,
   MapPin,
   Minus,
+  Palmtree,
   Plus,
+  Ship,
+  SlidersHorizontal,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import ExplorerDetailsPanel from './sidebar/ExplorerDetailsPanel';
 import ExplorerDiscoveryRail from './explorer/ExplorerDiscoveryRail';
@@ -30,6 +35,7 @@ import { shouldShowDevTools } from '../lib/devTools';
 import { adaptListingsToDiscoveryPoints } from '../lib/discoveryPointAdapter';
 import { adaptOrganizationsToDiscoveryPoints, adaptOrganizationsToGlobeEvents } from '../lib/hostGlobeAdapter';
 import { adaptTravelToDiscoveryPoints, adaptTravelToGlobeEvents } from '../lib/travelGlobeAdapter';
+import { buildCruiseMarkers, buildResortMarkers } from '../lib/travelMarkerModel';
 import { getListingDisplayCoords } from '../lib/explorerMarkers';
 import { isApproximateLocation } from '../lib/publicLocation';
 import { applyDevMobileListingSafetyToAll } from '../lib/devMobileListingSafety';
@@ -989,9 +995,27 @@ const getHeroArrivalPresets = (customPreset: HeroArrivalPreset | null): HeroArri
   },
 ];
 
+type PersistedGlobeDiscoverySession = {
+  hasPlayedIntro: boolean;
+  hasUserFilteredCategories: boolean;
+  listingTypes: Array<'club' | 'event' | 'promoter' | 'resort' | 'cruise'>;
+  selectedListingId: string | null;
+  selectedCountry: GlobeV1CountrySelection | null;
+  countryDiscoveryScope: { iso3: string; name: string } | null;
+  revealedCountryIso3: string | null;
+  activeActivityRegionId: string | null;
+  lastActiveRegion: ActivityRegion | null;
+  selectedOrganizationId: string | null;
+  selectedTravel: ResortData | { series: CruiseSeriesData; sailing?: CruiseSailingData | null } | null;
+  cameraPose: { lng: number; lat: number; distance?: number; zoomIntent?: number } | null;
+};
+
+let persistedProductionGlobeSession: PersistedGlobeDiscoverySession | null = null;
+
 const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'page', showDevTools = false, hybridPrototype = false, denseUsPinPrototype = false, mobilePrototype = false, mobileExperienceBasePath = '/mobile' }) => {
   const isHero = variant === 'hero';
   const isTabletPrototype = mobilePrototype && mobileExperienceBasePath === '/tablet';
+  const canPersistSession = !isHero && !mobilePrototype && !denseUsPinPrototype;
   const devToolsEnabled = shouldShowDevTools(showDevTools);
   // Production must always use the committed globe calibration. Alignment
   // experiments belong to the explicit hybrid/dev tooling only.
@@ -1017,14 +1041,43 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
-  const [selectedCountry, setSelectedCountry] = useState<GlobeV1CountrySelection | null>(null);
-  const [countryDiscoveryScope, setCountryDiscoveryScope] = useState<{ iso3: string; name: string } | null>(null);
-  const [revealedCountryIso3, setRevealedCountryIso3] = useState<string | null>(null);
+  const [tabletDiscoverOpen, setTabletDiscoverOpen] = useState(false);
+  const [tabletCategoriesOpen, setTabletCategoriesOpen] = useState(false);
+  const [hasUserFilteredCategories, setHasUserFilteredCategories] = useState(() =>
+    Boolean(canPersistSession && persistedProductionGlobeSession?.hasUserFilteredCategories),
+  );
+  const [selectedCountry, setSelectedCountry] = useState<GlobeV1CountrySelection | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.selectedCountry ?? null : null,
+  );
+  const [countryDiscoveryScope, setCountryDiscoveryScope] = useState<{ iso3: string; name: string } | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.countryDiscoveryScope ?? null : null,
+  );
+  const [revealedCountryIso3, setRevealedCountryIso3] = useState<string | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.revealedCountryIso3 ?? null : null,
+  );
   const [usaDiscoveryRegionId, setUsaDiscoveryRegionId] = useState<string | null>(() => captureParams?.get('region') ?? null);
   const [usaDiscoveryMetroId, setUsaDiscoveryMetroId] = useState<string | null>(() => captureParams?.get('metro') ?? null);
   const [discoveryStackAnchor, setDiscoveryStackAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
-  const [activeActivityRegionId, setActiveActivityRegionId] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.selectedOrganizationId ?? null : null,
+  );
+  const [selectedTravel, setSelectedTravel] = useState<ResortData | { series: CruiseSeriesData; sailing?: CruiseSailingData | null } | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.selectedTravel ?? null : null,
+  );
+  const [activeActivityRegionId, setActiveActivityRegionId] = useState<string | null>(() =>
+    canPersistSession ? persistedProductionGlobeSession?.activeActivityRegionId ?? null : null,
+  );
+  const lastActiveRegionRef = useRef<ActivityRegion | null>(
+    canPersistSession ? persistedProductionGlobeSession?.lastActiveRegion ?? null : null,
+  );
+  const restoredSessionOnReadyRef = useRef(false);
+  const restoredExplorerContextRef = useRef(false);
+  const pendingSessionRestoreRef = useRef(Boolean(canPersistSession && persistedProductionGlobeSession));
+  const prevCategoryFilterKeyRef = useRef<string | null>(
+    canPersistSession && persistedProductionGlobeSession
+      ? persistedProductionGlobeSession.listingTypes.join(',')
+      : null,
+  );
   const [runtimeState, setRuntimeState] = useState<'loading' | 'ready' | 'recovering' | 'error'>('loading');
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [atmosphereTool, setAtmosphereTool] = useState<AtmospherePatch>(() => devToolsEnabled ? readAtmosphereToolState() : defaultAtmosphereToolState);
@@ -1132,12 +1185,13 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const plannedTravelTimerRef = useRef<number | null>(null);
   const mobileMapHandoffTimerRef = useRef<number | null>(null);
   const mobileMapPreparingRef = useRef(false);
-  const globeIntroStartedRef = useRef(false);
+  const globeIntroStartedRef = useRef(Boolean(canPersistSession && persistedProductionGlobeSession?.hasPlayedIntro));
   const mobileMapRequestHandledRef = useRef<string | null>(null);
   const countryPinRevealTimerRef = useRef<number | null>(null);
   const beginListingTravelRef = useRef<(listingId: string) => void>(() => undefined);
   const beginAreaTravelRef = useRef<(region: ActivityRegion) => void>(() => undefined);
   const enterLocalViewForListingRef = useRef<(listingId: string) => void>(() => undefined);
+  const selectTravelItemRef = useRef<(listingId: string) => boolean>(() => false);
   const suppressNextGlobeSelectTravelRef = useRef<'allow-focus' | 'prevent-focus' | null>(null);
   const globeEventSelectInProgressRef = useRef(false);
   const navigationStateRef = useRef<{
@@ -1640,15 +1694,67 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       eventCount: globeListings.filter((listing) => listing.type === 'event').length,
     };
   }, [activeCountryIso3s.length, discoveryPoints, globeListings]);
-  const activeActivityRegion = useMemo(
-    () => usaPrototypeActivityRegions.find((region) => region.id === activeActivityRegionId)
+  const activeActivityRegion = useMemo(() => {
+    const exact = usaPrototypeActivityRegions.find((region) => region.id === activeActivityRegionId)
       ?? visibleCountryActivityRegions.find((region) => region.id === activeActivityRegionId)
-      ?? activityRegions.find((region) => region.id === activeActivityRegionId)
-      ?? null,
-    [activityRegions, activeActivityRegionId, usaPrototypeActivityRegions, visibleCountryActivityRegions],
-  );
+      ?? activityRegions.find((region) => region.id === activeActivityRegionId);
+    if (exact) return exact;
+    if (!activeActivityRegionId) return null;
+    if (activeActivityRegionId.startsWith('activity-region:')) {
+      const parts = activeActivityRegionId.split(':');
+      const cityPrefix = `${parts.slice(0, 3).join(':')}:`;
+      const citySlug = (parts[2] ?? '').toLowerCase();
+      const matchesCitySlug = (region: ActivityRegion) => {
+        const normalized = region.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return normalized === citySlug || normalized.startsWith(`${citySlug}-`);
+      };
+      const byPrefix = visibleCountryActivityRegions.find((region) => region.id.startsWith(cityPrefix))
+        ?? activityRegions.find((region) => region.id.startsWith(cityPrefix))
+        ?? (citySlug
+          ? visibleCountryActivityRegions.find(matchesCitySlug)
+            ?? activityRegions.find(matchesCitySlug)
+          : null);
+      if (byPrefix) return byPrefix;
+    }
+    if (denseUsPinPrototype) return null;
+    const prev = lastActiveRegionRef.current;
+    if (!prev) return null;
+    const candidates = revealedCountryIso3 ? visibleCountryActivityRegions : activityRegions;
+    const prevName = prev.name?.trim().toLowerCase() ?? '';
+    const byName = prevName
+      ? candidates.find((candidate) =>
+          candidate.name?.trim().toLowerCase() === prevName
+          && distanceMetersBetween(
+            { lat: prev.latitude, lng: prev.longitude },
+            { lat: candidate.latitude, lng: candidate.longitude },
+          ) <= 180_000,
+        )
+      : null;
+    if (byName) return byName;
+    let nearest: ActivityRegion | null = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+    for (const candidate of candidates) {
+      const dist = distanceMetersBetween(
+        { lat: prev.latitude, lng: prev.longitude },
+        { lat: candidate.latitude, lng: candidate.longitude },
+      );
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = candidate;
+      }
+    }
+    if (nearest && nearestDist <= 120_000) return nearest;
+    return {
+      ...prev,
+      discoveryPointIds: [],
+      listingIds: [],
+      clubCount: 0,
+      eventCount: 0,
+      hostCount: 0,
+    };
+  }, [activityRegions, activeActivityRegionId, denseUsPinPrototype, revealedCountryIso3, usaPrototypeActivityRegions, visibleCountryActivityRegions]);
   useEffect(() => {
-    if (!activeActivityRegion || surfaceMode !== 'globe' || runtimeState !== 'ready') {
+    if (!activeActivityRegion || activeActivityRegion.listingIds.length === 0 || surfaceMode !== 'globe' || runtimeState !== 'ready') {
       setDiscoveryStackAnchor(null);
       return;
     }
@@ -1684,6 +1790,116 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     [customHeroArrivalPreset, devToolsEnabled],
   );
   const countryDiscoveryScopeIso3 = countryDiscoveryScope?.iso3 ?? '';
+  const syntheticHostListings = useMemo<Listing[]>(() => {
+    return adaptOrganizationsToGlobeEvents(organizations).flatMap((event) => {
+      if (!event.organization) return [];
+      const hostRegion = event.organization.globePresence?.regions.find((candidate) =>
+        candidate.status !== 'inactive'
+        && candidate.latitude === event.lat
+        && candidate.longitude === event.lon,
+      );
+      const city = hostRegion?.city ?? '';
+      const region = hostRegion?.region ?? '';
+      const country = hostRegion?.country ?? '';
+      return [{
+        id: event.id,
+        type: 'promoter' as unknown as Listing['type'],
+        name: event.organization.name,
+        location: [city, region, country].filter(Boolean).join(', ') || event.hostRegionLabel || 'Host presence',
+        description: event.organization.descriptionShort ?? '',
+        geopoint: {
+          latitude: event.lat,
+          longitude: event.lon,
+          address: {
+            street: '',
+            city,
+            region,
+            postalCode: '',
+            country,
+          },
+        },
+        headerImageUrl: event.organization.headerImageUrl ?? event.organization.logoImageUrl ?? '',
+        logoImageUrl: event.organization.logoImageUrl ?? '',
+        tags: event.organization.displayTypes ?? [],
+        status: 'approved',
+      } as unknown as Listing];
+    });
+  }, [organizations]);
+  const syntheticTravelListings = useMemo<Listing[]>(() => {
+    const resortItems = buildResortMarkers(travelResorts).map((marker) => {
+      const resort = marker.resort;
+      const city = resort?.geopoint.address.city ?? '';
+      const region = resort?.geopoint.address.region ?? '';
+      const country = resort?.geopoint.address.country ?? '';
+      return {
+        id: marker.id,
+        type: 'resort' as unknown as Listing['type'],
+        name: marker.name,
+        location: [city, region, country].filter(Boolean).join(', ') || marker.subtitle,
+        description: resort?.descriptionShort ?? marker.subtitle,
+        geopoint: {
+          latitude: marker.latitude,
+          longitude: marker.longitude,
+          address: {
+            street: resort?.geopoint.address.addressLine1 ?? '',
+            city,
+            region,
+            postalCode: resort?.geopoint.address.postalCode ?? '',
+            country,
+          },
+        },
+        headerImageUrl: resort?.headerImageUrl ?? resort?.logoImageUrl ?? '',
+        logoImageUrl: resort?.logoImageUrl ?? '',
+        tags: resort?.amenities ?? [],
+        status: 'approved',
+      } as unknown as Listing;
+    });
+    const cruiseItems = buildCruiseMarkers(travelCruiseSeries, travelCruiseSailings).map((marker) => {
+      const sailing = marker.sailing;
+      const series = marker.cruiseSeries;
+      const city = sailing?.departurePort.city ?? sailing?.departurePort.portName ?? '';
+      const country = sailing?.departurePort.country ?? '';
+      return {
+        id: marker.id,
+        type: 'cruise' as unknown as Listing['type'],
+        name: marker.name,
+        location: [city, country].filter(Boolean).join(', ') || marker.subtitle,
+        description: series?.descriptionShort ?? marker.subtitle,
+        geopoint: {
+          latitude: marker.latitude,
+          longitude: marker.longitude,
+          address: {
+            street: '',
+            city,
+            region: '',
+            postalCode: '',
+            country,
+          },
+        },
+        headerImageUrl: sailing?.headerImageUrl ?? series?.headerImageUrl ?? series?.logoImageUrl ?? '',
+        logoImageUrl: sailing?.logoImageUrl ?? series?.logoImageUrl ?? '',
+        tags: sailing?.vibeTags ?? series?.typicalVibeTags ?? [],
+        status: 'approved',
+      } as unknown as Listing;
+    });
+    return [...resortItems, ...cruiseItems];
+  }, [travelCruiseSailings, travelCruiseSeries, travelResorts]);
+  const allDiscoverableListings = useMemo(
+    () => [...globeListings, ...syntheticHostListings, ...syntheticTravelListings],
+    [globeListings, syntheticHostListings, syntheticTravelListings],
+  );
+  useEffect(() => {
+    if (!activeActivityRegionId) {
+      lastActiveRegionRef.current = null;
+      return;
+    }
+    if (activeActivityRegion && activeActivityRegion.listingIds.length > 0) {
+      lastActiveRegionRef.current = activeActivityRegion;
+      if (activeActivityRegion.id !== activeActivityRegionId) {
+        setActiveActivityRegionId(activeActivityRegion.id);
+      }
+    }
+  }, [activeActivityRegion, activeActivityRegionId]);
   const regionDiscoveryRailListings = useMemo(() => {
     if (denseUsPinPrototype) {
       const scope = usaSelectedMetro
@@ -1695,14 +1911,17 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     }
     if (activeActivityRegion) {
       const memberIds = new Set(activeActivityRegion.listingIds);
-      return globeListings.filter((listing) => memberIds.has(listing.id));
+      return allDiscoverableListings.filter((listing) => memberIds.has(listing.id));
     }
     if (countryDiscoveryScopeIso3) {
-      return globeListings.filter((listing) =>
+      return allDiscoverableListings.filter((listing) =>
         resolveCountryIsoCodes(getListingPhysicalAddress(listing).country).iso3 === countryDiscoveryScopeIso3);
     }
+    if (hasUserFilteredCategories || tabletCategoriesOpen || tabletDiscoverOpen) {
+      return allDiscoverableListings;
+    }
     return [];
-  }, [activeActivityRegion, countryDiscoveryScopeIso3, denseUsPinPrototype, globeListings, usaSelectedMetro, usaSelectedRegion]);
+  }, [activeActivityRegion, allDiscoverableListings, countryDiscoveryScopeIso3, denseUsPinPrototype, globeListings, hasUserFilteredCategories, tabletCategoriesOpen, tabletDiscoverOpen, usaSelectedMetro, usaSelectedRegion]);
   const {
     selectedListingId,
     setSelectedListingId,
@@ -1714,8 +1933,24 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setSelectedTags,
     filteredListings: filteredDiscoveryRailListings,
   } = useExplorerState(regionDiscoveryRailListings, {
-    idleLimit: activeActivityRegion ? undefined : 6,
+    idleLimit: activeActivityRegion ? undefined : 12,
   });
+  if (
+    pendingSessionRestoreRef.current &&
+    persistedProductionGlobeSession &&
+    activeListingTypes.join(',') === persistedProductionGlobeSession.listingTypes.join(',') &&
+    selectedListingId === persistedProductionGlobeSession.selectedListingId
+  ) {
+    pendingSessionRestoreRef.current = false;
+  }
+  useEffect(() => {
+    if (!canPersistSession || restoredExplorerContextRef.current || !persistedProductionGlobeSession) return;
+    restoredExplorerContextRef.current = true;
+    setListingTypes(persistedProductionGlobeSession.listingTypes);
+    if (persistedProductionGlobeSession.selectedListingId) {
+      setSelectedListingId(persistedProductionGlobeSession.selectedListingId);
+    }
+  }, [canPersistSession, setListingTypes, setSelectedListingId]);
   useEffect(() => {
     if (!mobilePrototype || activeListingTypes.length) return;
     setListingTypes(['club', 'event', 'promoter', 'resort', 'cruise']);
@@ -1726,6 +1961,14 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     const query = searchText.trim().toLowerCase();
     return hostRuntimeEvents.flatMap((event) => {
       if (!memberIds.has(event.id) || !event.organization || !event.organizationId) return [];
+      if (
+        selectedTags.length > 0
+        && !selectedTags.every((tag) =>
+          (event.organization?.displayTypes ?? []).some((candidate) => candidate.toLowerCase() === tag.toLowerCase()),
+        )
+      ) {
+        return [];
+      }
       const hostRegion = event.organization.globePresence?.regions.find((candidate) =>
         candidate.status !== 'inactive'
         && candidate.latitude === event.lat
@@ -1750,8 +1993,101 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
         heroUrl: event.organization.headerImageUrl ?? event.organization.logoImageUrl,
       }];
     });
-  }, [activeActivityRegion, hostRuntimeEvents, searchText]);
-  const discoveryStackItemCount = filteredDiscoveryRailListings.length + activeRegionHostItems.length;
+  }, [activeActivityRegion, hostRuntimeEvents, searchText, selectedTags]);
+  const rotaryStackListings = useMemo(
+    () => filteredDiscoveryRailListings.filter((item) => (item.type as string) !== 'promoter'),
+    [filteredDiscoveryRailListings],
+  );
+  const discoveryStackItemCount = rotaryStackListings.length + activeRegionHostItems.length;
+  useEffect(() => {
+    if (pendingSessionRestoreRef.current) return;
+    const categoryKey = activeListingTypes.join(',');
+    const categoryChanged = prevCategoryFilterKeyRef.current !== null && prevCategoryFilterKeyRef.current !== categoryKey;
+    prevCategoryFilterKeyRef.current = categoryKey;
+
+    const isRestrictedCategory = activeListingTypes.length > 0 && activeListingTypes.length < 5;
+    let clearedInvalidSelection = false;
+
+    if (isRestrictedCategory) {
+      if (selectedOrganizationId && !activeListingTypes.includes('promoter')) {
+        setSelectedOrganizationId(null);
+        clearedInvalidSelection = true;
+      }
+      if (selectedTravel) {
+        const travelType = 'series' in selectedTravel ? 'cruise' : 'resort';
+        if (!activeListingTypes.includes(travelType)) {
+          setSelectedTravel(null);
+          clearedInvalidSelection = true;
+        }
+      }
+      if (selectedListingId) {
+        const item = allDiscoverableListings.find((candidate) => candidate.id === selectedListingId);
+        if (item && !(activeListingTypes as string[]).includes(item.type as string)) {
+          setSelectedListingId(null);
+          if (travelDestination?.type === 'listing' && travelDestination.listingId === selectedListingId) {
+            setTravelDestination(null);
+          }
+          clearedInvalidSelection = true;
+        }
+      }
+    }
+
+    if (!categoryChanged || !activeActivityRegion) return;
+
+    const currentValidSelection = !clearedInvalidSelection && Boolean(
+      selectedListingId || selectedOrganizationId || selectedTravel,
+    );
+    if (currentValidSelection && activeActivityRegion.listingIds.includes(selectedListingId ?? '')) {
+      return;
+    }
+
+    if (rotaryStackListings.length > 0) {
+      const firstListing = rotaryStackListings[0];
+      const nextType = String(firstListing.type);
+      setTravelDestination(null);
+      setSelectedOrganizationId(null);
+      if (nextType === 'resort') {
+        const resortMarker = buildResortMarkers(travelResorts).find((m) => m.id === firstListing.id.replace(/^travel:/, ''));
+        setSelectedTravel(resortMarker?.resort ?? null);
+      } else if (nextType === 'cruise') {
+        const cruiseMarker = buildCruiseMarkers(travelCruiseSeries, travelCruiseSailings).find((m) => m.id === firstListing.id.replace(/^travel:/, ''));
+        setSelectedTravel(cruiseMarker?.cruiseSeries ? { series: cruiseMarker.cruiseSeries, sailing: cruiseMarker.sailing } : null);
+      } else {
+        setSelectedTravel(null);
+      }
+      setSelectedListingId(firstListing.id);
+      return;
+    }
+
+    if (activeRegionHostItems.length > 0) {
+      const firstHost = activeRegionHostItems[0];
+      setTravelDestination(null);
+      setSelectedTravel(null);
+      setSelectedListingId(firstHost.id);
+      setSelectedOrganizationId(firstHost.organizationId);
+      return;
+    }
+
+    setTravelDestination(null);
+    setSelectedOrganizationId(null);
+    setSelectedTravel(null);
+    setSelectedListingId(null);
+  }, [
+    activeActivityRegion,
+    activeListingTypes,
+    activeRegionHostItems,
+    allDiscoverableListings,
+    rotaryStackListings,
+    selectedListingId,
+    selectedOrganizationId,
+    selectedTravel,
+    setSelectedListingId,
+    travelCruiseSailings,
+    travelCruiseSeries,
+    travelDestination,
+    travelResorts,
+  ]);
+  const { filteredListings: filteredAllDiscoverableListings } = useExplorerState(allDiscoverableListings);
   const { filteredListings: filteredMapListings } = useExplorerState(globeListings);
   const spatialMapListings = useMemo(
     () => aggregateEventsForSpatialDisplay(filteredMapListings).listings,
@@ -1861,12 +2197,12 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       : activeActivityRegion?.name ?? countryDiscoveryScope?.name ?? null;
   const discoveryRailTitle = surfaceMode === 'globe' && denseUsPinPrototype && countryDiscoveryScope && !usaSelectedRegion
     ? 'Choose a region'
-    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope && !filteredDiscoveryRailListings.length
       ? 'Choose a country'
       : undefined;
   const discoveryRailEmptyMessage = surfaceMode === 'globe' && denseUsPinPrototype && countryDiscoveryScope && !usaSelectedRegion
     ? 'Select a regional discovery marker to reveal its metro areas.'
-    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope
+    : surfaceMode === 'globe' && !activeActivityRegion && !countryDiscoveryScope && !hasUserFilteredCategories && !tabletCategoriesOpen && !tabletDiscoverOpen
       ? 'Select a highlighted country to reveal its activity.'
       : activeRegionHostItems.length && !filteredDiscoveryRailListings.length
         ? 'Hosts in this area are available in the discovery stack.'
@@ -1904,7 +2240,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               : `${geoContextCount} nearby`
     : `${geoContextCount} nearby`;
   const discoveryRailIsUpdating = surfaceMode === 'map' && isMapViewportDiscoveryPending;
-  const hasExplorerDetails = Boolean(detailListingId || selectedOrganizationId);
+  const hasExplorerDetails = Boolean(detailListingId || selectedOrganizationId || selectedTravel);
   const selectedListingIsGlobeEligible = useMemo(
     () => Boolean(selectedListingId && globeListings.some((listing) => listing.id === selectedListingId)),
     [globeListings, selectedListingId],
@@ -1965,16 +2301,24 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     );
   }, [camera.surface, denseUsPinPrototype, hybridPrototype, location.pathname, mobilePrototype, setCamera, setSurfaceMode]);
 
+  const appliedActivityRegionSearchRef = useRef<string | null>(null);
+  const restoredUrlRegionKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (denseUsPinPrototype) return;
     const params = new URLSearchParams(location.search);
     const activityRegionId = params.get('activityRegion');
     const scopeCountryIso3 = String(params.get('scopeCountry') ?? '').trim().toUpperCase();
-    if (!activityRegionId || !scopeCountryIso3) return;
+    if (!activityRegionId || !scopeCountryIso3) {
+      appliedActivityRegionSearchRef.current = null;
+      restoredUrlRegionKeyRef.current = null;
+      return;
+    }
+    if (appliedActivityRegionSearchRef.current === location.search) return;
     const countryPoint = discoveryPoints.find((point) =>
       resolveCountryIsoCodes(point.country).iso3 === scopeCountryIso3,
     );
     if (!countryPoint) return;
+    appliedActivityRegionSearchRef.current = location.search;
     const scopeName = params.get('scopeCountryName')?.trim() || countryPoint.country || scopeCountryIso3;
     setCountryDiscoveryScope((current) =>
       current?.iso3 === scopeCountryIso3 && current.name === scopeName
@@ -2280,9 +2624,67 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   useEffect(() => {
     if (denseUsPinPrototype || runtimeState !== 'ready' || surfaceMode !== 'globe' || !activeActivityRegion) return;
     const persistedRegionId = new URLSearchParams(location.search).get('activityRegion');
-    if (persistedRegionId !== activeActivityRegion.id) return;
+    if (!persistedRegionId) return;
+    if (restoredUrlRegionKeyRef.current === persistedRegionId) return;
+    if (persistedRegionId !== activeActivityRegion.id && !persistedRegionId.startsWith('activity-region:')) return;
+    restoredUrlRegionKeyRef.current = persistedRegionId;
     globeRef.current?.restoreActivityRegion(activeActivityRegion.id);
   }, [activeActivityRegion, denseUsPinPrototype, location.search, runtimeState, surfaceMode]);
+
+  useEffect(() => {
+    if (!canPersistSession || pendingSessionRestoreRef.current) return;
+    const snapshot = globeRef.current?.getNavigationSnapshot();
+    const cameraPose = snapshot && Number.isFinite(snapshot.lng) && Number.isFinite(snapshot.lat)
+      ? {
+          lng: snapshot.lng,
+          lat: snapshot.lat,
+          distance: snapshot.distance,
+          zoomIntent: snapshot.zoomIntent,
+        }
+      : persistedProductionGlobeSession?.cameraPose ?? { lng: camera.lng, lat: camera.lat };
+    persistedProductionGlobeSession = {
+      hasPlayedIntro: globeIntroStartedRef.current,
+      hasUserFilteredCategories,
+      listingTypes: activeListingTypes,
+      selectedListingId,
+      selectedCountry,
+      countryDiscoveryScope,
+      revealedCountryIso3,
+      activeActivityRegionId,
+      lastActiveRegion: activeActivityRegion ?? lastActiveRegionRef.current,
+      selectedOrganizationId,
+      selectedTravel,
+      cameraPose,
+    };
+  }, [
+    activeActivityRegion,
+    activeActivityRegionId,
+    activeListingTypes,
+    camera.lat,
+    camera.lng,
+    canPersistSession,
+    countryDiscoveryScope,
+    hasUserFilteredCategories,
+    revealedCountryIso3,
+    selectedCountry,
+    selectedListingId,
+    selectedOrganizationId,
+    selectedTravel,
+  ]);
+
+  useEffect(() => {
+    if (!canPersistSession || runtimeState !== 'ready' || surfaceMode !== 'globe' || restoredSessionOnReadyRef.current) return;
+    restoredSessionOnReadyRef.current = true;
+    const session = persistedProductionGlobeSession;
+    if (!session) return;
+    if (activeActivityRegion) {
+      globeRef.current?.restoreActivityRegion(activeActivityRegion.id);
+      return;
+    }
+    if (session.cameraPose && (session.countryDiscoveryScope || session.selectedListingId || session.selectedOrganizationId || session.selectedTravel)) {
+      globeRef.current?.setNavigationPose(session.cameraPose);
+    }
+  }, [activeActivityRegion, canPersistSession, runtimeState, surfaceMode]);
 
   useEffect(() => {
     if (runtimeState !== 'ready') return;
@@ -2320,6 +2722,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   }, [mobilePrototype, runtimeState]);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
     if (
       runtimeState !== 'ready' ||
       isHero ||
@@ -2327,7 +2730,9 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
       globeIntroStartedRef.current ||
       prefersReducedMotion ||
       surfaceModeRef.current !== 'globe' ||
-      new URLSearchParams(location.search).has('mapListing')
+      searchParams.has('mapListing') ||
+      searchParams.has('activityRegion') ||
+      searchParams.has('scopeCountry')
     ) return;
     const globe = globeRef.current;
     const container = containerRef.current;
@@ -2798,6 +3203,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setTravelDestination(destination);
     setTravelPhase('globe-arrived');
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     setSelectedListingId(listingId);
     if (runtimeState === 'ready' && !globeEventSelectInProgressRef.current) {
       suppressNextGlobeSelectTravelRef.current = 'prevent-focus';
@@ -2838,11 +3244,19 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setTravelDestination(destination);
     setTravelPhase('planning');
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     setSelectedListingId(listingId);
     if (runtimeState === 'ready' && !globeEventSelectInProgressRef.current) {
       suppressNextGlobeSelectTravelRef.current = 'allow-focus';
       const selectedEvent = globeRef.current?.selectEvent(resolveSpatialListingId(listingId) ?? listingId);
-      if (!selectedEvent) suppressNextGlobeSelectTravelRef.current = null;
+      if (!selectedEvent) {
+        suppressNextGlobeSelectTravelRef.current = null;
+        globeRef.current?.setNavigationPose({
+          lng: destination.lng,
+          lat: destination.lat,
+          zoomIntent: 0.68,
+        });
+      }
     }
     setCamera({
       surface: 'globe',
@@ -2893,8 +3307,19 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     };
     setTravelDestination(destination);
     setTravelPhase('planning');
-    setSelectedListingId(region.listingIds?.[0] ?? null);
-    setSelectedOrganizationId(null);
+    const firstId = region.listingIds?.[0] ?? null;
+    setSelectedListingId(firstId);
+    const firstHost = firstId ? hostRuntimeEvents.find((event) => event.id === firstId) : null;
+    const firstResort = firstId ? buildResortMarkers(travelResorts).find((marker) => marker.id === firstId) : null;
+    const firstCruise = firstId ? buildCruiseMarkers(travelCruiseSeries, travelCruiseSailings).find((marker) => marker.id === firstId) : null;
+    setSelectedOrganizationId(firstHost?.organizationId ?? null);
+    setSelectedTravel(
+      firstResort?.resort
+        ? firstResort.resort
+        : firstCruise?.cruiseSeries
+          ? { series: firstCruise.cruiseSeries, sailing: firstCruise.sailing }
+          : null,
+    );
     setActiveActivityRegionId(region.id);
     setCamera({
       surface: 'globe',
@@ -3260,6 +3685,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             setSelectedCountry(country);
             setSelectedListingId(null);
             setSelectedOrganizationId(null);
+            setSelectedTravel(null);
             setActiveActivityRegionId(null);
             globeRef.current?.setAdministrativeBoundaryIds([]);
 
@@ -3297,16 +3723,28 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           onEventHover: () => undefined,
           onEventSelect: (event) => {
             if (isHero) return;
-            if ((event.entityType === 'resort' || event.entityType === 'cruise') && event.travelSlug) {
-              navigateInCurrentExperience(event.entityType === 'resort'
-                ? `/resorts/${event.travelSlug}`
-                : `/cruises/${event.travelSlug}`);
-              return false;
+            if ((event.entityType === 'resort' || event.entityType === 'cruise') && event.listingId) {
+              if (mobilePrototype && event.travelSlug) {
+                navigateInCurrentExperience(event.entityType === 'resort'
+                  ? `/resorts/${event.travelSlug}`
+                  : `/cruises/${event.travelSlug}`);
+                return false;
+              }
+              if (selectTravelItemRef.current(event.listingId)) {
+                return;
+              }
+              if (event.travelSlug) {
+                navigateInCurrentExperience(event.entityType === 'resort'
+                  ? `/resorts/${event.travelSlug}`
+                  : `/cruises/${event.travelSlug}`);
+                return false;
+              }
             }
             if (event.entityType === 'promoter' && event.organizationId) {
               clearPlannedTravelTimers();
               setSelectedCountry(null);
-              setSelectedListingId(null);
+              setSelectedTravel(null);
+              setSelectedListingId(event.id);
               setSelectedOrganizationId(event.organizationId);
               setTravelDestination(null);
               setTravelPhase('globe-travel');
@@ -3322,6 +3760,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               return;
             }
             setSelectedOrganizationId(null);
+            setSelectedTravel(null);
             if (import.meta.env.DEV && event.listingId.startsWith('dev-scale:')) {
               setSelectedCountry(null);
               setSelectedListingId(null);
@@ -3396,6 +3835,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             setTravelPhase('idle');
             setSelectedListingId(null);
             setSelectedOrganizationId(null);
+            setSelectedTravel(null);
             setSelectedCountry(null);
             setActiveActivityRegionId(null);
             if (denseUsPinPrototype) {
@@ -3477,6 +3917,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setTravelPhase(surfaceModeRef.current === 'map' ? 'local-explore' : 'idle');
     setSelectedListingId(null);
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     if (surfaceModeRef.current === 'globe' && countryDiscoveryScope) {
       // Country selection is navigation context now, not details-panel content.
       // Closing a listing/host card should leave the user inside that country.
@@ -3491,12 +3932,101 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     explorerNavigationController.selectVenue(listingId);
   };
 
+  const selectTravelItem = (listingId: string): boolean => {
+    const normalizedId = listingId.replace(/^travel:/, '');
+    const resortMarker = buildResortMarkers(travelResorts).find((marker) => marker.id === normalizedId);
+    if (resortMarker?.resort) {
+      clearPlannedTravelTimers();
+      setSelectedCountry(null);
+      setSelectedOrganizationId(null);
+      setSelectedListingId(resortMarker.id);
+      setSelectedTravel(resortMarker.resort);
+      setTravelDestination(null);
+      setTravelPhase(surfaceModeRef.current === 'map' ? 'venue-explore' : 'globe-travel');
+      if (surfaceModeRef.current === 'globe') {
+        suppressNextGlobeSelectTravelRef.current = 'allow-focus';
+        const selected = globeRef.current?.selectEvent(`travel:${resortMarker.id}`);
+        if (!selected) {
+          suppressNextGlobeSelectTravelRef.current = null;
+          globeRef.current?.setNavigationPose({
+            lng: resortMarker.longitude,
+            lat: resortMarker.latitude,
+            zoomIntent: 0.68,
+          });
+        }
+      }
+      setCamera({
+        surface: surfaceModeRef.current,
+        lng: resortMarker.longitude,
+        lat: resortMarker.latitude,
+        zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+        pitch: surfaceModeRef.current === 'map' ? 0 : WORLD_PITCH,
+        bearing: surfaceModeRef.current === 'map' ? 0 : WORLD_BEARING,
+      });
+      return true;
+    }
+    const cruiseMarker = buildCruiseMarkers(travelCruiseSeries, travelCruiseSailings).find((marker) => marker.id === normalizedId);
+    if (cruiseMarker?.cruiseSeries) {
+      clearPlannedTravelTimers();
+      setSelectedCountry(null);
+      setSelectedOrganizationId(null);
+      setSelectedListingId(cruiseMarker.id);
+      setSelectedTravel({ series: cruiseMarker.cruiseSeries, sailing: cruiseMarker.sailing });
+      setTravelDestination(null);
+      setTravelPhase(surfaceModeRef.current === 'map' ? 'venue-explore' : 'globe-travel');
+      if (surfaceModeRef.current === 'globe') {
+        suppressNextGlobeSelectTravelRef.current = 'allow-focus';
+        const selected = globeRef.current?.selectEvent(`travel:${cruiseMarker.id}`);
+        if (!selected) {
+          suppressNextGlobeSelectTravelRef.current = null;
+          globeRef.current?.setNavigationPose({
+            lng: cruiseMarker.longitude,
+            lat: cruiseMarker.latitude,
+            zoomIntent: 0.68,
+          });
+        }
+      }
+      setCamera({
+        surface: surfaceModeRef.current,
+        lng: cruiseMarker.longitude,
+        lat: cruiseMarker.latitude,
+        zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+        pitch: surfaceModeRef.current === 'map' ? 0 : WORLD_PITCH,
+        bearing: surfaceModeRef.current === 'map' ? 0 : WORLD_BEARING,
+      });
+      return true;
+    }
+    return false;
+  };
+  selectTravelItemRef.current = selectTravelItem;
+
   const selectMapListing = (listingId: string) => {
+    if (!mobilePrototype && selectTravelItem(listingId)) {
+      return;
+    }
     const travelEvent = travelRuntimeEvents.find((event) => event.listingId === listingId);
     if ((travelEvent?.entityType === 'resort' || travelEvent?.entityType === 'cruise') && travelEvent.travelSlug) {
       navigateInCurrentExperience(travelEvent.entityType === 'resort'
         ? `/resorts/${travelEvent.travelSlug}`
         : `/cruises/${travelEvent.travelSlug}`);
+      return;
+    }
+    const hostEvent = adaptOrganizationsToGlobeEvents(organizations).find((event) => event.id === listingId || event.organizationId === listingId);
+    if (hostEvent?.organizationId) {
+      clearPlannedTravelTimers();
+      setSelectedCountry(null);
+      setSelectedTravel(null);
+      setSelectedListingId(hostEvent.id);
+      setSelectedOrganizationId(hostEvent.organizationId);
+      setCamera({
+        surface: 'map',
+        lng: hostEvent.lon,
+        lat: hostEvent.lat,
+        zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+        pitch: 0,
+        bearing: 0,
+      });
+      setSurfaceMode('map');
       return;
     }
     const destination = buildListingDestination(listingId);
@@ -3506,6 +4036,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setTravelPhase('venue-explore');
     setSelectedCountry(null);
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     setSelectedListingId(listingId);
     setCamera({
       surface: 'map',
@@ -3518,8 +4049,79 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setSurfaceMode('map');
   };
 
-  const selectListingFromRail = (listingId: string) => {
+  const selectItemInPlace = (listingId: string): boolean => {
+    setTabletDiscoverOpen(false);
+    clearPlannedTravelTimers();
+    navigationStateRef.current = {
+      selectedListingId: listingId,
+      travelDestination: null,
+      travelPhase: 'idle',
+    };
+    setTravelDestination(null);
+    setTravelPhase('idle');
+    setSelectedCountry(null);
+    globeRef.current?.clearEventSelection();
+
+    const hostEvent = adaptOrganizationsToGlobeEvents(organizations).find(
+      (event) => event.id === listingId || event.organizationId === listingId,
+    );
+    if (hostEvent?.organizationId) {
+      setSelectedTravel(null);
+      setSelectedListingId(hostEvent.id);
+      setSelectedOrganizationId(hostEvent.organizationId);
+      return true;
+    }
+
+    const normalizedId = listingId.replace(/^travel:/, '');
+    const resortMarker = buildResortMarkers(travelResorts).find((marker) => marker.id === normalizedId);
+    if (resortMarker?.resort) {
+      setSelectedOrganizationId(null);
+      setSelectedListingId(resortMarker.id);
+      setSelectedTravel(resortMarker.resort);
+      return true;
+    }
+
+    const cruiseMarker = buildCruiseMarkers(travelCruiseSeries, travelCruiseSailings).find(
+      (marker) => marker.id === normalizedId,
+    );
+    if (cruiseMarker?.cruiseSeries) {
+      setSelectedOrganizationId(null);
+      setSelectedListingId(cruiseMarker.id);
+      setSelectedTravel({ series: cruiseMarker.cruiseSeries, sailing: cruiseMarker.sailing });
+      return true;
+    }
+
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
+    setSelectedListingId(listingId);
+    return true;
+  };
+
+  const selectListingFromRail = (listingId: string) => {
+    setTabletDiscoverOpen(false);
+    if (surfaceModeRef.current === 'globe' && activeActivityRegion?.listingIds.includes(listingId)) {
+      selectItemInPlace(listingId);
+      return;
+    }
+    const targetItem = allDiscoverableListings.find(
+      (item) => item.id === listingId || item.id === listingId.replace(/^travel:/, ''),
+    );
+    const countryName = targetItem ? getListingPhysicalAddress(targetItem).country : '';
+    const iso = countryName ? resolveCountryIsoCodes(countryName) : null;
+    if (iso?.iso3 && !countryDiscoveryScope) {
+      setCountryDiscoveryScope({ iso3: iso.iso3, name: countryName });
+      setRevealedCountryIso3(iso.iso3);
+    }
+    const hostEvent = adaptOrganizationsToGlobeEvents(organizations).find((event) => event.id === listingId || event.organizationId === listingId);
+    if (hostEvent?.organizationId) {
+      selectHostFromRail(hostEvent.organizationId, hostEvent.id);
+      return;
+    }
+    if (!mobilePrototype && selectTravelItem(listingId)) {
+      return;
+    }
+    setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     if (graphicsCapability === 'unsupported') {
       setSelectedCountry(null);
       setSelectedListingId(listingId);
@@ -3532,16 +4134,29 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     selectListing(listingId);
   };
 
-  const selectHostFromRail = (organizationId: string) => {
-    const hostEvent = hostRuntimeEvents.find((event) => event.organizationId === organizationId);
+  const selectHostFromRail = (organizationId: string, eventId?: string) => {
+    const allHostEvents = adaptOrganizationsToGlobeEvents(organizations);
+    const hostEvent = (eventId ? allHostEvents.find((event) => event.id === eventId) : null)
+      ?? hostRuntimeEvents.find((event) => event.organizationId === organizationId)
+      ?? allHostEvents.find((event) => event.organizationId === organizationId);
     if (!hostEvent) return;
     clearPlannedTravelTimers();
     setSelectedCountry(null);
-    setSelectedListingId(null);
+    setSelectedTravel(null);
+    setSelectedListingId(hostEvent.id);
     setSelectedOrganizationId(organizationId);
     setTravelDestination(null);
     setTravelPhase('globe-travel');
-    globeRef.current?.selectEvent(hostEvent.id);
+    suppressNextGlobeSelectTravelRef.current = 'allow-focus';
+    const selected = globeRef.current?.selectEvent(hostEvent.id);
+    if (!selected) {
+      suppressNextGlobeSelectTravelRef.current = null;
+      globeRef.current?.setNavigationPose({
+        lng: hostEvent.lon,
+        lat: hostEvent.lat,
+        zoomIntent: 0.68,
+      });
+    }
     setCamera({
       surface: 'globe',
       lng: hostEvent.lon,
@@ -3552,6 +4167,41 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     });
     setSurfaceMode('globe');
   };
+
+  useEffect(() => {
+    const handleExploreRegion = (event: Event) => {
+      const detail = (event as CustomEvent<{ lat?: number; lng?: number; label?: string }>).detail;
+      if (!detail || !Number.isFinite(detail.lat) || !Number.isFinite(detail.lng)) return;
+      const lat = Number(detail.lat);
+      const lng = Number(detail.lng);
+      if (surfaceModeRef.current === 'map') {
+        setCamera({
+          surface: 'map',
+          lng,
+          lat,
+          zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+          pitch: 0,
+          bearing: 0,
+        });
+        return;
+      }
+      globeRef.current?.setNavigationPose({
+        lng,
+        lat,
+        zoomIntent: 0.72,
+      });
+      setCamera({
+        surface: 'globe',
+        lng,
+        lat,
+        zoom: GLOBE_MAP_MIN_ARRIVAL_ZOOM,
+        pitch: WORLD_PITCH,
+        bearing: WORLD_BEARING,
+      });
+    };
+    window.addEventListener('swingsphere:explore-region', handleExploreRegion);
+    return () => window.removeEventListener('swingsphere:explore-region', handleExploreRegion);
+  }, [setCamera]);
 
   const handleVenueArrivalComplete = (listingId: string) => {
     const destination = navigationStateRef.current.travelDestination;
@@ -3666,6 +4316,8 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const returnToWorld = () => {
     clearPlannedTravelTimers();
     clearCountryPinReveal();
+    persistedProductionGlobeSession = null;
+    lastActiveRegionRef.current = null;
     navigationStateRef.current = {
       selectedListingId: null,
       travelDestination: null,
@@ -3675,6 +4327,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
     setTravelPhase('idle');
     setSelectedListingId(null);
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     setSelectedCountry(null);
     setActiveActivityRegionId(null);
     globeRef.current?.setAdministrativeBoundaryIds([]);
@@ -3692,10 +4345,13 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
   const resetMapToWorld = () => {
     clearPlannedTravelTimers();
     clearCountryPinReveal();
+    persistedProductionGlobeSession = null;
+    lastActiveRegionRef.current = null;
     setTravelDestination(null);
     setTravelPhase('local-explore');
     setSelectedListingId(null);
     setSelectedOrganizationId(null);
+    setSelectedTravel(null);
     setSelectedCountry(null);
     setActiveActivityRegionId(null);
     globeRef.current?.setAdministrativeBoundaryIds([]);
@@ -3957,6 +4613,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
               'absolute inset-0 z-[2]',
               'origin-center transition-[opacity,transform,filter] duration-700 ease-out will-change-[opacity,transform,filter]',
               isTabletPrototype && detailListingId ? '[&_.globe-venue-label--selected]:!opacity-0 [&_.globe-venue-label--selected]:!pointer-events-none' : '',
+              hasExplorerDetails && !mobilePrototype ? 'max-xl:[&_.globe-venue-label--selected]:!opacity-0 max-xl:[&_.globe-venue-label--selected]:!pointer-events-none' : '',
               surfaceMode === 'globe' ? 'pointer-events-auto' : 'pointer-events-none',
             ].join(' ')}
             style={{
@@ -3971,17 +4628,16 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           {surfaceMode === 'globe' && activeActivityRegion && discoveryStackItemCount > 0 ? (
             <DiscoveryRotaryStack
               scopeName={discoveryMapScopeName ?? activeActivityRegion.name}
-              listings={filteredDiscoveryRailListings}
+              listings={rotaryStackListings}
               hosts={activeRegionHostItems}
               selectedListingId={selectedListingId}
               anchor={discoveryStackAnchor}
+              avoidRightPanel={hasExplorerDetails && !mobilePrototype}
               onSelectListing={(listingId) => {
-                setSelectedOrganizationId(null);
-                setSelectedListingId(listingId);
+                selectItemInPlace(listingId);
               }}
               onSelectHost={(host) => {
-                setSelectedListingId(null);
-                setSelectedOrganizationId(host.organizationId);
+                selectItemInPlace(host.id);
               }}
               onOpenMap={() => setManualSurfaceMode('map')}
               entityIndex={entityIndex ?? undefined}
@@ -4052,6 +4708,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             variant="fullBleed"
             stats={globeStats}
             hasExplorerDetails={hasExplorerDetails}
+            tabletCategoriesOpen={tabletCategoriesOpen}
             onCenter={returnToWorld}
             onZoomIn={() => {
               const snapshot = globeRef.current?.getNavigationSnapshot();
@@ -4075,7 +4732,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           /> : null}
 
           {showLocalViewHint ? (
-            <div className="pointer-events-none absolute bottom-[5.7rem] left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-300/20 bg-black/58 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-red-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-[20px] backdrop-saturate-150">
+            <div className="pointer-events-none absolute bottom-[calc(max(14px,env(safe-area-inset-bottom))+clamp(154px,19vh,176px)+14px)] left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-300/20 bg-black/58 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-red-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-[20px] backdrop-saturate-150">
               Click again to explore nearby
             </div>
           ) : null}
@@ -4083,10 +4740,18 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
 
         {!mobilePrototype && !isTabletPrototype && geoContextTitle ? (
           <div
-            className="pointer-events-none absolute left-1/2 top-[clamp(92px,11.5vh,104px)] z-30 -translate-x-1/2 text-center"
+            className={`pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 text-center transition-[top,left,transform] duration-200 top-[clamp(92px,11.5vh,104px)] ${
+              tabletCategoriesOpen
+                ? 'max-xl:top-[calc(62px+80px)] sm:max-xl:top-[calc(74px+80px)]'
+                : 'max-xl:top-[calc(62px+18px)] sm:max-xl:top-[calc(74px+18px)]'
+            } ${
+              hasExplorerDetails
+                ? 'max-lg:left-4 max-lg:translate-x-0 max-lg:top-[calc(62px+80px)] sm:max-lg:top-[calc(74px+80px)] lg:max-xl:left-[calc((100vw-min(320px,43vw)-72px)/2)]'
+                : ''
+            }`}
             aria-live="polite"
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/48 px-3 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/58 px-3 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.34)] backdrop-blur-xl">
               <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-red-200/75">{geoContextKind}</span>
               <span className="h-3 w-px bg-white/12" />
               <span className="text-[11px] font-black uppercase tracking-[0.12em] text-white">{geoContextTitle}</span>
@@ -4124,7 +4789,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
                 zoomIntent: Math.max(0, snapshot.zoomIntent - 0.12),
               });
             }}
-            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter])}
+            onFilterChange={(filter) => {
+              setHasUserFilteredCategories(true);
+              setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter]);
+            }}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}
             isUpdating={mobileMapPreparing || discoveryRailIsUpdating}
@@ -4143,7 +4811,10 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             onSelectListing={selectListingFromRail}
             onNavigate={navigateInCurrentExperience}
             onRecenter={returnToWorld}
-            onFilterChange={(filter) => setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter])}
+            onFilterChange={(filter) => {
+              setHasUserFilteredCategories(true);
+              setListingTypes(filter === 'all' ? ['club', 'event', 'promoter', 'resort', 'cruise'] : [filter]);
+            }}
             devMobileMode={mobilePrototype}
             experienceBasePath={mobileExperienceBasePath}
             entityIndex={entityIndex ?? undefined}
@@ -4151,27 +4822,108 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           />
         )}
 
-        <div className={`pointer-events-none absolute inset-0 z-20 max-md:hidden ${mobilePrototype ? 'hidden' : ''}`}>
-          <div className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(92px,11.5vh,104px)] w-[clamp(248px,17vw,292px)] ${hasExplorerDetails ? 'max-lg:hidden' : ''}`}>
+        {!mobilePrototype && !isTabletPrototype && (
+          <nav className="ss-glass ss-glass--liquid pointer-events-auto absolute left-4 top-[calc(62px+14px)] sm:top-[calc(74px+14px)] z-30 hidden min-[480px]:flex max-w-[calc(100vw-32px)] items-center gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#11131a]/95 p-1.5 shadow-[0_14px_34px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out [scrollbar-width:none] xl:hidden" aria-label="Tablet discovery categories">
+            <button
+              type="button"
+              onClick={() => setTabletCategoriesOpen((open) => !open)}
+              aria-expanded={tabletCategoriesOpen}
+              aria-label={tabletCategoriesOpen ? 'Hide discovery categories' : 'Show discovery categories'}
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors ${
+                tabletCategoriesOpen
+                  ? 'border-white/20 bg-white/[0.08] text-white'
+                  : hasUserFilteredCategories && activeListingTypes.length === 1
+                    ? activeListingTypes[0] === 'event'
+                      ? 'border-amber-400/55 bg-amber-400/12 text-amber-50 hover:bg-amber-400/18'
+                      : activeListingTypes[0] === 'club'
+                        ? 'border-red-400/55 bg-red-500/12 text-red-50 hover:bg-red-500/18'
+                        : activeListingTypes[0] === 'promoter'
+                          ? 'border-blue-400/55 bg-blue-500/12 text-blue-50 hover:bg-blue-500/18'
+                          : activeListingTypes[0] === 'resort'
+                            ? 'border-emerald-400/55 bg-emerald-400/12 text-emerald-50 hover:bg-emerald-400/18'
+                            : 'border-violet-400/55 bg-violet-400/12 text-violet-50 hover:bg-violet-400/18'
+                    : 'border-white/10 bg-white/[0.05] text-gray-100 hover:bg-white/[0.09]'
+              }`}
+            >
+              <SlidersHorizontal
+                className={`h-4 w-4 ${
+                  !tabletCategoriesOpen && hasUserFilteredCategories && activeListingTypes.length === 1
+                    ? activeListingTypes[0] === 'event'
+                      ? 'text-amber-300'
+                      : activeListingTypes[0] === 'club'
+                        ? 'text-red-300'
+                        : activeListingTypes[0] === 'promoter'
+                          ? 'text-blue-300'
+                          : activeListingTypes[0] === 'resort'
+                            ? 'text-emerald-300'
+                            : 'text-violet-300'
+                    : 'text-red-300'
+                }`}
+                aria-hidden="true"
+              />
+              <span>{tabletCategoriesOpen ? 'Close' : 'Discover'}</span>
+              {!tabletCategoriesOpen && hasUserFilteredCategories && activeListingTypes.length === 1 ? (
+                <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${activeListingTypes[0] === 'event' ? 'bg-amber-400/20 text-amber-200' : activeListingTypes[0] === 'club' ? 'bg-red-500/25 text-red-100' : activeListingTypes[0] === 'promoter' ? 'bg-blue-500/20 text-blue-200' : activeListingTypes[0] === 'resort' ? 'bg-emerald-400/20 text-emerald-200' : 'bg-violet-400/20 text-violet-200'}`}>
+                  {activeListingTypes[0] === 'promoter' ? 'Hosts' : `${activeListingTypes[0]}s`}
+                </span>
+              ) : null}
+            </button>
+            {tabletCategoriesOpen ? <>
+            {([
+              { type: 'all', label: 'All', Icon: Globe2, active: 'border-white/60 bg-white/18 text-white shadow-[0_0_14px_rgba(255,255,255,0.14)]', idle: 'text-gray-300' },
+              { type: 'event', label: 'Events', Icon: CalendarDays, active: 'border-amber-300/80 bg-amber-400/20 text-amber-50 shadow-[0_0_14px_rgba(251,191,36,0.2)]', idle: 'text-amber-300' },
+              { type: 'club', label: 'Clubs', Icon: Building2, active: 'border-red-400/80 bg-red-500/20 text-red-50 shadow-[0_0_14px_rgba(248,113,113,0.22)]', idle: 'text-red-300' },
+              { type: 'promoter', label: 'Hosts', Icon: Users, active: 'border-blue-400/80 bg-blue-500/20 text-blue-50 shadow-[0_0_14px_rgba(96,165,250,0.22)]', idle: 'text-blue-300' },
+              { type: 'resort', label: 'Resorts', Icon: Palmtree, active: 'border-emerald-300/80 bg-emerald-400/20 text-emerald-50 shadow-[0_0_14px_rgba(52,211,153,0.2)]', idle: 'text-emerald-300' },
+              { type: 'cruise', label: 'Cruises', Icon: Ship, active: 'border-violet-300/80 bg-violet-400/20 text-violet-50 shadow-[0_0_14px_rgba(167,139,250,0.22)]', idle: 'text-violet-300' },
+            ] as const).map(({ type, label, Icon, active, idle }) => {
+              const selected = type === 'all' ? activeListingTypes.length === 0 || activeListingTypes.length === 5 : activeListingTypes.length === 1 && activeListingTypes[0] === type;
+              return (
+                <button key={type} type="button" aria-pressed={selected} onClick={() => {
+                  setHasUserFilteredCategories(true);
+                  setListingTypes(type === 'all' ? [] : [type]);
+                }}
+                  className={`flex min-h-11 min-w-[54px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-2.5 py-1 text-[10px] font-semibold transition-all duration-150 ${selected ? active : `border-transparent hover:bg-white/10 ${idle}`}`}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />{label}
+                </button>
+              );
+            })}
+            <span className="mx-1 h-7 w-px shrink-0 bg-white/10" aria-hidden="true" />
+            <button type="button" onClick={() => setTabletDiscoverOpen((open) => !open)} aria-expanded={tabletDiscoverOpen} aria-controls="tablet-discover-filters"
+              aria-label={tabletDiscoverOpen ? 'Close advanced filters' : 'Open advanced filters'} className={`grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border transition-colors ${tabletDiscoverOpen ? 'border-red-400/60 bg-red-500/18 text-red-100' : 'border-transparent text-gray-300 hover:bg-white/10'}`}>
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            </button>
+            </> : null}
+          </nav>
+        )}
+        <div className={`pointer-events-none absolute inset-0 z-20 max-[479px]:hidden ${mobilePrototype ? 'hidden' : ''}`}>
+          {tabletDiscoverOpen && !mobilePrototype && !isTabletPrototype ? (
+            <button type="button" className="pointer-events-auto absolute inset-0 z-[21] hidden bg-black/45 backdrop-blur-[2px] min-[480px]:block xl:hidden" aria-label="Close discovery filters" onClick={() => setTabletDiscoverOpen(false)} />
+          ) : null}
+          <div id="tablet-discover-filters" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(14px,1.25vw,22px)] top-[clamp(92px,11.5vh,104px)] w-[clamp(248px,17vw,292px)] max-xl:left-4 max-xl:top-[calc(62px+80px)] sm:max-xl:top-[calc(74px+80px)] max-xl:bottom-[calc(max(14px,env(safe-area-inset-bottom))+clamp(154px,19vh,176px)+8px)] max-xl:z-[22] max-xl:w-[min(360px,calc(100vw-32px))] ${tabletDiscoverOpen ? '' : 'max-xl:hidden'}`}>
             <ExplorerFilterPanel
               searchText={searchText}
               onSearchTextChange={setSearchText}
               listingTypes={listingTypes}
-              onListingTypesChange={setListingTypes}
+              onListingTypesChange={(nextTypes) => {
+                setHasUserFilteredCategories(true);
+                setListingTypes(nextTypes);
+              }}
               selectedTags={selectedTags}
               onSelectedTagsChange={setSelectedTags}
-              searchResults={searchText.trim() ? filteredMapListings.slice(0, 6) : []}
+              searchResults={searchText.trim() ? filteredAllDiscoverableListings.slice(0, 6) : []}
               onSelectSearchResult={selectListingFromRail}
               onOpenTutorial={() => window.dispatchEvent(new CustomEvent('swingsphere:open-globe-tour'))}
             />
           </div>
 
-          <aside className={`pointer-events-auto absolute right-[clamp(14px,1.25vw,22px)] top-[clamp(92px,11.5vh,104px)] w-[clamp(320px,22vw,388px)] origin-top transition-[bottom,opacity,transform] duration-300 ease-out ${hasExplorerDetails ? 'bottom-[clamp(14px,1.8vh,20px)] translate-x-0 opacity-100' : 'pointer-events-none bottom-[clamp(184px,22vh,210px)] translate-x-4 opacity-0'}`} aria-label="Listing details">
+          <aside className={`pointer-events-auto absolute right-[clamp(14px,1.25vw,22px)] max-xl:right-4 top-[clamp(92px,11.5vh,104px)] ${tabletCategoriesOpen ? 'max-lg:top-[calc(62px+80px)] sm:max-lg:top-[calc(74px+80px)] lg:max-xl:top-[calc(62px+14px)] sm:lg:max-xl:top-[calc(74px+14px)]' : 'max-xl:top-[calc(62px+14px)] sm:max-xl:top-[calc(74px+14px)]'} max-xl:w-[min(320px,43vw)] w-[clamp(320px,22vw,388px)] origin-top transition-[top,bottom,opacity,transform] duration-300 ease-out ${hasExplorerDetails ? 'bottom-[clamp(14px,1.8vh,20px)] max-xl:bottom-[calc(max(14px,env(safe-area-inset-bottom))+clamp(154px,19vh,176px)+8px)] translate-x-0 opacity-100' : 'pointer-events-none bottom-[clamp(184px,22vh,210px)] translate-x-4 opacity-0'}`} aria-label="Listing details">
             <ExplorerDetailsPanel
               mode="floating"
               onClose={closePanel}
               selectedListingId={detailListingId}
               selectedOrganizationId={selectedOrganizationId}
+              selectedTravel={selectedTravel}
               listings={mobileSafeListings}
               organizations={organizations}
               entityIndex={entityIndex ?? undefined}
@@ -4180,7 +4932,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
 
           {selectedPrivateMapListing ? (
             <div
-              className={`absolute bottom-[clamp(178px,22vh,202px)] flex justify-end transition-[right,opacity,transform] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)]' : 'right-[clamp(72px,6vw,112px)]'}`}
+              className={`absolute bottom-[clamp(178px,22vh,202px)] flex justify-end transition-[right,opacity,transform] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)] max-xl:right-4' : 'right-[clamp(72px,6vw,112px)] max-xl:right-4'}`}
               aria-live="polite"
             >
               <div className="ss-glass ss-glass--liquid flex max-w-[440px] items-center gap-2.5 rounded-full border border-red-300/20 bg-[rgba(10,12,16,0.82)] px-4 py-2 text-[12px] font-medium text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_14px_34px_rgba(0,0,0,0.38)] backdrop-blur-[18px]">
@@ -4193,7 +4945,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
             </div>
           ) : null}
 
-          <div data-globe-tour="nearby" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] h-[clamp(154px,19vh,176px)] transition-[right,left] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)] max-lg:left-[clamp(14px,1.25vw,22px)]' : 'right-[clamp(72px,6vw,112px)]'}`}>
+          <div data-globe-tour="nearby" className={`pointer-events-auto absolute bottom-[clamp(14px,1.8vh,20px)] left-[clamp(278px,19vw,326px)] max-xl:left-4 max-xl:right-4 max-xl:bottom-[max(14px,env(safe-area-inset-bottom))] h-[clamp(154px,19vh,176px)] transition-[right,left] duration-200 ${hasExplorerDetails ? 'right-[clamp(350px,23.5vw,416px)] max-xl:right-4' : 'right-[clamp(72px,6vw,112px)] max-xl:right-4'}`}>
             <ExplorerNearbyCarousel
               listings={discoveryRailListings}
               selectedListingId={discoveryRailSelectedListingId}
@@ -4207,7 +4959,7 @@ const ProductionGlobePage: React.FC<ProductionGlobePageProps> = ({ variant = 'pa
           </div>
         </div>
 
-        {!mobilePrototype && !isTabletPrototype ? <GlobeExploreTour /> : null}
+        {!mobilePrototype && !isTabletPrototype ? <div className="max-xl:hidden"><GlobeExploreTour /></div> : null}
 
         {productionGeoAlignEnabled && !hybridPrototype && !devToolsEnabled ? (
           <section className="pointer-events-auto absolute right-5 top-[84px] z-[95] w-[330px] rounded-2xl border border-cyan-300/20 bg-[rgba(7,9,13,0.92)] p-3 text-gray-100 shadow-2xl shadow-black/55 backdrop-blur-2xl">
@@ -5300,6 +6052,7 @@ const GlobeStageOverlays: React.FC<{
   variant?: 'docked' | 'fullBleed';
   stats?: { countryCount: number; cityCount: number; eventCount: number };
   hasExplorerDetails?: boolean;
+  tabletCategoriesOpen?: boolean;
   onCenter?: () => void;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
@@ -5308,6 +6061,7 @@ const GlobeStageOverlays: React.FC<{
   variant = 'docked',
   stats = { countryCount: 0, cityCount: 0, eventCount: 0 },
   hasExplorerDetails = false,
+  tabletCategoriesOpen = false,
   onCenter,
   onZoomIn,
   onZoomOut,
@@ -5315,7 +6069,7 @@ const GlobeStageOverlays: React.FC<{
 }) => (
   <>
     <div
-      className={`ss-glass ss-glass--liquid pointer-events-none absolute z-10 hidden items-center gap-4 rounded-full px-4 py-2 text-gray-300 md:flex transition-[right,bottom] duration-200 ${
+      className={`ss-glass ss-glass--liquid pointer-events-none absolute z-10 hidden max-xl:!hidden items-center gap-4 rounded-full px-4 py-2 text-gray-300 md:flex transition-[right,bottom] duration-200 ${
         variant === 'fullBleed'
           ? `bottom-[calc(clamp(154px,19vh,176px)+18px)] ${
               hasExplorerDetails
@@ -5360,10 +6114,12 @@ const GlobeStageOverlays: React.FC<{
     </div>
 
     <div
-      className={`pointer-events-auto absolute top-[clamp(92px,11.5vh,104px)] z-20 hidden lg:flex flex-col gap-2 transition-[right] duration-200 ${
+      className={`pointer-events-auto absolute top-[clamp(92px,11.5vh,104px)] max-xl:top-[calc(62px+14px)] sm:max-xl:top-[calc(74px+14px)] z-20 ${
+        hasExplorerDetails || tabletCategoriesOpen ? 'hidden lg:flex' : 'hidden min-[480px]:flex'
+      } flex-col gap-2 transition-[right,top] duration-200 ${
         hasExplorerDetails
-          ? 'right-[clamp(346px,23.5vw,412px)]'
-          : 'right-[clamp(14px,1.5vw,24px)]'
+          ? 'right-[clamp(346px,23.5vw,412px)] max-xl:right-[calc(min(320px,43vw)+28px)]'
+          : 'right-[clamp(14px,1.5vw,24px)] max-xl:right-4'
       }`}
     >
       {[

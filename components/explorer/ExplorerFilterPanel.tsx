@@ -357,7 +357,7 @@ const ExplorerFilterPanel: React.FC<ExplorerFilterPanelProps> = ({
           </div>
         )}
 
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-3 max-xl:hidden">
           <div className="ss-explore-led-glow" data-globe-tour="help">
             <button
               type="button"

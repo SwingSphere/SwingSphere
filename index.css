@@ -835,6 +835,102 @@ html[data-effects="low"] .ss-glass--liquid,
   }
 }
 
+/* Directional next-step signal for a selected discovery destination. */
+@keyframes ss-discovery-next-step-orbit {
+  to { transform: rotate(360deg); }
+}
+
+.ss-discovery-next-step {
+  --ss-next-step-border: rgba(255, 105, 125, 0.46);
+  --ss-next-step-glow: rgba(255, 60, 85, 0.18);
+  --ss-next-step-inner-glow: rgba(255, 95, 115, 0.08);
+  --ss-next-step-sweep-soft: rgba(255, 75, 101, 0.12);
+  --ss-next-step-sweep-core: #ff4259;
+  --ss-next-step-sweep-peak: #fff4f5;
+  --ss-next-step-fill: rgba(42, 8, 14, 0.96);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--ss-next-step-border);
+  box-shadow: 0 0 18px var(--ss-next-step-glow), inset 0 0 12px var(--ss-next-step-inner-glow);
+}
+
+.ss-discovery-next-step--event {
+  --ss-next-step-border: rgba(252, 211, 77, 0.44);
+  --ss-next-step-glow: rgba(245, 158, 11, 0.16);
+  --ss-next-step-inner-glow: rgba(252, 211, 77, 0.07);
+  --ss-next-step-sweep-soft: rgba(251, 191, 36, 0.12);
+  --ss-next-step-sweep-core: #f59e0b;
+  --ss-next-step-sweep-peak: #fffbeb;
+  --ss-next-step-fill: rgba(36, 24, 6, 0.96);
+}
+
+.ss-discovery-next-step--host {
+  --ss-next-step-border: rgba(96, 165, 250, 0.44);
+  --ss-next-step-glow: rgba(59, 130, 246, 0.16);
+  --ss-next-step-inner-glow: rgba(96, 165, 250, 0.07);
+  --ss-next-step-sweep-soft: rgba(59, 130, 246, 0.12);
+  --ss-next-step-sweep-core: #3b82f6;
+  --ss-next-step-sweep-peak: #eff6ff;
+  --ss-next-step-fill: rgba(8, 22, 44, 0.96);
+}
+
+.ss-discovery-next-step--resort {
+  --ss-next-step-border: rgba(110, 231, 183, 0.44);
+  --ss-next-step-glow: rgba(16, 185, 129, 0.16);
+  --ss-next-step-inner-glow: rgba(110, 231, 183, 0.07);
+  --ss-next-step-sweep-soft: rgba(16, 185, 129, 0.12);
+  --ss-next-step-sweep-core: #10b981;
+  --ss-next-step-sweep-peak: #ecfdf5;
+  --ss-next-step-fill: rgba(6, 32, 24, 0.96);
+}
+
+.ss-discovery-next-step--cruise {
+  --ss-next-step-border: rgba(196, 181, 253, 0.44);
+  --ss-next-step-glow: rgba(139, 92, 246, 0.16);
+  --ss-next-step-inner-glow: rgba(196, 181, 253, 0.07);
+  --ss-next-step-sweep-soft: rgba(139, 92, 246, 0.12);
+  --ss-next-step-sweep-core: #8b5cf6;
+  --ss-next-step-sweep-peak: #f5f3ff;
+  --ss-next-step-fill: rgba(24, 12, 44, 0.96);
+}
+
+.ss-discovery-next-step::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+  width: 170%;
+  aspect-ratio: 1;
+  left: -35%;
+  top: 50%;
+  margin-top: -85%;
+  background: conic-gradient(
+    transparent 0deg 245deg,
+    var(--ss-next-step-sweep-soft) 268deg,
+    var(--ss-next-step-sweep-core) 298deg,
+    var(--ss-next-step-sweep-peak) 315deg,
+    var(--ss-next-step-sweep-core) 332deg,
+    transparent 355deg
+  );
+  will-change: transform;
+  animation: ss-discovery-next-step-orbit 7.5s linear infinite;
+}
+
+.ss-discovery-next-step::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  inset: 1.5px;
+  border-radius: calc(1rem - 1.5px);
+  background: var(--ss-next-step-fill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-discovery-next-step::before { animation: none; }
+}
+
 @keyframes ss-explore-glow-sweep {
   to {
     --ss-explore-glow-angle: 360deg;

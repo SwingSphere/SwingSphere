@@ -33,9 +33,15 @@ const IssueReporter: React.FC = () => {
     } finally { setSaving(false); }
   };
   const deviceRoute = /^\/(mobile|tablet)(\/|$)/.test(pathname);
+  const explorerRoute = /^\/(globe|map)(\/|$)/.test(pathname);
+  const positionClass = deviceRoute
+    ? 'z-[18] left-3 bottom-[calc(env(safe-area-inset-bottom)+11.25rem)]'
+    : explorerRoute
+      ? 'z-[18] left-3 max-[479px]:bottom-[calc(env(safe-area-inset-bottom)+11.25rem)] min-[480px]:max-xl:left-4 min-[480px]:max-xl:bottom-[calc(max(14px,env(safe-area-inset-bottom))+clamp(154px,19vh,176px)+10px)] xl:bottom-[calc(env(safe-area-inset-bottom)+0.75rem)]'
+      : 'z-30 left-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)]';
   return (
     <>
-      <button type="button" onClick={open} aria-haspopup="dialog" className={`fixed left-3 z-40 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/45 px-3 py-1.5 text-[11px] text-gray-400 backdrop-blur-sm transition hover:border-white/20 hover:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${deviceRoute ? 'bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]' : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)]'}`}>
+      <button type="button" onClick={open} aria-haspopup="dialog" className={`fixed inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/45 px-3 py-1.5 text-[11px] text-gray-400 backdrop-blur-sm transition hover:border-white/20 hover:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${positionClass}`}>
         <Flag size={12} aria-hidden="true" /> Report issue
       </button>
       {context ? (
