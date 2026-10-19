@@ -2,7 +2,17 @@ import type { SyntheticEvent } from 'react';
 import type { Listing, OrganizationData, EventSeriesData } from '../types';
 import type { EntityIndex } from './entityIndex';
 import { hostSlug, normalizeHostName } from './identityUtils';
-import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
+import {
+  getCloudflareImageUrl,
+  selectHeroCloudflareVariant,
+} from './media/getCloudflareImageUrl';
+import {
+  encodeHeroCropToUrl,
+  extractHeroCropFromUrl,
+  resolveEntityHeroCrop,
+  stripHeroCropFromUrl,
+  type HeroCropConfig,
+} from './media/heroCrop';
 import {
   isEventAffirmativelyClubOperated,
   resolveEventLogoState,
@@ -17,7 +27,7 @@ const loggedMediaDiagnostics = new Set<string>();
 
 const normalizeUrlKey = (url?: string | null): string => {
   if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
+  const trimmed = stripHeroCropFromUrl(url);
   if (!trimmed) return '';
   if (typeof window !== 'undefined' && trimmed.startsWith('/')) {
     try {
@@ -29,7 +39,7 @@ const normalizeUrlKey = (url?: string | null): string => {
   try {
     const parsed = new URL(trimmed);
     if (parsed.pathname === LISTING_IMAGE_FALLBACK) return LISTING_IMAGE_FALLBACK;
-    return parsed.href;
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
   } catch {
     return trimmed;
   }
@@ -84,13 +94,15 @@ const VARIANT_FALLBACK_ORDER: Record<string, string[]> = {
 export const getCloudflareAlternateVariantUrls = (url?: string | null): string[] => {
   const parsed = parseCloudflareDeliveryUrl(url);
   if (!parsed) return [];
+  const { crop } = extractHeroCropFromUrl(url);
   const alternates = VARIANT_FALLBACK_ORDER[parsed.variant.toLowerCase()] ?? (parsed.variant !== 'public' ? ['public'] : []);
   const results: string[] = [];
   for (const altVariant of alternates) {
-    const candidate = getCloudflareImageUrl({
+    const rawCandidate = getCloudflareImageUrl({
       externalId: parsed.externalId,
       variant: altVariant,
     });
+    const candidate = rawCandidate && crop ? encodeHeroCropToUrl(rawCandidate, crop) : rawCandidate;
     if (candidate && candidate !== url?.trim() && !isMediaUrlKnownFailed(candidate)) {
       results.push(candidate);
     }
@@ -101,19 +113,32 @@ export const getCloudflareAlternateVariantUrls = (url?: string | null): string[]
 export const withPreferredCloudflareVariant = (
   url: string | null | undefined,
   preferredVariant?: string,
+  explicitCrop?: Partial<HeroCropConfig> | null,
 ): string | null => {
   if (!url) return null;
-  if (!preferredVariant) return url;
-  const parsed = parseCloudflareDeliveryUrl(url);
-  if (!parsed || parsed.variant === preferredVariant) return url;
+  const { cleanUrl, crop: urlCrop } = extractHeroCropFromUrl(url);
+  const effectiveCrop = explicitCrop ?? urlCrop;
+  if (!preferredVariant) {
+    return effectiveCrop ? encodeHeroCropToUrl(cleanUrl, effectiveCrop) : url;
+  }
+  const parsed = parseCloudflareDeliveryUrl(cleanUrl);
+  if (!parsed) {
+    return effectiveCrop ? encodeHeroCropToUrl(cleanUrl, effectiveCrop) : url;
+  }
+  const targetVariant =
+    preferredVariant === 'heropage' && parsed.variant.toLowerCase() === 'flyerpage'
+      ? 'flyerpage'
+      : preferredVariant === 'heropage' && effectiveCrop
+        ? selectHeroCloudflareVariant(effectiveCrop)
+        : preferredVariant;
   const preferredUrl = getCloudflareImageUrl({
     externalId: parsed.externalId,
-    variant: preferredVariant,
+    variant: targetVariant,
   });
   if (preferredUrl && !isMediaUrlKnownFailed(preferredUrl)) {
-    return preferredUrl;
+    return effectiveCrop ? encodeHeroCropToUrl(preferredUrl, effectiveCrop) : preferredUrl;
   }
-  return url;
+  return effectiveCrop ? encodeHeroCropToUrl(cleanUrl, effectiveCrop) : url;
 };
 
 export const markMediaUrlFailed = (
@@ -190,7 +215,14 @@ const resolveImageCandidate = (candidate: unknown): string | null => {
 type MediaBearingEntity = {
   logoImageUrl?: string;
   headerImageUrl?: string;
-  mediaAssets?: Array<{ role?: string; external_id?: string }>;
+  heroCrop?: Partial<HeroCropConfig> | null;
+  mediaAssets?: Array<{
+    role?: string;
+    external_id?: string;
+    focal_point_x?: number | null;
+    focal_point_y?: number | null;
+    hero_crop?: HeroCropConfig | null;
+  }>;
 };
 
 const getMediaAssetUrl = (
@@ -198,9 +230,10 @@ const getMediaAssetUrl = (
   role: 'logo' | 'hero' | 'flyer' | 'gallery',
   variantOverride?: string,
 ) => {
-  const asset = listing?.mediaAssets?.find(
+  const matching = (listing?.mediaAssets ?? []).filter(
     (item) => item.role === role && typeof item.external_id === 'string' && item.external_id.trim(),
   );
+  const asset = matching[matching.length - 1];
   if (!asset || !asset.external_id) {
     return null;
   }
@@ -212,10 +245,17 @@ const getMediaAssetUrl = (
         : role === 'gallery'
           ? 'gallerypage'
           : 'herocard';
-  const url = getCloudflareImageUrl({
+  const requestedVariant = variantOverride || defaultVariant;
+  const heroCrop = role === 'hero' ? resolveEntityHeroCrop(listing as any, listing?.headerImageUrl) : null;
+  const effectiveVariant =
+    role === 'hero' && requestedVariant === 'heropage' && heroCrop
+      ? selectHeroCloudflareVariant(heroCrop)
+      : requestedVariant;
+  const rawUrl = getCloudflareImageUrl({
     externalId: asset.external_id.trim(),
-    variant: variantOverride || defaultVariant,
+    variant: effectiveVariant,
   });
+  const url = rawUrl && role === 'hero' && heroCrop ? encodeHeroCropToUrl(rawUrl, heroCrop) : rawUrl;
   return resolveImageCandidate(url);
 };
 
@@ -261,9 +301,10 @@ const getEntityPrimaryHeroUrl = (
   variant: 'herocard' | 'heropage' = 'herocard',
 ): string | null => {
   if (!entity) return null;
+  const crop = resolveEntityHeroCrop(entity as any, entity.headerImageUrl);
   const candidates: unknown[] = [
+    withPreferredCloudflareVariant(entity.headerImageUrl, variant, crop),
     getMediaAssetUrl(entity, 'hero', variant),
-    withPreferredCloudflareVariant(entity.headerImageUrl, variant),
     entity.headerImageUrl,
   ];
   for (const candidate of candidates) {
@@ -433,9 +474,10 @@ export const getListingPrimaryHeroUrl = (
 ): string | null => {
   if (!listing) return null;
   const aliases = listing as Listing & ListingImageAliases;
+  const crop = resolveEntityHeroCrop(listing as any, listing.headerImageUrl);
   const candidates: unknown[] = [
+    withPreferredCloudflareVariant(listing.headerImageUrl, variant, crop),
     getMediaAssetUrl(listing, 'hero', variant),
-    withPreferredCloudflareVariant(listing.headerImageUrl, variant),
     listing.headerImageUrl,
     aliases.heroImage,
     aliases.coverImage,
@@ -527,6 +569,32 @@ export const getListingHeroUrl = (
   if (listing.type === 'club' && entityIndex && listing.ownerOrganizationId) {
     const orgHero = getEntityPrimaryHeroUrl(entityIndex.organizationsById.get(listing.ownerOrganizationId), 'herocard');
     if (orgHero) return orgHero;
+  }
+  return getListingLogoUrl(listing, entityIndex);
+};
+
+/**
+ * Full-page hero image resolver for destination detail pages (ClubDetailTemplate, etc.).
+ * Uses high-resolution `heropage` / uncropped Cloudflare variants and preserves `#ss-crop=` framing metadata.
+ */
+export const getListingHeroPageUrl = (
+  listing: Listing | null | undefined,
+  entityIndex?: EntityIndex,
+): string => {
+  if (!listing) return LISTING_IMAGE_FALLBACK;
+  const directHero = getListingPrimaryHeroUrl(listing, 'heropage');
+  if (directHero) return directHero;
+  if (listing.type === 'club' && entityIndex && listing.ownerOrganizationId) {
+    const orgHero = getEntityPrimaryHeroUrl(entityIndex.organizationsById.get(listing.ownerOrganizationId), 'heropage');
+    if (orgHero) return orgHero;
+  }
+  if (listing.type === 'event') {
+    if (entityIndex) {
+      const inherited = getIndexedEventInheritedHeroUrl(listing, entityIndex, 'heropage');
+      if (inherited) return inherited;
+    }
+    const flyer = getListingPrimaryFlyerUrl(listing, 'flyerpage');
+    if (flyer) return flyer;
   }
   return getListingLogoUrl(listing, entityIndex);
 };

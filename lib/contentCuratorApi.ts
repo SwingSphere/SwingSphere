@@ -37,6 +37,72 @@ export interface CuratorCandidateWarning {
   message: string;
 }
 
+export interface CuratorDiscoveredImage {
+  url: string;
+  highResUrl: string | null;
+  associatedEventUrl: string | null;
+  width: number | null;
+  height: number | null;
+  aspectRatio: string | null;
+  sourceRole: string;
+  relevance: 'event_specific' | 'series_specific' | 'generic_club' | string;
+  rightsStatus: string;
+  alt: string | null;
+  evidence: {
+    sourceUrl: string | null;
+    context: string | null;
+    rawValue: string | null;
+    verifiedAt: string | null;
+    method: string | null;
+  } | null;
+  visualAnalysis?: {
+    inferredTheme: string;
+    atmosphere: string;
+    visualMotifs: string[];
+    paletteCues: string[];
+    stylisticDirection: string;
+  } | null;
+}
+
+export interface CuratorStatusMatrix {
+  discovery: 'discovered';
+  eventData: 'incomplete' | 'partially_complete' | 'complete' | 'excluded_non_event';
+  artwork:
+    | 'not_started'
+    | 'official_reference_found'
+    | 'brief_ready'
+    | 'generated_pending_review'
+    | 'regeneration_requested'
+    | 'approved'
+    | 'rejected';
+  publication:
+    | 'not_published'
+    | 'already_published'
+    | 'correction_pending'
+    | 'ready_for_admin_approval'
+    | 'approved_for_publication'
+    | 'excluded';
+  updatedAt?: string;
+}
+
+export interface CuratorEventDetails {
+  theme?: string | null;
+  atmosphere?: string | null;
+  activities?: string[];
+  dressCode?: string | null;
+  eligibility?: string | null;
+  membershipRequirement?: string | null;
+  admission?: {
+    raw: string | null;
+    tiers: Array<{ category: string; label: string; price: string }>;
+  } | string | null;
+  rsvpRequirement?: string | null;
+  ageRequirement?: string | null;
+  scheduleChanges?: string | null;
+  city?: string | null;
+  country?: string | null;
+}
+
 export interface CuratorCandidateRecord {
   id: string;
   title: string;
@@ -59,6 +125,32 @@ export interface CuratorCandidateRecord {
   rsvpUrl: string | null;
   flyerUrl: string | null;
   description: string | null;
+  displayDescription?: string | null;
+  sourceDescription?: {
+    text: string;
+    rawText: string;
+    paragraphs: string[];
+    sourceUrl: string | null;
+    context: string | null;
+    method: string | null;
+    capturedAt: string | null;
+  } | null;
+  eventDetails?: CuratorEventDetails | null;
+  theme?: string | null;
+  atmosphere?: string | null;
+  activities?: string[];
+  dressCode?: string | null;
+  membershipRequirement?: string | null;
+  rsvpRequirement?: string | null;
+  ageRequirement?: string | null;
+  scheduleChanges?: string | null;
+  discoveredImages?: CuratorDiscoveredImage[];
+  statusMatrix?: CuratorStatusMatrix;
+  mediaPriority?: {
+    score: number;
+    tier: 'high' | 'medium' | 'low' | 'excluded' | string;
+    reasons: string[];
+  } | null;
   admission: string | null;
   restrictions: string | null;
   series: string | null;
@@ -118,7 +210,11 @@ export interface CuratorCandidateRecord {
   stagedMedia: {
     id: string;
     status: string;
+    creativeProcess?: 'reference_first' | 'description_first' | string;
     styleFamily: string | null;
+    medium?: string | null;
+    layoutTemplate?: string | null;
+    layoutTemplateName?: string | null;
     selectedVersionId: string;
     hasGeneratedPair: boolean;
     flyerPreviewUrl: string | null;
@@ -130,10 +226,66 @@ export interface CuratorCandidateRecord {
 export interface CuratorVisualCriterion {
   id: string;
   number: number;
+  category?: 'technical' | 'aesthetic' | string;
   question: string;
   passed: boolean;
   status: string;
   notes: string;
+}
+
+export interface CuratorAppliedFacts {
+  title: string;
+  clubName: string;
+  hostName: string | null;
+  venueName: string;
+  city: string | null;
+  presentingLine: string;
+  dateIso: string | null;
+  dateFormatted: string;
+  dateBadge: string;
+  weekdayShort: string;
+  timeFormatted: string;
+  startTime: string | null;
+  endTime: string | null;
+  timezone: string;
+  themeKicker: string | null;
+  dressCode: string | null;
+  eligibility: string | null;
+  admission: string | null;
+  rsvpOrMembership: string | null;
+  calloutPills: string[];
+  missingRequiredFacts: string[];
+  hasMissingFacts: boolean;
+}
+
+export interface CuratorLogoSource {
+  status: 'canonical_logo_loaded' | 'canonical_logo_url_configured' | 'missing_canonical_logo' | string;
+  logoUrl: string | null;
+  clubId: string | null;
+  clubName: string | null;
+  missingLogoFlag: boolean;
+  fallbackTreatment: string | null;
+  localCachePath?: string | null;
+}
+
+export interface CuratorQualityEvaluation {
+  evaluatedAt: string;
+  allPassed: boolean;
+  passedCount: number;
+  totalCriteria: number;
+  technicalValidation: {
+    passed: boolean;
+    passedCount: number;
+    total: number;
+    checks: CuratorVisualCriterion[];
+  };
+  aestheticEvaluation: {
+    passed: boolean;
+    passedCount: number;
+    total: number;
+    checks: CuratorVisualCriterion[];
+  };
+  criteria: CuratorVisualCriterion[];
 }
 
 export interface CuratorClubIdentitySummary {
@@ -166,6 +318,10 @@ export interface CuratorMediaVersion {
   versionNumber: number;
   createdAt: string | null;
   styleFamily: string | null;
+  medium?: string | null;
+  layoutTemplate?: string | null;
+  layoutTemplateName?: string | null;
+  regenerationLevel?: 'artwork' | 'layout' | 'typography' | string;
   composition: string | null;
   palette: string[];
   sensualityMode: string | null;
@@ -179,6 +335,7 @@ export interface CuratorMediaVersion {
     readyForApproval: boolean;
     criteria: CuratorVisualCriterion[];
   } | null;
+  qualityEvaluation?: CuratorQualityEvaluation | null;
   previewUrls: {
     flyer: string | null;
     hero: string | null;
@@ -205,16 +362,44 @@ export interface CuratorMediaItem {
   validationOnly: boolean;
   source: string;
   officialSourceArtworkUrl: string | null;
+  discoveredImages?: CuratorDiscoveredImage[];
+  designSkill?: string;
+  designMode?: string;
+  creativeProcess?: 'reference_first' | 'description_first' | string;
+  officialImageAnalysis?: {
+    inferredTheme: string;
+    atmosphere: string;
+    visualMotifs: string[];
+    paletteCues: string[];
+    stylisticDirection: string;
+    referenceImageUrl?: string | null;
+    sourceUrl?: string | null;
+  } | null;
+  descriptionAnalysis?: {
+    theme: string;
+    atmosphere: string;
+    dressCode: string | null;
+    activities: string[];
+    audience: string | null;
+    membershipRequirement: string | null;
+    derivedMotifs: string[];
+    styleSelectionRationale: string;
+  } | null;
   existingCatalogArtwork: {
     flyer: string | null;
     hero: string | null;
   } | null;
   styleFamily: string | null;
+  medium?: string | null;
+  layoutTemplate?: string | null;
+  layoutTemplateName?: string | null;
   composition: string | null;
   palette: string[];
   technique: string | null;
   motifs: string[];
   rationale: string | null;
+  appliedFacts?: CuratorAppliedFacts | null;
+  logoSource?: CuratorLogoSource | null;
   clubIdentity: CuratorClubIdentitySummary;
   sensualityDirection: CuratorSensualityDirection;
   provenance: string;
@@ -243,6 +428,7 @@ export interface CuratorMediaItem {
     readyForApproval: boolean;
     criteria: CuratorVisualCriterion[];
   };
+  qualityEvaluation?: CuratorQualityEvaluation | null;
   visualReview: {
     decision: string;
     artworkApproved?: boolean;
@@ -258,6 +444,7 @@ export interface CuratorMediaItem {
     revisionId: string;
     requestedAt: string;
     requestedBy: string;
+    regenerationLevel?: string;
     feedback: Record<string, unknown>;
     generatedImmediately: boolean;
     resultingVersionId: string | null;
@@ -498,14 +685,31 @@ export interface CuratorDashboardSnapshot {
   mediaItems: CuratorMediaItem[];
   creativeCatalog: {
     styles: Array<{
+      id?: string;
       family: string;
+      medium?: string;
+      defaultTemplate?: string;
       themes: string[];
       palette: string[];
+      paletteHex?: string[];
       composition: string;
       technique: string;
       motifs: string[];
       sensualityMode?: string;
       sensualityCues?: string[];
+    }>;
+    layoutTemplates?: Array<{
+      id: string;
+      name: string;
+      category: string;
+      description: string;
+      stageACompositionCue?: string;
+    }>;
+    supportedDesignModes?: Array<{
+      id: string;
+      label: string;
+      dimensions: string;
+      description: string;
     }>;
     visualRelevanceCriteria: Array<{
       id: string;
@@ -513,6 +717,20 @@ export interface CuratorDashboardSnapshot {
       question: string;
       category: string;
     }>;
+    qualityCriteria?: {
+      technicalValidation: Array<{
+        id: string;
+        number: number;
+        question: string;
+        category: string;
+      }>;
+      aestheticEvaluation: Array<{
+        id: string;
+        number: number;
+        question: string;
+        category: string;
+      }>;
+    };
     sensualityTechniques: Array<{
       id: string;
       label: string;
@@ -878,12 +1096,14 @@ export const buildAuthorizedEventDraftFromCandidate = (
 
   const { start, end } = buildIsoStartEnd(candidate);
 
+  const cleanDescription = candidate.displayDescription || candidate.description;
+
   if (existingEvent) {
     return {
       ...existingEvent,
       name: candidate.title || existingEvent.name,
       hostName: candidate.hostName || candidate.clubName || existingEvent.hostName,
-      description_full: candidate.description || existingEvent.description_full,
+      description_full: cleanDescription || existingEvent.description_full,
       website: candidate.sourceUrl || candidate.ticketUrl || existingEvent.website,
       time: {
         start: candidate.date ? start : existingEvent.time.start,
@@ -912,7 +1132,7 @@ export const buildAuthorizedEventDraftFromCandidate = (
     name: candidate.title,
     hostName: candidate.hostName || parentClub?.name || candidate.clubName || 'SwingSphere Host',
     description_full:
-      candidate.description ||
+      cleanDescription ||
       `${candidate.title} hosted at ${candidate.venue || parentClub?.name || candidate.clubName}. Verified from official source calendar.`,
     location:
       candidate.address ||

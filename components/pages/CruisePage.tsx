@@ -9,6 +9,7 @@ import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import EntityPageShell from '../entity/EntityPageShell';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
+import { resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import Seo from '../Seo';
 
@@ -153,6 +154,11 @@ const CruisePage: React.FC = () => {
           location={nextSailing ? `${dateRange} · ${departure}` : departure}
           subtitle={series.descriptionShort}
           imageUrl={nextSailing?.headerImageUrl ?? series.headerImageUrl}
+          heroCrop={
+            nextSailing?.headerImageUrl
+              ? resolveEntityHeroCrop(nextSailing)
+              : resolveEntityHeroCrop(series)
+          }
           logoImageUrl={series.logoImageUrl ?? nextSailing?.logoImageUrl}
           badge="Sailing series"
           tone="cruise"

@@ -1,4 +1,14 @@
-import { getCloudflareImageUrl } from './media/getCloudflareImageUrl';
+import {
+  getCloudflareImageUrl,
+  getHeroCloudflareImageUrl,
+  normalizeHeroDeliveryUrl,
+} from './media/getCloudflareImageUrl';
+import {
+  encodeHeroCropToUrl,
+  resolveEntityHeroCrop,
+  stripHeroCropFromUrl,
+  type HeroCropConfig,
+} from './media/heroCrop';
 import {
   isSyntheticHostOrganization,
   resolveEventOrganizerOrganizationId,
@@ -60,28 +70,87 @@ type MediaNode = EntityRef & {
   headerImageUrl?: string;
 };
 
+type UploadedMediaAssetInput = {
+  role?: string;
+  external_id?: string;
+  focal_point_x?: number | null;
+  focal_point_y?: number | null;
+  hero_crop?: HeroCropConfig | null;
+  source_width?: number | null;
+  source_height?: number | null;
+};
+
 type MediaBearingEntity = {
   logoImageUrl?: string;
   headerImageUrl?: string;
-  mediaAssets?: Array<{
-    role?: string;
-    external_id?: string;
-  }>;
+  heroCrop?: Partial<HeroCropConfig> | null;
+  mediaAssets?: UploadedMediaAssetInput[];
 };
 
-const resolveUploadedMediaUrl = (entity: MediaBearingEntity, role: 'logo' | 'hero'): string | undefined => {
-  const asset = entity.mediaAssets?.find((item) => item.role === role && item.external_id?.trim());
-  if (!asset?.external_id) return undefined;
-  return getCloudflareImageUrl({
-    externalId: asset.external_id.trim(),
-    variant: role === 'logo' ? 'logosquare' : 'herocard',
-  }) ?? undefined;
+const resolveSingleAssetMediaUrl = (
+  asset: UploadedMediaAssetInput,
+  roleOverride?: string,
+  fallbackHeaderUrl?: string,
+  entityCrop?: Partial<HeroCropConfig> | null,
+): string | undefined => {
+  const externalId = asset.external_id?.trim();
+  if (!externalId) return undefined;
+  const role = roleOverride || asset.role || 'hero';
+  if (role === 'logo') {
+    return getCloudflareImageUrl({ externalId, variant: 'logosquare' }) ?? undefined;
+  }
+  if (role === 'avatar') {
+    return getCloudflareImageUrl({ externalId, variant: 'avatarsquare' }) ?? undefined;
+  }
+  if (role === 'flyer') {
+    return getCloudflareImageUrl({ externalId, variant: 'flyerpage' }) ?? undefined;
+  }
+  if (role === 'gallery') {
+    return getCloudflareImageUrl({ externalId, variant: 'gallerypage' }) ?? undefined;
+  }
+  const crop = resolveEntityHeroCrop(
+    {
+      headerImageUrl: fallbackHeaderUrl,
+      heroCrop: asset.hero_crop ?? entityCrop ?? (
+        asset.source_width && asset.source_height
+          ? { sourceWidth: asset.source_width, sourceHeight: asset.source_height }
+          : null
+      ),
+      mediaAssets: [asset as any],
+    },
+    fallbackHeaderUrl,
+  );
+  return getHeroCloudflareImageUrl(externalId, crop) ?? undefined;
 };
 
-const mediaNodeFields = (entity: MediaBearingEntity) => ({
-  logoImageUrl: resolveUploadedMediaUrl(entity, 'logo') ?? entity.logoImageUrl,
-  headerImageUrl: resolveUploadedMediaUrl(entity, 'hero') ?? entity.headerImageUrl,
-});
+export function resolveUploadedMediaUrl(asset: UploadedMediaAssetInput, role?: string): string;
+export function resolveUploadedMediaUrl(entity: MediaBearingEntity, role: 'logo' | 'hero'): string | undefined;
+export function resolveUploadedMediaUrl(
+  input: UploadedMediaAssetInput | MediaBearingEntity,
+  role?: string,
+): string | undefined {
+  if ('external_id' in input && typeof input.external_id === 'string') {
+    return resolveSingleAssetMediaUrl(input, role) ?? '';
+  }
+  const entity = input as MediaBearingEntity;
+  const targetRole = (role ?? 'hero') as 'logo' | 'hero';
+  const matching = (entity.mediaAssets ?? []).filter((item) => item.role === targetRole && item.external_id?.trim());
+  const asset = matching[matching.length - 1];
+  if (!asset) return undefined;
+  return resolveSingleAssetMediaUrl(asset, targetRole, entity.headerImageUrl, entity.heroCrop);
+}
+
+const mediaNodeFields = (entity: MediaBearingEntity) => {
+  const crop = resolveEntityHeroCrop(entity as any, entity.headerImageUrl);
+  const directHeader = entity.headerImageUrl
+    ? normalizeHeroDeliveryUrl(entity.headerImageUrl, crop)
+    : undefined;
+  const uploadedHeader = resolveUploadedMediaUrl(entity, 'hero');
+  return {
+    logoImageUrl: resolveUploadedMediaUrl(entity, 'logo') ?? entity.logoImageUrl,
+    headerImageUrl: directHeader || uploadedHeader,
+  };
+};
 
 const refKey = (ref: EntityRef) => `${ref.type}:${ref.id}`;
 
@@ -656,13 +725,13 @@ export const getCanonicalMediaSignature = (url?: string | null, externalId?: str
   if (externalId?.trim()) return `cf:${externalId.trim().toLowerCase()}`;
   const cfId = extractCloudflareExternalIdFromUrl(url);
   if (cfId) return `cf:${cfId.toLowerCase()}`;
-  const trimmed = url?.trim();
+  const trimmed = stripHeroCropFromUrl(url);
   if (!trimmed) return null;
   try {
     const parsed = new URL(trimmed);
     return `url:${parsed.origin.toLowerCase()}${parsed.pathname}`;
   } catch {
-    return `url:${trimmed.toLowerCase()}`;
+    return `url:${trimmed.split('#')[0].split('?')[0].toLowerCase()}`;
   }
 };
 

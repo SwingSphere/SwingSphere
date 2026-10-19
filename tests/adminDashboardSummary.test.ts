@@ -365,6 +365,23 @@ const createSampleInput = (): DashboardSummaryInput => ({
   assert.equal(duplicateItem.count, 2); // club-1 and club-2-dup share "velvet lounge|austin"
 }
 
+// Private and approximate locations must not appear in public building-verification warnings.
+{
+  const input = createSampleInput();
+  const club = input.listings.find((item) => item.id === 'club-2-dup');
+  const venue = input.venues.find((item) => item.id === 'venue-2-unverified');
+  assert.ok(club && venue);
+  club.status = 'private';
+  venue.visibility = 'private';
+  const spatial = buildOperationalQueue(input).find((item) => item.id === 'building-verification');
+  assert.ok(spatial);
+  assert.ok(!spatial.records.some((record) => record.id === club.id));
+  assert.ok(!spatial.records.some((record) => record.id === venue.id));
+  venue.visibility = 'public_exact';
+  const publicSpatial = buildOperationalQueue(input).find((item) => item.id === 'building-verification');
+  assert.ok(publicSpatial?.records.some((record) => record.id === venue.id));
+}
+
 // Media audit must use the same resolved image sources as listing editors/pages.
 {
   const input = createSampleInput();

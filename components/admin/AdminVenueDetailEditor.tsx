@@ -15,10 +15,10 @@ import { useAppStore } from '../../store/appStore';
 import { AdminEditorPage } from './editor/AdminDetailPage';
 import EntityRelationshipPanel from './EntityRelationshipPanel';
 import MediaUploader from '../media/MediaUploader';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { encodeHeroCropToUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { getMediaRule } from '../../lib/media/mediaRules';
-import type { MediaAsset, MediaRole } from '../../lib/media/types';
+import type { HeroCropConfig, MediaAsset, MediaRole } from '../../lib/media/types';
 
 type AdminVenueDetailEditorProps = {
   venue: VenueData;
@@ -84,16 +84,30 @@ const AdminVenueDetailEditor: React.FC<AdminVenueDetailEditorProps> = ({
   const mediaOwnerId = draft.id ? getMediaOwnerId('venue', draft.id) : '';
   const getAsset = (role: MediaRole) => draft.mediaAssets?.find((asset) => asset.role === role) ?? null;
   const handleAssetUploaded = (asset: MediaAsset) => {
-    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
+    const url = resolveUploadedMediaUrl(asset);
     setDraft((current) => ({
       ...current,
       mediaAssets: asset.role === 'gallery'
         ? [...(current.mediaAssets ?? []), asset]
         : [...(current.mediaAssets ?? []).filter((item) => item.role !== asset.role), asset],
       ...(asset.role === 'logo' ? { logoImageUrl: url } : {}),
-      ...(asset.role === 'hero' ? { headerImageUrl: url } : {}),
+      ...(asset.role === 'hero' ? { headerImageUrl: url, heroCrop: asset.hero_crop ?? current.heroCrop } : {}),
       ...(asset.role === 'gallery' ? { galleryImageUrls: [...(current.galleryImageUrls ?? []), url] } : {}),
     }));
+  };
+  const handleHeroCropChange = (heroCrop: HeroCropConfig, resolvedUrlWithCrop?: string) => {
+    setDraft((current) => {
+      const nextHeaderUrl =
+        resolvedUrlWithCrop ||
+        (current.headerImageUrl
+          ? encodeHeroCropToUrl(current.headerImageUrl, heroCrop)
+          : current.headerImageUrl);
+      return {
+        ...current,
+        headerImageUrl: nextHeaderUrl,
+        heroCrop,
+      };
+    });
   };
 
   const updateAddress = (field: keyof VenueData['address'], value: string) => {
@@ -207,8 +221,26 @@ const AdminVenueDetailEditor: React.FC<AdminVenueDetailEditorProps> = ({
           onSave: () => saveDraft(),
           render: () => mediaOwnerId ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <MediaUploader tone="light" ownerType="venue" ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} label="Upload or replace venue logo" onUploaded={handleAssetUploaded} />
-              <MediaUploader tone="light" ownerType="venue" ownerId={mediaOwnerId} role="hero" existingAsset={getAsset('hero')} label="Upload or replace venue hero image" onUploaded={handleAssetUploaded} />
+              <MediaUploader tone="light" ownerType="venue" ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} existingImageUrl={draft.logoImageUrl ?? null} label="Upload or replace venue logo" onUploaded={handleAssetUploaded} />
+              <MediaUploader
+                tone="light"
+                ownerType="venue"
+                ownerId={mediaOwnerId}
+                role="hero"
+                existingAsset={getAsset('hero')}
+                existingImageUrl={draft.headerImageUrl ?? null}
+                existingHeroCrop={resolveEntityHeroCrop(draft)}
+                heroPreviewContext={{
+                  entityKind: 'venue',
+                  title: draft.name,
+                  subtitle: [draft.address.city, draft.address.region, draft.address.country].filter(Boolean).join(', '),
+                  badgeLabel: 'Venue',
+                  logoUrl: draft.logoImageUrl ?? null,
+                }}
+                label="Upload or replace venue hero image"
+                onUploaded={handleAssetUploaded}
+                onHeroCropChange={handleHeroCropChange}
+              />
               <div className="md:col-span-2"><MediaUploader tone="light" ownerType="venue" ownerId={mediaOwnerId} role="gallery" label="Add venue gallery image" onUploaded={handleAssetUploaded} /></div>
               {draft.logoImageUrl ? <img src={draft.logoImageUrl} alt="Current venue logo" className="h-36 w-full rounded-xl border border-gray-200 bg-white object-contain p-3" /> : null}
               {draft.headerImageUrl ? <img src={draft.headerImageUrl} alt="Current venue hero" className="h-36 w-full rounded-xl border border-gray-200 object-cover" /> : null}

@@ -100,6 +100,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let mounted = true;
 
+    const isDevAdminFallback = () =>
+      import.meta.env.DEV &&
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem('swingsphere:dev-admin') === 'true';
+
     const restore = async () => {
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user;
@@ -110,7 +115,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (error) {
           console.error('Failed to restore authenticated profile:', error);
         }
-      } else if (import.meta.env.DEV && typeof window !== 'undefined' && window.localStorage.getItem('swingsphere:dev-admin') === 'true') {
+      } else if (isDevAdminFallback()) {
         profile = mockUsers[0];
       }
       if (mounted) {
@@ -130,6 +135,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch (error) {
             console.error('Failed to load authenticated profile after auth state change:', error);
           }
+        } else if (isDevAdminFallback()) {
+          profile = mockUsers[0];
         }
         if (mounted) {
           setCurrentUser(profile);
@@ -142,7 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user;
       if (!user) {
-        if (mounted) setCurrentUser(null);
+        if (mounted) setCurrentUser(isDevAdminFallback() ? mockUsers[0] : null);
         return;
       }
       try {

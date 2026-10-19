@@ -9,6 +9,7 @@ import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import EntityPageShell from '../entity/EntityPageShell';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { TravelChipList, TravelFact, TravelHero, TravelSection } from '../travel/TravelPagePrimitives';
+import { resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import Seo from '../Seo';
 
@@ -130,6 +131,7 @@ const ResortPage: React.FC = () => {
           location={location}
           subtitle={resort.descriptionShort}
           imageUrl={resort.headerImageUrl}
+          heroCrop={resolveEntityHeroCrop(resort)}
           logoImageUrl={resort.logoImageUrl}
           badge="Stay + Experience"
         />

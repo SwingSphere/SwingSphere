@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, MapPin, Pencil } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
+import SharedHeroImage from '../entity/SharedHeroImage';
 import BadgeShelf from '../badges/BadgeShelf';
 import type { BadgeAwardView } from '../../lib/badges/badgeTypes';
 import { buildFallbackCandidateChain, markMediaUrlFailed } from '../../lib/listingImage';
+import type { HeroCropConfig } from '../../lib/media/heroCrop';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import type { HostQuickEditField } from '../admin-edit/HostQuickEditPanel';
 
@@ -16,6 +18,7 @@ type HostHeroProps = {
   themePills: string[];
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: HeroCropConfig | null;
   description?: string;
   operatorName?: string;
   displayLabel?: string;
@@ -42,6 +45,7 @@ const HostHero: React.FC<HostHeroProps> = ({
   cadenceText,
   logoImageUrl,
   headerImageUrl,
+  heroCrop,
   operatorName,
   displayLabel = 'Promoter',
   regions = [],
@@ -76,12 +80,15 @@ const HostHero: React.FC<HostHeroProps> = ({
 
   return (
     <section className="relative mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-2xl shadow-black/40">
-      <div className="relative min-h-[360px] sm:min-h-[420px]">
+      <div className="relative aspect-[4/3] min-h-[220px] sm:aspect-[16/9] sm:min-h-[320px] lg:aspect-[20/9] lg:min-h-[420px]">
         {activeHeaderUrl ? (
-          <img
+          <SharedHeroImage
             src={activeHeaderUrl}
+            fallbackUrls={headerCandidates.slice(headerIdx + 1)}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            crop={heroCrop}
+            entityId={organizationId ?? hostSlug}
+            className="absolute inset-0"
             onError={() => {
               const nextUrl = headerCandidates[headerIdx + 1] ?? null;
               markMediaUrlFailed(activeHeaderUrl, { entityId: organizationId ?? hostSlug, role: 'hero', nextUrl });
@@ -91,12 +98,14 @@ const HostHero: React.FC<HostHeroProps> = ({
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(185,28,28,0.28),transparent_34%),linear-gradient(135deg,#17191f,#07090d_62%,#14070a)]" />
         )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/85 via-[#05060a]/25 to-transparent" />
 
 
         {showQuickControls ? (
           <div className="absolute right-4 top-4 z-30 flex flex-wrap gap-2 sm:right-6 sm:top-6">
             <button
               type="button"
+              data-testid="quick-edit-hero-button"
               onClick={() => onQuickEdit?.('hero')}
               className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
             >

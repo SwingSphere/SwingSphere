@@ -78,23 +78,24 @@ const buildCatalogSignature = (
         ev.clubBrandId ?? '',
         ev.hostName ?? '',
         String(ev.logoOverride ?? ''),
+        JSON.stringify(l.heroCrop ?? null),
         mediaSig,
       ].join(':');
     })
     .join('|');
   const venueSig = venues
-    .map((v) => `${v.id}:${v.slug}:${v.name}:${v.visibility}:${v.logoImageUrl ?? ''}:${v.headerImageUrl ?? ''}`)
+    .map((v) => `${v.id}:${v.slug}:${v.name}:${v.visibility}:${v.logoImageUrl ?? ''}:${v.headerImageUrl ?? ''}:${JSON.stringify(v.heroCrop ?? null)}`)
     .join('|');
   const orgSig = organizations
     .map(
       (o) =>
-        `${o.id}:${o.slug}:${o.status}:${o.name}:${o.displayTypes.join(',')}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}`,
+        `${o.id}:${o.slug}:${o.status}:${o.name}:${o.displayTypes.join(',')}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}:${JSON.stringify(o.heroCrop ?? null)}`,
     )
     .join('|');
   const seriesSig = eventSeries
     .map(
       (s) =>
-        `${s.id}:${s.slug}:${s.status}:${s.name}:${s.organizerOrganizationId ?? ''}:${s.defaultVenueId ?? ''}:${s.logoImageUrl ?? ''}:${s.headerImageUrl ?? ''}`,
+        `${s.id}:${s.slug}:${s.status}:${s.name}:${s.organizerOrganizationId ?? ''}:${s.defaultVenueId ?? ''}:${s.logoImageUrl ?? ''}:${s.headerImageUrl ?? ''}:${JSON.stringify(s.heroCrop ?? null)}`,
     )
     .join('|');
   const relSig = relationships

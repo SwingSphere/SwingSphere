@@ -3218,5 +3218,187 @@
       }
     },
     "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-kink-store-92231-2026-1791947918629",
+    "listingId": "event-kink-store-92231-2026",
+    "venueId": "venue-kink-store-sf",
+    "action": "create",
+    "occurredAt": "2026-10-14T03:18:37.958Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-kink-store-92231-2026",
+      "venueId": "venue-kink-store-sf",
+      "normalizedAddress": "224 6th street san francisco california 94103 united states",
+      "latitude": 37.7792264,
+      "longitude": -122.4069506,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-14T03:18:16.277Z",
+      "hash": "bvs-3dea8d36"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-event-kink-store-92231-2026",
+      "listingId": "event-kink-store-92231-2026",
+      "venueId": "venue-kink-store-sf",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "350243940"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -122.40679800510406,
+              37.779296813559384
+            ],
+            [
+              -122.40685701370239,
+              37.7792501745395
+            ],
+            [
+              -122.40686774253845,
+              37.77925865436349
+            ],
+            [
+              -122.40688383579254,
+              37.77924593462714
+            ],
+            [
+              -122.40687310695648,
+              37.77923745480172
+            ],
+            [
+              -122.40692675113678,
+              37.7791950556599
+            ],
+            [
+              -122.40695357322693,
+              37.779216255233834
+            ],
+            [
+              -122.40696966648102,
+              37.779199295575154
+            ],
+            [
+              -122.4069482088089,
+              37.77918233591262
+            ],
+            [
+              -122.40707159042358,
+              37.77908481777739
+            ],
+            [
+              -122.40713059902191,
+              37.779135696820504
+            ],
+            [
+              -122.40685701370239,
+              37.77934345254981
+            ],
+            [
+              -122.40679800510406,
+              37.779296813559384
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 12,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-14T03:18:37.444Z",
+        "updatedAt": "2026-10-14T03:18:37.958Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 13
+      }
+    },
+    "note": "Explicit Building Inspector save."
+  },
+  {
+    "version": 1,
+    "id": "building-history-event-kink-store-92217-2026-1791947984899",
+    "listingId": "event-kink-store-92217-2026",
+    "venueId": "venue-kink-penthouse-mission-sf",
+    "action": "create",
+    "occurredAt": "2026-10-14T03:19:44.629Z",
+    "actorUserId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+    "persistenceMode": "manual",
+    "policyVersion": "building-persistence-v1",
+    "inputSnapshot": {
+      "version": 1,
+      "listingId": "event-kink-store-92217-2026",
+      "venueId": "venue-kink-penthouse-mission-sf",
+      "normalizedAddress": "1717 mission street san francisco california 94103 united states",
+      "latitude": 37.7696943,
+      "longitude": -122.4198548,
+      "visibility": "public_exact",
+      "coordinateProvenance": "nominatim",
+      "coordinateConfidence": 0.98,
+      "validatedAt": "2026-10-14T03:19:08.656Z",
+      "hash": "bvs-eccadc48"
+    },
+    "previousAsset": null,
+    "nextAsset": {
+      "id": "building-asset-event-kink-store-92217-2026",
+      "listingId": "event-kink-store-92217-2026",
+      "venueId": "venue-kink-penthouse-mission-sf",
+      "version": 1,
+      "provider": {
+        "source": "OpenFreeMap",
+        "featureIds": [
+          "32844350"
+        ],
+        "origin": "provider"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -122.41942584514618,
+              37.769879374630534
+            ],
+            [
+              -122.41945266723633,
+              37.76962070674847
+            ],
+            [
+              -122.41983890533447,
+              37.7696461495311
+            ],
+            [
+              -122.4198067188263,
+              37.76990481732415
+            ],
+            [
+              -122.41942584514618,
+              37.769879374630534
+            ]
+          ]
+        ]
+      },
+      "renderHeightMeters": 5,
+      "renderMinHeightMeters": 0,
+      "capture": {
+        "createdAt": "2026-10-14T03:19:44.300Z",
+        "updatedAt": "2026-10-14T03:19:44.629Z",
+        "polygonCount": 1,
+        "ringCount": 1,
+        "vertexCount": 5
+      }
+    },
+    "note": "Explicit Building Inspector save."
   }
 ]

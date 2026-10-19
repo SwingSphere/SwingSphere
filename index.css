@@ -1870,7 +1870,7 @@ html[data-effects="low"] .ss-explore-led-glow::before,
   }
 }
 
-@media (min-width: 640px) and (max-width: 1024px) {
+@media (min-width: 640px) and (max-width: 1023px) {
   .ss-event-hero-tablet {
     display: block !important;
   }
@@ -1889,7 +1889,7 @@ html[data-effects="low"] .ss-explore-led-glow::before,
   }
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 1024px) {
   .ss-event-hero-desktop {
     display: block !important;
   }
@@ -1914,3 +1914,30 @@ html[data-effects="low"] .ss-explore-led-glow::before,
   }
 }
 
+/* Shared WYSIWYG Hero Image Renderer ---------------------------------------- */
+.ss-shared-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--ss-hero-mobile-fit, cover);
+  object-position: var(--ss-hero-mobile-pos, 50% 50%);
+  transform-origin: var(--ss-hero-mobile-origin, 50% 50%);
+  transform: scale(var(--ss-hero-mobile-scale, 1));
+}
+
+@media (min-width: 640px) {
+  .ss-shared-hero-img {
+    object-fit: var(--ss-hero-tablet-fit, cover);
+    object-position: var(--ss-hero-tablet-pos, 50% 50%);
+    transform-origin: var(--ss-hero-tablet-origin, 50% 50%);
+    transform: scale(var(--ss-hero-tablet-scale, 1));
+  }
+}
+
+@media (min-width: 1024px) {
+  .ss-shared-hero-img {
+    object-fit: var(--ss-hero-desktop-fit, cover);
+    object-position: var(--ss-hero-desktop-pos, 50% 50%);
+    transform-origin: var(--ss-hero-desktop-origin, 50% 50%);
+    transform: scale(var(--ss-hero-desktop-scale, 1));
+  }
+}

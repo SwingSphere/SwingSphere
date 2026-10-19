@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import type { EventData, EventSeriesData, OrganizationData, VenueData } from '../../types';
-import type { MediaAsset, MediaRole } from '../../lib/media/types';
+import type { HeroCropConfig, MediaAsset, MediaRole } from '../../lib/media/types';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { encodeHeroCropToUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { getMediaRule } from '../../lib/media/mediaRules';
 import MediaUploader from '../media/MediaUploader';
 
 const slugify = (value: string) => value
@@ -49,8 +49,7 @@ const AdminEventSeriesEditor: React.FC<AdminEventSeriesEditorProps> = ({
   const mediaOwnerId = draft.id ? getMediaOwnerId('event_series', draft.id) : '';
   const getAsset = (role: MediaRole) => draft.mediaAssets?.find((asset) => asset.role === role) ?? null;
   const handleAssetUploaded = (asset: MediaAsset) => {
-    const variant = getMediaRule(asset.role).defaultVariant;
-    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant });
+    const url = resolveUploadedMediaUrl(asset);
     setDraft((current) => {
       const existing = current.mediaAssets ?? [];
       const mediaAssets = asset.role === 'gallery'
@@ -60,7 +59,21 @@ const AdminEventSeriesEditor: React.FC<AdminEventSeriesEditorProps> = ({
         ...current,
         mediaAssets,
         ...(asset.role === 'logo' ? { logoImageUrl: url } : {}),
-        ...(asset.role === 'hero' ? { headerImageUrl: url } : {}),
+        ...(asset.role === 'hero' ? { headerImageUrl: url, heroCrop: asset.hero_crop ?? current.heroCrop } : {}),
+      };
+    });
+  };
+  const handleHeroCropChange = (heroCrop: HeroCropConfig, resolvedUrlWithCrop?: string) => {
+    setDraft((current) => {
+      const nextHeaderUrl =
+        resolvedUrlWithCrop ||
+        (current.headerImageUrl
+          ? encodeHeroCropToUrl(current.headerImageUrl, heroCrop)
+          : current.headerImageUrl);
+      return {
+        ...current,
+        headerImageUrl: nextHeaderUrl,
+        heroCrop,
       };
     });
   };
@@ -135,6 +148,7 @@ const AdminEventSeriesEditor: React.FC<AdminEventSeriesEditorProps> = ({
                 role="logo"
                 cropAspectRatioOverride={1}
                 existingAsset={getAsset('logo')}
+                existingImageUrl={draft.logoImageUrl ?? null}
                 label="Upload or replace series logo"
                 helperText="Square logo used across every occurrence in this series. You can crop and reposition the image before upload."
                 onUploaded={handleAssetUploaded}
@@ -145,9 +159,19 @@ const AdminEventSeriesEditor: React.FC<AdminEventSeriesEditorProps> = ({
                 ownerId={mediaOwnerId}
                 role="hero"
                 existingAsset={getAsset('hero')}
+                existingImageUrl={draft.headerImageUrl ?? null}
+                existingHeroCrop={resolveEntityHeroCrop(draft)}
+                heroPreviewContext={{
+                  entityKind: 'event',
+                  title: draft.name,
+                  subtitle: draft.descriptionShort || 'Recurring Event Series',
+                  badgeLabel: 'Event Series',
+                  logoUrl: draft.logoImageUrl ?? null,
+                }}
                 label="Upload or replace default banner"
                 helperText="Wide brand banner inherited by occurrences that do not provide their own banner."
                 onUploaded={handleAssetUploaded}
+                onHeroCropChange={handleHeroCropChange}
               />
             </div>
             {!draft.id && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Save the new series once before uploading media so SwingSphere can create a permanent media owner.</p>}

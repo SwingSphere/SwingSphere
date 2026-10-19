@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Expand, ExternalLink, ImagePlus, Mail, Pencil, Ticket, X, ZoomIn, ZoomOut } from 'lucide-react';
 import HeroContainer from '../HeroContainer';
+import SharedHeroImage from '../SharedHeroImage';
 import HeroLogo from './HeroLogo';
 import HeroThumbnailStack from '../HeroThumbnailStack';
 import HeroTagRow from '../HeroTagRow';
@@ -16,6 +17,7 @@ import {
   markMediaUrlFailed,
 } from '../../../lib/listingImage';
 import { getCanonicalMediaSignature } from '../../../lib/entityBrandMedia';
+import type { HeroCropConfig } from '../../../lib/media/heroCrop';
 
 type EventHeroProps = {
   eventId: string;
@@ -24,6 +26,7 @@ type EventHeroProps = {
   backgroundFallbackUrls?: Array<string | null | undefined>;
   mobileFlyerImageUrl?: string;
   flyerFallbackUrls?: Array<string | null | undefined>;
+  heroCrop?: HeroCropConfig | null;
   eventLogoUrl?: string;
   clubLogoUrl?: string;
   hostLogoUrl?: string;
@@ -51,6 +54,7 @@ const EventHero: React.FC<EventHeroProps> = ({
   backgroundFallbackUrls = [],
   mobileFlyerImageUrl,
   flyerFallbackUrls = [],
+  heroCrop,
   eventLogoUrl,
   clubLogoUrl,
   hostLogoUrl,
@@ -252,17 +256,25 @@ const EventHero: React.FC<EventHeroProps> = ({
                   : undefined
               }
             >
-              <img
-                src={activePrimaryVisualUrl}
-                onError={() => recordCandidateFailure(activePrimaryVisualUrl, 'flyer')}
-                alt={activeVisualIsFlyer ? `${title} flyer` : title}
-                decoding="async"
-                className={
-                  activeVisualIsFlyer
-                    ? 'max-h-[72vh] w-full object-contain'
-                    : 'h-full w-full object-cover'
-                }
-              />
+              {activeVisualIsFlyer ? (
+                <img
+                  src={activePrimaryVisualUrl}
+                  onError={() => recordCandidateFailure(activePrimaryVisualUrl, 'flyer')}
+                  alt={`${title} flyer`}
+                  decoding="async"
+                  className="max-h-[72vh] w-full object-contain"
+                />
+              ) : (
+                <SharedHeroImage
+                  src={activePrimaryVisualUrl}
+                  alt={title}
+                  crop={heroCrop}
+                  viewport="mobile"
+                  entityId={eventId}
+                  onError={() => recordCandidateFailure(activePrimaryVisualUrl, 'flyer')}
+                  className="h-full w-full"
+                />
+              )}
             </button>
 
             {showQuickControls ? (
@@ -506,18 +518,19 @@ const EventHero: React.FC<EventHeroProps> = ({
         </div>
       </section>
 
-      {/* DESKTOP (> 1024px): Preserve cinematic horizontal HeroContainer presentation */}
+      {/* DESKTOP (> 1024px): Preserve cinematic horizontal 20:9 HeroContainer presentation */}
       <div className="ss-event-hero-desktop" data-testid="event-hero-desktop">
         <HeroContainer
           title={title}
           imageUrl={activeHeroUrl}
           fallbackImageUrls={heroCandidates.slice(1)}
-          heightClassName="h-[460px]"
+          heroCrop={activeFlyerUrl && activeHeroUrl === activeFlyerUrl && !heroCrop ? null : heroCrop}
         >
           {showQuickControls ? (
             <div className="absolute left-6 top-6 z-40 flex flex-wrap gap-2">
               <button
                 type="button"
+                data-testid="quick-edit-hero-button"
                 onClick={() => onQuickEdit?.('hero')}
                 className="ss-glass ss-glass--interactive inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/65 px-3 py-2 text-xs font-black text-white"
               >

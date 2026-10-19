@@ -1,24 +1,40 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FolderOpen } from 'lucide-react';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import { FolderOpen, Sliders } from 'lucide-react';
+import { getCloudflareImageUrl, getHeroCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
 import {
   computeFileSha256Hex,
   saveStoredUploadMetadata,
   validateExternalImageUrl,
 } from '../../lib/media/canonicalAssetModel';
+import {
+  encodeHeroCropToUrl,
+  extractHeroCropFromUrl,
+  normalizeHeroCropConfig,
+  type HeroCropConfig,
+} from '../../lib/media/heroCrop';
 import { supabase } from '../../lib/supabase';
 import { ALLOWED_MEDIA_MIME_TYPES, formatMaxUploadSize, getMediaRule } from '../../lib/media/mediaRules';
 import type { MediaAsset, MediaOwnerType, MediaRole } from '../../lib/media/types';
+import HeroImageComposerModal, {
+  type HeroComposerConfirmPayload,
+  type HeroComposerPreviewContext,
+} from './HeroImageComposerModal';
 import ImageCropDialog from './ImageCropDialog';
 import MediaImage from './MediaImage';
 import MediaLibraryPickerModal from './MediaLibraryPickerModal';
+import SharedHeroImage from '../entity/SharedHeroImage';
 
 type MediaUploaderProps = {
   ownerType: MediaOwnerType;
   ownerId: string;
   role: MediaRole;
   existingAsset?: MediaAsset | null;
+  existingImageUrl?: string | null;
+  existingHeroCrop?: HeroCropConfig | null;
+  heroPreviewContext?: HeroComposerPreviewContext;
   onUploaded?: (asset: MediaAsset) => void;
+  onHeroCropChange?: (crop: HeroCropConfig, resolvedUrlWithCrop: string) => void;
   label?: string;
   helperText?: string;
   cropAspectRatioOverride?: number | null;
@@ -36,10 +52,17 @@ type UploadState = 'idle' | 'creating' | 'uploading' | 'saving';
 
 // Preserve the original if re-encoding does not improve its size. Cloudflare still
 // performs browser-specific resizing/format negotiation on delivery.
-const optimizeUploadFile = async (file: File, role: MediaRole): Promise<File> => {
-  if (file.size <= 500 * 1024) return file;
-  const maxDimension = role === 'flyer' ? 1800 : role === 'logo' || role === 'avatar' ? 1024 : 1600;
-  const quality = role === 'flyer' || role === 'logo' ? 0.9 : 0.84;
+const optimizeUploadFile = async (file: File, role: MediaRole, skipReencode = false): Promise<File> => {
+  if (skipReencode || file.size <= 500 * 1024) return file;
+  const maxDimension =
+    role === 'hero'
+      ? 2048
+      : role === 'flyer'
+        ? 1800
+        : role === 'logo' || role === 'avatar'
+          ? 1024
+          : 1600;
+  const quality = role === 'hero' || role === 'flyer' || role === 'logo' ? 0.9 : 0.84;
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(file);
@@ -92,7 +115,11 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   ownerId,
   role,
   existingAsset,
+  existingImageUrl,
+  existingHeroCrop,
+  heroPreviewContext,
   onUploaded,
+  onHeroCropChange,
   label,
   helperText,
   cropAspectRatioOverride,
@@ -106,23 +133,84 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   allowLibraryPick = true,
 }) => {
   const rule = getMediaRule(role);
+  // Legacy listing identifiers are human-readable; the Media API requires a stable UUID.
+  // Normalize at the shared upload boundary so every editor follows the same contract.
+  const uploadOwnerId = getMediaOwnerId(ownerType, ownerId.trim());
   const [asset, setAsset] = useState<MediaAsset | null>(existingAsset ?? null);
   const [state, setState] = useState<UploadState>('idle');
   const [error, setError] = useState<string>('');
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const [isReframingExistingHero, setIsReframingExistingHero] = useState(false);
+  const [estimatedOptimizedBytes, setEstimatedOptimizedBytes] = useState<number | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [lastFailedUpload, setLastFailedUpload] = useState<{
+    file: File;
+    heroPayload?: {
+      crop: HeroCropConfig;
+      mode: 'non_destructive' | 'exported_crop';
+      naturalWidth: number;
+      naturalHeight: number;
+    };
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setAsset(existingAsset ?? null);
   }, [existingAsset]);
 
+  const resolvedHeroCrop = useMemo<HeroCropConfig | null>(() => {
+    if (role !== 'hero') return null;
+    if (asset?.hero_crop) return normalizeHeroCropConfig(asset.hero_crop);
+    if (existingHeroCrop) return normalizeHeroCropConfig(existingHeroCrop);
+    if (existingImageUrl) {
+      const fromUrl = extractHeroCropFromUrl(existingImageUrl);
+      if (fromUrl) return fromUrl;
+    }
+    if (asset?.focal_point_x != null || asset?.focal_point_y != null) {
+      return normalizeHeroCropConfig({
+        focalX: asset.focal_point_x ?? 0.5,
+        focalY: asset.focal_point_y ?? 0.5,
+      });
+    }
+    return null;
+  }, [asset, existingHeroCrop, existingImageUrl, role]);
+
   const previewUrl = useMemo(() => {
-    if (!asset) return null;
-    return getCloudflareImageUrl({ externalId: asset.external_id, variant: rule.defaultVariant });
-  }, [asset, rule.defaultVariant]);
+    if (asset) {
+      if (role === 'hero') {
+        return getHeroCloudflareImageUrl({
+          externalId: asset.external_id,
+          crop: resolvedHeroCrop,
+          preferredVariant: 'heropage',
+        });
+      }
+      return getCloudflareImageUrl({ externalId: asset.external_id, variant: rule.defaultVariant });
+    }
+    if (existingImageUrl) return existingImageUrl;
+    return null;
+  }, [asset, existingImageUrl, resolvedHeroCrop, role, rule.defaultVariant]);
+
+  useEffect(() => {
+    let active = true;
+    if (!cropFile || role !== 'hero') {
+      setEstimatedOptimizedBytes(null);
+      return () => {
+        active = false;
+      };
+    }
+    optimizeUploadFile(cropFile, 'hero')
+      .then((optimized) => {
+        if (active) setEstimatedOptimizedBytes(optimized.size);
+      })
+      .catch(() => {
+        if (active) setEstimatedOptimizedBytes(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [cropFile, role]);
 
   const isBusy = state !== 'idle';
   const accept = ALLOWED_MEDIA_MIME_TYPES.join(',');
@@ -143,12 +231,28 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
     onError?.(message);
   };
 
-  const uploadFile = async (originalFile: File) => {
+  const uploadFile = async (
+    originalFile: File,
+    heroPayload?: {
+      crop: HeroCropConfig;
+      mode: 'non_destructive' | 'exported_crop';
+      naturalWidth: number;
+      naturalHeight: number;
+    },
+  ) => {
     try {
-      const file = await optimizeUploadFile(originalFile, role);
+      setError('');
+      setLastFailedUpload(null);
+      const skipReencode = heroPayload?.mode === 'exported_crop';
+      const file = await optimizeUploadFile(originalFile, role, skipReencode);
       const sha256Promise = computeFileSha256Hex(file).catch(() => undefined);
       const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
+      const isDevAdminLocal =
+        import.meta.env.DEV &&
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem('swingsphere:dev-admin') === 'true';
+      const accessToken =
+        sessionData.session?.access_token || (isDevAdminLocal ? 'dev-admin-local-token' : undefined);
       if (!accessToken) throw new Error('Please log in before uploading media.');
       const authHeaders = {
         'Content-Type': 'application/json',
@@ -159,7 +263,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       const createResponse = await fetch('/api/media/create-upload-url', {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ ownerType, ownerId, role, managedEntityId }),
+        body: JSON.stringify({ ownerType, ownerId: uploadOwnerId, role, managedEntityId }),
       });
       if (!createResponse.ok) throw new Error(await getUploadError(createResponse));
       const createPayload = await createResponse.json();
@@ -193,23 +297,105 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
         headers: authHeaders,
         body: JSON.stringify({
           ownerType,
-          ownerId,
+          ownerId: uploadOwnerId,
           role,
           externalId,
           altText: file.name.replace(/\.[^.]+$/, ''),
           managedEntityId,
+          ...(heroPayload
+            ? {
+                focalPointX: heroPayload.crop.focalX,
+                focalPointY: heroPayload.crop.focalY,
+                width: heroPayload.naturalWidth || undefined,
+                height: heroPayload.naturalHeight || undefined,
+              }
+            : {}),
         }),
       });
       if (!completeResponse.ok) throw new Error(await getUploadError(completeResponse));
       const completePayload = await completeResponse.json();
-      const nextAsset = completePayload.asset as MediaAsset;
+      const baseAsset = completePayload.asset as MediaAsset;
+      const nextAsset: MediaAsset = heroPayload
+        ? {
+            ...baseAsset,
+            focal_point_x: heroPayload.crop.focalX,
+            focal_point_y: heroPayload.crop.focalY,
+            hero_crop: heroPayload.crop,
+            source_width: heroPayload.naturalWidth || baseAsset.width,
+            source_height: heroPayload.naturalHeight || baseAsset.height,
+          }
+        : baseAsset;
       setAsset(nextAsset);
+      setLastFailedUpload(null);
       onUploaded?.(nextAsset);
+      if (heroPayload && onHeroCropChange) {
+        const deliveryUrl =
+          getHeroCloudflareImageUrl({
+            externalId: nextAsset.external_id,
+            crop: heroPayload.crop,
+            preferredVariant: 'heropage',
+          }) ?? '';
+        onHeroCropChange(heroPayload.crop, encodeHeroCropToUrl(deliveryUrl, heroPayload.crop));
+      }
     } catch (uploadError: any) {
+      setLastFailedUpload({ file: originalFile, heroPayload });
       reportError(uploadError?.message || 'Upload failed. Please try again.');
     } finally {
       setState('idle');
       clearInput();
+    }
+  };
+
+  const handleHeroComposerConfirm = (payload: HeroComposerConfirmPayload) => {
+    setCropFile(null);
+    setIsReframingExistingHero(false);
+
+    if (payload.file) {
+      void uploadFile(payload.file, {
+        crop: payload.crop,
+        mode: payload.mode,
+        naturalWidth: payload.naturalWidth,
+        naturalHeight: payload.naturalHeight,
+      });
+      return;
+    }
+
+    // Re-framing an existing hero asset in-place without re-uploading or duplicating canonical assets
+    const nextCrop = normalizeHeroCropConfig({
+      ...payload.crop,
+      sourceWidth: payload.naturalWidth || payload.crop.sourceWidth,
+      sourceHeight: payload.naturalHeight || payload.crop.sourceHeight,
+    });
+
+    if (asset) {
+      const updatedAsset: MediaAsset = {
+        ...asset,
+        focal_point_x: nextCrop.focalX,
+        focal_point_y: nextCrop.focalY,
+        hero_crop: nextCrop,
+        source_width: payload.naturalWidth || asset.source_width || asset.width,
+        source_height: payload.naturalHeight || asset.source_height || asset.height,
+      };
+      setAsset(updatedAsset);
+      onUploaded?.(updatedAsset);
+      const baseDeliveryUrl =
+        getHeroCloudflareImageUrl({
+          externalId: updatedAsset.external_id,
+          crop: nextCrop,
+          preferredVariant: 'heropage',
+        }) ??
+        existingImageUrl ??
+        '';
+      const urlWithCrop = encodeHeroCropToUrl(baseDeliveryUrl, nextCrop);
+      onHeroCropChange?.(nextCrop, urlWithCrop);
+      onExternalImageUrl?.(urlWithCrop);
+      return;
+    }
+
+    if (existingImageUrl) {
+      const urlWithCrop = encodeHeroCropToUrl(existingImageUrl, nextCrop);
+      onHeroCropChange?.(nextCrop, urlWithCrop);
+      onExternalImageUrl?.(urlWithCrop);
     }
   };
 
@@ -232,7 +418,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       return;
     }
 
-    if (cropAspectRatio) {
+    if (role === 'hero' || cropAspectRatio) {
       setCropFile(file);
       return;
     }
@@ -280,21 +466,37 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   }, [externalFile]);
 
   const isLight = tone === 'light';
-  const cropDialog = cropFile && cropAspectRatio ? (
-    <ImageCropDialog
-      file={cropFile}
-      aspectRatio={cropAspectRatio}
-      title={`Crop ${label ?? rule.label}`}
-      onCancel={() => {
-        setCropFile(null);
-        clearInput();
-      }}
-      onConfirm={(croppedFile) => {
-        setCropFile(null);
-        void uploadFile(croppedFile);
-      }}
-    />
-  ) : null;
+  const cropDialog =
+    role === 'hero' && (cropFile || (isReframingExistingHero && previewUrl)) ? (
+      <HeroImageComposerModal
+        file={cropFile}
+        existingImageUrl={cropFile ? null : previewUrl}
+        initialCrop={resolvedHeroCrop}
+        title={`${cropFile ? 'Compose' : 'Adjust'} ${label ?? rule.label}`}
+        previewContext={heroPreviewContext}
+        estimatedOptimizedBytes={estimatedOptimizedBytes}
+        onCancel={() => {
+          setCropFile(null);
+          setIsReframingExistingHero(false);
+          clearInput();
+        }}
+        onConfirm={handleHeroComposerConfirm}
+      />
+    ) : cropFile && cropAspectRatio ? (
+      <ImageCropDialog
+        file={cropFile}
+        aspectRatio={cropAspectRatio}
+        title={`Crop ${label ?? rule.label}`}
+        onCancel={() => {
+          setCropFile(null);
+          clearInput();
+        }}
+        onConfirm={(croppedFile) => {
+          setCropFile(null);
+          void uploadFile(croppedFile);
+        }}
+      />
+    ) : null;
 
   if (triggerOnly) {
     return (
@@ -326,20 +528,37 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
         <p className={isLight ? 'text-xs text-gray-600' : 'text-xs text-gray-300'}>
           Drag an image here, upload a file, or select an existing canonical asset.
         </p>
-        {allowLibraryPick ? (
-          <button
-            type="button"
-            onClick={() => setIsLibraryOpen(true)}
-            className={
-              isLight
-                ? 'inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50'
-                : 'inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition hover:bg-white/[0.12] hover:text-white'
-            }
-          >
-            <FolderOpen className="h-3.5 w-3.5 text-red-400" />
-            Choose From Media Library
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {role === 'hero' && previewUrl ? (
+            <button
+              type="button"
+              data-testid="adjust-hero-framing-button"
+              onClick={() => setIsReframingExistingHero(true)}
+              className={
+                isLight
+                  ? 'inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-100'
+                  : 'inline-flex items-center gap-1.5 rounded-lg border border-red-400/35 bg-red-500/15 px-2.5 py-1.5 text-xs font-semibold text-red-100 transition hover:bg-red-500/25'
+              }
+            >
+              <Sliders className="h-3.5 w-3.5 text-red-300" />
+              Adjust Hero Framing
+            </button>
+          ) : null}
+          {allowLibraryPick ? (
+            <button
+              type="button"
+              onClick={() => setIsLibraryOpen(true)}
+              className={
+                isLight
+                  ? 'inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50'
+                  : 'inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition hover:bg-white/[0.12] hover:text-white'
+              }
+            >
+              <FolderOpen className="h-3.5 w-3.5 text-red-400" />
+              Choose From Media Library
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="min-w-0 flex-1">
@@ -349,6 +568,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
               id={inputId}
               ref={inputRef}
               type="file"
+              data-testid={`media-file-input-${role}`}
               accept={accept}
               disabled={isBusy}
               onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
@@ -367,10 +587,46 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
               {state === 'creating' ? 'Preparing upload' : state === 'uploading' ? 'Uploading image' : 'Saving media'}
             </p>
           )}
-          {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+          {error && (
+            <div
+              role="alert"
+              data-testid="media-upload-error"
+              className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+            >
+              <span>{error}</span>
+              {lastFailedUpload && !isBusy ? (
+                <button
+                  type="button"
+                  data-testid="media-upload-retry-button"
+                  onClick={() => void uploadFile(lastFailedUpload.file, lastFailedUpload.heroPayload)}
+                  className="rounded-lg border border-red-300/40 bg-red-500/20 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-red-500/35"
+                >
+                  Retry upload
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
-        <div className={isLight ? 'flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white md:w-36' : 'flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/35 md:w-36'}>
-          {asset ? (
+        <div
+          className={
+            role === 'hero'
+              ? isLight
+                ? 'relative flex aspect-[20/9] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-black md:w-64'
+                : 'relative flex aspect-[20/9] w-full items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/60 md:w-64'
+              : isLight
+                ? 'flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white md:w-36'
+                : 'flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/35 md:w-36'
+          }
+        >
+          {role === 'hero' && previewUrl ? (
+            <SharedHeroImage
+              src={previewUrl}
+              alt={asset?.alt_text ?? rule.label}
+              crop={resolvedHeroCrop}
+              viewport="desktop"
+              className="h-full w-full"
+            />
+          ) : asset ? (
             <MediaImage asset={asset} className="h-full w-full" alt={asset.alt_text ?? rule.label} />
           ) : previewUrl ? (
             <img src={previewUrl} alt="" className={['h-full w-full', rule.objectFitClassName].join(' ')} />
@@ -389,9 +645,22 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
           targetOwnerType={ownerType}
           targetOwnerId={ownerId}
           onSelectCanonicalAsset={({ syntheticMediaAsset, resolvedUrl }) => {
-            setAsset(syntheticMediaAsset);
-            onUploaded?.(syntheticMediaAsset);
-            onExternalImageUrl?.(resolvedUrl);
+            const nextAsset: MediaAsset =
+              role === 'hero' && resolvedHeroCrop
+                ? {
+                    ...syntheticMediaAsset,
+                    focal_point_x: resolvedHeroCrop.focalX,
+                    focal_point_y: resolvedHeroCrop.focalY,
+                    hero_crop: resolvedHeroCrop,
+                  }
+                : syntheticMediaAsset;
+            setAsset(nextAsset);
+            onUploaded?.(nextAsset);
+            const finalUrl =
+              role === 'hero' && resolvedHeroCrop
+                ? encodeHeroCropToUrl(resolvedUrl, resolvedHeroCrop)
+                : resolvedUrl;
+            onExternalImageUrl?.(finalUrl);
           }}
         />
       ) : null}
@@ -400,4 +669,3 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
 };
 
 export default MediaUploader;
-

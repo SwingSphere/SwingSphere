@@ -162,6 +162,7 @@ export interface VenueData {
   accessibilityNotes?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   buildingAssetId?: string;
@@ -199,6 +200,7 @@ export interface OrganizationData {
   contactEmail?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   operatingRegions?: string[];
   globePresence?: OrganizationGlobePresence;
@@ -271,6 +273,7 @@ export interface EventSeriesData {
   descriptionFull?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   defaultVenueId?: string;
   defaultTags?: string[];
@@ -302,6 +305,7 @@ export interface ResortData {
   transportationNotes?: string[];
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: EntityStatus;
@@ -332,6 +336,7 @@ export interface CruiseSeriesData {
   experienceHighlights: string[];
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: EntityStatus;
@@ -356,6 +361,7 @@ export interface CruiseSailingData {
   theme?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: EntityStatus;
 }
@@ -372,6 +378,8 @@ export interface ClubBrandData {
   descriptionFull?: string;
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
+  mediaAssets?: import('./lib/media/types').MediaAsset[];
   defaultAmenities?: string[];
   status: EntityStatus;
   createdAt?: string;
@@ -425,6 +433,7 @@ export interface ClubData {
   generalAmenities: string[];
   logoImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   mediaPresentation?: 'default' | 'monochrome';
   mediaAssets?: import('./lib/media/types').MediaAsset[];
@@ -464,6 +473,7 @@ export interface EventData {
   logoOverride?: boolean;
   flyerImageUrl?: string;
   headerImageUrl?: string;
+  heroCrop?: import('./lib/media/heroCrop').HeroCropConfig;
   galleryImageUrls?: string[];
   mediaAssets?: import('./lib/media/types').MediaAsset[];
   status: 'pending_approval' | 'approved' | 'flagged';

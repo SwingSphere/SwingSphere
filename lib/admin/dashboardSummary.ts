@@ -19,6 +19,7 @@ import type { AdminListingClaim } from '../claims/listingClaims';
 import type { PendingWrittenReview } from '../feedback/adminFeedbackModeration';
 import type { PlatformHealthSnapshot } from './platformHealth';
 import { buildingVerificationNeedsReview } from '../buildingVerification';
+import { isApproximateLocation } from '../publicLocation';
 import { resolveBrandLogo, type BrandMediaCatalog } from '../entityBrandMedia';
 import { getListingPrimaryFlyerUrl, getListingPrimaryHeroUrl } from '../listingImage';
 import {
@@ -368,7 +369,13 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
   const affectedVenueIds: string[] = [];
   const affectedClubIdsForSpatial: string[] = [];
 
+  // Private/approximate club locations do not require a public 3D footprint.
+  // Event privacy is separate and never changes the venue's own visibility.
+  const requiresPublicClubBuilding = (club: ClubData) => club.status !== 'private' && !isApproximateLocation(club);
+  const requiresPublicVenueBuilding = (venue: VenueData) => venue.visibility === 'public_exact' && venue.status !== 'private';
+
   for (const club of clubs) {
+    if (!requiresPublicClubBuilding(club)) continue;
     if (buildingVerificationNeedsReview(club)) {
       seenSpatialIds.add(`club:${club.id}`);
       affectedClubIdsForSpatial.push(club.id);
@@ -400,6 +407,7 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
   }
 
   for (const venue of input.venues) {
+    if (!requiresPublicVenueBuilding(venue)) continue;
     const hasBuilding = Boolean(
       getBuildingAssetForVenue(venue, input.buildingAssets, {
         listings: input.listings,
@@ -429,6 +437,7 @@ export const buildOperationalQueue = (input: DashboardSummaryInput): Operational
   }
 
   for (const club of clubs) {
+    if (!requiresPublicClubBuilding(club)) continue;
     if (seenSpatialIds.has(`club:${club.id}`)) continue;
     const hasBuilding = Boolean(
       getBuildingAssetForListing(club, input.buildingAssets, {

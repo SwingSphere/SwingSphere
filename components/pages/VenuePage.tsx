@@ -5,9 +5,11 @@ import { getClubCanonicalPath, getEventCanonicalPath } from '../../lib/entityUti
 import { getClubForOrganization } from '../../lib/entityCompatibility';
 import { isPastEvent } from '../../lib/eventLifecycle';
 import EntityPageShell from '../entity/EntityPageShell';
+import HeroContainer from '../entity/HeroContainer';
 import { DetailContextNav } from '../navigation/DetailContextNav';
 import { hasStreetViewForListing } from '../../lib/streetViewAvailability';
 import DescriptionSection from '../entity/DescriptionSection';
+import { resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
 import Seo from '../Seo';
@@ -135,13 +137,24 @@ const VenuePage: React.FC = () => {
           />
         }
         hero={
-        <section className="pt-10">
-          <div className="rounded-2xl border border-gray-800 bg-gray-950/80 p-6 sm:p-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-red-300/80">Venue</p>
-            <h1 className="mt-3 text-3xl font-semibold text-gray-100 sm:text-5xl">{venue.name}</h1>
-            <p className="mt-3 text-sm text-gray-400">{visibleLocation}</p>
+        <HeroContainer
+          title={venue.name}
+          imageUrl={venue.headerImageUrl}
+          heroCrop={resolveEntityHeroCrop(venue)}
+        >
+          {venue.logoImageUrl ? (
+            <div className="absolute left-4 top-4 z-20 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-black/45 shadow-lg backdrop-blur-sm sm:left-6 sm:top-6 sm:h-24 sm:w-24">
+              <img src={venue.logoImageUrl} alt={`${venue.name} logo`} className="h-full w-full object-contain" />
+            </div>
+          ) : null}
+          <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-5 pt-16 sm:px-6 sm:pb-6 [text-shadow:0_2px_8px_rgba(0,0,0,0.95)]">
+            <span className="inline-flex rounded-full border border-red-400/30 bg-red-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-red-200 backdrop-blur-md">
+              Venue
+            </span>
+            <h1 className="mt-2.5 text-2xl font-bold text-white sm:text-4xl lg:text-5xl">{venue.name}</h1>
+            <p className="mt-2 text-sm text-gray-200">{visibleLocation}</p>
           </div>
-        </section>
+        </HeroContainer>
       }
       main={
         <>

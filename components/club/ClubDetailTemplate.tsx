@@ -11,7 +11,8 @@ import WhatHappensHere from './WhatHappensHere';
 import ClubEventsPreview, { type ClubEventPreviewItem } from './ClubEventsPreview';
 import ClubRhythmSection from './ClubRhythmSection';
 import ClubMapCard from './ClubMapCard';
-import { getListingImageUrl, handleListingImageError } from '../../lib/listingImage';
+import { getListingHeroPageUrl, handleListingImageError } from '../../lib/listingImage';
+import { resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import { formatListingPhysicalAddress, getListingPhysicalAddress, getListingPhysicalCoords } from '../../lib/entityCompatibility';
 import { getApproximateLocationCenter, isApproximateLocation } from '../../lib/publicLocation';
 import ClubReviewsSection from './ClubReviewsSection';
@@ -98,7 +99,8 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
   }, [club]);
 
   const scheduleSummary = useMemo(() => getScheduleSummary(club), [club]);
-  const coverImage = getListingImageUrl(club);
+  const coverImage = getListingHeroPageUrl(club);
+  const heroCrop = useMemo(() => resolveEntityHeroCrop(club, coverImage), [club, coverImage]);
 
   const thumbnails = useMemo(
     () => unique([...(club.galleryImageUrls ?? []), coverImage]),
@@ -154,6 +156,7 @@ const ClubDetailTemplate: React.FC<ClubDetailTemplateProps> = ({ club, clubKey, 
           locationLine={locationLine}
           tags={club.generalAmenities ?? []}
           backgroundImageUrl={coverImage}
+          heroCrop={heroCrop}
           logoImageUrl={extended.logoImageUrl}
           mediaPresentation={club.mediaPresentation}
           onQuickEdit={onQuickEdit}

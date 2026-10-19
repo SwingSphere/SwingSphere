@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import type { ClubData, SocialLink } from '../../types';
 import type { MediaAsset, MediaRole } from '../../lib/media/types';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
-import { getMediaRule } from '../../lib/media/mediaRules';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import MediaUploader from '../media/MediaUploader';
+import { getListingPrimaryHeroUrl } from '../../lib/listingImage';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { useAdminEditMode } from './AdminEditModeContext';
@@ -45,7 +47,7 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
   }, [draft.mediaAssets, field]);
 
   const mediaOwnerId = useMemo(
-    () => draft.mediaAssets?.find((asset) => asset.owner_id)?.owner_id ?? getMediaOwnerId('club', draft.id),
+    () => getMediaOwnerId('club', draft.mediaAssets?.find((asset) => asset.owner_id)?.owner_id ?? draft.id),
     [draft.id, draft.mediaAssets],
   );
 
@@ -58,7 +60,7 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
   };
 
   const handleUploaded = (asset: MediaAsset) => {
-    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
+    const url = resolveUploadedMediaUrl(asset, asset.role);
     const currentAssets = draft.mediaAssets ?? [];
     const mediaAssets = asset.role === 'gallery'
       ? [...currentAssets, asset]
@@ -67,7 +69,7 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
       ...draft,
       mediaAssets,
       ...(asset.role === 'logo' && url ? { logoImageUrl: url } : {}),
-      ...(asset.role === 'hero' && url ? { headerImageUrl: url } : {}),
+      ...(asset.role === 'hero' && url ? { headerImageUrl: url, heroCrop: asset.hero_crop ?? draft.heroCrop } : {}),
     });
   };
 
@@ -107,8 +109,8 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
     updateDraft({ ...draft, schedule });
   };
 
-  return (
-    <aside className="fixed bottom-24 right-4 z-[1500] w-[calc(100%-2rem)] max-w-md rounded-2xl border border-white/15 bg-[#111217]/98 p-4 text-white shadow-2xl shadow-black/60 backdrop-blur-xl" aria-label={`Quick edit ${fieldLabels[field]}`}>
+  return createPortal(
+    <aside className="fixed bottom-32 right-4 z-[1500] w-[calc(100%-2rem)] max-w-md rounded-2xl border border-white/15 bg-[#111217]/98 p-4 text-white shadow-2xl shadow-black/60 backdrop-blur-xl" aria-label={`Quick edit ${fieldLabels[field]}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-300">Quick edit</p>
@@ -262,7 +264,29 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
             ownerId={mediaOwnerId}
             role={mediaRole}
             existingAsset={existingAsset}
+            existingImageUrl={
+              mediaRole === 'hero'
+                ? draft.headerImageUrl || getListingPrimaryHeroUrl(draft, 'heropage') || undefined
+                : undefined
+            }
+            existingHeroCrop={mediaRole === 'hero' ? resolveEntityHeroCrop(draft) : undefined}
+            heroPreviewContext={
+              mediaRole === 'hero'
+                ? {
+                    entityType: 'club',
+                    title: draft.name,
+                    locationText: [draft.geopoint?.address?.city, draft.geopoint?.address?.region]
+                      .filter(Boolean)
+                      .join(', '),
+                    logoUrl: draft.logoImageUrl,
+                    tags: draft.generalAmenities,
+                  }
+                : undefined
+            }
             onUploaded={handleUploaded}
+            onHeroCropChange={(crop, urlWithCrop) =>
+              updateDraft({ ...draft, heroCrop: crop, headerImageUrl: urlWithCrop })
+            }
             label={`Upload ${fieldLabels[field].toLowerCase()}`}
             tone="dark"
             cropAspectRatioOverride={field === 'logo' ? 1 : undefined}
@@ -273,12 +297,13 @@ const ClubQuickEditPanel: React.FC<Props> = ({ club, field, onClose, onPreview, 
 
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-white/10">Cancel</button>
-        <button type="button" onClick={save} disabled={saving || !draft.name.trim()} className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-black text-white disabled:opacity-50">
+        <button type="button" data-testid="quick-edit-save-button" onClick={save} disabled={saving || !draft.name.trim()} className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-black text-white disabled:opacity-50">
           <Check size={16} />
           {saving ? 'Saving…' : 'Save change'}
         </button>
       </div>
-    </aside>
+    </aside>,
+    document.body,
   );
 };
 

@@ -545,7 +545,7 @@ export const evaluateAssetRoleQuality = (params: {
         checks.push({
           level: 'warning',
           code: 'hero_non_landscape',
-          message: `Hero image is ${aspectRatioLabel} (${width}×${height}px). Wide landscape (16:9) is recommended to prevent vertical cropping in page headers.`,
+          message: `Hero image is ${aspectRatioLabel} (${width}×${height}px). Wide landscape (20:9 or 16:9) is recommended; use the Hero Image Composer to frame portrait/square images cleanly.`,
         });
       }
 

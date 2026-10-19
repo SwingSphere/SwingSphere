@@ -8,6 +8,7 @@ import { Pencil } from 'lucide-react';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import type { ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
 import SaveEntityButton from '../profile/SaveEntityButton';
+import type { HeroCropConfig } from '../../lib/media/heroCrop';
 
 type ClubHeroProps = {
   clubId: string;
@@ -15,6 +16,7 @@ type ClubHeroProps = {
   locationLine: string;
   tags: string[];
   backgroundImageUrl?: string;
+  heroCrop?: Partial<HeroCropConfig> | null;
   logoImageUrl?: string;
   mediaPresentation?: 'default' | 'monochrome';
   onQuickEdit?: (field: ClubQuickEditField) => void;
@@ -34,6 +36,7 @@ const ClubHero: React.FC<ClubHeroProps> = ({
   locationLine,
   tags,
   backgroundImageUrl,
+  heroCrop,
   logoImageUrl,
   mediaPresentation = 'default',
   onQuickEdit,
@@ -60,13 +63,14 @@ const ClubHero: React.FC<ClubHeroProps> = ({
       title={clubName}
       imageUrl={backgroundImageUrl}
       fallbackImageUrls={[logoImageUrl]}
+      heroCrop={heroCrop}
       imageClassName={monochrome ? 'grayscale contrast-[1.08]' : ''}
       heightClassName={uiTokens.hero.clubHeight}
     >
       <PublicFeedbackHeroBadge targetType="club" sourceId={clubId} onClick={() => document.getElementById(`club-feedback-${clubId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
       {showQuickControls ? (
         <div className="absolute right-4 top-4 z-30 flex flex-wrap justify-end gap-2 sm:right-6 sm:top-6">
-          <button type="button" onClick={() => onQuickEdit?.('hero')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Hero</button>
+          <button type="button" data-testid="quick-edit-hero-button" onClick={() => onQuickEdit?.('hero')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Hero</button>
           <button type="button" onClick={() => onQuickEdit?.('gallery')} className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"><Pencil size={14} /> Gallery</button>
         </div>
       ) : null}

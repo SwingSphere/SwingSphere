@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import type { ClubBrandData, ClubData, OrganizationData } from '../../types';
-import type { MediaAsset, MediaRole } from '../../lib/media/types';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import type { HeroCropConfig, MediaAsset, MediaRole } from '../../lib/media/types';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { encodeHeroCropToUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { getMediaRule } from '../../lib/media/mediaRules';
 import MediaUploader from '../media/MediaUploader';
 import * as api from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
@@ -26,11 +26,30 @@ const AdminClubBrandEditor: React.FC<Props> = ({ brand, clubs, organizations, on
   const { addToast } = useAppStore();
   const locations = useMemo(() => clubs.filter((club) => club.clubBrandId === draft.id), [clubs, draft.id]);
   const mediaOwnerId = getMediaOwnerId('club_brand', draft.id);
+  const getAsset = (role: MediaRole) => draft.mediaAssets?.find((asset) => asset.role === role) ?? null;
 
   const handleUpload = (asset: MediaAsset) => {
-    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role as MediaRole).defaultVariant });
-    if (asset.role === 'logo') setDraft((current) => ({ ...current, logoImageUrl: url }));
-    if (asset.role === 'hero') setDraft((current) => ({ ...current, headerImageUrl: url }));
+    const url = resolveUploadedMediaUrl(asset);
+    setDraft((current) => ({
+      ...current,
+      mediaAssets: [...(current.mediaAssets ?? []).filter((item) => item.role !== asset.role), asset],
+      ...(asset.role === 'logo' ? { logoImageUrl: url } : {}),
+      ...(asset.role === 'hero' ? { headerImageUrl: url, heroCrop: asset.hero_crop ?? current.heroCrop } : {}),
+    }));
+  };
+  const handleHeroCropChange = (heroCrop: HeroCropConfig, resolvedUrlWithCrop?: string) => {
+    setDraft((current) => {
+      const nextHeaderUrl =
+        resolvedUrlWithCrop ||
+        (current.headerImageUrl
+          ? encodeHeroCropToUrl(current.headerImageUrl, heroCrop)
+          : current.headerImageUrl);
+      return {
+        ...current,
+        headerImageUrl: nextHeaderUrl,
+        heroCrop,
+      };
+    });
   };
 
   const handleSave = async () => {
@@ -70,7 +89,7 @@ const AdminClubBrandEditor: React.FC<Props> = ({ brand, clubs, organizations, on
           <label className="sm:col-span-2"><span className="mb-1 block text-sm font-semibold text-gray-700">Full description</span><textarea rows={7} value={draft.descriptionFull ?? ''} onChange={(e) => setDraft({ ...draft, descriptionFull: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2" /></label>
         </div></section>
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-bold text-gray-800">Ownership and defaults</h2><div className="mt-4 space-y-4"><label><span className="mb-1 block text-sm font-semibold text-gray-700">Operator organization</span><select value={draft.operatorOrganizationId ?? ''} onChange={(e) => setDraft({ ...draft, operatorOrganizationId: e.target.value || undefined })} className="w-full rounded-lg border border-gray-300 px-3 py-2"><option value="">Not linked</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label><label><span className="mb-1 block text-sm font-semibold text-gray-700">Default amenities</span><input value={amenitiesText} onChange={(e) => setAmenitiesText(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" /></label></div></section>
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-bold text-gray-800">Brand media</h2><div className="mt-4 grid gap-4"><MediaUploader tone="light" ownerType="club_brand" ownerId={mediaOwnerId} role="logo" label="Upload square brand logo" cropAspectRatioOverride={1} onUploaded={handleUpload} /><MediaUploader tone="light" ownerType="club_brand" ownerId={mediaOwnerId} role="hero" label="Upload default brand banner" onUploaded={handleUpload} /></div></section>
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-bold text-gray-800">Brand media</h2><div className="mt-4 grid gap-4"><MediaUploader tone="light" ownerType="club_brand" ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} existingImageUrl={draft.logoImageUrl ?? null} label="Upload square brand logo" cropAspectRatioOverride={1} onUploaded={handleUpload} /><MediaUploader tone="light" ownerType="club_brand" ownerId={mediaOwnerId} role="hero" existingAsset={getAsset('hero')} existingImageUrl={draft.headerImageUrl ?? null} existingHeroCrop={resolveEntityHeroCrop(draft)} heroPreviewContext={{ entityKind: 'club', title: draft.name, subtitle: draft.descriptionShort || 'Multi-Location Club Brand', badgeLabel: 'Club Brand', logoUrl: draft.logoImageUrl ?? null }} label="Upload default brand banner" onUploaded={handleUpload} onHeroCropChange={handleHeroCropChange} /></div></section>
       </div>
       <aside><section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-800">Linked locations</h2><div className="mt-3 text-3xl font-black">{locations.length}</div><div className="mt-4 space-y-2">{locations.map((club) => <button key={club.id} onClick={() => onOpenClub(club.id)} className="block w-full rounded-lg border border-gray-200 p-3 text-left hover:border-blue-300 hover:bg-blue-50"><div className="font-semibold text-gray-800">{club.name}</div><div className="mt-1 text-xs text-gray-500">{club.location}</div></button>)}{!locations.length && <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">No locations linked yet.</p>}</div></section></aside>
     </div>

@@ -28,9 +28,12 @@ const ensureMeta = (selector: string, attributes: Record<string, string>): HTMLM
   return element;
 };
 
+import { stripHeroCropFromUrl } from '../lib/media/heroCrop';
+
 const toAbsoluteUrl = (value: string): string => {
   try {
-    return new URL(value, SITE_ORIGIN).toString();
+    const cleaned = stripHeroCropFromUrl(value) || value;
+    return new URL(cleaned, SITE_ORIGIN).toString();
   } catch {
     return SITE_ORIGIN;
   }

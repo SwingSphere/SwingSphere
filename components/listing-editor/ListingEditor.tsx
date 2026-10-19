@@ -10,7 +10,9 @@ import DayProgramFields from '../club/DayProgramFields';
 import Button from '../Button';
 import MediaUploader from '../media/MediaUploader';
 import { EditorInput as Field, EditorSelect as Select, EditorSurface as Section, EditorTextArea as TextArea } from '../editor/EditorPrimitives';
-import type { MediaAsset, MediaRole } from '../../lib/media/types';
+import type { HeroCropConfig, MediaAsset, MediaRole } from '../../lib/media/types';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { encodeHeroCropToUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import {
   ATTENDANCE_POLICY_OPTIONS,
   CLUB_AMENITY_TAGS,
@@ -70,6 +72,9 @@ type ListingDraft = {
   venueId?: string;
   status: Listing['status'];
   headerImageUrl: string;
+  logoImageUrl?: string;
+  flyerImageUrl?: string;
+  heroCrop?: HeroCropConfig | null;
   galleryImageUrls: string[];
   mediaAssets: MediaAsset[];
   headerImageFile?: File | null;
@@ -218,6 +223,9 @@ const createDraftFromListing = (listing: ClubData | EventData, currentUser?: Use
   venueId: listing.type === 'event' ? listing.venueId : undefined,
   status: listing.status,
   headerImageUrl: listing.headerImageUrl ?? '',
+  logoImageUrl: listing.logoImageUrl,
+  flyerImageUrl: listing.type === 'event' ? listing.flyerImageUrl : undefined,
+  heroCrop: listing.heroCrop ?? null,
   galleryImageUrls: listing.galleryImageUrls ?? [],
   mediaAssets: listing.mediaAssets ?? [],
   };
@@ -450,6 +458,8 @@ const submitDraft = async (
     geopoint: base,
     locationMeta: draft.locationMeta,
     headerImageUrl: draft.headerImageFile ? `https://firebasestorage.googleapis.com/.../${draft.headerImageFile.name}` : draft.headerImageUrl || undefined,
+    logoImageUrl: draft.logoImageUrl || undefined,
+    heroCrop: draft.heroCrop ?? null,
     galleryImageUrls: draft.galleryImageFiles?.length
       ? draft.galleryImageFiles.map((file) => `https://firebasestorage.googleapis.com/.../${file.name}`)
       : draft.galleryImageUrls,
@@ -492,6 +502,7 @@ const submitDraft = async (
     venueKey: draft.venueKey || undefined,
     time: draft.time,
     tags: draft.tags,
+    flyerImageUrl: draft.flyerImageUrl || undefined,
     status: draft.status,
     postedByUserId: draft.postedByUserId,
     organizerOrganizationId: draft.organizerOrganizationId,
@@ -789,11 +800,34 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
   };
 
   const handleMediaUploaded = (asset: MediaAsset) => {
+    const resolvedUrl = resolveUploadedMediaUrl(asset);
     setDraft((current) => {
       const mediaAssets = asset.role === 'gallery'
         ? [...current.mediaAssets, asset]
         : [...current.mediaAssets.filter((item) => item.role !== asset.role), asset];
-      return { ...current, mediaAssets };
+      return {
+        ...current,
+        mediaAssets,
+        ...(asset.role === 'logo' ? { logoImageUrl: resolvedUrl } : {}),
+        ...(asset.role === 'flyer' ? { flyerImageUrl: resolvedUrl } : {}),
+        ...(asset.role === 'hero' ? { headerImageUrl: resolvedUrl, heroCrop: asset.hero_crop ?? current.heroCrop } : {}),
+        ...(asset.role === 'gallery' ? { galleryImageUrls: [...current.galleryImageUrls, resolvedUrl] } : {}),
+      };
+    });
+  };
+
+  const handleHeroCropChange = (heroCrop: HeroCropConfig, resolvedUrlWithCrop?: string) => {
+    setDraft((current) => {
+      const nextHeaderUrl =
+        resolvedUrlWithCrop ||
+        (current.headerImageUrl
+          ? encodeHeroCropToUrl(current.headerImageUrl, heroCrop)
+          : current.headerImageUrl);
+      return {
+        ...current,
+        headerImageUrl: nextHeaderUrl,
+        heroCrop,
+      };
     });
   };
 
@@ -1942,6 +1976,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
                 ownerId={draft.id ?? ''}
                 role="flyer"
                 existingAsset={getDraftMediaAsset('flyer')}
+                existingImageUrl={draft.flyerImageUrl ?? null}
                 onUploaded={handleMediaUploaded}
                 label="Event flyer"
                 managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
@@ -1952,7 +1987,17 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
               ownerId={draft.id ?? ''}
               role="hero"
               existingAsset={getDraftMediaAsset('hero')}
+              existingImageUrl={draft.headerImageUrl || null}
+              existingHeroCrop={resolveEntityHeroCrop(draft)}
+              heroPreviewContext={{
+                entityKind: 'event',
+                title: draft.name,
+                subtitle: [draft.hostName ? `By ${draft.hostName}` : '', draft.addressInput].filter(Boolean).join(' · '),
+                badgeLabel: 'Event',
+                logoUrl: draft.logoImageUrl ?? null,
+              }}
               onUploaded={handleMediaUploaded}
+              onHeroCropChange={handleHeroCropChange}
               label="Event hero image"
               managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />
@@ -1973,6 +2018,7 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
               ownerId={draft.id ?? ''}
               role="logo"
               existingAsset={getDraftMediaAsset('logo')}
+              existingImageUrl={draft.logoImageUrl ?? null}
               onUploaded={handleMediaUploaded}
               label="Club logo"
               managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
@@ -1982,7 +2028,17 @@ const ListingEditor: React.FC<ListingEditorProps> = ({ mode, initialKind, initia
               ownerId={draft.id ?? ''}
               role="hero"
               existingAsset={getDraftMediaAsset('hero')}
+              existingImageUrl={draft.headerImageUrl || null}
+              existingHeroCrop={resolveEntityHeroCrop(draft)}
+              heroPreviewContext={{
+                entityKind: 'club',
+                title: draft.name,
+                subtitle: draft.addressInput || formatListingAddress(draft.advancedAddress),
+                badgeLabel: 'Club',
+                logoUrl: draft.logoImageUrl ?? null,
+              }}
               onUploaded={handleMediaUploaded}
+              onHeroCropChange={handleHeroCropChange}
               label="Club hero image"
               managedEntityId={listingToEdit?.status === 'approved' ? listingToEdit.id : undefined}
             />

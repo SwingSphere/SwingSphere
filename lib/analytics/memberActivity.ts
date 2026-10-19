@@ -31,6 +31,8 @@ export const getAdminMemberActivity = async (userId: string): Promise<MemberActi
 };
 export const recordMemberActivity = async (kind: MemberActivityKind, path: string, entityType = '', entityId = '', destination = ''): Promise<void> => {
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) return;
     const { error } = await supabase.rpc('record_member_activity', {
       p_kind: kind, p_path: path.split(/[?#]/)[0], p_entity_type: entityType, p_entity_id: entityId, p_destination: destination,
     });

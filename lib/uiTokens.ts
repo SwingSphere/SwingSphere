@@ -1,7 +1,7 @@
 export const uiTokens = {
   hero: {
-    defaultHeight: 'h-[340px] sm:h-[420px] lg:h-[460px]',
-    clubHeight: 'h-[340px] sm:h-[410px] lg:h-[450px]',
+    defaultHeight: 'aspect-[4/3] min-h-[220px] sm:aspect-[16/9] sm:min-h-[320px] lg:aspect-[20/9] lg:min-h-[420px]',
+    clubHeight: 'aspect-[4/3] min-h-[220px] sm:aspect-[16/9] sm:min-h-[320px] lg:aspect-[20/9] lg:min-h-[420px]',
     overlayRightPaddingDesktop: 'lg:pr-[24%]',
     overlayMaxWidthDesktop: 'lg:max-w-[70%]',
   },

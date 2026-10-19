@@ -100,10 +100,10 @@ test('Phase 1, 2 & 4: live Content Curator snapshot loads 84 sources, 113 candid
     );
   }
 
-  // Media records, including 6 generated 1080x1350 + 1920x1080 pairs and 7-point visual relevance criteria
-  assert.ok(snapshot.mediaItems.length >= 54);
+  // Media records, including 9 generated 1080x1350 + 1920x1080 pairs and 10-point universal visual relevance criteria
+  assert.ok(snapshot.mediaItems.length >= 161);
   assert.equal(snapshot.mediaItems.length, snapshot.summary.artwork.total);
-  assert.equal(snapshot.summary.artwork.generatedPairs, 6);
+  assert.equal(snapshot.summary.artwork.generatedPairs, 9);
   const twistPair = snapshot.mediaItems.find((m: any) => m.id === 'candidate-1794dc45e24f56d473a38e83');
   assert.ok(twistPair);
   assert.equal(twistPair.hasGeneratedPair, true);
@@ -111,8 +111,40 @@ test('Phase 1, 2 & 4: live Content Curator snapshot loads 84 sources, 113 candid
   assert.equal(twistPair.dimensions.flyer.height, 1350);
   assert.equal(twistPair.dimensions.hero.width, 1920);
   assert.equal(twistPair.dimensions.hero.height, 1080);
-  assert.equal(twistPair.visualEvaluation.criteria.length, 7);
+  assert.equal(twistPair.visualEvaluation.criteria.length, 10);
   assert.equal(twistPair.publicPublishingAuthorized, false);
+
+  // Verify the 3 new validation pairs (Silky Soft, Twist Couples Saturday, All Kinks Thursday) and universal enrichment fields
+  const silkyCandidate = snapshot.candidates.find((c: any) => c.id === 'candidate-c141b9a6593bf783e6fbf186');
+  assert.ok(silkyCandidate);
+  assert.ok(silkyCandidate.statusMatrix);
+  assert.equal(silkyCandidate.statusMatrix.discovery, 'candidate_staged');
+  assert.equal(silkyCandidate.statusMatrix.eventData, 'complete');
+  assert.equal(silkyCandidate.statusMatrix.artwork, 'visually_reviewed');
+  assert.equal(silkyCandidate.statusMatrix.publication, 'pending_review');
+  assert.ok(silkyCandidate.displayDescription?.includes('Slip into satin, lace'));
+  assert.ok(silkyCandidate.sourceDescription?.sourceUrl);
+  assert.ok(silkyCandidate.eventDetails?.theme);
+  assert.ok(Array.isArray(silkyCandidate.discoveredImages) && silkyCandidate.discoveredImages.length >= 1);
+
+  const silkyMedia = snapshot.mediaItems.find((m: any) => m.id === 'candidate-c141b9a6593bf783e6fbf186');
+  assert.ok(silkyMedia);
+  assert.equal(silkyMedia.creativeProcess, 'reference_first');
+  assert.equal(silkyMedia.styleFamily, 'Elegant fashion editorial');
+  assert.ok(silkyMedia.officialImageAnalysis);
+  assert.equal(silkyMedia.visualEvaluation.passedCount, 10);
+
+  const twistSatMedia = snapshot.mediaItems.find((m: any) => m.id === 'candidate-f939e809a5c35f6558fdcf2e');
+  assert.ok(twistSatMedia);
+  assert.equal(twistSatMedia.creativeProcess, 'description_first');
+  assert.ok(twistSatMedia.descriptionAnalysis);
+  assert.equal(twistSatMedia.visualEvaluation.passedCount, 10);
+
+  const allKinksMedia = snapshot.mediaItems.find((m: any) => m.id === 'candidate-d550c934092d5646f46ba983');
+  assert.ok(allKinksMedia);
+  assert.equal(allKinksMedia.creativeProcess, 'reference_first');
+  assert.equal(allKinksMedia.styleFamily, 'Dark industrial');
+  assert.equal(allKinksMedia.visualEvaluation.passedCount, 10);
 
   // 5 operational cron jobs distinguishing scheduler outcome from source extraction outcome
   assert.equal(snapshot.agentAndJobs.cronJobs.length, 5);
@@ -133,10 +165,10 @@ test('Phase 1, 2 & 4: live Content Curator snapshot loads 84 sources, 113 candid
   assert.ok(!serialized.includes('file:///'));
 });
 
-test('Phase 2 & 4: restricted preview media streaming serves all 6 real portrait flyers and landscape heroes with private no-store headers and blocks traversal', async () => {
+test('Phase 2 & 4: restricted preview media streaming serves all 9 real portrait flyers and landscape heroes with private no-store headers and blocks traversal', async () => {
   const snapshot = await getCuratorBridgeSnapshot(makeLocalAdminReq());
   const generatedPairs = snapshot.mediaItems.filter((m: any) => m.hasGeneratedPair);
-  assert.equal(generatedPairs.length, 6);
+  assert.equal(generatedPairs.length, 9);
 
   for (const item of generatedPairs) {
     for (const role of ['flyer', 'hero'] as const) {
@@ -348,7 +380,11 @@ test('Phase 1, 2 & 4: Supabase RLS migration, revocable machine credentials, 15m
   assert.match(curatorUiSrc, /curator-last-sync-time/);
   assert.match(curatorUiSrc, /openclaw infer image/);
   assert.match(curatorUiSrc, /\*\/15 \* \* \* \*/);
+  assert.match(curatorUiSrc, /swingsphere-creative-director/);
+  assert.match(curatorUiSrc, /Stage B Deterministic Factual Overlay Fields/);
+  assert.match(curatorUiSrc, /Creative Director 12-Point Quality Check/);
+  assert.match(curatorUiSrc, /Select regeneration level/);
+  assert.match(curatorUiSrc, /Override poster layout template/);
   assert.match(curatorUiSrc, /sm:grid-cols-4/);
   assert.match(curatorUiSrc, /xl:grid-cols-12/);
 });
-

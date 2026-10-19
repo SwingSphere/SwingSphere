@@ -56,6 +56,13 @@ export type WatercolorThemeSettings = {
 // Alias for backwards compatibility
 export type LiquidThemeSettings = WatercolorThemeSettings;
 
+export type AuroraThemeSettings = {
+  driftSpeed: number;
+  fieldScale: number;
+  colorStrength: number;
+  softness: number;
+};
+
 export type SculpturalThemeSettings = {
   surfaceScale: number;    // 40 - 200 (default 100)
   deformation: number;     // 20 - 180 (default 90)

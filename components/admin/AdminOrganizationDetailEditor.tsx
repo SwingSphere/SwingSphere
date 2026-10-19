@@ -6,9 +6,9 @@ import { nameSlug } from '../../lib/identityUtils';
 import { useAppStore } from '../../store/appStore';
 import MediaUploader from '../media/MediaUploader';
 import { getMediaOwnerId } from '../../lib/media/getMediaOwnerId';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
-import { getMediaRule } from '../../lib/media/mediaRules';
-import type { MediaAsset, MediaRole } from '../../lib/media/types';
+import { resolveUploadedMediaUrl } from '../../lib/entityBrandMedia';
+import { encodeHeroCropToUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
+import type { HeroCropConfig, MediaAsset, MediaRole } from '../../lib/media/types';
 import { AdminEditorPage } from './editor/AdminDetailPage';
 import AdminOrganizationTeamAccess from './AdminOrganizationTeamAccess';
 
@@ -85,14 +85,28 @@ const AdminOrganizationDetailEditor: React.FC<{
 
   const getAsset = (role: MediaRole) => draft.mediaAssets?.find((asset) => asset.role === role) ?? null;
   const handleAssetUploaded = (asset: MediaAsset) => {
-    const url = getCloudflareImageUrl({ externalId: asset.external_id, variant: getMediaRule(asset.role).defaultVariant });
+    const url = resolveUploadedMediaUrl(asset);
     setDraft((current) => ({
       ...current,
       mediaAssets: asset.role === 'gallery' ? [...(current.mediaAssets ?? []), asset] : [...(current.mediaAssets ?? []).filter((item) => item.role !== asset.role), asset],
       ...(asset.role === 'logo' ? { logoImageUrl: url } : {}),
-      ...(asset.role === 'hero' ? { headerImageUrl: url } : {}),
+      ...(asset.role === 'hero' ? { headerImageUrl: url, heroCrop: asset.hero_crop ?? current.heroCrop } : {}),
       ...(asset.role === 'gallery' ? { galleryImageUrls: [...(current.galleryImageUrls ?? []), url] } : {}),
     }));
+  };
+  const handleHeroCropChange = (heroCrop: HeroCropConfig, resolvedUrlWithCrop?: string) => {
+    setDraft((current) => {
+      const nextHeaderUrl =
+        resolvedUrlWithCrop ||
+        (current.headerImageUrl
+          ? encodeHeroCropToUrl(current.headerImageUrl, heroCrop)
+          : current.headerImageUrl);
+      return {
+        ...current,
+        headerImageUrl: nextHeaderUrl,
+        heroCrop,
+      };
+    });
   };
 
   return <AdminEditorPage
@@ -124,8 +138,26 @@ const AdminOrganizationDetailEditor: React.FC<{
       },
       {
         id: 'images', title: 'Images', saveLabel: 'Save Images', onSave: () => saveDraft(), render: () => mediaOwnerId ? <div className="grid gap-4 md:grid-cols-2">
-          <MediaUploader tone="light" ownerType="organization" ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} label="Upload or replace logo" onUploaded={handleAssetUploaded} />
-          <MediaUploader tone="light" ownerType="organization" ownerId={mediaOwnerId} role="hero" existingAsset={getAsset('hero')} label="Upload or replace hero" onUploaded={handleAssetUploaded} />
+          <MediaUploader tone="light" ownerType="organization" ownerId={mediaOwnerId} role="logo" existingAsset={getAsset('logo')} existingImageUrl={draft.logoImageUrl ?? null} label="Upload or replace logo" onUploaded={handleAssetUploaded} />
+          <MediaUploader
+            tone="light"
+            ownerType="organization"
+            ownerId={mediaOwnerId}
+            role="hero"
+            existingAsset={getAsset('hero')}
+            existingImageUrl={draft.headerImageUrl ?? null}
+            existingHeroCrop={resolveEntityHeroCrop(draft)}
+            heroPreviewContext={{
+              entityKind: 'host',
+              title: draft.name,
+              subtitle: draft.descriptionShort || 'Host & Promoter Profile',
+              badgeLabel: draft.displayTypes[0]?.replaceAll('_', ' ') || 'Organization',
+              logoUrl: draft.logoImageUrl ?? null,
+            }}
+            label="Upload or replace hero"
+            onUploaded={handleAssetUploaded}
+            onHeroCropChange={handleHeroCropChange}
+          />
           <div className="md:col-span-2"><MediaUploader tone="light" ownerType="organization" ownerId={mediaOwnerId} role="gallery" label="Add gallery image" onUploaded={handleAssetUploaded} /></div>
         </div> : <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-900">Save this organization once before uploading images.</div>
       },

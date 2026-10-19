@@ -10,6 +10,7 @@ import type {
     Listing,
     DashboardStats,
     OrganizationData,
+    OrganizationRelationship,
     OrganizationMember,
     OrganizationMemberRole,
     OrganizationMemberStatus,
@@ -777,6 +778,10 @@ export const saveAmbientBuildingMassings = async (
 
 // --- USERS ---
 export const getUsers = async (): Promise<User[]> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+        return db.users;
+    }
     const [{ data: profiles, error }, { data: authData }] = await Promise.all([
         supabase
             .from('profiles')

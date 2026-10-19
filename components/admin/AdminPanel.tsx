@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminDashboard from './AdminDashboard';
+import AdminContextualQueue from './AdminContextualQueue';
 import AdminManageClubs from './AdminManageClubs';
 import AdminAddClub from './AdminAddClub';
 import AdminUserManagement from './AdminUserManagement';
@@ -50,7 +51,7 @@ import type {
 } from '../../types';
 import type { User } from '../../data/mockUsers';
 import { getOpenSiteIssueCount } from '../../lib/issueReports';
-import type { AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
+import { buildOperationalQueue, type AdminQueueFilterSpec } from '../../lib/admin/dashboardSummary';
 
 export type AdminView = 
     | 'dashboard' 
@@ -124,6 +125,14 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
         cruiseSeries,
         cruiseSailings,
     }), [clubBrands, cruiseSailings, cruiseSeries, eventSeries, listings, organizationVenueRelationships, organizations, resorts, venues]);
+    const contextualQueue = React.useMemo(() => buildOperationalQueue({
+        listings, venues, organizations, venueRelationships: organizationVenueRelationships,
+        clubBrands, eventSeries, resorts, cruiseSeries, cruiseSailings, buildingAssets,
+        openSiteIssueCount: issueCount ?? 0,
+    }), [listings, venues, organizations, organizationVenueRelationships, clubBrands, eventSeries, resorts, cruiseSeries, cruiseSailings, buildingAssets, issueCount]);
+    const queueFor = (target: 'clubs' | 'events' | 'travel' | 'venues' | 'organizations') => (
+        <AdminContextualQueue items={contextualQueue} target={target} onOpen={setView} />
+    );
     const entityIndex = React.useMemo(() => {
         if (!listings.length) return null;
         return buildEntityIndex(listings, users, venues, organizations, organizationVenueRelationships, eventSeries, organizationRelationships);
@@ -436,7 +445,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             case 'manage-clubs':
                 const clubs = listings.filter(l => l.type === 'club') as ClubData[];
                 return (
-                    <AdminManageClubs
+                    <>{queueFor('clubs')}<AdminManageClubs
                         clubs={clubs}
                         clubBrands={clubBrands}
                         organizations={organizations}
@@ -445,7 +454,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onDataChange={fetchData}
                         filterSpec={queueFilter}
                         onClearFilter={() => setQueueFilter(null)}
-                    />
+                    /></>
                 );
             case 'add-club-brand':
                 return <AdminClubBrandEditor brand={{ id: '', type: 'club_brand', name: '', slug: '', status: 'draft' }} clubs={listings.filter(l => l.type === 'club') as ClubData[]} organizations={organizations} onSaved={(saved) => { handleClubBrandSaved(saved); setView({ view: 'edit-club-brand', clubBrandId: saved.id }); }} onOpenClub={(clubId) => setView({ view: 'edit-club', clubId })} onBack={() => setView('manage-clubs')} />;
@@ -507,7 +516,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             case 'manage-events':
                 const events = listings.filter(l => l.type === 'event') as EventData[];
                 return (
-                    <AdminManageEvents
+                    <>{queueFor('events')}<AdminManageEvents
                         events={events}
                         eventSeries={eventSeries}
                         organizations={organizations}
@@ -517,7 +526,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onDataChange={fetchData}
                         filterSpec={queueFilter}
                         onClearFilter={() => setQueueFilter(null)}
-                    />
+                    /></>
                 );
             case 'add-event-series':
                 return <AdminEventSeriesEditor eventSeries={{ id: '', type: 'event_series', name: '', slug: '', status: 'draft' }} events={listings.filter(l => l.type === 'event') as EventData[]} organizations={organizations} venues={venues} onSaved={(saved) => { handleEventSeriesSaved(saved); setView({ view: 'edit-event-series', eventSeriesId: saved.id }); }} onEditOccurrence={(eventId) => setView({ view: 'edit-event', eventId })} onBack={() => setView('manage-events')} />;
@@ -527,7 +536,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 if (!seriesToEdit) return <div>Event series not found.</div>;
                 return <AdminEventSeriesEditor eventSeries={seriesToEdit} events={listings.filter(l => l.type === 'event') as EventData[]} organizations={organizations} venues={venues} onSaved={handleEventSeriesSaved} onEditOccurrence={(eventId) => setView({ view: 'edit-event', eventId })} onBack={() => setView('manage-events')} />;
             case 'manage-travel':
-                return <AdminManageTravel resorts={resorts} cruiseSeries={cruiseSeries} sailings={cruiseSailings} setView={setView} />;
+                return <>{queueFor('travel')}<AdminManageTravel resorts={resorts} cruiseSeries={cruiseSeries} sailings={cruiseSailings} setView={setView} /></>;
             case 'add-resort':
                 return <AdminTravelEditor entity={{ id: '', type: 'resort', name: '', slug: '', descriptionShort: '', descriptionFull: '', geopoint: { latitude: 0, longitude: 0, address: { city: '', region: '', country: '' } }, resortStyle: 'destination_resort', audienceLabel: '', accommodationSummary: '', amenities: [], experienceHighlights: [], status: 'draft' }} organizations={organizations} cruiseSeries={cruiseSeries} sailings={cruiseSailings} onSaved={(saved) => { handleTravelSaved(saved); if (saved.type === 'resort') setView({ view: 'edit-resort', resortId: saved.id }); }} onOpenSailing={(id) => setView({ view: 'edit-cruise-sailing', cruiseSailingId: id })} onBack={() => setView('manage-travel')} />;
             case 'edit-resort':
@@ -552,7 +561,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                 return <AdminTravelEditor entity={sailingToEdit} organizations={organizations} cruiseSeries={cruiseSeries} sailings={cruiseSailings} onSaved={handleTravelSaved} onOpenSailing={(id) => setView({ view: 'edit-cruise-sailing', cruiseSailingId: id })} onBack={() => setView('manage-travel')} />;
             case 'manage-venues':
                 return (
-                    <AdminManageVenues
+                    <>{queueFor('venues')}<AdminManageVenues
                         venues={venues}
                         listings={listings}
                         buildingAssets={buildingAssets}
@@ -561,11 +570,11 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onDataChange={fetchData}
                         filterSpec={queueFilter}
                         onClearFilter={() => setQueueFilter(null)}
-                    />
+                    /></>
                 );
             case 'manage-organizations':
                 return (
-                    <AdminManageOrganizations
+                    <>{queueFor('organizations')}<AdminManageOrganizations
                         organizations={organizations}
                         listings={listings}
                         relationships={organizationVenueRelationships}
@@ -575,7 +584,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
                         onDeleted={handleOrganizationDeleted}
                         filterSpec={queueFilter}
                         onClearFilter={() => setQueueFilter(null)}
-                    />
+                    /></>
                 );
             case 'add-organization':
                 return <AdminOrganizationDetailEditor organization={{ id: '', type: 'organization', name: '', slug: '', displayTypes: ['host', 'promoter'], status: 'draft' }} organizations={organizations} organizationRelationships={organizationRelationships} onOrganizationRelationshipsChanged={setOrganizationRelationships} listings={listings} venues={venues} relationships={organizationVenueRelationships} users={users} onSaved={(saved) => { handleOrganizationSaved(saved); setView({ view: 'edit-organization', organizationId: saved.id }); }} onDeleted={handleOrganizationDeleted} onBack={() => setView('manage-organizations')} />;

@@ -43,7 +43,14 @@ export type MediaAsset = {
   sort_order: number;
   focal_point_x: number | null;
   focal_point_y: number | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
+  hero_crop?: import('./heroCrop').HeroCropConfig | null;
+  source_width?: number | null;
+  source_height?: number | null;
+  width?: number | null;
+  height?: number | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
+
+export type { HeroCropConfig } from './heroCrop';

@@ -18,11 +18,10 @@ import EventCalendarCard from '../event/EventCalendarCard';
 import EventHostCard from '../event/EventHostCard';
 import {
   getEventCardImageUrl,
-  getListingImageUrl,
+  getListingHeroPageUrl,
   getListingPrimaryFlyerUrl,
   getListingPrimaryHeroUrl,
   handleListingImageError,
-  withPreferredCloudflareVariant,
 } from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import {
@@ -32,7 +31,12 @@ import {
   resolveEventOrganizerOrganizationId,
 } from '../../lib/entityCompatibility';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
-import { getCloudflareImageUrl } from '../../lib/media/getCloudflareImageUrl';
+import {
+  getCloudflareImageUrl,
+  getHeroCloudflareImageUrl,
+  normalizeHeroDeliveryUrl,
+} from '../../lib/media/getCloudflareImageUrl';
+import { extractHeroCropFromUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import EventFeedbackSection from '../feedback/EventFeedbackSection';
 import EventOverviewSection from '../event/EventOverviewSection';
 import EventEssentialsSection from '../event/EventEssentialsSection';
@@ -314,17 +318,25 @@ const EventPage: React.FC = () => {
     relationships: organizationVenueRelationships,
     eventSeries: eventSeriesCatalog,
   });
+  const resolvedEventHeroCrop = resolveEntityHeroCrop(
+    event,
+    event.headerImageUrl || eventBrandHeader.url || presenterHeroUrl,
+    event.heroCrop ??
+      extractHeroCropFromUrl(eventBrandHeader.url).crop ??
+      extractHeroCropFromUrl(presenterHeroUrl).crop ??
+      eventSeries?.heroCrop,
+  );
   const directHeroImage =
     (eventHeroAsset
-      ? getCloudflareImageUrl({ externalId: eventHeroAsset.external_id, variant: 'heropage' }) ?? undefined
+      ? getHeroCloudflareImageUrl({ externalId: eventHeroAsset.external_id, crop: resolvedEventHeroCrop }) ?? undefined
       : undefined) ??
     getListingPrimaryHeroUrl(event, 'heropage');
   const inheritedHeroImage =
-    (eventBrandHeader.url ? withPreferredCloudflareVariant(eventBrandHeader.url, 'heropage') : null) ??
-    (presenterHeroUrl ? withPreferredCloudflareVariant(presenterHeroUrl, 'heropage') : null) ??
-    (eventSeries?.headerImageUrl ? withPreferredCloudflareVariant(eventSeries.headerImageUrl, 'heropage') : null) ??
+    (eventBrandHeader.url ? normalizeHeroDeliveryUrl(eventBrandHeader.url, resolvedEventHeroCrop) : null) ??
+    (presenterHeroUrl ? normalizeHeroDeliveryUrl(presenterHeroUrl, resolvedEventHeroCrop) : null) ??
+    (eventSeries?.headerImageUrl ? normalizeHeroDeliveryUrl(eventSeries.headerImageUrl, resolvedEventHeroCrop) : null) ??
     undefined;
-  const venueCoverImage = venue ? getListingImageUrl(venue, index ?? undefined) : '';
+  const venueCoverImage = venue ? getListingHeroPageUrl(venue, index ?? undefined) : '';
   const eventCoverImage =
     directHeroImage ??
     inheritedHeroImage ??
@@ -377,8 +389,13 @@ const EventPage: React.FC = () => {
   const rsvpUrl = extendedEvent.rsvpUrl?.trim();
   const websiteUrl = event.website?.trim();
 
-  const accessUrl = ticketUrl || rsvpUrl || websiteUrl;
-  const accessDestinationType = ticketUrl ? 'ticket' : rsvpUrl ? 'rsvp' : 'website';
+  // Prefer the organizer's public event information page over a ticket checkout/login.
+  // Keep ticketUrl and rsvpUrl in the event record for explicit purchase flows.
+  const publicEventPageUrl = websiteUrl && !/luminasocialclub\.com\/login\//i.test(websiteUrl)
+    ? websiteUrl
+    : undefined;
+  const accessUrl = publicEventPageUrl || ticketUrl || rsvpUrl || websiteUrl;
+  const accessDestinationType = publicEventPageUrl ? 'website' : ticketUrl ? 'ticket' : rsvpUrl ? 'rsvp' : 'website';
 
   const attendanceText = event.tags?.find((tag) => /ticket|rsvp|member|invite|admission/i.test(tag));
   const eventAddress = getListingPhysicalAddress(event, entityCollections);
@@ -528,6 +545,7 @@ const EventPage: React.FC = () => {
             backgroundFallbackUrls={heroFallbackUrls}
             mobileFlyerImageUrl={eventFlyerHeroImage}
             flyerFallbackUrls={flyerFallbackUrls}
+            heroCrop={resolvedEventHeroCrop}
             eventLogoUrl={eventLogoImage}
             clubLogoUrl={venueLogoImage}
             hostLogoUrl={presenterLogoUrl}

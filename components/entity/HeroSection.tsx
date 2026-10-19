@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SharedHeroImage from './SharedHeroImage';
+import type { HeroCropConfig } from '../../lib/media/heroCrop';
 
 type HeroLink = {
   label: string;
@@ -12,6 +14,7 @@ type HeroSectionProps = {
   subtitle?: string;
   meta?: string[];
   imageUrl?: string;
+  heroCrop?: HeroCropConfig | null;
   pills?: string[];
   pillLabel?: string;
   links?: HeroLink[];
@@ -23,6 +26,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   subtitle,
   meta,
   imageUrl,
+  heroCrop,
   pills,
   pillLabel,
   links,
@@ -30,12 +34,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <section className="mt-6">
       <div className="rounded-2xl overflow-hidden border border-gray-800 bg-black/40">
-        <div className="relative h-64 sm:h-80">
-          <img
+        <div className="relative aspect-[4/3] min-h-[280px] sm:aspect-[16/9] sm:min-h-[360px] lg:aspect-[20/9] lg:min-h-[450px]">
+          <SharedHeroImage
             src={imageUrl ?? '/placeholder.jpg'}
             alt={title}
-            className="w-full h-full object-cover"
+            crop={heroCrop}
+            className="w-full h-full"
           />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/85 via-[#05060a]/20 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)]">
             {eyebrow && (
               <span className="inline-flex text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gray-900/70 text-gray-200">

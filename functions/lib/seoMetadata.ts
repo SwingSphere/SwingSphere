@@ -147,7 +147,10 @@ const isUsableMediaUrl = (url?: string | null): url is string => {
 
 export const toAbsoluteUrl = (pathOrUrl?: string | null): string => {
   if (!isUsableMediaUrl(pathOrUrl)) return DEFAULT_OG_IMAGE;
-  const trimmed = pathOrUrl.trim();
+  const trimmed = pathOrUrl
+    .trim()
+    .replace(/([#&])ss-crop=[^&#]*/gi, (_m, sep) => (sep === '#' ? '#' : ''))
+    .replace(/#[&]*$/, '');
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `${SITE_ORIGIN}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };

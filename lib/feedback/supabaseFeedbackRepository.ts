@@ -65,6 +65,9 @@ export class SupabaseFeedbackRepository implements FeedbackRepository {
   }
 
   async getUserSubmission(targetType: FeedbackTargetType, targetId: string, userId: string): Promise<FeedbackSubmission | null> {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      return null;
+    }
     await this.authenticatedUserId(userId);
     const data = await this.rpc('feedback_get_user_submission', { p_target_type: targetType, p_target_id: targetId, p_visit_date: null });
     return data == null ? null : mapFeedbackSubmission(data);

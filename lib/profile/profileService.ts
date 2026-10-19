@@ -102,7 +102,14 @@ const mapSavedCollectionItem = (row: SavedCollectionItemRow): SavedCollectionIte
   addedAt: row.added_at,
 });
 
+const isUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 export const getProfilePrivacy = async (userId: string): Promise<ProfilePrivacySettings> => {
+  if (!isUuid(userId)) {
+    const now = new Date().toISOString();
+    return { userId, profileVisibility: 'private', createdAt: now, updatedAt: now };
+  }
   const { data, error } = await supabase
     .from('profile_privacy_settings')
     .select('user_id, profile_visibility, created_at, updated_at')
@@ -174,6 +181,7 @@ export const getPublicProfileByHandle = async (handle: string): Promise<PublicMe
 };
 
 export const listSavedEntities = async (userId: string): Promise<SavedEntity[]> => {
+  if (!isUuid(userId)) return [];
   const { data, error } = await supabase
     .from('saved_entities')
     .select('id, user_id, entity_type, entity_id, private_note, created_at, updated_at')
@@ -189,6 +197,7 @@ export const getSavedEntity = async (
   entityType: SavedEntityType,
   entityId: string,
 ): Promise<SavedEntity | null> => {
+  if (!isUuid(userId)) return null;
   const { data, error } = await supabase
     .from('saved_entities')
     .select('id, user_id, entity_type, entity_id, private_note, created_at, updated_at')
@@ -232,6 +241,7 @@ export const removeSavedEntity = async (userId: string, savedEntityId: string): 
 };
 
 export const listSavedCollections = async (userId: string): Promise<SavedCollection[]> => {
+  if (!isUuid(userId)) return [];
   const { data, error } = await supabase
     .from('saved_collections')
     .select('id, user_id, title, description, visibility, created_at, updated_at')

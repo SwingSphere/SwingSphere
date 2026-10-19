@@ -212,7 +212,7 @@ const ClubPage: React.FC = () => {
         <React.Suspense fallback={null}>
           <ClubQuickEditPanel
             key={`${club.id}-${quickEditField}`}
-            club={club}
+            club={presentationClub ?? club}
             field={quickEditField}
             onClose={() => setQuickEditField(null)}
             onPreview={setClubOverride}

@@ -10,10 +10,32 @@ import type {
   VenueData,
 } from '../types';
 import { mockOrganizations } from '../data/mockOrganizations';
+import {
+  encodeHeroCropToUrl,
+  extractHeroCropFromUrl,
+  hasCustomHeroCrop,
+  resolveEntityHeroCrop,
+} from './media/heroCrop';
 import { supabase } from './supabase';
 import { VERIFIED_RESORT_PUBLIC_COORDINATES } from './travelMarkerModel';
 
 const mockOrgById = new Map(mockOrganizations.map((org) => [org.id, org]));
+
+const parseHeaderHeroCrop = (headerImageUrl?: string | null) =>
+  extractHeroCropFromUrl(headerImageUrl).crop ?? undefined;
+
+const serializeHeaderWithCrop = (entity: {
+  headerImageUrl?: string | null;
+  heroCrop?: any;
+  mediaAssets?: any[];
+}): string | null => {
+  if (!entity.headerImageUrl) return null;
+  const crop = resolveEntityHeroCrop(entity, entity.headerImageUrl);
+  if (hasCustomHeroCrop(crop) || (crop.sourceWidth && crop.sourceHeight)) {
+    return encodeHeroCropToUrl(entity.headerImageUrl, crop);
+  }
+  return entity.headerImageUrl;
+};
 
 const requireData = <T,>(data: T | null, error: unknown): T => {
   if (error) throw error;
@@ -34,6 +56,7 @@ const mapOrganization = (row: any): OrganizationData => {
     fallbackOrg?.name && (!remoteName || remoteName === remoteName.toLowerCase())
       ? fallbackOrg.name
       : (remoteName || fallbackOrg?.name || '');
+  const headerImageUrl = row.header_image_url ?? fallbackOrg?.headerImageUrl ?? undefined;
   return {
     id: row.id,
     type: 'organization',
@@ -47,7 +70,8 @@ const mapOrganization = (row: any): OrganizationData => {
     fetlife: row.fetlife ?? fallbackOrg?.fetlife ?? undefined,
     contactEmail: row.contact_email ?? fallbackOrg?.contactEmail ?? undefined,
     logoImageUrl: row.logo_image_url ?? fallbackOrg?.logoImageUrl ?? undefined,
-    headerImageUrl: row.header_image_url ?? fallbackOrg?.headerImageUrl ?? undefined,
+    headerImageUrl,
+    heroCrop: parseHeaderHeroCrop(headerImageUrl),
     galleryImageUrls: row.gallery_image_urls?.length ? row.gallery_image_urls : (fallbackOrg?.galleryImageUrls ?? []),
     operatingRegions: row.operating_regions?.length ? row.operating_regions : (fallbackOrg?.operatingRegions ?? []),
     globePresence: row.globe_presence ?? fallbackOrg?.globePresence ?? undefined,
@@ -76,6 +100,7 @@ const mapVenue = (row: any): VenueData => ({
   accessibilityNotes: row.accessibility_notes ?? undefined,
   logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
+  heroCrop: parseHeaderHeroCrop(row.header_image_url),
   galleryImageUrls: row.gallery_image_urls ?? [],
   buildingAssetId: row.building_asset_id ?? undefined,
   createdAt: row.created_at ?? undefined,
@@ -119,6 +144,7 @@ const mapEventSeries = (row: any): EventSeriesData => ({
   descriptionFull: row.description_full ?? undefined,
   logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
+  heroCrop: parseHeaderHeroCrop(row.header_image_url),
   defaultVenueId: row.default_venue_id ?? undefined,
   defaultTags: row.default_tags ?? [],
   status: row.status,
@@ -137,6 +163,7 @@ const mapClubBrand = (row: any): ClubBrandData => ({
   descriptionFull: row.description_full ?? undefined,
   logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
+  heroCrop: parseHeaderHeroCrop(row.header_image_url),
   defaultAmenities: row.default_amenities ?? [],
   status: row.status,
   createdAt: row.created_at ?? undefined,
@@ -191,6 +218,7 @@ const mapResort = (row: any): ResortData => {
     transportationNotes: row.transportation_notes ?? [],
     logoImageUrl: row.logo_image_url ?? undefined,
     headerImageUrl: row.header_image_url ?? undefined,
+    heroCrop: parseHeaderHeroCrop(row.header_image_url),
     galleryImageUrls: row.gallery_image_urls ?? [],
     status: row.status,
   };
@@ -208,6 +236,7 @@ const mapCruiseSeries = (row: any): CruiseSeriesData => ({
   experienceHighlights: row.experience_highlights ?? [],
   logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
+  heroCrop: parseHeaderHeroCrop(row.header_image_url),
   galleryImageUrls: row.gallery_image_urls ?? [],
   status: row.status,
 });
@@ -231,6 +260,7 @@ const mapCruiseSailing = (row: any): CruiseSailingData => ({
   theme: row.theme ?? undefined,
   logoImageUrl: row.logo_image_url ?? undefined,
   headerImageUrl: row.header_image_url ?? undefined,
+  heroCrop: parseHeaderHeroCrop(row.header_image_url),
   status: row.status,
 });
 
@@ -255,7 +285,7 @@ export const saveOrganization = async (organization: OrganizationData): Promise<
     fetlife: organization.fetlife ?? null,
     contact_email: organization.contactEmail ?? null,
     logo_image_url: organization.logoImageUrl ?? null,
-    header_image_url: organization.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(organization),
     gallery_image_urls: organization.galleryImageUrls ?? [],
     operating_regions: organization.operatingRegions ?? [],
     globe_presence: organization.globePresence ?? null,
@@ -295,7 +325,7 @@ export const saveVenue = async (venue: VenueData): Promise<VenueData> => {
     parking_notes: venue.parkingNotes ?? null,
     accessibility_notes: venue.accessibilityNotes ?? null,
     logo_image_url: venue.logoImageUrl ?? null,
-    header_image_url: venue.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(venue),
     gallery_image_urls: venue.galleryImageUrls ?? [],
     building_asset_id: venue.buildingAssetId ?? null,
     created_by: actorId,
@@ -386,7 +416,7 @@ export const saveEventSeries = async (series: EventSeriesData): Promise<EventSer
     description_short: series.descriptionShort ?? null,
     description_full: series.descriptionFull ?? null,
     logo_image_url: series.logoImageUrl ?? null,
-    header_image_url: series.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(series),
     default_venue_id: series.defaultVenueId ?? null,
     default_tags: series.defaultTags ?? [],
     status: series.status,
@@ -411,7 +441,7 @@ export const saveClubBrand = async (brand: ClubBrandData): Promise<ClubBrandData
     description_short: brand.descriptionShort ?? null,
     description_full: brand.descriptionFull ?? null,
     logo_image_url: brand.logoImageUrl ?? null,
-    header_image_url: brand.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(brand),
     default_amenities: brand.defaultAmenities ?? [],
     status: brand.status,
     created_by: actorId,
@@ -447,7 +477,7 @@ export const saveResort = async (resort: ResortData): Promise<ResortData> => {
     access_notes: resort.accessNotes ?? [],
     transportation_notes: resort.transportationNotes ?? [],
     logo_image_url: resort.logoImageUrl ?? null,
-    header_image_url: resort.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(resort),
     gallery_image_urls: resort.galleryImageUrls ?? [],
     status: resort.status,
     created_by: actorId,
@@ -473,7 +503,7 @@ export const saveCruiseSeries = async (series: CruiseSeriesData): Promise<Cruise
     audience_label: series.audienceLabel,
     experience_highlights: series.experienceHighlights ?? [],
     logo_image_url: series.logoImageUrl ?? null,
-    header_image_url: series.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(series),
     gallery_image_urls: series.galleryImageUrls ?? [],
     status: series.status,
     created_by: actorId,
@@ -506,7 +536,7 @@ export const saveCruiseSailing = async (sailing: CruiseSailingData): Promise<Cru
     pricing_summary: sailing.pricingSummary ?? null,
     theme: sailing.theme ?? null,
     logo_image_url: sailing.logoImageUrl ?? null,
-    header_image_url: sailing.headerImageUrl ?? null,
+    header_image_url: serializeHeaderWithCrop(sailing),
     status: sailing.status,
     created_by: actorId,
   }).select('*').single();

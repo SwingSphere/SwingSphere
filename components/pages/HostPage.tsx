@@ -19,11 +19,12 @@ import { isPastEvent } from '../../lib/eventLifecycle';
 import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
 import {
   getListingFlyerUrl,
-  getListingImageUrl,
+  getListingHeroPageUrl,
   getListingPrimaryLogoUrl,
   handleListingImageError,
   serializeFallbackCandidates,
 } from '../../lib/listingImage';
+import { extractHeroCropFromUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import type { ClubData, CruiseSailingData, CruiseSeriesData, EventData } from '../../types';
 import HostPageLayout from '../host/HostPageLayout';
 import { DetailContextNav } from '../navigation/DetailContextNav';
@@ -478,7 +479,14 @@ const HostPage: React.FC = () => {
 
   const canonicalPath = getHostCanonicalPath(hostProfile.slug);
   const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
-  const hostHeroImage = resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined);
+  const hostHeroImage = resolvedHostHeader || (ownedClub ? getListingHeroPageUrl(ownedClub) : undefined);
+  const hostHeroCrop = resolveEntityHeroCrop(
+    hostProfile.organization ?? ownedClub,
+    resolvedHostHeader,
+    hostProfile.organization?.heroCrop ??
+      extractHeroCropFromUrl(resolvedHostHeader).crop ??
+      ownedClub?.heroCrop,
+  );
   const hostLogoImage = resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined);
   const seoImageUrl = hostHeroImage || hostLogoImage;
   const isLogoOnlyPreview = !hostHeroImage && Boolean(hostLogoImage);
@@ -518,7 +526,12 @@ const HostPage: React.FC = () => {
       <React.Suspense fallback={null}>
         <HostQuickEditPanel
           key={`${hostProfile.organization.id}-${quickEditField}`}
-          organization={hostProfile.organization}
+          organization={{
+            ...hostProfile.organization,
+            headerImageUrl: hostProfile.organization.headerImageUrl || hostHeroImage,
+            logoImageUrl: hostProfile.organization.logoImageUrl || hostLogoImage,
+            heroCrop: hostProfile.organization.heroCrop ?? hostHeroCrop ?? undefined,
+          }}
           field={quickEditField}
           onClose={() => setQuickEditField(null)}
         />
@@ -527,7 +540,16 @@ const HostPage: React.FC = () => {
     {canEditHostPage ? (
       <React.Suspense fallback={null}>
         <HostPageAdminEditor
-          organization={hostProfile.organization ?? null}
+          organization={
+            hostProfile.organization
+              ? {
+                  ...hostProfile.organization,
+                  headerImageUrl: hostProfile.organization.headerImageUrl || hostHeroImage,
+                  logoImageUrl: hostProfile.organization.logoImageUrl || hostLogoImage,
+                  heroCrop: hostProfile.organization.heroCrop ?? hostHeroCrop ?? undefined,
+                }
+              : null
+          }
           listings={listings}
           venues={venues}
           relationships={organizationVenueRelationships}
@@ -537,7 +559,7 @@ const HostPage: React.FC = () => {
       </React.Suspense>
     ) : null}
     <HostPageLayout
-      backgroundImageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+      backgroundImageUrl={hostHeroImage}
       contextNav={
         <DetailContextNav
           breadcrumbs={[
@@ -555,8 +577,9 @@ const HostPage: React.FC = () => {
           hostName={hostProfile.name}
           cadenceText={cadenceText}
           themePills={themePills}
-          logoImageUrl={resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined)}
-          headerImageUrl={resolvedHostHeader || (ownedClub ? getListingImageUrl(ownedClub) : undefined)}
+          logoImageUrl={hostLogoImage}
+          headerImageUrl={hostHeroImage}
+          heroCrop={hostHeroCrop}
           description={hostProfile.organization?.descriptionShort}
           operatorName={operatorOrganization?.name}
           displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.includes('producer') ? 'Producer' : hostProfile.organization?.displayTypes?.includes('community') ? 'Community' : 'Host'}

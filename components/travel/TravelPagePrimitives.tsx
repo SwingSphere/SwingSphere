@@ -1,5 +1,7 @@
 import React from 'react';
 import EntityTypePill from '../entity/EntityTypePill';
+import SharedHeroImage from '../entity/SharedHeroImage';
+import type { HeroCropConfig } from '../../lib/media/heroCrop';
 
 export const TravelSection: React.FC<{
   eyebrow?: string;
@@ -47,27 +49,31 @@ export const TravelHero: React.FC<{
   location: string;
   subtitle: string;
   imageUrl?: string;
+  heroCrop?: HeroCropConfig | null;
   logoImageUrl?: string;
   badge: string;
   tone?: 'resort' | 'cruise';
-}> = ({ typeLabel, title, location, subtitle, imageUrl, logoImageUrl, badge, tone = 'resort' }) => (
-  <section className="relative mt-6 min-h-[25rem] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#080b10] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-    {imageUrl ? <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+}> = ({ typeLabel, title, location, subtitle, imageUrl, heroCrop, logoImageUrl, badge, tone = 'resort' }) => (
+  <section className="relative mt-6 aspect-[4/3] min-h-[280px] sm:aspect-[16/9] sm:min-h-[360px] lg:aspect-[20/9] lg:min-h-[450px] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#080b10] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+    {imageUrl ? (
+      <SharedHeroImage src={imageUrl} alt="" crop={heroCrop} className="absolute inset-0" />
+    ) : null}
+    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/85 via-[#05060a]/25 to-transparent" />
     <div className="absolute left-4 top-4 z-20 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-black/35 shadow-lg backdrop-blur-sm sm:left-6 sm:top-6 sm:h-24 sm:w-24">
       {logoImageUrl ? (
-        <img src={logoImageUrl} alt={`${title} logo`} className="block h-full w-full object-cover" />
+        <img src={logoImageUrl} alt={`${title} logo`} className="block h-full w-full object-contain" />
       ) : (
         <span className="text-2xl font-black text-white" aria-label={`${title} logo placeholder`}>{title.trim().slice(0, 2).toUpperCase()}</span>
       )}
     </div>
-    <div className="relative flex min-h-[25rem] flex-col justify-end p-6 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)] sm:p-9">
+    <div className="relative flex h-full min-h-[280px] sm:min-h-[360px] lg:min-h-[450px] flex-col justify-end p-6 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)] sm:p-9">
       <div className="flex flex-wrap items-center gap-2">
         <EntityTypePill tone={tone}>{typeLabel}</EntityTypePill>
         <span className={tone === 'cruise' ? 'rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-violet-100 backdrop-blur-xl' : 'rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100 backdrop-blur-xl'}>{badge}</span>
       </div>
-      <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-[-0.035em] text-white sm:text-6xl">{title}</h1>
+      <h1 className="mt-4 max-w-4xl text-3xl font-black tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">{title}</h1>
       <p className={tone === 'cruise' ? 'mt-3 text-sm font-semibold text-violet-100/85' : 'mt-3 text-sm font-semibold text-emerald-100/85'}>{location}</p>
-      <p className="mt-4 max-w-2xl text-base leading-7 text-gray-300 sm:text-lg">{subtitle}</p>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300 sm:text-base sm:leading-7">{subtitle}</p>
     </div>
   </section>
 );

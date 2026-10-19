@@ -61,6 +61,24 @@ const formatDateTime = (iso: string | null | undefined): string => {
   });
 };
 
+const formatCuratorDetail = (value: unknown): string => {
+  if (value == null) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return value.map(formatCuratorDetail).filter(Boolean).join(' · ');
+  if (typeof value === 'object') {
+    const detail = value as Record<string, unknown>;
+    const raw = detail.rawText ?? detail.raw ?? detail.text;
+    if (typeof raw === 'string' && raw.trim()) return raw;
+    if (Array.isArray(detail.tiers)) return detail.tiers.map((tier) => {
+      if (typeof tier !== 'object' || tier === null) return formatCuratorDetail(tier);
+      const entry = tier as Record<string, unknown>;
+      return [entry.label ?? entry.category, entry.price].map(formatCuratorDetail).filter(Boolean).join(': ');
+    }).filter(Boolean).join(' · ');
+    return '';
+  }
+  return '';
+};
+
 const formatShortDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return 'Missing Date';
   return dateStr;
@@ -156,6 +174,8 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
   const [artworkReviewNotes, setArtworkReviewNotes] = useState('');
   const [regenFeedback, setRegenFeedback] = useState('');
   const [regenStyleFamily, setRegenStyleFamily] = useState('');
+  const [regenLayoutTemplate, setRegenLayoutTemplate] = useState('');
+  const [regenLevel, setRegenLevel] = useState<'artwork' | 'layout' | 'typography'>('artwork');
   const [regenSensualityMode, setRegenSensualityMode] = useState('');
   const [regenComposition, setRegenComposition] = useState('');
   const [regenGenerateNow, setRegenGenerateNow] = useState<boolean>(false);
@@ -273,6 +293,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
         m.eventTitle.toLowerCase().includes(q) ||
         m.clubName.toLowerCase().includes(q) ||
         (m.styleFamily || '').toLowerCase().includes(q) ||
+        (m.layoutTemplateName || m.layoutTemplate || '').toLowerCase().includes(q) ||
         (m.sensualityDirection?.mode || '').toLowerCase().includes(q) ||
         m.id.toLowerCase().includes(q)
       );
@@ -292,6 +313,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
     if (selectedMedia) {
       setInspectingVersionId(selectedMedia.selectedVersionId || selectedMedia.versionHistory?.at(-1)?.versionId || 'v1');
       setRegenStyleFamily(selectedMedia.styleFamily || '');
+      setRegenLayoutTemplate(selectedMedia.layoutTemplate || '');
       setRegenSensualityMode(selectedMedia.sensualityDirection?.mode || '');
       setRegenComposition(selectedMedia.composition || '');
     }
@@ -933,6 +955,56 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                     )}
                   </div>
 
+                  {/* Independent 4-Dimension Readiness Matrix */}
+                  {selectedCandidate.statusMatrix && (
+                    <div
+                      data-testid="curator-status-matrix"
+                      className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3 sm:grid-cols-4"
+                    >
+                      <div className="rounded-lg border border-slate-200 bg-white p-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Discovery</div>
+                        <div className="mt-0.5 text-xs font-bold text-emerald-700">
+                          {selectedCandidate.statusMatrix.discovery.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">2. Event Data</div>
+                        <div
+                          className={`mt-0.5 text-xs font-bold ${
+                            selectedCandidate.statusMatrix.eventData === 'complete'
+                              ? 'text-emerald-700'
+                              : selectedCandidate.statusMatrix.eventData === 'partially_complete'
+                                ? 'text-amber-700'
+                                : 'text-rose-700'
+                          }`}
+                        >
+                          {selectedCandidate.statusMatrix.eventData.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">3. Artwork</div>
+                        <div
+                          className={`mt-0.5 text-xs font-bold ${
+                            selectedCandidate.statusMatrix.artwork === 'approved' ||
+                            selectedCandidate.statusMatrix.artwork === 'generated_pending_review'
+                              ? 'text-purple-700'
+                              : selectedCandidate.statusMatrix.artwork === 'official_reference_found'
+                                ? 'text-blue-700'
+                                : 'text-slate-700'
+                          }`}
+                        >
+                          {selectedCandidate.statusMatrix.artwork.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">4. Publication</div>
+                        <div className="mt-0.5 text-xs font-bold text-slate-800">
+                          {selectedCandidate.statusMatrix.publication.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Warnings, Closure, Duplicate & Inferred-Field Indicators */}
                   {(selectedCandidate.warnings.length > 0 ||
                     selectedCandidate.inferredFields.length > 0 ||
@@ -982,6 +1054,140 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Enriched Structured Event Details & Descriptions */}
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Extracted Event Details &amp; Multi-Paragraph Description
+                      </h3>
+                      {selectedCandidate.mediaPriority && (
+                        <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[10px] font-bold uppercase text-indigo-800">
+                          Media Priority: {selectedCandidate.mediaPriority.tier} ({selectedCandidate.mediaPriority.score})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                      {(selectedCandidate.theme || selectedCandidate.eventDetails?.theme) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Theme: </span>
+                          <span className="font-semibold text-slate-900">
+                            {formatCuratorDetail(selectedCandidate.theme || selectedCandidate.eventDetails?.theme)}
+                          </span>
+                        </div>
+                      )}
+                      {(selectedCandidate.atmosphere || selectedCandidate.eventDetails?.atmosphere) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Atmosphere: </span>
+                          <span className="font-semibold text-slate-900">
+                            {formatCuratorDetail(selectedCandidate.atmosphere || selectedCandidate.eventDetails?.atmosphere)}
+                          </span>
+                        </div>
+                      )}
+                      {(selectedCandidate.dressCode || selectedCandidate.eventDetails?.dressCode) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Dress Code: </span>
+                          <span className="font-semibold text-slate-900">
+                            {formatCuratorDetail(selectedCandidate.dressCode || selectedCandidate.eventDetails?.dressCode)}
+                          </span>
+                        </div>
+                      )}
+                      {(selectedCandidate.restrictions || selectedCandidate.eventDetails?.eligibility) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Eligibility / Audience: </span>
+                          <span className="font-semibold text-slate-900">
+                            {formatCuratorDetail(selectedCandidate.restrictions || selectedCandidate.eventDetails?.eligibility)}
+                          </span>
+                        </div>
+                      )}
+                      {formatCuratorDetail(selectedCandidate.admission || selectedCandidate.eventDetails?.admission) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Admission / Pricing: </span>
+                          <span className="font-semibold text-slate-900">
+                            {formatCuratorDetail(selectedCandidate.admission || selectedCandidate.eventDetails?.admission)}
+                          </span>
+                        </div>
+                      )}
+                      {(selectedCandidate.membershipRequirement ||
+                        selectedCandidate.rsvpRequirement ||
+                        selectedCandidate.ageRequirement) && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <span className="font-bold text-slate-500">Requirements: </span>
+                          <span className="font-semibold text-slate-900">
+                            {[
+                              selectedCandidate.ageRequirement,
+                              selectedCandidate.membershipRequirement,
+                              selectedCandidate.rsvpRequirement,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {(selectedCandidate.displayDescription || selectedCandidate.description) && (
+                      <div className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase text-slate-500">
+                          <span>Clean SwingSphere Display Description</span>
+                          {selectedCandidate.sourceDescription?.context && (
+                            <span className="font-mono text-[10px] font-normal text-slate-400">
+                              Provenance: {selectedCandidate.sourceDescription.context}
+                            </span>
+                          )}
+                        </div>
+                        <div className="whitespace-pre-line text-xs leading-relaxed text-slate-800">
+                          {selectedCandidate.displayDescription || selectedCandidate.description}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Discovered Official Event Images */}
+                    {selectedCandidate.discoveredImages && selectedCandidate.discoveredImages.length > 0 && (
+                      <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold uppercase text-blue-900">
+                          <span>
+                            Discovered Official Event Images ({selectedCandidate.discoveredImages.length})
+                          </span>
+                          <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] text-blue-800">
+                            Visual Reference Only — Does Not Replace 1080×1350 + 1920×1080 Pair
+                          </span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {selectedCandidate.discoveredImages.slice(0, 4).map((img, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2.5 rounded-lg border border-blue-100 bg-white p-2 text-xs"
+                            >
+                              <img
+                                src={img.highResUrl || img.url}
+                                alt={img.alt || selectedCandidate.title}
+                                className="h-14 w-14 shrink-0 rounded border border-slate-200 bg-slate-900 object-contain"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-bold text-slate-800">
+                                  {img.relevance.replace(/_/g, ' ')} ({img.sourceRole})
+                                </div>
+                                <div className="text-[11px] text-slate-500">
+                                  {img.width && img.height ? `${img.width}×${img.height}` : 'Dimensions dynamic'} · Ratio:{' '}
+                                  {img.aspectRatio || 'auto'}
+                                </div>
+                                <a
+                                  href={img.highResUrl || img.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline"
+                                >
+                                  Open Source Image <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Original vs. Proposed Values Table */}
                   <div>
@@ -1321,11 +1527,23 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       {item.clubName} {item.eventDate ? `· ${item.eventDate}` : ''}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+                      {item.creativeProcess && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-bold uppercase ${
+                            item.creativeProcess === 'reference_first'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {item.creativeProcess === 'reference_first' ? 'Reference-First' : 'Description-First'}
+                        </span>
+                      )}
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">
                         {item.sensualityDirection?.mode || 'Tasteful Nightlife'}
                       </span>
                       <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-700">
-                        7-Point Eval: {item.visualEvaluation?.passedCount ?? 7}/7
+                        Quality Eval: {item.visualEvaluation?.passedCount ?? 10}/
+                        {item.visualEvaluation?.totalCriteria ?? 10}
                       </span>
                       <span className="rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700">
                         {item.selectedVersionId || 'v1'} ({item.versionHistory?.length || 1} ver)
@@ -1354,6 +1572,20 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             ? 'Approved'
                             : selectedMedia.status.replace(/_/g, ' ')}
                         </span>
+                        {selectedMedia.creativeProcess && (
+                          <span
+                            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase ${
+                              selectedMedia.creativeProcess === 'reference_first'
+                                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                                : 'border-amber-200 bg-amber-50 text-amber-800'
+                            }`}
+                          >
+                            Process:{' '}
+                            {selectedMedia.creativeProcess === 'reference_first'
+                              ? 'Reference-First (Official Graphic + Details)'
+                              : 'Description-First (Event Details + Club Identity)'}
+                          </span>
+                        )}
                         <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                           Event Status: {selectedMedia.eventReviewState.replace(/_/g, ' ')}
                         </span>
@@ -1505,10 +1737,25 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
 
                   {/* Club Identity Direction & Contextual Sensuality Grid */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {/* Club Identity Inspection */}
+                    {/* Club Identity & Canonical Logo Source Inspection */}
                     <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        1. Inspected Club Identity &amp; Visual References
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          1. Inspected Club Identity &amp; Canonical Logo Source
+                        </div>
+                        {selectedMedia.logoSource && (
+                          <span
+                            className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              selectedMedia.logoSource.missingLogoFlag
+                                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            }`}
+                          >
+                            {selectedMedia.logoSource.missingLogoFlag
+                              ? 'Missing Logo (Text Crest Fallback)'
+                              : selectedMedia.logoSource.status.replace(/_/g, ' ')}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-2 space-y-2 text-xs text-slate-700">
                         <div className="flex items-center gap-3">
@@ -1530,6 +1777,19 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             </div>
                           </div>
                         </div>
+                        {selectedMedia.logoSource?.logoUrl && (
+                          <div className="truncate text-[11px] text-slate-600">
+                            <span className="font-semibold">Canonical Logo URL:</span>{' '}
+                            <a
+                              href={selectedMedia.logoSource.logoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-blue-600 hover:underline"
+                            >
+                              {selectedMedia.logoSource.logoUrl}
+                            </a>
+                          </div>
+                        )}
                         <div>
                           <span className="font-semibold text-slate-600">Brand Colors: </span>
                           <span className="inline-flex flex-wrap gap-1">
@@ -1554,15 +1814,40 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </div>
                     </div>
 
-                    {/* Contextual Sensuality & Brief */}
+                    {/* Creative Director System & Contextual Sensuality Brief */}
                     <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4">
-                      <div className="text-xs font-bold uppercase tracking-wider text-purple-900">
-                        2. Contextual Sensuality &amp; Creative Brief
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                          2. Creative Director Design System &amp; Brief
+                        </div>
+                        <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-900">
+                          {selectedMedia.designSkill || 'swingsphere-creative-director'}
+                        </span>
                       </div>
                       <div className="mt-2 space-y-1.5 text-xs text-slate-700">
                         <div>
-                          <span className="font-bold text-slate-900">Style Family:</span> {selectedMedia.styleFamily} (
-                          {selectedMedia.technique})
+                          <span className="font-bold text-slate-900">Creative Process:</span>{' '}
+                          <span className="font-semibold text-purple-900">
+                            {selectedMedia.creativeProcess === 'reference_first'
+                              ? 'Reference-First (Official Event Graphic + Event Description)'
+                              : 'Description-First (Full Event Description + Club Identity)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-900">Style Family &amp; Medium:</span>{' '}
+                          <span className="font-semibold text-slate-900">{selectedMedia.styleFamily}</span>
+                          {selectedMedia.medium ? (
+                            <span className="ml-1.5 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-800">
+                              {selectedMedia.medium.replace(/_/g, ' ')}
+                            </span>
+                          ) : null}{' '}
+                          ({selectedMedia.technique})
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-900">Poster Layout Template:</span>{' '}
+                          <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-900">
+                            {selectedMedia.layoutTemplateName || selectedMedia.layoutTemplate || 'Editorial Couture Frame'}
+                          </span>
                         </div>
                         <div>
                           <span className="font-bold text-slate-900">Sensuality Mode:</span>{' '}
@@ -1578,19 +1863,165 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                           <span className="font-bold text-slate-900">Composition &amp; Palette:</span>{' '}
                           {selectedMedia.composition} · Palette: {(selectedMedia.palette || []).join(', ')}
                         </div>
+                        {selectedMedia.officialImageAnalysis?.stylisticDirection && (
+                          <div className="rounded border border-blue-200 bg-blue-50/70 p-2 text-[11px] text-blue-900">
+                            <span className="font-bold">Official Image Reference Analysis:</span>{' '}
+                            {selectedMedia.officialImageAnalysis.stylisticDirection}
+                          </div>
+                        )}
+                        {selectedMedia.descriptionAnalysis?.styleSelectionRationale &&
+                          selectedMedia.creativeProcess === 'description_first' && (
+                            <div className="rounded border border-amber-200 bg-amber-50/70 p-2 text-[11px] text-amber-900">
+                              <span className="font-bold">Description-First Analysis:</span>{' '}
+                              {selectedMedia.descriptionAnalysis.styleSelectionRationale}
+                            </div>
+                          )}
                         <div className="text-[11px] text-slate-500">
-                          <span className="font-semibold">Guardrail:</span> Avoids defaulting to unrelated flowers, empty
-                          furniture, plain cocktails, or sterile abstract shapes.
+                          <span className="font-semibold">Two-Stage Architecture:</span> Stage A generates unlettered
+                          artwork with layout safe zones; Stage B deterministically composites crisp SVG typography &amp;
+                          canonical club branding.
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* 7-Point Visual Relevance Evaluation */}
+                  {/* Stage B Applied Factual Fields Inspection */}
+                  {selectedMedia.appliedFacts && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          3. Stage B Deterministic Factual Overlay Fields (Rendered on Flyer)
+                        </h3>
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+                            selectedMedia.appliedFacts.hasMissingFacts
+                              ? 'border-amber-200 bg-amber-50 text-amber-800'
+                              : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {selectedMedia.appliedFacts.hasMissingFacts
+                            ? `Missing Required Facts Flagged: ${selectedMedia.appliedFacts.missingRequiredFacts.join(', ')}`
+                            : 'All Required Poster Facts Verified'}
+                        </span>
+                      </div>
+                      <div className="mt-2.5 grid grid-cols-1 gap-2.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Event Title &amp; Kicker</div>
+                          <div className="mt-0.5 font-bold text-slate-900">{selectedMedia.appliedFacts.title}</div>
+                          {selectedMedia.appliedFacts.themeKicker && (
+                            <div className="text-[11px] text-purple-700">{selectedMedia.appliedFacts.themeKicker}</div>
+                          )}
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Date &amp; Badge</div>
+                          <div className="mt-0.5 font-bold text-slate-900">
+                            {selectedMedia.appliedFacts.dateFormatted}
+                          </div>
+                          <div className="text-[11px] text-slate-600">
+                            Badge: {selectedMedia.appliedFacts.weekdayShort} · {selectedMedia.appliedFacts.dateBadge}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Time &amp; Timezone</div>
+                          <div className="mt-0.5 font-bold text-slate-900">
+                            {selectedMedia.appliedFacts.timeFormatted}
+                          </div>
+                          <div className="text-[11px] text-slate-600">
+                            TZ: {selectedMedia.appliedFacts.timezone || 'Local'}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Club, Venue &amp; City</div>
+                          <div className="mt-0.5 font-bold text-slate-900">
+                            {selectedMedia.appliedFacts.presentingLine}
+                          </div>
+                          <div className="text-[11px] text-slate-600">
+                            {selectedMedia.appliedFacts.venueName}
+                            {selectedMedia.appliedFacts.city ? ` · ${selectedMedia.appliedFacts.city}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      {(selectedMedia.appliedFacts.calloutPills?.length > 0 ||
+                        selectedMedia.appliedFacts.rsvpOrMembership) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className="font-bold text-slate-600">Callout Pills:</span>
+                          {(selectedMedia.appliedFacts.calloutPills || []).map((pill, idx) => (
+                            <span
+                              key={idx}
+                              className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-semibold text-slate-800"
+                            >
+                              {pill}
+                            </span>
+                          ))}
+                          {selectedMedia.appliedFacts.rsvpOrMembership && (
+                            <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 font-semibold text-purple-900">
+                              {selectedMedia.appliedFacts.rsvpOrMembership}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 12-Point Creative Director Technical + Aesthetic Quality Evaluation */}
+                  {selectedMedia.qualityEvaluation && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Creative Director 12-Point Quality Check (Technical Validation + Aesthetic Review)
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
+                            Technical: {selectedMedia.qualityEvaluation.technicalValidation?.passedCount ?? 7}/
+                            {selectedMedia.qualityEvaluation.technicalValidation?.total ?? 7}
+                          </span>
+                          <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-800">
+                            Aesthetic: {selectedMedia.qualityEvaluation.aestheticEvaluation?.passedCount ?? 5}/
+                            {selectedMedia.qualityEvaluation.aestheticEvaluation?.total ?? 5}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {(selectedMedia.qualityEvaluation.criteria || []).map((crit) => (
+                          <div
+                            key={crit.id}
+                            className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 text-xs"
+                          >
+                            <CheckCircle2
+                              className={`mt-0.5 h-4 w-4 shrink-0 ${
+                                crit.passed ? 'text-emerald-600' : 'text-amber-500'
+                              }`}
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                                <span>
+                                  {crit.number}. {crit.question}
+                                </span>
+                                {crit.category && (
+                                  <span
+                                    className={`rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
+                                      crit.category === 'technical'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-purple-100 text-purple-800'
+                                    }`}
+                                  >
+                                    {crit.category}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-slate-600">{crit.notes}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 10-Point Visual Relevance Evaluation */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        7-Point Visual Relevance Evaluation Criteria
+                        10-Point Universal Visual Quality Checklist
                       </h3>
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
@@ -1599,8 +2030,8 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             : 'border-amber-200 bg-amber-50 text-amber-800'
                         }`}
                       >
-                        {selectedMedia.visualEvaluation?.passedCount ?? 7} /{' '}
-                        {selectedMedia.visualEvaluation?.totalCriteria ?? 7} Criteria Passed
+                        {selectedMedia.visualEvaluation?.passedCount ?? 10} /{' '}
+                        {selectedMedia.visualEvaluation?.totalCriteria ?? 10} Criteria Passed
                       </span>
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1645,9 +2076,19 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             }`}
                           >
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-mono font-bold text-slate-900">{ver.versionId}</span>
                                 <span className="font-semibold text-slate-700">{ver.styleFamily}</span>
+                                {(ver.layoutTemplateName || ver.layoutTemplate) && (
+                                  <span className="rounded bg-blue-50 px-1.5 py-0.2 text-[10px] font-semibold text-blue-800">
+                                    {ver.layoutTemplateName || ver.layoutTemplate}
+                                  </span>
+                                )}
+                                {ver.regenerationLevel && (
+                                  <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold uppercase text-slate-700">
+                                    Level: {ver.regenerationLevel}
+                                  </span>
+                                )}
                                 {ver.sensualityMode && (
                                   <span className="rounded bg-purple-50 px-1.5 py-0.2 text-[10px] font-semibold text-purple-800">
                                     {ver.sensualityMode}
@@ -1763,15 +2204,38 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </div>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <select
+                          aria-label="Select regeneration level"
+                          value={regenLevel}
+                          onChange={(e) => setRegenLevel(e.target.value as 'artwork' | 'layout' | 'typography')}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-purple-950"
+                        >
+                          <option value="artwork">Full Artwork + Poster Composition (Stage A + B)</option>
+                          <option value="layout">Recompose Poster Layout Only (Stage B · Zero AI Cost)</option>
+                          <option value="typography">Recompose Typography / Facts Only (Stage B · Zero AI Cost)</option>
+                        </select>
+                        <select
+                          aria-label="Override poster layout template"
+                          value={regenLayoutTemplate}
+                          onChange={(e) => setRegenLayoutTemplate(e.target.value)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800"
+                        >
+                          <option value="">Keep / Auto Poster Layout Template</option>
+                          {(snapshot.creativeCatalog.layoutTemplates || []).map((tpl) => (
+                            <option key={tpl.id} value={tpl.id}>
+                              {tpl.name} ({tpl.category})
+                            </option>
+                          ))}
+                        </select>
+                        <select
                           aria-label="Override style family"
                           value={regenStyleFamily}
                           onChange={(e) => setRegenStyleFamily(e.target.value)}
                           className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800"
                         >
-                          <option value="">Keep / Auto Style Family</option>
+                          <option value="">Keep / Auto Style Family (30 Families)</option>
                           {snapshot.creativeCatalog.styles.map((s) => (
                             <option key={s.family} value={s.family}>
-                              {s.family}
+                              {s.family} {s.medium ? `[${s.medium}]` : ''}
                             </option>
                           ))}
                         </select>
@@ -1793,7 +2257,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         rows={2}
                         value={regenFeedback}
                         onChange={(e) => setRegenFeedback(e.target.value)}
-                        placeholder="Describe desired atmosphere, lighting, masquerade/editorial cues, or composition changes..."
+                        placeholder="Describe desired atmosphere, lighting, layout adjustment, or typography hierarchy changes..."
                         className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-900"
                       />
                       <label className="flex items-center gap-2 text-xs font-medium text-purple-950">
@@ -1804,11 +2268,17 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                           className="rounded border-purple-300 text-purple-700"
                         />
                         <span>
-                          Invoke existing OpenClaw image provider immediately (
-                          <code className="font-mono text-[11px]">
-                            {snapshot.connection.imageProvider?.cliCommand || 'openclaw infer image'}
-                          </code>
-                          ; no separate API integration required)
+                          {regenLevel === 'artwork' ? (
+                            <>
+                              Invoke existing OpenClaw image provider immediately (
+                              <code className="font-mono text-[11px]">
+                                {snapshot.connection.imageProvider?.cliCommand || 'openclaw infer image'}
+                              </code>
+                              ; no separate API integration required)
+                            </>
+                          ) : (
+                            'Re-render Stage B SVG layout & typography immediately on existing Stage A artwork (zero paid AI generation cost)'
+                          )}
                         </span>
                       </label>
                       <button
@@ -1821,21 +2291,29 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             {
                               notes:
                                 regenFeedback.trim() ||
-                                'Refine adult nightlife atmosphere and club-specific visual alignment.',
+                                'Refine adult nightlife atmosphere, poster layout hierarchy, and club-specific visual alignment.',
+                              regenerationLevel: regenLevel,
+                              layoutTemplate: regenLayoutTemplate || undefined,
                               styleFamily: regenStyleFamily || undefined,
                               sensualityMode: regenSensualityMode || undefined,
                               compositionDirection: regenComposition || undefined,
-                              generateNow: regenGenerateNow,
+                              generateNow: regenGenerateNow || regenLevel !== 'artwork',
                             },
-                            regenGenerateNow
-                              ? `Invoked OpenClaw image provider for "${selectedMedia.eventTitle}" without altering verified event facts.`
-                              : `Staged feedback-driven revision for "${selectedMedia.eventTitle}" without altering verified event facts.`,
+                            regenLevel !== 'artwork'
+                              ? `Recomposed Stage B ${regenLevel} for "${selectedMedia.eventTitle}" on existing artwork without paid AI generation.`
+                              : regenGenerateNow
+                                ? `Invoked OpenClaw image provider for "${selectedMedia.eventTitle}" without altering verified event facts.`
+                                : `Staged feedback-driven revision for "${selectedMedia.eventTitle}" without altering verified event facts.`,
                           )
                         }
                         className="inline-flex items-center gap-1.5 rounded-xl bg-purple-700 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-800 disabled:opacity-50"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
-                        {regenGenerateNow ? 'Regenerate via OpenClaw Provider' : 'Stage Feedback-Based Revision'}
+                        {regenLevel !== 'artwork'
+                          ? `Recompose Poster ${regenLevel === 'layout' ? 'Layout' : 'Typography'} (Stage B)`
+                          : regenGenerateNow
+                            ? 'Regenerate via OpenClaw Provider'
+                            : 'Stage Feedback-Based Revision'}
                       </button>
                     </div>
                   </div>

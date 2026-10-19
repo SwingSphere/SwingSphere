@@ -1,0 +1,4443 @@
+{
+  "summary": {
+    "variantResponsesMeasured": 509,
+    "totalVariantBytes": 43757284,
+    "variantsOver500KB": 8,
+    "variantsOver1MB": 0,
+    "variantsOver2MB": 0,
+    "variantsOver3MB": 0,
+    "largestVariants": [
+      {
+        "id": "775fc9c3-aaed-4329-9f82-0945b0691800",
+        "filename": "flyer-san-diego-enchanted-darkness-halloween-party-2026-10-10.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 672084
+      },
+      {
+        "id": "95a29452-76c4-492e-6d91-78acbcb72500",
+        "filename": "flyer-brooklyn-masquerade-party-2026-11-21.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 629006
+      },
+      {
+        "id": "ca52dc1b-0be8-4ae0-8a6d-56a89ba30a00",
+        "filename": "flyer-san-jose-halloween-party-2026-10-31.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 621188
+      },
+      {
+        "id": "ddd88865-ad6c-4e18-4b80-678f0ef01e00",
+        "filename": "flyer-phoenix-halloween-party-2026-10-17.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 600302
+      },
+      {
+        "id": "05835f4e-78e1-4f37-9cc6-03d2b7bd4600",
+        "filename": "flyer-denver-halloween-party-2026-10-10.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 581178
+      },
+      {
+        "id": "831f6506-7af0-4096-697b-51be2fb79c00",
+        "filename": "flyer-raleigh-halloween-party-2026-10-17.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 533058
+      },
+      {
+        "id": "0f68b6c4-51d6-40a7-0194-c441781ffb00",
+        "filename": "flyer-los-angeles-halloween-party-2026-10-10.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 530090
+      },
+      {
+        "id": "bf75497f-bd78-44c0-883b-fc0b71d7a600",
+        "filename": "flyer-san-pedro-halloween-cruise-2026-10-24.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 527322
+      },
+      {
+        "id": "cd86a3b4-9ce0-4596-1104-8403803bb900",
+        "filename": "flyer-las-vegas-haunted-circus-halloween-party-2026-10-17.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 511676
+      },
+      {
+        "id": "42024911-0363-44d2-3236-0523b5e96500",
+        "filename": "flyer-austin-halloween-party-2026-10-17.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 504070
+      },
+      {
+        "id": "a041102b-847e-4b09-42c2-e0f9f09b5900",
+        "filename": "flyer-san-diego-halloween-party-2026-10-31.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 492238
+      },
+      {
+        "id": "501310a9-9342-4255-bd17-09aded1ac400",
+        "filename": "flyer-seattle-pajama-party-2026-11-07.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 490228
+      },
+      {
+        "id": "1e7b6d38-f130-4204-193f-9c1a96a2ff00",
+        "filename": "flyer-las-vegas-tease-cocktail-mixer-2026-10-16.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 475170
+      },
+      {
+        "id": "3b787e42-5f34-454f-2818-84a294e39100",
+        "filename": "flyer-san-diego-pajama-party-2026-11-14.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 474000
+      },
+      {
+        "id": "10cabcf9-639b-4aeb-afa3-01ccff712300",
+        "filename": "flyer-miami-spring-cruise-to-key-west-bimini-beach-club-2027-03-18.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 471270
+      },
+      {
+        "id": "745406ec-5a74-4acb-e2c9-2722a38b0600",
+        "filename": "438cb3bf-03b7-47a1-b693-9dfc01fbba8c.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 412842
+      },
+      {
+        "id": "860bcd42-e8a8-4f43-6d8e-64665c9d1400",
+        "filename": "Enchanted Castle Costume Party.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 351564
+      },
+      {
+        "id": "e5935c50-133f-43dc-aeac-03f2c6c21a00",
+        "filename": "Enchanted Castle Costume Party.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 351564
+      },
+      {
+        "id": "3d019471-7bef-4f01-72bf-0296b5c33b00",
+        "filename": "582dfcc05ba335233a0a57a76ef9a92a.jpg",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 349312
+      },
+      {
+        "id": "06c4711a-956d-47d8-65a7-c756ac64db00",
+        "filename": "ChatGPT Image Sep 13, 2026, 07_27_32 PM.png",
+        "role": "flyer",
+        "variant": "flyerpage",
+        "bytes": 324306
+      }
+    ],
+    "originalSizesAvailable": false,
+    "scannedAt": "2026-10-11T22:24:03.345Z",
+    "totalInCloudflare": 314,
+    "scanned": 314,
+    "measured": 0,
+    "errors": 0,
+    "over500KB": 0,
+    "over1MB": 0,
+    "over2MB": 0,
+    "over3MB": 0,
+    "totalSourceBytes": 0,
+    "largest": []
+  },
+  "entries": [
+    {
+      "id": "a00cde0e-e3ef-47ab-5492-b01222ae0e00",
+      "filename": "ChatGPT Image Oct 8, 2026, 08_58_27 PM-2-cropped.webp",
+      "uploaded": "2026-10-09T04:00:44.178Z",
+      "role": "hero",
+      "ownerType": "cruise_series",
+      "ownerId": "a83253c7-00f8-4b29-a3ea-d09fb2c6ace1",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 82404,
+        "heropage": 252844
+      },
+      "errors": []
+    },
+    {
+      "id": "863cf4e2-b191-431a-7fba-866df0d7fa00",
+      "filename": "images (5)-cropped.webp",
+      "uploaded": "2026-10-09T04:00:40.116Z",
+      "role": "logo",
+      "ownerType": "cruise_series",
+      "ownerId": "a83253c7-00f8-4b29-a3ea-d09fb2c6ace1",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 7032
+      },
+      "errors": []
+    },
+    {
+      "id": "4b2b2835-fbd8-4de9-e636-7869e2a36900",
+      "filename": "ChatGPT Image Oct 8, 2026, 08_58_27 PM-2-cropped.webp",
+      "uploaded": "2026-10-09T03:58:37.980Z",
+      "role": "hero",
+      "ownerType": "cruise_series",
+      "ownerId": "a83253c7-00f8-4b29-a3ea-d09fb2c6ace1",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 82404,
+        "heropage": 252844
+      },
+      "errors": []
+    },
+    {
+      "id": "fed3cd21-60ca-431e-8a54-debd588d1000",
+      "filename": "ChatGPT Image Oct 8, 2026, 08_19_26 PM-2-cropped.webp",
+      "uploaded": "2026-10-09T03:19:59.368Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "8d712f5f-f515-4521-a501-2b1772ec36b9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 67410,
+        "heropage": 186808
+      },
+      "errors": []
+    },
+    {
+      "id": "246b3d75-8182-4eed-8113-ec537d788500",
+      "filename": "ChatGPT Image Oct 8, 2026, 08_19_26 PM-1-cropped.webp",
+      "uploaded": "2026-10-09T03:19:47.381Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "8d712f5f-f515-4521-a501-2b1772ec36b9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10180
+      },
+      "errors": []
+    },
+    {
+      "id": "9c0e04e9-54ec-44f7-49fa-311616944200",
+      "filename": "ChatGPT Image Oct 8, 2026, 07_26_34 PM-2-cropped.webp",
+      "uploaded": "2026-10-09T03:05:40.445Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "8d712f5f-f515-4521-a501-2b1772ec36b9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 64870,
+        "heropage": 179250
+      },
+      "errors": []
+    },
+    {
+      "id": "51420e7e-a9ed-43e1-a804-cb2957197500",
+      "filename": "thePE.jpg",
+      "uploaded": "2026-10-08T00:17:52.568Z",
+      "role": "logo",
+      "ownerType": "venue",
+      "ownerId": "5a67b548-f8b4-4fe6-a517-ad0029a19b9e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 18938
+      },
+      "errors": []
+    },
+    {
+      "id": "a09b0337-d5ed-47d4-4919-dfe90a373400",
+      "filename": "krystal-image-cropped.webp",
+      "uploaded": "2026-10-08T00:15:00.193Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "a8ac7b22-b9f9-4820-a973-896a4f16a808",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8824
+      },
+      "errors": []
+    },
+    {
+      "id": "c59f62e8-b7cd-4677-14af-6bb608b98000",
+      "filename": "krystal-image.png",
+      "uploaded": "2026-10-08T00:13:43.632Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "aeac8494-c3f9-47de-af73-79ac49169e96",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8998
+      },
+      "errors": []
+    },
+    {
+      "id": "65a213e5-265d-498d-8cd2-2b6f05c7c800",
+      "filename": "krystal-image.png",
+      "uploaded": "2026-10-08T00:13:30.298Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "17af6876-30f1-44b0-a875-c66ed60f2dc8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8998
+      },
+      "errors": []
+    },
+    {
+      "id": "a0762971-0922-49ac-8878-9e58cb2ec700",
+      "filename": "krystal-image.png",
+      "uploaded": "2026-10-08T00:12:37.275Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "aaaa3fb1-b7f7-4663-ab71-34c95d147f7b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8998
+      },
+      "errors": []
+    },
+    {
+      "id": "22660bf0-f02a-4367-2db8-447cb596de00",
+      "filename": "krystal-image-cropped.webp",
+      "uploaded": "2026-10-07T10:12:13.742Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "1eb1b212-33f4-4800-af78-100ad9117118",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8824
+      },
+      "errors": []
+    },
+    {
+      "id": "fc474aa7-a206-4141-e043-78eb40371600",
+      "filename": "9e20e5f1-b72d-4cd3-8d84-2e28f3739782-cropped.webp",
+      "uploaded": "2026-10-07T10:11:10.840Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "55ec34b2-8d89-4e04-a425-02aa4abc579c",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 56692,
+        "heropage": 151018
+      },
+      "errors": []
+    },
+    {
+      "id": "9d9935e9-e7b9-4431-21b9-ca6d26ac0c00",
+      "filename": "ChatGPT Image Oct 7, 2026, 02_04_25 AM-2-cropped.webp",
+      "uploaded": "2026-10-07T09:07:36.003Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "7af99e18-a971-4b06-ac2e-1420874750ae",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 69226,
+        "heropage": 159926
+      },
+      "errors": []
+    },
+    {
+      "id": "a66278fd-7cab-4d88-ef92-8d2704271a00",
+      "filename": "ChatGPT Image Oct 7, 2026, 02_04_23 AM-1-cropped.webp",
+      "uploaded": "2026-10-07T09:07:22.807Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "7af99e18-a971-4b06-ac2e-1420874750ae",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 17632
+      },
+      "errors": []
+    },
+    {
+      "id": "6dc1932c-e09d-4d4e-1fca-51c2808c2100",
+      "filename": "Chrome Club Paradise Emblem-cropped.webp",
+      "uploaded": "2026-10-07T06:39:15.412Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "a126e0d0-c3d8-489a-a834-d7c84b517fb2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 16516
+      },
+      "errors": []
+    },
+    {
+      "id": "29c5fe73-84bd-4017-03d6-e67a0b4adb00",
+      "filename": "ChatGPT Image Oct 6, 2026, 11_29_42 PM-2-cropped.webp",
+      "uploaded": "2026-10-07T06:29:48.590Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "a126e0d0-c3d8-489a-a834-d7c84b517fb2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 31266,
+        "heropage": 77918
+      },
+      "errors": []
+    },
+    {
+      "id": "10cabcf9-639b-4aeb-afa3-01ccff712300",
+      "filename": "flyer-miami-spring-cruise-to-key-west-bimini-beach-club-2027-03-18.png",
+      "uploaded": "2026-10-06T14:32:22.123Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 61072,
+        "flyerpage": 471270
+      },
+      "errors": []
+    },
+    {
+      "id": "95a29452-76c4-492e-6d91-78acbcb72500",
+      "filename": "flyer-brooklyn-masquerade-party-2026-11-21.png",
+      "uploaded": "2026-10-06T14:32:21.106Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-masquerade-party-brooklyn-2026-11-21",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 69570,
+        "flyerpage": 629006
+      },
+      "errors": []
+    },
+    {
+      "id": "3b787e42-5f34-454f-2818-84a294e39100",
+      "filename": "flyer-san-diego-pajama-party-2026-11-14.png",
+      "uploaded": "2026-10-06T14:32:19.857Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-pajama-party-san-diego-2026-11-14",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 58538,
+        "flyerpage": 474000
+      },
+      "errors": []
+    },
+    {
+      "id": "501310a9-9342-4255-bd17-09aded1ac400",
+      "filename": "flyer-seattle-pajama-party-2026-11-07.png",
+      "uploaded": "2026-10-06T14:32:18.650Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-pajama-party-seattle-2026-11-07",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 53604,
+        "flyerpage": 490228
+      },
+      "errors": []
+    },
+    {
+      "id": "a041102b-847e-4b09-42c2-e0f9f09b5900",
+      "filename": "flyer-san-diego-halloween-party-2026-10-31.png",
+      "uploaded": "2026-10-06T14:32:17.379Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-san-diego-2026-10-31",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 50278,
+        "flyerpage": 492238
+      },
+      "errors": []
+    },
+    {
+      "id": "ca52dc1b-0be8-4ae0-8a6d-56a89ba30a00",
+      "filename": "flyer-san-jose-halloween-party-2026-10-31.png",
+      "uploaded": "2026-10-06T14:32:16.034Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-san-jose-2026-10-31",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 74062,
+        "flyerpage": 621188
+      },
+      "errors": []
+    },
+    {
+      "id": "bf75497f-bd78-44c0-883b-fc0b71d7a600",
+      "filename": "flyer-san-pedro-halloween-cruise-2026-10-24.png",
+      "uploaded": "2026-10-06T14:32:14.853Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-cruise-san-pedro-2026-10-24",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 73354,
+        "flyerpage": 527322
+      },
+      "errors": []
+    },
+    {
+      "id": "831f6506-7af0-4096-697b-51be2fb79c00",
+      "filename": "flyer-raleigh-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T14:32:13.614Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-raleigh-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 52020,
+        "flyerpage": 533058
+      },
+      "errors": []
+    },
+    {
+      "id": "42024911-0363-44d2-3236-0523b5e96500",
+      "filename": "flyer-austin-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T14:32:12.420Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-austin-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 55660,
+        "flyerpage": 504070
+      },
+      "errors": []
+    },
+    {
+      "id": "ddd88865-ad6c-4e18-4b80-678f0ef01e00",
+      "filename": "flyer-phoenix-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T14:32:11.119Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-phoenix-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 68990,
+        "flyerpage": 600302
+      },
+      "errors": []
+    },
+    {
+      "id": "cd86a3b4-9ce0-4596-1104-8403803bb900",
+      "filename": "flyer-las-vegas-haunted-circus-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T14:32:10.051Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 57796,
+        "flyerpage": 511676
+      },
+      "errors": []
+    },
+    {
+      "id": "1e7b6d38-f130-4204-193f-9c1a96a2ff00",
+      "filename": "flyer-las-vegas-tease-cocktail-mixer-2026-10-16.png",
+      "uploaded": "2026-10-06T14:32:09.161Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 54728,
+        "flyerpage": 475170
+      },
+      "errors": []
+    },
+    {
+      "id": "05835f4e-78e1-4f37-9cc6-03d2b7bd4600",
+      "filename": "flyer-denver-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T14:32:08.047Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-denver-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 70364,
+        "flyerpage": 581178
+      },
+      "errors": []
+    },
+    {
+      "id": "775fc9c3-aaed-4329-9f82-0945b0691800",
+      "filename": "flyer-san-diego-enchanted-darkness-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T14:32:07.062Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 66128,
+        "flyerpage": 672084
+      },
+      "errors": []
+    },
+    {
+      "id": "0f68b6c4-51d6-40a7-0194-c441781ffb00",
+      "filename": "flyer-los-angeles-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T14:32:05.793Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-los-angeles-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 57238,
+        "flyerpage": 530090
+      },
+      "errors": []
+    },
+    {
+      "id": "24575391-dfa6-4165-aedd-9cb734721d00",
+      "filename": "flyer-miami-spring-cruise-to-key-west-bimini-beach-club-2027-03-18.png",
+      "uploaded": "2026-10-06T12:56:04.344Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-spring-cruise-to-key-west-bimini-beach-club-miami-2027-03-18",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 36302,
+        "flyerpage": 254530
+      },
+      "errors": []
+    },
+    {
+      "id": "761968d1-641d-4c84-c75d-aff6a1786000",
+      "filename": "flyer-brooklyn-masquerade-party-2026-11-21.png",
+      "uploaded": "2026-10-06T12:56:03.693Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-masquerade-party-brooklyn-2026-11-21",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 23054,
+        "flyerpage": 129822
+      },
+      "errors": []
+    },
+    {
+      "id": "060e18f1-7d57-4579-8a5e-ceb2c0e5c300",
+      "filename": "flyer-san-diego-pajama-party-2026-11-14.png",
+      "uploaded": "2026-10-06T12:56:02.876Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-pajama-party-san-diego-2026-11-14",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 30762,
+        "flyerpage": 215918
+      },
+      "errors": []
+    },
+    {
+      "id": "8ea5337a-5e9b-4702-9efb-ece4c822d700",
+      "filename": "flyer-seattle-pajama-party-2026-11-07.png",
+      "uploaded": "2026-10-06T12:56:02.109Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-pajama-party-seattle-2026-11-07",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 33202,
+        "flyerpage": 213974
+      },
+      "errors": []
+    },
+    {
+      "id": "3d916525-aabe-448b-b5f0-20c2cf8d9e00",
+      "filename": "flyer-san-diego-halloween-party-2026-10-31.png",
+      "uploaded": "2026-10-06T12:56:01.316Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-san-diego-2026-10-31",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 30044,
+        "flyerpage": 228834
+      },
+      "errors": []
+    },
+    {
+      "id": "3b099373-4d71-41df-5c0b-70b6670d1000",
+      "filename": "flyer-san-jose-halloween-party-2026-10-31.png",
+      "uploaded": "2026-10-06T12:56:00.515Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-san-jose-2026-10-31",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 22480,
+        "flyerpage": 151578
+      },
+      "errors": []
+    },
+    {
+      "id": "062d30fa-4d28-498a-61b1-cdde472bbd00",
+      "filename": "flyer-san-pedro-halloween-cruise-2026-10-24.png",
+      "uploaded": "2026-10-06T12:55:59.750Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-cruise-san-pedro-2026-10-24",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 37648,
+        "flyerpage": 255930
+      },
+      "errors": []
+    },
+    {
+      "id": "32a62daa-fe67-4935-fd5e-515a7b4ef800",
+      "filename": "flyer-raleigh-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T12:55:58.936Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-raleigh-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 19324,
+        "flyerpage": 101064
+      },
+      "errors": []
+    },
+    {
+      "id": "5e920284-8b64-4d0e-c0bc-686255248e00",
+      "filename": "flyer-austin-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T12:55:58.156Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-austin-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 20174,
+        "flyerpage": 113558
+      },
+      "errors": []
+    },
+    {
+      "id": "fd7e460b-3d2c-4da3-ff2d-7d1443481900",
+      "filename": "flyer-phoenix-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T12:55:57.512Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-phoenix-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 22198,
+        "flyerpage": 154538
+      },
+      "errors": []
+    },
+    {
+      "id": "f8f86726-4008-460f-c498-635405953e00",
+      "filename": "flyer-las-vegas-haunted-circus-halloween-party-2026-10-17.png",
+      "uploaded": "2026-10-06T12:55:56.780Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-haunted-circus-halloween-party-las-vegas-2026-10-17",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 29690,
+        "flyerpage": 211336
+      },
+      "errors": []
+    },
+    {
+      "id": "38056fb2-ca8f-442b-f979-13a09aa43e00",
+      "filename": "flyer-las-vegas-tease-cocktail-mixer-2026-10-16.png",
+      "uploaded": "2026-10-06T12:55:55.987Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-tease-cocktail-mixer-las-vegas-2026-10-16",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 24594,
+        "flyerpage": 207924
+      },
+      "errors": []
+    },
+    {
+      "id": "177c0f0c-861a-43ea-ea43-df6b674c6800",
+      "filename": "flyer-denver-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T12:55:55.271Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-denver-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 24244,
+        "flyerpage": 201180
+      },
+      "errors": []
+    },
+    {
+      "id": "69305560-69e3-48a0-e5ea-76466ea1a200",
+      "filename": "flyer-san-diego-enchanted-darkness-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T12:55:54.602Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-enchanted-darkness-halloween-party-san-diego-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 39688,
+        "flyerpage": 324082
+      },
+      "errors": []
+    },
+    {
+      "id": "5e25d4d4-1121-4c52-4e64-83f409105200",
+      "filename": "flyer-los-angeles-halloween-party-2026-10-10.png",
+      "uploaded": "2026-10-06T12:55:53.487Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "event-halloween-party-los-angeles-2026-10-10",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 20520,
+        "flyerpage": 115990
+      },
+      "errors": []
+    },
+    {
+      "id": "231e8090-0fe7-4963-52a9-d59882da7800",
+      "filename": "ChatGPT Image Oct 4, 2026, 09_55_43 PM-1-cropped.webp",
+      "uploaded": "2026-10-05T05:59:48.372Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "9b00067b-a489-4155-aff7-de03117a2b7d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8810
+      },
+      "errors": []
+    },
+    {
+      "id": "bf37dc88-6956-416c-993f-c68fa14ebe00",
+      "filename": "Neon NV Nights Club Poster.png",
+      "uploaded": "2026-10-05T05:59:25.282Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "9b00067b-a489-4155-aff7-de03117a2b7d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 52060,
+        "flyerpage": 149998
+      },
+      "errors": []
+    },
+    {
+      "id": "2b5828b8-2938-461a-5d82-c70b920d6c00",
+      "filename": "Unhinged 80s Glow Night Party.png",
+      "uploaded": "2026-10-05T05:51:08.789Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "78753fa2-bc5e-46b4-a67d-9c7aa511abac",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 85498,
+        "flyerpage": 256574
+      },
+      "errors": []
+    },
+    {
+      "id": "860bcd42-e8a8-4f43-6d8e-64665c9d1400",
+      "filename": "Enchanted Castle Costume Party.png",
+      "uploaded": "2026-10-05T05:50:38.221Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "7e730a7d-c265-4beb-ac7b-4e251b192133",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 107616,
+        "flyerpage": 351564
+      },
+      "errors": []
+    },
+    {
+      "id": "e5935c50-133f-43dc-aeac-03f2c6c21a00",
+      "filename": "Enchanted Castle Costume Party.png",
+      "uploaded": "2026-10-05T05:45:39.490Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "7e730a7d-c265-4beb-ac7b-4e251b192133",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 107616,
+        "flyerpage": 351564
+      },
+      "errors": []
+    },
+    {
+      "id": "ef02bbde-4203-4e1e-4f00-927abf655e00",
+      "filename": "Angels and Devils_ Unhinged Night.png",
+      "uploaded": "2026-10-05T05:33:23.934Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "71f55029-2955-4f0b-a13a-fab102081ad3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 93198,
+        "flyerpage": 317174
+      },
+      "errors": []
+    },
+    {
+      "id": "671d46e0-b2df-4258-aa0b-59a6146c4a00",
+      "filename": "Neon Unhinged Martini Nightclub-cropped.webp",
+      "uploaded": "2026-10-05T05:29:44.763Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "4096f1e5-c375-4d5b-a5fd-4ead2fb3a303",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 83922,
+        "heropage": 210400
+      },
+      "errors": []
+    },
+    {
+      "id": "037e61d1-4ca6-4358-c244-47ac4daa1e00",
+      "filename": "Unhinged Neon Martini Pinup-cropped.webp",
+      "uploaded": "2026-10-05T05:14:06.267Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "4096f1e5-c375-4d5b-a5fd-4ead2fb3a303",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 19452
+      },
+      "errors": []
+    },
+    {
+      "id": "d22c3073-dec7-439e-6f4d-9e9575211300",
+      "filename": "Unhinged Halloween Monster Bash.png",
+      "uploaded": "2026-10-05T05:10:04.624Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "fffaace1-a34f-4eeb-af40-2509fc039433",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 83492,
+        "flyerpage": 277798
+      },
+      "errors": []
+    },
+    {
+      "id": "0b7a3e0b-5b4f-445b-ebc7-7049081e0c00",
+      "filename": "ChatGPT Image Oct 4, 2026, 10_03_01 PM-1-cropped.webp",
+      "uploaded": "2026-10-05T05:03:33.177Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "7bd2e9a7-1659-4bad-aa20-465fe5b88fa5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 32644
+      },
+      "errors": []
+    },
+    {
+      "id": "1db2efbc-e193-4ef9-027a-03ba98b07600",
+      "filename": "ChatGPT Image Oct 4, 2026, 10_03_02 PM-2-cropped.webp",
+      "uploaded": "2026-10-05T05:03:18.608Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "7bd2e9a7-1659-4bad-aa20-465fe5b88fa5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 81398,
+        "heropage": 254464
+      },
+      "errors": []
+    },
+    {
+      "id": "900d462f-a804-4b4b-7e70-4780be14fe00",
+      "filename": "ChatGPT Image Oct 4, 2026, 09_55_43 PM-2-cropped.webp",
+      "uploaded": "2026-10-05T04:56:04.611Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "6013f409-d769-41c7-a66d-1f31ff0cd1af",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 72846,
+        "heropage": 175412
+      },
+      "errors": []
+    },
+    {
+      "id": "98868e4e-0358-432d-bc6c-abbbaf9d5100",
+      "filename": "ChatGPT Image Oct 4, 2026, 09_55_43 PM-1-cropped.webp",
+      "uploaded": "2026-10-05T04:55:49.568Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "6013f409-d769-41c7-a66d-1f31ff0cd1af",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8810
+      },
+      "errors": []
+    },
+    {
+      "id": "431e62de-c7e0-4466-0be0-695bdf686000",
+      "filename": "Neon Labyrinth in Mystic Purple Mist-cropped.webp",
+      "uploaded": "2026-10-05T04:50:49.035Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "d971fdb4-97c5-4d1a-a018-7c7c25ba1fa2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 13114
+      },
+      "errors": []
+    },
+    {
+      "id": "55657cfa-ee2f-44b8-aa96-34fd946e7100",
+      "filename": "chrome_FLWEEU7nuD-cropped.webp",
+      "uploaded": "2026-10-05T04:37:01.990Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "d971fdb4-97c5-4d1a-a018-7c7c25ba1fa2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 21582,
+        "heropage": 47768
+      },
+      "errors": []
+    },
+    {
+      "id": "0328952e-c851-453b-6562-06f1e455e600",
+      "filename": "f214f0b24950ad7b8b037f1e0b97e475.jpg",
+      "uploaded": "2026-10-05T04:35:08.716Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "85046f95-430a-4453-a2bc-b9fd59db191b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 28304,
+        "flyerpage": 121254
+      },
+      "errors": []
+    },
+    {
+      "id": "3d019471-7bef-4f01-72bf-0296b5c33b00",
+      "filename": "582dfcc05ba335233a0a57a76ef9a92a.jpg",
+      "uploaded": "2026-10-05T04:34:42.156Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "c5dd5118-908b-4f1e-ab9a-c770be2b7a96",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 68232,
+        "flyerpage": 349312
+      },
+      "errors": []
+    },
+    {
+      "id": "e97f5f5c-d3cf-43b4-de4c-f8eef9f4cd00",
+      "filename": "Luxurious Red-Lit Nightclub Lounge-cropped.webp",
+      "uploaded": "2026-10-05T04:34:05.206Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "2377ddae-6169-4ec0-a38e-584637bc6558",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 63420,
+        "heropage": 155556
+      },
+      "errors": []
+    },
+    {
+      "id": "d18d46dd-a574-4b00-fa7d-2ac797164100",
+      "filename": "Club Escape Neon Emblem-cropped.webp",
+      "uploaded": "2026-10-05T04:30:35.573Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "2377ddae-6169-4ec0-a38e-584637bc6558",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 11592
+      },
+      "errors": []
+    },
+    {
+      "id": "ea33ee8c-fdee-4804-4bdf-475544895300",
+      "filename": "Eclipse Circus_ Gothic Cyberpunk Cabaret-cropped.webp",
+      "uploaded": "2026-10-05T04:14:25.616Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "fa2da0f6-9f43-4368-a6c9-920ea32441a0",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 74862,
+        "heropage": 199704
+      },
+      "errors": []
+    },
+    {
+      "id": "37478eff-dd7d-4fe1-f22d-1a744a360700",
+      "filename": "Forged Silver W in Smoke-cropped.webp",
+      "uploaded": "2026-10-05T04:07:20.208Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "fa2da0f6-9f43-4368-a6c9-920ea32441a0",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20054
+      },
+      "errors": []
+    },
+    {
+      "id": "4294ac77-cb9b-45f8-c515-9f1a7dd22700",
+      "filename": "Forged Silver W in Smoke-cropped.webp",
+      "uploaded": "2026-10-05T04:07:04.614Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "a2017289-1466-4a07-aed8-1c2141e66b5f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20054
+      },
+      "errors": []
+    },
+    {
+      "id": "4535a951-9b99-489c-f481-389b8222d400",
+      "filename": "Gothic Red Neon Nightclub Lounge-cropped.webp",
+      "uploaded": "2026-10-05T04:03:01.502Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "59214969-78ac-4cff-ad8a-6411565581c7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 58920,
+        "heropage": 159616
+      },
+      "errors": []
+    },
+    {
+      "id": "f26afa41-2354-431b-e5cd-250168fad300",
+      "filename": "Neon Gender Emblem and SAMEPLACE Wordmark-cropped.webp",
+      "uploaded": "2026-10-05T04:00:50.286Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "59214969-78ac-4cff-ad8a-6411565581c7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 18572
+      },
+      "errors": []
+    },
+    {
+      "id": "2f2f5af6-6bda-495a-9ce5-4dc42e1b1400",
+      "filename": "BDSM_ The Game — Amsterdam Nightlife Flyer.png",
+      "uploaded": "2026-10-05T03:58:28.234Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "ba75ead9-848d-4357-ab9d-a061f390e8bf",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 58576,
+        "flyerpage": 180358
+      },
+      "errors": []
+    },
+    {
+      "id": "c6ae11dc-0099-4bf7-9100-d010d156bb00",
+      "filename": "WL-HW-BALL-2026-FLYER-SOCIALS-DIGITAL-Klein-ro6jhele2mlrphkoq1g3nw47z9c9ehc03tal8i0x8k.jpg",
+      "uploaded": "2026-10-05T03:54:44.031Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "fb964079-fb1c-4dab-a889-5471cde43f43",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 44754,
+        "flyerpage": 117438
+      },
+      "errors": []
+    },
+    {
+      "id": "52978373-8d27-4134-b164-6822bd279600",
+      "filename": "WL-ANIMALIA-NOV-2026--rt81zrq261o17swxjch5jstuqfo1ai7qlexqe3tr9g.jpg",
+      "uploaded": "2026-10-05T03:54:33.595Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a2017289-1466-4a07-aed8-1c2141e66b5f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 31908,
+        "flyerpage": 79994
+      },
+      "errors": []
+    },
+    {
+      "id": "f7c5447f-eee1-431a-97e5-d12dfedab800",
+      "filename": "chrome_ziZKIejqGl-cropped.webp",
+      "uploaded": "2026-10-05T03:53:05.406Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "a2017289-1466-4a07-aed8-1c2141e66b5f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 48986,
+        "heropage": 112392
+      },
+      "errors": []
+    },
+    {
+      "id": "7ad1a98e-bb50-4933-eeaa-fa9030b5f700",
+      "filename": "warmup-1-700x316.png",
+      "uploaded": "2026-10-01T11:05:24.961Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "17af6876-30f1-44b0-a875-c66ed60f2dc8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 10968,
+        "flyerpage": 26888
+      },
+      "errors": []
+    },
+    {
+      "id": "1b5fa2fc-83f5-4674-dd8b-df707c69a200",
+      "filename": "23ottobre-700x316.png",
+      "uploaded": "2026-10-01T11:05:09.302Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "1eb1b212-33f4-4800-af78-100ad9117118",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 15234,
+        "flyerpage": 33672
+      },
+      "errors": []
+    },
+    {
+      "id": "c11bbb5c-4be8-4216-530a-a955b0cbda00",
+      "filename": "24ottobre-700x316.jpg",
+      "uploaded": "2026-10-01T11:04:53.157Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "19b1aa33-3af4-4305-aa78-082be0117c1d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 13446,
+        "flyerpage": 32558
+      },
+      "errors": []
+    },
+    {
+      "id": "d6279f28-f220-4d3c-b12f-af18dbbcf100",
+      "filename": "31ottobre-2-700x316.png",
+      "uploaded": "2026-10-01T11:03:57.381Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "18af6a09-31f1-4643-a975-c801d70f2f5b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 13128,
+        "flyerpage": 33420
+      },
+      "errors": []
+    },
+    {
+      "id": "197eeac2-e85c-4aee-f797-40f7f5408b00",
+      "filename": "17ottobre-700x316.jpg",
+      "uploaded": "2026-10-01T11:02:47.719Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "aaaa3fb1-b7f7-4663-ab71-34c95d147f7b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 12500,
+        "flyerpage": 29826
+      },
+      "errors": []
+    },
+    {
+      "id": "d2add40b-97d0-4e0a-e828-1848d18b1700",
+      "filename": "16ottobre-700x316.png",
+      "uploaded": "2026-10-01T11:01:59.698Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a9aa3e1e-b6f7-44d0-aa71-33365c147de8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 12054,
+        "flyerpage": 28366
+      },
+      "errors": []
+    },
+    {
+      "id": "c3801d4f-252c-4853-f18f-b385213fa500",
+      "filename": "10ottobre-700x316.jpg",
+      "uploaded": "2026-10-01T11:01:42.380Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "abaa4144-bcf7-4e42-ac71-365c6214875a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 16866,
+        "flyerpage": 41778
+      },
+      "errors": []
+    },
+    {
+      "id": "f9f8c777-a4a2-414e-a244-de0cbb46ff00",
+      "filename": "9ottobre-700x316.png",
+      "uploaded": "2026-10-01T11:01:25.660Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a8ac7b22-b9f9-4820-a973-896a4f16a808",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 9768,
+        "flyerpage": 23080
+      },
+      "errors": []
+    },
+    {
+      "id": "47786f7b-3638-499f-78e6-d41ed5b24e00",
+      "filename": "3ottobre-700x315.png",
+      "uploaded": "2026-10-01T11:01:03.152Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "aeac8494-c3f9-47de-af73-79ac49169e96",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 13052,
+        "flyerpage": 28234
+      },
+      "errors": []
+    },
+    {
+      "id": "2efe3573-92a8-4f7b-72cc-4224fc2f4c00",
+      "filename": "krystal-image-cropped.webp",
+      "uploaded": "2026-10-01T11:00:12.903Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "55ec34b2-8d89-4e04-a425-02aa4abc579c",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8824
+      },
+      "errors": []
+    },
+    {
+      "id": "e6d141d1-3f88-442e-e6af-bde6c410a200",
+      "filename": "2ottobre-700x316.png",
+      "uploaded": "2026-10-01T10:58:23.475Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "afac8627-c4f9-4971-a073-7b3f4a16a029",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 11238,
+        "flyerpage": 24078
+      },
+      "errors": []
+    },
+    {
+      "id": "4214996f-f9fe-4435-1c97-6c59f2d66400",
+      "filename": "ChatGPT Image Sep 27, 2026, 11_26_39 PM-cropped.webp",
+      "uploaded": "2026-09-28T06:26:53.691Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "c1362f3e-c0e3-4878-af4f-d15653d04630",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 22166,
+        "heropage": 56558
+      },
+      "errors": []
+    },
+    {
+      "id": "d4fd5903-fb00-46dd-29f4-624e4ffeff00",
+      "filename": "1678821243ec44ab5d84da9973258ac4-cropped.webp",
+      "uploaded": "2026-09-28T06:21:32.230Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "c1362f3e-c0e3-4878-af4f-d15653d04630",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8096
+      },
+      "errors": []
+    },
+    {
+      "id": "8dce3d76-d626-4a00-88d9-da2dbfab8e00",
+      "filename": "ChatGPT Image Sep 26, 2026, 07_35_36 PM-cropped.webp",
+      "uploaded": "2026-09-28T06:11:35.777Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "4fa5f40f-935f-4a4d-a97d-d897269dbdd5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 80482,
+        "heropage": 198860
+      },
+      "errors": []
+    },
+    {
+      "id": "6f4ac0f9-1c89-4351-b28a-fd644f052b00",
+      "filename": "c05a2cab-812f-471d-ad41-a2e8f5303f29-cropped.webp",
+      "uploaded": "2026-09-28T03:51:34.625Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "98932611-cffc-4843-af1c-2f198974a72b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 90520,
+        "heropage": 236206
+      },
+      "errors": []
+    },
+    {
+      "id": "9173a390-49ff-423f-2c7e-e95485fbdc00",
+      "filename": "cdl-color_orig (1).png",
+      "uploaded": "2026-09-28T03:51:24.548Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "98932611-cffc-4843-af1c-2f198974a72b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 13092
+      },
+      "errors": []
+    },
+    {
+      "id": "54443ee4-e8ec-49d5-df48-8971ac2f8800",
+      "filename": "c05a2cab-812f-471d-ad41-a2e8f5303f29-cropped.webp",
+      "uploaded": "2026-09-28T03:10:25.169Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "98932611-cffc-4843-af1c-2f198974a72b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 86342,
+        "heropage": 233674
+      },
+      "errors": []
+    },
+    {
+      "id": "a651b654-eb81-456e-cebb-a220e483fc00",
+      "filename": "c05a2cab-812f-471d-ad41-a2e8f5303f29-cropped.webp",
+      "uploaded": "2026-09-28T03:09:25.047Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "98932611-cffc-4843-af1c-2f198974a72b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 89676,
+        "heropage": 228340
+      },
+      "errors": []
+    },
+    {
+      "id": "745406ec-5a74-4acb-e2c9-2722a38b0600",
+      "filename": "438cb3bf-03b7-47a1-b693-9dfc01fbba8c.png",
+      "uploaded": "2026-09-28T02:55:07.680Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a7465fa5-2f8b-4fab-a8d8-c91dd2e357c3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 109828,
+        "flyerpage": 412842
+      },
+      "errors": []
+    },
+    {
+      "id": "67be4683-8087-455c-17a2-56d27415c300",
+      "filename": "c05a2cab-812f-471d-ad41-a2e8f5303f29-cropped.webp",
+      "uploaded": "2026-09-28T02:50:24.916Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "a7465fa5-2f8b-4fab-a8d8-c91dd2e357c3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 86342,
+        "heropage": 233674
+      },
+      "errors": []
+    },
+    {
+      "id": "7721a1ef-2cf8-417d-f128-f42efa5d2700",
+      "filename": "ChatGPT Image Sep 27, 2026, 05_09_47 PM.png",
+      "uploaded": "2026-09-28T00:53:15.972Z",
+      "role": "logo",
+      "ownerType": "cruise_sailing",
+      "ownerId": "de082591-d2af-41ef-a1f5-2be98a379ea7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 17212
+      },
+      "errors": []
+    },
+    {
+      "id": "226b60da-e92f-4137-60bc-8196d6797d00",
+      "filename": "ChatGPT Image Sep 27, 2026, 05_09_47 PM.png",
+      "uploaded": "2026-09-28T00:49:48.253Z",
+      "role": "logo",
+      "ownerType": "cruise_series",
+      "ownerId": "d8440830-2504-41da-a49e-b55801236fc2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 17212
+      },
+      "errors": []
+    },
+    {
+      "id": "e4a042b6-ee09-4627-1111-e36100921300",
+      "filename": "ChatGPT Image Sep 27, 2026, 05_09_47 PM-cropped.webp",
+      "uploaded": "2026-09-28T00:09:57.369Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "7fffb575-64ca-4207-a4b0-611d547241cf",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 16858
+      },
+      "errors": []
+    },
+    {
+      "id": "a3e50a19-4408-4d9a-1a21-f473b485b700",
+      "filename": "images.png",
+      "uploaded": "2026-09-27T03:28:08.513Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "43c7f24d-3cd9-4b9f-a6d7-32f55b392427",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 16230
+      },
+      "errors": []
+    },
+    {
+      "id": "596a2d5c-63b7-406f-1e9d-fda5ec2e4100",
+      "filename": "2b2de1a4-5ae7-471d-8444-9df8b3419b95-cropped.webp",
+      "uploaded": "2026-09-27T02:59:21.319Z",
+      "role": "hero",
+      "ownerType": "venue",
+      "ownerId": "d744a2fe-902c-42e4-a878-8b06be437ccc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 55488,
+        "heropage": 136214
+      },
+      "errors": []
+    },
+    {
+      "id": "0712a825-98ef-4577-0112-d1ea608a5e00",
+      "filename": "ChatGPT Image Sep 26, 2026, 07_56_12 PM.png",
+      "uploaded": "2026-09-27T02:56:43.430Z",
+      "role": "logo",
+      "ownerType": "venue",
+      "ownerId": "d744a2fe-902c-42e4-a878-8b06be437ccc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 28636
+      },
+      "errors": []
+    },
+    {
+      "id": "4ca4353c-13c0-47e1-c3c3-224e9726d700",
+      "filename": "ChatGPT Image Sep 26, 2026, 07_35_36 PM-cropped.webp",
+      "uploaded": "2026-09-27T02:35:42.282Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "b932f07f-b904-4ca9-a4bf-2927c4eb8711",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 80482,
+        "heropage": 198860
+      },
+      "errors": []
+    },
+    {
+      "id": "3f1c0ea3-4f10-440d-23dc-33ddcddd7000",
+      "filename": "chrome_M8NmrITajW-cropped.webp",
+      "uploaded": "2026-09-26T08:37:26.649Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "c1281c82-6a07-4f74-af4d-cdea1202fcfc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 34170,
+        "heropage": 110290
+      },
+      "errors": []
+    },
+    {
+      "id": "76b8e566-0110-4159-bec4-e471dc802e00",
+      "filename": "illuminaughtylogosmall.webp",
+      "uploaded": "2026-09-26T08:36:42.059Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "c1281c82-6a07-4f74-af4d-cdea1202fcfc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 41652
+      },
+      "errors": []
+    },
+    {
+      "id": "337b8662-4797-480e-534a-de7efd731b00",
+      "filename": "9-27-A.webp",
+      "uploaded": "2026-09-26T01:57:11.601Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "956b9fb5-867d-40a3-a8e5-cdcd671e4ebb",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 33612,
+        "flyerpage": 80092
+      },
+      "errors": []
+    },
+    {
+      "id": "de4d1fe5-ed47-4ad4-63da-14776a28c000",
+      "filename": "10-1-A.webp",
+      "uploaded": "2026-09-26T01:56:46.874Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "559f4956-af43-4170-ae23-de8e0c96dca8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 45224,
+        "flyerpage": 102058
+      },
+      "errors": []
+    },
+    {
+      "id": "39cc0b4f-9df5-489c-0043-84cafe5b8900",
+      "filename": "10-3-A.webp",
+      "uploaded": "2026-09-26T01:56:14.184Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "95df86a4-0a17-4122-a5f1-59ec7c1bdd6a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 38512,
+        "flyerpage": 90890
+      },
+      "errors": []
+    },
+    {
+      "id": "f5612c58-01f0-4cd2-517a-cab1da370600",
+      "filename": "10-2-A.webp",
+      "uploaded": "2026-09-26T01:55:37.071Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a7e56b7b-b8a3-4451-a0fb-8fb39ca37b89",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 49358,
+        "flyerpage": 115476
+      },
+      "errors": []
+    },
+    {
+      "id": "fe45e1e0-5277-4a34-1d3f-a5810abf4400",
+      "filename": "10-4-A.webp",
+      "uploaded": "2026-09-26T01:55:07.945Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "9fd69b7b-5cab-418d-add0-7d13fb613c05",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 71240,
+        "flyerpage": 162962
+      },
+      "errors": []
+    },
+    {
+      "id": "404d2c3a-be11-47b3-b4cb-1dc50c827900",
+      "filename": "10-31-A.webp",
+      "uploaded": "2026-09-26T01:53:49.766Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "0dc46b09-c7af-4c5b-a395-bf819341f953",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 75550,
+        "flyerpage": 178310
+      },
+      "errors": []
+    },
+    {
+      "id": "55af055e-f50a-486a-388a-325de3b18400",
+      "filename": "ChatGPT Image Sep 25, 2026, 06_51_23 PM-cropped.webp",
+      "uploaded": "2026-09-26T01:51:35.928Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "c1bdbe68-4f20-493a-ac91-0190e6cb1002",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 57316,
+        "heropage": 150198
+      },
+      "errors": []
+    },
+    {
+      "id": "01f25808-333c-4d0b-0cb8-c3ab59b93b00",
+      "filename": "10-17-A1-768x1024.png",
+      "uploaded": "2026-09-26T01:35:46.691Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "74c2a66f-3798-48d1-afd8-cd1764822f59",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 46852,
+        "flyerpage": 120870
+      },
+      "errors": []
+    },
+    {
+      "id": "f1170d1d-61c0-440b-4326-20a75a63cd00",
+      "filename": "9-23-A-400x533.webp",
+      "uploaded": "2026-09-25T23:57:53.819Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "4b32da46-9490-4180-a3f8-28fe6caba218",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 36064,
+        "flyerpage": 84546
+      },
+      "errors": []
+    },
+    {
+      "id": "62836797-731c-4b5a-3317-7b8155009400",
+      "filename": "9-26-A-400x533.webp",
+      "uploaded": "2026-09-25T23:57:28.986Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "ef37df76-2492-4a58-a731-702e58bd01b0",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 32616,
+        "flyerpage": 76238
+      },
+      "errors": []
+    },
+    {
+      "id": "0774add8-8b6f-4f15-4bff-ee2b86296900",
+      "filename": "9-25-A.webp",
+      "uploaded": "2026-09-25T23:57:09.557Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "dffaf4fe-9d8b-45fc-a82f-dd366c9d3954",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 44674,
+        "flyerpage": 102986
+      },
+      "errors": []
+    },
+    {
+      "id": "af8ef69a-f68b-446b-0836-66c6b0ce5a00",
+      "filename": "chrome_HocSR9PNbB.png",
+      "uploaded": "2026-09-25T05:58:57.822Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "3593fc46-75d3-4ac0-a1ba-298e635e0fe8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 46972,
+        "flyerpage": 116164
+      },
+      "errors": []
+    },
+    {
+      "id": "b0b2fa8a-b4a4-4a9a-84b7-a83a2771c200",
+      "filename": "original (9).jpg",
+      "uploaded": "2026-09-25T05:56:02.882Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "a8693957-2afc-4bd5-af16-43bf685d5f7d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 59884,
+        "flyerpage": 176878
+      },
+      "errors": []
+    },
+    {
+      "id": "afb8ea1f-043f-45cc-4de9-8479fd296f00",
+      "filename": "original (7).jpg",
+      "uploaded": "2026-09-25T05:55:05.836Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "fb6e1a4d-2882-485b-addc-5f253ad6d433",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 60654,
+        "flyerpage": 173134
+      },
+      "errors": []
+    },
+    {
+      "id": "e0082874-1315-4460-0ce8-ac8b049d2400",
+      "filename": "original (4).jpg",
+      "uploaded": "2026-09-25T05:54:44.982Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "4debf70d-06ef-4fe7-a6ac-e185af9f23bf",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 56274,
+        "flyerpage": 171772
+      },
+      "errors": []
+    },
+    {
+      "id": "dd34b85c-6a14-4103-e57b-5e8b1e6e3b00",
+      "filename": "original (6).jpg",
+      "uploaded": "2026-09-25T05:54:24.119Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "480862b4-9190-46c2-a1e5-4abc82992d2a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 57346,
+        "flyerpage": 157772
+      },
+      "errors": []
+    },
+    {
+      "id": "7680774c-a3cb-42b6-218a-13ec0d6bf500",
+      "filename": "original (5).jpg",
+      "uploaded": "2026-09-25T05:54:08.587Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "5f1d472f-d68f-404d-a973-21176c11c815",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 83558,
+        "flyerpage": 251334
+      },
+      "errors": []
+    },
+    {
+      "id": "4487d18d-e5f1-44d1-bfbb-f22512a64c00",
+      "filename": "original (3).jpg",
+      "uploaded": "2026-09-25T05:53:44.200Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "4cbb94c7-0140-4c11-a087-5dbf5a56b6a9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 44480,
+        "flyerpage": 128012
+      },
+      "errors": []
+    },
+    {
+      "id": "a5ad31a9-7af2-421f-bab9-9584d4e62b00",
+      "filename": "original (2).jpg",
+      "uploaded": "2026-09-25T05:53:29.158Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "fd63683e-5b29-4680-a903-2006c576baa8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 101984,
+        "flyerpage": 308848
+      },
+      "errors": []
+    },
+    {
+      "id": "6076c946-b3c1-4db1-a944-5d163bdc9900",
+      "filename": "original.jpeg",
+      "uploaded": "2026-09-25T05:52:35.547Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "b932f07f-b904-4ca9-a4bf-2927c4eb8711",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 91022,
+        "flyerpage": 270176
+      },
+      "errors": []
+    },
+    {
+      "id": "90b4e3b5-9222-4508-976f-1b7a4430b300",
+      "filename": "original (8).jpg",
+      "uploaded": "2026-09-25T05:52:16.903Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "d5b0ab8d-c3c8-487f-af4b-a8b5d205f4e7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 57138,
+        "flyerpage": 165772
+      },
+      "errors": []
+    },
+    {
+      "id": "f70219b6-d6b4-417c-7800-6da08066f600",
+      "filename": "original (5).jpg",
+      "uploaded": "2026-09-25T05:50:30.754Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "3593fc46-75d3-4ac0-a1ba-298e635e0fe8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 83558,
+        "flyerpage": 251334
+      },
+      "errors": []
+    },
+    {
+      "id": "20776f9d-f7c8-4d93-3377-97fd0f063f00",
+      "filename": "original.png",
+      "uploaded": "2026-09-25T05:49:42.404Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "e4f9c0a1-903a-4d5b-a989-f1c9d4893aa3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 73510,
+        "flyerpage": 229768
+      },
+      "errors": []
+    },
+    {
+      "id": "14280825-8e92-4b10-944a-6306920ac300",
+      "filename": "9e20e5f1-b72d-4cd3-8d84-2e28f3739782-cropped.webp",
+      "uploaded": "2026-09-25T03:12:21.825Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "2da9ee87-dade-48fd-a897-347f5722a9f5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 56692,
+        "heropage": 151018
+      },
+      "errors": []
+    },
+    {
+      "id": "18e2d744-50c8-4969-720a-8f05922b5800",
+      "filename": "ChatGPT Image Sep 24, 2026, 07_48_25 PM-2.png",
+      "uploaded": "2026-09-25T02:53:03.031Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "b644c421-db97-4ae7-a1a9-44998a12285f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 34682
+      },
+      "errors": []
+    },
+    {
+      "id": "b329c766-34a4-44b4-7386-1550d592fa00",
+      "filename": "ChatGPT Image Sep 24, 2026, 07_48_24 PM-1-cropped.webp",
+      "uploaded": "2026-09-25T02:48:58.428Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "b644c421-db97-4ae7-a1a9-44998a12285f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 94172,
+        "heropage": 246356
+      },
+      "errors": []
+    },
+    {
+      "id": "d6a605e9-fcf4-467d-8cf6-6f0a0a39d100",
+      "filename": "ChatGPT Image Sep 24, 2026, 07_45_13 PM-cropped.webp",
+      "uploaded": "2026-09-25T02:46:31.501Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "dbd06a79-03c5-4f73-ac3f-fc011a0baddb",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 75982,
+        "heropage": 201958
+      },
+      "errors": []
+    },
+    {
+      "id": "71ebacf9-4ec0-4fe3-76ba-7a0eb1247a00",
+      "filename": "ChatGPT Image Sep 24, 2026, 07_38_53 PM-cropped.webp",
+      "uploaded": "2026-09-25T02:39:02.072Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "809f3765-69dc-49ff-a703-281d002704b7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 79742,
+        "heropage": 198036
+      },
+      "errors": []
+    },
+    {
+      "id": "8da47896-1eb4-4622-c75d-af261971f600",
+      "filename": "8218271e-b226-4380-bbc0-831531a4c766-cropped.webp",
+      "uploaded": "2026-09-25T02:24:20.006Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "62e8404f-e044-4569-a790-51f74912d071",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 82198,
+        "heropage": 210614
+      },
+      "errors": []
+    },
+    {
+      "id": "3510ed5a-472f-4d0c-813d-8da38cc0a100",
+      "filename": "ChatGPT Image Sep 24, 2026, 07_14_20 PM-cropped.webp",
+      "uploaded": "2026-09-25T02:14:39.809Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "8fe1a3a5-a096-4bdb-ae45-510d79bc11e3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 74910,
+        "heropage": 179664
+      },
+      "errors": []
+    },
+    {
+      "id": "09c2ad81-ad83-4558-ad73-a46d16776b00",
+      "filename": "942afc59-9bc6-440f-8415-4048a5ceeca4-cropped.webp",
+      "uploaded": "2026-09-25T01:57:29.403Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "549c81b9-159f-443f-aa94-f2115e7278f7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 59768,
+        "heropage": 147866
+      },
+      "errors": []
+    },
+    {
+      "id": "7568b9bf-1afb-429e-b2a0-2ac083e38700",
+      "filename": "ChatGPT Image Sep 24, 2026, 06_48_14 PM-cropped.webp",
+      "uploaded": "2026-09-25T01:48:27.434Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "ac6879b9-7f66-48fb-a4d8-1aa1ba7be0a3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 34688,
+        "heropage": 88098
+      },
+      "errors": []
+    },
+    {
+      "id": "30bac3a0-c4bd-4219-b640-b763f1873100",
+      "filename": "d3fbc08d-6803-4e2e-8f39-aa011f60ffc2-cropped.webp",
+      "uploaded": "2026-09-25T01:33:51.525Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "61dc774b-844b-42e1-a92c-2173e1b1cae9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 77534,
+        "heropage": 191088
+      },
+      "errors": []
+    },
+    {
+      "id": "3f07a6c8-74ad-4d04-35ba-da6446223a00",
+      "filename": "ChatGPT Image Sep 24, 2026, 06_30_11 PM-cropped.webp",
+      "uploaded": "2026-09-25T01:30:20.460Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "1bb2156e-962a-4c7c-a4ae-6d565edf1364",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 44014,
+        "heropage": 114604
+      },
+      "errors": []
+    },
+    {
+      "id": "f2357991-5c27-452b-0e22-e7f46d267b00",
+      "filename": "a763e36f-3ebf-487f-b1c9-bbeea0b6b4ec-cropped.webp",
+      "uploaded": "2026-09-25T01:24:23.641Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 63800,
+        "heropage": 173666
+      },
+      "errors": []
+    },
+    {
+      "id": "081d6d77-c567-46b9-7074-6455a6b1e400",
+      "filename": "ChatGPT Image Sep 24, 2026, 06_21_20 PM.png",
+      "uploaded": "2026-09-25T01:21:27.471Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 19692
+      },
+      "errors": []
+    },
+    {
+      "id": "f8c758a8-1953-4851-4726-b3fda3854800",
+      "filename": "7cb79628-19dc-4273-9316-2af90f69302b.png",
+      "uploaded": "2026-09-25T01:14:29.457Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "ec3f768e-c9fa-4d40-a8ec-9f16f0540ba8",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 30406
+      },
+      "errors": []
+    },
+    {
+      "id": "7de7e086-ef6a-4d3f-b863-51ca1c0b6700",
+      "filename": "c9c42abd-9a01-4c38-af93-cc865e97d003.png",
+      "uploaded": "2026-09-25T01:12:24.308Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "463246bb-dbf9-4f8d-a6ea-bd03b8db0815",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 23272
+      },
+      "errors": []
+    },
+    {
+      "id": "3211ab01-9526-4adf-95e1-254197b9ce00",
+      "filename": "0955c116-39c2-428f-b624-803db2a1a967.png",
+      "uploaded": "2026-09-25T01:12:01.830Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "1bb2156e-962a-4c7c-a4ae-6d565edf1364",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 26408
+      },
+      "errors": []
+    },
+    {
+      "id": "7afe15c1-b929-4efe-beba-c347cede1f00",
+      "filename": "97e318aa-6d7c-44ad-9882-450e13979b18.png",
+      "uploaded": "2026-09-25T01:11:50.496Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "c1bdbe68-4f20-493a-ac91-0190e6cb1002",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 43648
+      },
+      "errors": []
+    },
+    {
+      "id": "b29ed32b-de39-4f3b-6871-130567fcfc00",
+      "filename": "52885457-723e-4383-9933-428b09797ed8.png",
+      "uploaded": "2026-09-25T01:11:38.299Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "0ab5ecab-910e-4f65-ab5c-04837f2575dd",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 27658
+      },
+      "errors": []
+    },
+    {
+      "id": "6fd1aba7-8365-43e5-a7b2-d327011d4000",
+      "filename": "51f3a375-e6e5-4033-a24c-e017e2e5f134.png",
+      "uploaded": "2026-09-25T01:11:21.721Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "dbd06a79-03c5-4f73-ac3f-fc011a0baddb",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 43742
+      },
+      "errors": []
+    },
+    {
+      "id": "53a1cbd8-5e51-4e8b-a403-d494044a3a00",
+      "filename": "a1ea62e5-30ba-4f99-9e7c-5a0c52eef892.png",
+      "uploaded": "2026-09-25T01:11:03.417Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "549873b9-84a7-41cb-a0a6-a9513c3b0bc3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 15010
+      },
+      "errors": []
+    },
+    {
+      "id": "3e1ff419-2911-4bd5-c33d-e4f2be778400",
+      "filename": "be3acb16-1024-4238-bd5a-60c1a0d41d36.png",
+      "uploaded": "2026-09-25T01:10:39.321Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "61dc774b-844b-42e1-a92c-2173e1b1cae9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 34078
+      },
+      "errors": []
+    },
+    {
+      "id": "62347a83-cf3a-4404-e0b6-11918ee85a00",
+      "filename": "ChatGPT Image Sep 24, 2026, 06_03_11 PM.png",
+      "uploaded": "2026-09-25T01:03:20.567Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "5282fa58-6dde-460a-a32c-45908f07fe02",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 45148
+      },
+      "errors": []
+    },
+    {
+      "id": "b49e343b-579c-4fd6-af15-21ee506c5400",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_59_41 PM-cropped.webp",
+      "uploaded": "2026-09-25T00:59:49.806Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "fae9ba8f-37ca-4bcd-aa84-8e37fecc1d75",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 46196,
+        "heropage": 118246
+      },
+      "errors": []
+    },
+    {
+      "id": "2cee4bc6-2401-43d4-62ab-faad1b859100",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_58_05 PM.png",
+      "uploaded": "2026-09-25T00:58:49.273Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "fae9ba8f-37ca-4bcd-aa84-8e37fecc1d75",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10954
+      },
+      "errors": []
+    },
+    {
+      "id": "abffde5b-97dc-414f-30cd-d8c54de3c200",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_53_32 PM-cropped.webp",
+      "uploaded": "2026-09-25T00:53:45.630Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "f7995b36-2ef9-4a00-af1f-7abe222e6788",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 49500,
+        "heropage": 119498
+      },
+      "errors": []
+    },
+    {
+      "id": "747651c1-c2ef-486f-821e-b422b6a4c900",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_51_40 PM.png",
+      "uploaded": "2026-09-25T00:51:49.411Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "f7995b36-2ef9-4a00-af1f-7abe222e6788",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10522
+      },
+      "errors": []
+    },
+    {
+      "id": "d86625ea-ed4f-4545-df7a-0394ed62e300",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_17_40 PM-2-cropped.webp",
+      "uploaded": "2026-09-25T00:18:21.705Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "7c61a7af-84a7-409d-a2f7-e097e28c1a45",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 63364,
+        "heropage": 159988
+      },
+      "errors": []
+    },
+    {
+      "id": "27676b4b-21ef-4d4e-7cc8-d25b60127d00",
+      "filename": "ChatGPT Image Sep 24, 2026, 05_17_40 PM-1.png",
+      "uploaded": "2026-09-25T00:18:10.761Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "7c61a7af-84a7-409d-a2f7-e097e28c1a45",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 22276
+      },
+      "errors": []
+    },
+    {
+      "id": "1a14e934-fc5c-4f20-6262-3c94dd978000",
+      "filename": "ChatGPT Image Sep 22, 2026, 11_11_33 PM (2)-cropped.webp",
+      "uploaded": "2026-09-23T06:11:52.870Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "7fe0fead-a848-48bb-abd8-cbe56a8f6813",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 55774,
+        "heropage": 128576
+      },
+      "errors": []
+    },
+    {
+      "id": "87b06404-4dce-4f4a-2aec-21c5f67e4700",
+      "filename": "ChatGPT Image Sep 22, 2026, 11_11_33 PM (1).png",
+      "uploaded": "2026-09-23T06:11:38.365Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "7fe0fead-a848-48bb-abd8-cbe56a8f6813",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 11268
+      },
+      "errors": []
+    },
+    {
+      "id": "f127d9d1-df29-4b48-5445-bd29ee904e00",
+      "filename": "c1fe7afa-0b35-4c2b-9f35-43bf94091ecc-cropped.webp",
+      "uploaded": "2026-09-23T02:25:16.906Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 31862,
+        "heropage": 67524
+      },
+      "errors": []
+    },
+    {
+      "id": "00c5fe56-6ec4-4daf-92de-b41918d33a00",
+      "filename": "843b40c6-b0d6-416c-b3e3-734a87f44d1a-cropped.webp",
+      "uploaded": "2026-09-23T02:25:06.169Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 24398,
+        "heropage": 51482
+      },
+      "errors": []
+    },
+    {
+      "id": "32bcdfd2-f9bd-4e89-3e7a-f4caf6380000",
+      "filename": "1a412868-7bf5-48f3-80f8-c6312f9fcc43-cropped.webp",
+      "uploaded": "2026-09-23T02:24:56.905Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 20934,
+        "heropage": 43388
+      },
+      "errors": []
+    },
+    {
+      "id": "227a8b88-b0ac-4f91-3960-f7c43bafba00",
+      "filename": "ChatGPT Image Sep 22, 2026, 07_23_14 PM (2)-cropped.webp",
+      "uploaded": "2026-09-23T02:23:37.910Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 43882,
+        "heropage": 103892
+      },
+      "errors": []
+    },
+    {
+      "id": "f0c57677-9bb4-4133-b0fd-d3091e2beb00",
+      "filename": "ChatGPT Image Sep 22, 2026, 07_23_14 PM (1).png",
+      "uploaded": "2026-09-23T02:23:22.887Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "b032d270-44c8-4686-af3e-bdd80c568e4e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 24140
+      },
+      "errors": []
+    },
+    {
+      "id": "1e83bf5c-4ddd-4c95-a7c9-8ef6a17bec00",
+      "filename": "ChatGPT Image Sep 22, 2026, 07_04_34 PM.png",
+      "uploaded": "2026-09-23T02:04:41.818Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "259cbfdf-a039-41ed-a78f-72379ea12c45",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 24590
+      },
+      "errors": []
+    },
+    {
+      "id": "4ae0c453-c192-4152-4585-401386932100",
+      "filename": "ChatGPT Image Sep 22, 2026, 06_59_26 PM-cropped.webp",
+      "uploaded": "2026-09-23T02:00:21.752Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "259cbfdf-a039-41ed-a78f-72379ea12c45",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 38868,
+        "heropage": 101950
+      },
+      "errors": []
+    },
+    {
+      "id": "9701b8b2-c54b-4314-244a-f3d30669f400",
+      "filename": "ChatGPT Image Sep 19, 2026, 10_03_39 PM-cropped.webp",
+      "uploaded": "2026-09-20T05:03:51.201Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "f05ad989-7525-41c3-a911-c9b1871b3fab",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 48086,
+        "heropage": 109122
+      },
+      "errors": []
+    },
+    {
+      "id": "3109f3c4-d6e2-4371-7388-de833f606c00",
+      "filename": "ChatGPT Image Sep 19, 2026, 09_58_40 PM.png",
+      "uploaded": "2026-09-20T04:59:11.139Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "f05ad989-7525-41c3-a911-c9b1871b3fab",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 7608
+      },
+      "errors": []
+    },
+    {
+      "id": "7517e3b1-2410-48cc-deb1-d34bf3b09800",
+      "filename": "ChatGPT Image Sep 19, 2026, 09_06_07 PM (2)-cropped.webp",
+      "uploaded": "2026-09-20T04:06:28.716Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "3db57ca0-f174-4772-aa9b-1cb8582358ca",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 53288,
+        "heropage": 127906
+      },
+      "errors": []
+    },
+    {
+      "id": "da4e9874-35f3-405a-bab7-75094d73ec00",
+      "filename": "ChatGPT Image Sep 19, 2026, 09_06_07 PM (1).png",
+      "uploaded": "2026-09-20T04:06:13.915Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "3db57ca0-f174-4772-aa9b-1cb8582358ca",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9262
+      },
+      "errors": []
+    },
+    {
+      "id": "2f9f4bb8-49b5-43cb-2b9e-a1112f99f900",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_57_44 PM (2)-cropped.webp",
+      "uploaded": "2026-09-20T03:58:02.846Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "7f33ff8e-7557-4390-a6de-e036b19c4a38",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 48910,
+        "heropage": 119692
+      },
+      "errors": []
+    },
+    {
+      "id": "6c13db1f-729b-4b9f-c9c0-a7392db09300",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_57_44 PM (1).png",
+      "uploaded": "2026-09-20T03:57:51.796Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "7f33ff8e-7557-4390-a6de-e036b19c4a38",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29392
+      },
+      "errors": []
+    },
+    {
+      "id": "3f57384d-da60-49bf-95a5-6254dfd8a700",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_29_31 PM (2)-cropped.webp",
+      "uploaded": "2026-09-20T03:29:56.890Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "e2cdd5cb-20b4-47a5-a109-9e83eb70d71d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 66852,
+        "heropage": 187068
+      },
+      "errors": []
+    },
+    {
+      "id": "d3d53db5-3154-48c9-5d00-953a57f35800",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_29_31 PM (1).png",
+      "uploaded": "2026-09-20T03:29:44.427Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "e2cdd5cb-20b4-47a5-a109-9e83eb70d71d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 14484
+      },
+      "errors": []
+    },
+    {
+      "id": "fe3e566c-0ae0-4fca-185e-e5b87b293200",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_23_49 PM (2)-cropped.webp",
+      "uploaded": "2026-09-20T03:24:11.504Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "c0a22456-0090-40cc-abeb-7f3ee526ab34",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 65574,
+        "heropage": 157548
+      },
+      "errors": []
+    },
+    {
+      "id": "339972a9-211d-419a-f8c1-14d947181700",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_23_48 PM (1).png",
+      "uploaded": "2026-09-20T03:23:56.592Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "c0a22456-0090-40cc-abeb-7f3ee526ab34",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 7198
+      },
+      "errors": []
+    },
+    {
+      "id": "57a47d6f-3c13-49df-99f2-c63c0b82dd00",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_16_23 PM (2)-cropped.webp",
+      "uploaded": "2026-09-20T03:17:24.363Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "3c7666e4-22dd-46ba-acfc-643c24b39d92",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 51900,
+        "heropage": 128470
+      },
+      "errors": []
+    },
+    {
+      "id": "7dd75e58-afbf-4c1f-c7f7-38fc5887ec00",
+      "filename": "ChatGPT Image Sep 19, 2026, 08_16_23 PM (1).png",
+      "uploaded": "2026-09-20T03:16:29.186Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "3c7666e4-22dd-46ba-acfc-643c24b39d92",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 36268
+      },
+      "errors": []
+    },
+    {
+      "id": "8d8f4380-0b41-4754-c425-f09c60cd4100",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1).png",
+      "uploaded": "2026-09-19T21:51:47.492Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "1c0e1492-d453-46b2-ab7d-8b926380994a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 30082
+      },
+      "errors": []
+    },
+    {
+      "id": "b6455dc0-b751-4fc9-15ba-1015fd813c00",
+      "filename": "colette_banner-cropped.webp",
+      "uploaded": "2026-09-19T21:51:12.760Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "97439bf8-9610-43b2-a18b-9260fed8493a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29834,
+        "heropage": 73176
+      },
+      "errors": []
+    },
+    {
+      "id": "19f436cb-39ba-4cfb-04b5-c1ef680a1c00",
+      "filename": "colette.png",
+      "uploaded": "2026-09-19T21:50:40.229Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "97439bf8-9610-43b2-a18b-9260fed8493a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 3608
+      },
+      "errors": []
+    },
+    {
+      "id": "3d4f63f2-da7a-4db9-7de7-4a1c56e5c700",
+      "filename": "Club-Zona-X-hero-source-cropped.webp",
+      "uploaded": "2026-09-19T21:30:06.074Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29078,
+        "heropage": 64284
+      },
+      "errors": []
+    },
+    {
+      "id": "568ec186-359b-4aa5-22fa-7a756a0b0d00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:50:37.739Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "246a5c11-3791-41b2-0c49-03f0785ea500",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:39:29.320Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "a767fa07-e184-41e3-dcc2-8f0ae1040200",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:37:52.988Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "920ba092-ef4b-4d40-e606-51de86f7ac00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:37:37.329Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "a120e834-2ed9-436d-311e-bd5f7b122e00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (2)-cropped.webp",
+      "uploaded": "2026-09-14T03:36:52.962Z",
+      "role": "hero",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 54062,
+        "heropage": 174580
+      },
+      "errors": []
+    },
+    {
+      "id": "69f28c9d-f2dd-4378-7350-fa5954747000",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:34:26.735Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "cf9822c5-c284-42e2-ad91-17ed41fb0500",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:33:57.929Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "45f9c3f1-e667-4723-7d6d-31879e0e8b00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1)-cropped.webp",
+      "uploaded": "2026-09-14T03:33:31.441Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29140
+      },
+      "errors": []
+    },
+    {
+      "id": "afc9527d-4aff-4aeb-b0b7-52df7f7cba00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1).png",
+      "uploaded": "2026-09-14T03:21:55.359Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 30082
+      },
+      "errors": []
+    },
+    {
+      "id": "6160be10-1ef1-41af-861e-a3db88d73c00",
+      "filename": "New Logo Final-cropped.webp",
+      "uploaded": "2026-09-14T03:21:15.898Z",
+      "role": "gallery",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 8140,
+        "heropage": 14536
+      },
+      "errors": []
+    },
+    {
+      "id": "696f22c1-a3bb-4a1b-8e79-9a512f004f00",
+      "filename": "ChatGPT Image Sep 13, 2026, 08_20_09 PM (1).png",
+      "uploaded": "2026-09-14T03:20:35.285Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "1114e3c4-7982-4e96-a6f4-d3fc54c7076e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 30082
+      },
+      "errors": []
+    },
+    {
+      "id": "3ead47ab-b007-440a-fa6d-3a16e6fc2900",
+      "filename": "ChatGPT Image Sep 13, 2026, 12_44_37 PM-cropped.webp",
+      "uploaded": "2026-09-14T02:28:22.772Z",
+      "role": "gallery",
+      "ownerType": "event",
+      "ownerId": "1c0e1492-d453-46b2-ab7d-8b926380994a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 32516,
+        "heropage": 61090
+      },
+      "errors": []
+    },
+    {
+      "id": "c91ddc2d-835c-402d-8816-822f35b34900",
+      "filename": "ChatGPT Image Sep 13, 2026, 07_27_32 PM-cropped.webp",
+      "uploaded": "2026-09-14T02:28:07.761Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "1c0e1492-d453-46b2-ab7d-8b926380994a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 58412,
+        "heropage": 154716
+      },
+      "errors": []
+    },
+    {
+      "id": "06c4711a-956d-47d8-65a7-c756ac64db00",
+      "filename": "ChatGPT Image Sep 13, 2026, 07_27_32 PM.png",
+      "uploaded": "2026-09-14T02:27:46.041Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "1c0e1492-d453-46b2-ab7d-8b926380994a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 65308,
+        "flyerpage": 324306
+      },
+      "errors": []
+    },
+    {
+      "id": "9fa4f287-4aa1-46e4-1a0d-1efa40740d00",
+      "filename": "ChatGPT Image Jul 12, 2026, 11_38_00 PM-cropped.webp",
+      "uploaded": "2026-09-13T20:36:34.731Z",
+      "role": "hero",
+      "ownerType": "user",
+      "ownerId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 8548,
+        "heropage": 23562
+      },
+      "errors": []
+    },
+    {
+      "id": "d30ba622-9c15-46a9-9946-aea794391800",
+      "filename": "New Logo Final-cropped.webp",
+      "uploaded": "2026-09-13T20:35:34.217Z",
+      "role": "avatar",
+      "ownerType": "user",
+      "ownerId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 11388,
+        "heropage": 18258
+      },
+      "errors": []
+    },
+    {
+      "id": "80100270-28a1-4588-729b-0c07478cf100",
+      "filename": "ChatGPT Image Sep 13, 2026, 01_32_45 PM (2)-cropped.webp",
+      "uploaded": "2026-09-13T20:34:08.316Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "0c726e60-2e1e-4b03-9516-99af7d49024d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 54174,
+        "heropage": 180206
+      },
+      "errors": []
+    },
+    {
+      "id": "126e87a6-444c-4fe9-5228-5649c7bbdb00",
+      "filename": "ChatGPT Image Sep 13, 2026, 01_32_45 PM (1).png",
+      "uploaded": "2026-09-13T20:33:23.182Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "0c726e60-2e1e-4b03-9516-99af7d49024d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 30456
+      },
+      "errors": []
+    },
+    {
+      "id": "3a55645d-2042-4233-06b5-e63038d2af00",
+      "filename": "ChatGPT Image Sep 13, 2026, 12_44_37 PM-cropped.webp",
+      "uploaded": "2026-09-13T19:44:50.885Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "3bc2b6a5-4014-419b-a305-cdad03117763",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 39704,
+        "heropage": 102010
+      },
+      "errors": []
+    },
+    {
+      "id": "e77965d2-6feb-4729-1fb1-27899da5ca00",
+      "filename": "ChatGPT Image Sep 13, 2026, 12_35_44 PM-cropped.webp",
+      "uploaded": "2026-09-13T19:36:16.077Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "6da5166c-f252-4342-a379-bef4150804aa",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 58194,
+        "heropage": 134746
+      },
+      "errors": []
+    },
+    {
+      "id": "28eed6c5-62fb-4182-61cb-91cad63e1600",
+      "filename": "ChatGPT Image Sep 13, 2026, 12_27_28 PM-cropped.webp",
+      "uploaded": "2026-09-13T19:28:57.337Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "6db0fd5b-b97e-4a85-a81d-21e39baf9bad",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 30870,
+        "heropage": 72498
+      },
+      "errors": []
+    },
+    {
+      "id": "de8a41c5-2647-4ede-70ac-ff3ead996500",
+      "filename": "Golden Insomnia Crest on Burgundy Silk.png",
+      "uploaded": "2026-09-13T19:15:11.953Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "5404c40b-5fb0-4109-af8b-2713e411ef51",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 18388
+      },
+      "errors": []
+    },
+    {
+      "id": "dd482a19-34d1-475b-6db6-dd67fa9dd000",
+      "filename": "a7ae241a-d3a1-4fbd-9ca1-311ce98a8af4-cropped.webp",
+      "uploaded": "2026-09-10T06:37:45.474Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "0c726e60-2e1e-4b03-9516-99af7d49024d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 47606,
+        "heropage": 95558
+      },
+      "errors": []
+    },
+    {
+      "id": "952664cd-2721-4450-e55f-ce6fd4052000",
+      "filename": "2ab497d3-6315-4017-a2e7-ca42c411e269-cropped.webp",
+      "uploaded": "2026-09-10T02:10:12.160Z",
+      "role": "avatar",
+      "ownerType": "user",
+      "ownerId": "2facc361-0845-409e-a8e1-7948b4e8878b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 28372,
+        "heropage": 45054
+      },
+      "errors": []
+    },
+    {
+      "id": "1bff276e-fdfa-474d-09cb-09d25518d800",
+      "filename": "67dd55fc-c7f2-4fbd-a2ee-67527750c0bb-cropped.webp",
+      "uploaded": "2026-09-09T08:58:41.961Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "c76cfba8-802f-4836-a533-3bd06188595e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29524,
+        "heropage": 72748
+      },
+      "errors": []
+    },
+    {
+      "id": "4e2d2755-5f74-4168-da04-858559e63300",
+      "filename": "2af755f3-f40a-4573-ad45-6b039e005c39-cropped.webp",
+      "uploaded": "2026-09-09T08:53:25.187Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "549873b9-84a7-41cb-a0a6-a9513c3b0bc3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 40818,
+        "heropage": 99126
+      },
+      "errors": []
+    },
+    {
+      "id": "3f0a475f-2151-480b-8b5b-3de827173200",
+      "filename": "108396ed-cb6c-44a9-ade2-647e93122b47-cropped.webp",
+      "uploaded": "2026-09-09T08:44:55.098Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "5282fa58-6dde-460a-a32c-45908f07fe02",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 41084,
+        "heropage": 105590
+      },
+      "errors": []
+    },
+    {
+      "id": "c828d442-4073-4dbf-fed5-60a6bfa23b00",
+      "filename": "fefda174-0e4e-459f-9860-7d925f8786ee.png",
+      "uploaded": "2026-09-08T07:36:35.597Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "709e44ff-fd8d-4381-ad7c-ada78424d389",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 14622
+      },
+      "errors": []
+    },
+    {
+      "id": "34f8f8a6-43a0-4b57-9427-32cba24cf100",
+      "filename": "4f37e922-2f8d-480a-9d72-2ec49da517c2-cropped.webp",
+      "uploaded": "2026-09-08T07:17:53.357Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "76d9d66f-c8e3-4ba1-a279-d38781675599",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 15350
+      },
+      "errors": []
+    },
+    {
+      "id": "8189db0d-1dd2-4ec0-16f8-69ba13462400",
+      "filename": "2f7c1d2d-0055-4fa9-ba56-0fbb96ce1324-cropped.webp",
+      "uploaded": "2026-09-08T07:07:44.282Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "24c1d8b8-b406-4dea-a2f7-59d04505dcc2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 23756,
+        "heropage": 60708
+      },
+      "errors": []
+    },
+    {
+      "id": "a8c56bfc-4730-4b74-c55d-dd666fb48700",
+      "filename": "24218bd8-3579-4d56-82c9-31f93cfafbb1-cropped.webp",
+      "uploaded": "2026-09-08T07:02:25.102Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "deaae57d-4eaa-4833-a81c-14c58818c21b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 39360,
+        "heropage": 157320
+      },
+      "errors": []
+    },
+    {
+      "id": "1ffdd4fa-46f4-4387-964c-b66fa61f6a00",
+      "filename": "chrome_lurGflzrsE-cropped.webp",
+      "uploaded": "2026-09-08T05:51:07.014Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "ac6879b9-7f66-48fb-a4d8-1aa1ba7be0a3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 7368,
+        "heropage": 18632
+      },
+      "errors": []
+    },
+    {
+      "id": "2e1c12d6-f084-4898-94d8-687e5e559300",
+      "filename": "7920c42e-78fe-45a4-b166-3bf15e195093-cropped.webp",
+      "uploaded": "2026-09-08T05:45:15.335Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "88eaa044-266c-4abe-aac5-0e6cdf890226",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 90202,
+        "heropage": 227836
+      },
+      "errors": []
+    },
+    {
+      "id": "359a4134-7878-496f-b6e5-0d0c90204500",
+      "filename": "cd9a6186-d171-4ea7-9d0d-739a133d83b9-cropped.webp",
+      "uploaded": "2026-09-08T05:30:22.574Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 65086,
+        "heropage": 161964
+      },
+      "errors": []
+    },
+    {
+      "id": "63902e94-8154-4426-d052-767d5b846700",
+      "filename": "94cc1e79-f092-4827-add2-152a2fef14ac-cropped.webp",
+      "uploaded": "2026-09-08T05:16:02.315Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "3d79d1bc-b8ad-4bfe-a2dc-be049c31cd26",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 54504,
+        "heropage": 136724
+      },
+      "errors": []
+    },
+    {
+      "id": "5ba545fc-64aa-4abb-34e1-42dc7677e100",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_56_10 PM.png",
+      "uploaded": "2026-09-06T06:23:51.653Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "ac6879b9-7f66-48fb-a4d8-1aa1ba7be0a3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 19090
+      },
+      "errors": []
+    },
+    {
+      "id": "76e0b1e8-b7d8-4c54-40ef-3a6aaa736200",
+      "filename": "92500703-3d51-496d-aca8-3ff8438b4100.png",
+      "uploaded": "2026-09-05T04:00:13.786Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "24c1d8b8-b406-4dea-a2f7-59d04505dcc2",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 6394
+      },
+      "errors": []
+    },
+    {
+      "id": "2a61fc41-224a-44fa-1935-1e763a06c900",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_38_00 PM (2).png",
+      "uploaded": "2026-09-05T03:38:21.411Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "77c3ac19-80a1-4f4f-ab7a-b781d5e83037",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 35598
+      },
+      "errors": []
+    },
+    {
+      "id": "d95f91af-8701-4b5b-f3e6-e37ebac6fe00",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_38_00 PM (1).png",
+      "uploaded": "2026-09-05T03:38:16.381Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "1ecd6df8-85fc-4dee-af9f-d0e0aafacc36",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29942
+      },
+      "errors": []
+    },
+    {
+      "id": "419a4944-2b50-47a5-8ef0-bf98003cda00",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_38_00 PM (3).png",
+      "uploaded": "2026-09-05T03:38:09.373Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "d4f800a7-dd9c-41ed-adb3-f6ef802f3015",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 31460
+      },
+      "errors": []
+    },
+    {
+      "id": "6628177b-9bf3-4810-3f74-aaaa6f31c900",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_24_27 PM.png",
+      "uploaded": "2026-09-05T03:24:33.720Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "6da5166c-f252-4342-a379-bef4150804aa",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20718
+      },
+      "errors": []
+    },
+    {
+      "id": "2477ee16-0a37-4732-1770-71e92bc91900",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_21_55 PM.png",
+      "uploaded": "2026-09-05T03:22:21.242Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "62e8404f-e044-4569-a790-51f74912d071",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 24406
+      },
+      "errors": []
+    },
+    {
+      "id": "c95b3161-dcdf-4866-09ae-08c2b709bc00",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_12_48 PM.png",
+      "uploaded": "2026-09-05T03:13:03.127Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "549c81b9-159f-443f-aa94-f2115e7278f7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 13934
+      },
+      "errors": []
+    },
+    {
+      "id": "8d7e1b78-d459-457a-6d8b-251b1d784f00",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_09_54 PM.png",
+      "uploaded": "2026-09-05T03:09:59.824Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "88eaa044-266c-4abe-aac5-0e6cdf890226",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 19374
+      },
+      "errors": []
+    },
+    {
+      "id": "3db274b8-d4dd-41d3-d1e4-a2e4e60cce00",
+      "filename": "ChatGPT Image Sep 4, 2026, 08_06_58 PM.png",
+      "uploaded": "2026-09-05T03:07:13.907Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 25196
+      },
+      "errors": []
+    },
+    {
+      "id": "1cd01018-d19e-4ad9-7949-e697eec83500",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (1).png",
+      "uploaded": "2026-09-05T03:01:26.939Z",
+      "role": "logo",
+      "ownerType": "venue",
+      "ownerId": "39f35c00-5298-4262-ad12-9808d42f7a4a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20984
+      },
+      "errors": []
+    },
+    {
+      "id": "5178df82-ce81-4364-bfa5-1dd6cdff0700",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_28_48 PM.png",
+      "uploaded": "2026-09-05T03:00:44.783Z",
+      "role": "logo",
+      "ownerType": "event_series",
+      "ownerId": "8d7bb1ca-3b34-4024-a25b-84726f26dbec",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9888
+      },
+      "errors": []
+    },
+    {
+      "id": "44eb9381-b7a0-44e2-c3d6-3ff758a27f00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_25_49 PM.png",
+      "uploaded": "2026-09-05T03:00:23.055Z",
+      "role": "logo",
+      "ownerType": "event_series",
+      "ownerId": "b43b4019-4b74-40f7-a381-96e1ee1be2bf",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9200
+      },
+      "errors": []
+    },
+    {
+      "id": "4a56a312-5626-43cc-98d2-8e99365ebe00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_28_48 PM.png",
+      "uploaded": "2026-09-05T02:59:29.263Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "4fa5f40f-935f-4a4d-a97d-d897269dbdd5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9888
+      },
+      "errors": []
+    },
+    {
+      "id": "27181551-cd4d-4a60-414a-9d398aac5900",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_57_54 PM.png",
+      "uploaded": "2026-09-05T02:58:07.053Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "77cb631f-94f5-4015-a972-57374446ca8d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20504
+      },
+      "errors": []
+    },
+    {
+      "id": "afd5c06d-def3-4277-ae98-6c2ad53f6900",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_52_47 PM.png",
+      "uploaded": "2026-09-05T02:52:54.615Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "3bc2b6a5-4014-419b-a305-cdad03117763",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 23976
+      },
+      "errors": []
+    },
+    {
+      "id": "80089f4a-a0b9-4a81-4e36-0c3abf097900",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (3).png",
+      "uploaded": "2026-09-05T02:49:56.813Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "5966a0ef-1499-4f19-af4b-df873f877951",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 25172
+      },
+      "errors": []
+    },
+    {
+      "id": "75478ddd-c63b-48c0-f104-aeac57317f00",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (1).png",
+      "uploaded": "2026-09-05T02:49:48.237Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20984
+      },
+      "errors": []
+    },
+    {
+      "id": "50701b48-242c-48a0-2c28-35abdc8c3500",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_49_18 PM (2).png",
+      "uploaded": "2026-09-05T02:49:31.467Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 29288
+      },
+      "errors": []
+    },
+    {
+      "id": "ba0c4f1e-4986-402c-9419-d6c16f7eb000",
+      "filename": "ChatGPT Image Sep 4, 2026, 07_44_03 PM.png",
+      "uploaded": "2026-09-05T02:44:18.370Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "ac3711d4-b963-4ebe-a917-b34c6a151a96",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 25656
+      },
+      "errors": []
+    },
+    {
+      "id": "da176e5d-9847-4480-c85c-fa3b063a4d00",
+      "filename": "epicure_club_black_white_hero-cropped.webp",
+      "uploaded": "2026-09-03T07:35:04.110Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "99d686d2-a973-41a4-a124-0e2a839dcabc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 37542,
+        "heropage": 89216
+      },
+      "errors": []
+    },
+    {
+      "id": "62a4cc93-c2f4-4bd0-2cec-5b912561bf00",
+      "filename": "epicure_club_black_white_logo.png",
+      "uploaded": "2026-09-03T07:34:05.556Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "99d686d2-a973-41a4-a124-0e2a839dcabc",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8720
+      },
+      "errors": []
+    },
+    {
+      "id": "2db665ae-dddf-4162-0dea-0f31c82b0300",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_56_46 PM.png",
+      "uploaded": "2026-09-03T06:56:54.443Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "b644c421-db97-4ae7-a1a9-44998a12285f",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 6984
+      },
+      "errors": []
+    },
+    {
+      "id": "0f60d544-550f-4fcf-0cc1-30d705b30e00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_28_48 PM.png",
+      "uploaded": "2026-09-03T06:29:24.085Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9888
+      },
+      "errors": []
+    },
+    {
+      "id": "2e9aa2c9-9319-4fd3-1985-844a301b9100",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_28_48 PM.png",
+      "uploaded": "2026-09-03T06:28:58.306Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9888
+      },
+      "errors": []
+    },
+    {
+      "id": "276286f6-ed72-4a22-cdde-fb751cc88f00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_25_49 PM.png",
+      "uploaded": "2026-09-03T06:27:48.362Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "32cac153-c422-4831-a184-e94b4e540e49",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9200
+      },
+      "errors": []
+    },
+    {
+      "id": "05a092d5-7150-4b98-b8bf-9d2523391a00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_25_49 PM.png",
+      "uploaded": "2026-09-03T06:26:42.815Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "1531907d-572b-4f0b-a388-46655d8b3273",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9200
+      },
+      "errors": []
+    },
+    {
+      "id": "bc92daf5-86b5-4d86-01ce-6203f64b1c00",
+      "filename": "ChatGPT Image Sep 2, 2026, 11_25_49 PM.png",
+      "uploaded": "2026-09-03T06:26:03.425Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9200
+      },
+      "errors": []
+    },
+    {
+      "id": "5dbaa725-0fd7-4f22-9166-4e0b257b8500",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_40_29 PM.png",
+      "uploaded": "2026-09-02T22:40:44.815Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "0b55c2ac-d307-40e2-a081-b62432f1999a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 7850
+      },
+      "errors": []
+    },
+    {
+      "id": "a6b6823b-7550-471d-339c-efd953014c00",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_38_20 PM.png",
+      "uploaded": "2026-09-02T22:38:46.012Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "35f5912f-2b14-49e5-a469-d497ebe3b6cd",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 14370
+      },
+      "errors": []
+    },
+    {
+      "id": "9dbd3a62-e072-4774-ff03-a670837f8200",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (3).png",
+      "uploaded": "2026-09-02T22:34:05.513Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "3507cc6c-56e7-41ee-aefe-2174cacbb9d6",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 22076
+      },
+      "errors": []
+    },
+    {
+      "id": "663f0dcf-dbfe-4d86-6a13-f0d6db68d300",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (2).png",
+      "uploaded": "2026-09-02T22:33:54.932Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "54f1d061-59f9-4663-a9fc-ebc9849f116b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 16452
+      },
+      "errors": []
+    },
+    {
+      "id": "6b293a77-629d-403d-0b43-81a118413800",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_33_09 PM (1).png",
+      "uploaded": "2026-09-02T22:33:43.447Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "752b93e4-3009-4f4e-a6f1-fc1c551ada26",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 14684
+      },
+      "errors": []
+    },
+    {
+      "id": "18aaf042-d4dd-49f2-1284-531a1a957900",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_27_56 PM (4).png",
+      "uploaded": "2026-09-02T22:29:19.308Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "994318c6-0add-4870-a2fd-384ee0dff458",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 14000
+      },
+      "errors": []
+    },
+    {
+      "id": "d082c559-8c19-44ff-e7b9-a4abb3f93d00",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_27_56 PM (3).png",
+      "uploaded": "2026-09-02T22:29:07.472Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "3d79d1bc-b8ad-4bfe-a2dc-be049c31cd26",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 17216
+      },
+      "errors": []
+    },
+    {
+      "id": "4a3b2b66-ab74-48be-1d2b-5a3e4bf63200",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_27_55 PM (2).png",
+      "uploaded": "2026-09-02T22:28:56.416Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "18a937bf-06d6-43d1-ab09-cc378d3deae9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 12618
+      },
+      "errors": []
+    },
+    {
+      "id": "2f62b83e-0313-45d5-2af7-a4232b278500",
+      "filename": "ChatGPT Image Sep 2, 2026, 03_27_55 PM (1).png",
+      "uploaded": "2026-09-02T22:28:44.866Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "63801665-5a8c-446b-ac2e-7c6de8bfdd53",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10282
+      },
+      "errors": []
+    },
+    {
+      "id": "a8bfa2ff-c978-483c-a53f-01952be5b300",
+      "filename": "krystal-image.png",
+      "uploaded": "2026-09-02T22:02:02.600Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "2da9ee87-dade-48fd-a897-347f5722a9f5",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8998
+      },
+      "errors": []
+    },
+    {
+      "id": "bf1499e5-1727-4891-dce3-30139098e800",
+      "filename": "Idiza Lounge Club Desire.png",
+      "uploaded": "2026-09-02T21:59:39.666Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "c76cfba8-802f-4836-a533-3bd06188595e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 6696
+      },
+      "errors": []
+    },
+    {
+      "id": "f9ae3928-9333-4c42-24f5-1134e400c300",
+      "filename": "cupids.png",
+      "uploaded": "2026-09-02T19:15:42.768Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "809f3765-69dc-49ff-a703-281d002704b7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20888
+      },
+      "errors": []
+    },
+    {
+      "id": "5907e674-dbb1-4bf4-1b58-78b8a6b68300",
+      "filename": "Club_Rich.png",
+      "uploaded": "2026-09-01T23:27:49.855Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "8fe1a3a5-a096-4bdb-ae45-510d79bc11e3",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 11844
+      },
+      "errors": []
+    },
+    {
+      "id": "ba75270c-1385-45b8-1b73-11d1bc6fe600",
+      "filename": "Trapeze - FTL.png",
+      "uploaded": "2026-09-01T23:24:06.971Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "6db0fd5b-b97e-4a85-a81d-21e39baf9bad",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10264
+      },
+      "errors": []
+    },
+    {
+      "id": "97e327da-cffa-467c-eb5b-c9051d2a5d00",
+      "filename": "collethouston-cropped.webp",
+      "uploaded": "2026-08-17T02:43:53.333Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "18a937bf-06d6-43d1-ab09-cc378d3deae9",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 35156,
+        "heropage": 80994
+      },
+      "errors": []
+    },
+    {
+      "id": "c937b497-a809-4f48-e8f5-0a8d2ae6f500",
+      "filename": "colette_banner-cropped.webp",
+      "uploaded": "2026-08-11T05:18:31.134Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "994318c6-0add-4870-a2fd-384ee0dff458",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 30050,
+        "heropage": 75378
+      },
+      "errors": []
+    },
+    {
+      "id": "9e0566b6-069b-46c1-5cc7-a568d6609200",
+      "filename": "aug16-cropped.webp",
+      "uploaded": "2026-08-11T05:16:56.620Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 39300,
+        "heropage": 87360
+      },
+      "errors": []
+    },
+    {
+      "id": "fa3be4f7-a551-4e3e-a6cb-60ac0687c500",
+      "filename": "sep6-cropped.webp",
+      "uploaded": "2026-08-11T05:15:32.015Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29352,
+        "heropage": 68536
+      },
+      "errors": []
+    },
+    {
+      "id": "33a97bb1-eda3-416b-770a-9e9983558100",
+      "filename": "event-bronze-halloween-kickoff-twist-cropped.webp",
+      "uploaded": "2026-08-09T08:59:50.321Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 40992,
+        "heropage": 95264
+      },
+      "errors": []
+    },
+    {
+      "id": "0812ac96-018c-43a9-aad2-75c6057f9400",
+      "filename": "event-bronze-halloween-kickoff-twist.jpg",
+      "uploaded": "2026-08-09T08:59:29.752Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "8d26dba4-c397-4c8e-abb2-017c7e337046",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 55770,
+        "flyerpage": 156862
+      },
+      "errors": []
+    },
+    {
+      "id": "625e15fb-0c8d-4001-c2aa-38a3b30dcd00",
+      "filename": "aug16.jpg",
+      "uploaded": "2026-08-05T16:31:51.562Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "03cb7891-d60e-4d63-a4fd-c7091ff3379b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 70526,
+        "flyerpage": 218102
+      },
+      "errors": []
+    },
+    {
+      "id": "358d3786-037f-42de-3cfe-e356582c7a00",
+      "filename": "aug30.jpg",
+      "uploaded": "2026-08-05T16:30:48.508Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "1531907d-572b-4f0b-a388-46655d8b3273",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 85066,
+        "flyerpage": 248610
+      },
+      "errors": []
+    },
+    {
+      "id": "43b11c0a-c229-4369-16c0-fe7f6eea9500",
+      "filename": "aug30-cropped.webp",
+      "uploaded": "2026-08-05T16:30:09.292Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "1531907d-572b-4f0b-a388-46655d8b3273",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29356,
+        "heropage": 70984
+      },
+      "errors": []
+    },
+    {
+      "id": "0d278b0c-bb9d-44b0-5c7c-9bbf08586700",
+      "filename": "0e72356a-aefa-41c1-b5f3-88098be73fce (1)-cropped.webp",
+      "uploaded": "2026-07-30T01:54:29.115Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "5966a0ef-1499-4f19-af4b-df873f877951",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 37246,
+        "heropage": 100228
+      },
+      "errors": []
+    },
+    {
+      "id": "f6689383-90fc-4ba1-d1c0-42fe97d53000",
+      "filename": "chrome_dAIn6LUAX6-cropped.webp",
+      "uploaded": "2026-07-30T01:23:48.424Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "0b55c2ac-d307-40e2-a081-b62432f1999a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 8362,
+        "heropage": 22794
+      },
+      "errors": []
+    },
+    {
+      "id": "e8382e63-7dc6-4fdb-4d0d-2fc465e93600",
+      "filename": "chrome_4TJ5OleU5i-cropped.webp",
+      "uploaded": "2026-07-29T23:21:32.406Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 27566,
+        "heropage": 51630
+      },
+      "errors": []
+    },
+    {
+      "id": "bcfd16fe-e778-479a-ca25-56c8c99f1000",
+      "filename": "chrome_UAirUmQUF9-cropped.webp",
+      "uploaded": "2026-07-29T23:21:24.929Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 60972,
+        "heropage": 112590
+      },
+      "errors": []
+    },
+    {
+      "id": "a913bef4-1373-460b-946f-0822632c1100",
+      "filename": "chrome_Ir1kfYEnvE-cropped.webp",
+      "uploaded": "2026-07-29T23:21:14.358Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 27118,
+        "heropage": 55486
+      },
+      "errors": []
+    },
+    {
+      "id": "7e7a8cc7-fee8-4343-7e17-93a0b6315e00",
+      "filename": "chrome_nvUekaqkQv-cropped.webp",
+      "uploaded": "2026-07-29T23:21:07.882Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 9432,
+        "heropage": 19414
+      },
+      "errors": []
+    },
+    {
+      "id": "18c6e6f7-8c75-460c-4fa6-2eb348bc0700",
+      "filename": "chrome_NrX2y1Ta7r-cropped.webp",
+      "uploaded": "2026-07-29T23:19:11.872Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "ebce96c5-13f2-450f-a3a7-091de44ac9a7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29698,
+        "heropage": 70180
+      },
+      "errors": []
+    },
+    {
+      "id": "731d8310-54cd-4be2-5883-47947cb59600",
+      "filename": "Signature Weekend-cropped.webp",
+      "uploaded": "2026-07-29T10:01:32.254Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "35f5912f-2b14-49e5-a469-d497ebe3b6cd",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 18356,
+        "heropage": 32150
+      },
+      "errors": []
+    },
+    {
+      "id": "216d753b-3d2c-4735-87b0-680305b58700",
+      "filename": "SignatureWeekend-cropped.webp",
+      "uploaded": "2026-07-29T10:01:05.148Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "35f5912f-2b14-49e5-a469-d497ebe3b6cd",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 38440,
+        "heropage": 159296
+      },
+      "errors": []
+    },
+    {
+      "id": "e2e26eb9-5017-41ea-5a10-9bce7bdd9500",
+      "filename": "original (1)-cropped.webp",
+      "uploaded": "2026-07-29T09:57:07.894Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "32cac153-c422-4831-a184-e94b4e540e49",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 35662,
+        "heropage": 82638
+      },
+      "errors": []
+    },
+    {
+      "id": "2efd2b8e-f5d8-4565-cf0a-6568edceec00",
+      "filename": "original (1).jpg",
+      "uploaded": "2026-07-29T09:56:35.185Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "32cac153-c422-4831-a184-e94b4e540e49",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 58208,
+        "flyerpage": 159506
+      },
+      "errors": []
+    },
+    {
+      "id": "82471f52-6229-44a3-d7f2-28449abfed00",
+      "filename": "original.jpg",
+      "uploaded": "2026-07-29T08:51:43.585Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "5adf718c-0796-479a-a86a-dfe4eb6a8532",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 49622,
+        "flyerpage": 143566
+      },
+      "errors": []
+    },
+    {
+      "id": "87c9d97c-a5e4-4e9e-ba44-d415031fc200",
+      "filename": "8f3dd3c2-a384-46b4-a504-d83666866cd3.png",
+      "uploaded": "2026-07-29T05:37:07.156Z",
+      "role": "flyer",
+      "ownerType": "event",
+      "ownerId": "e4176789-29ec-4d2b-a0bf-58210411c123",
+      "sourceBytes": null,
+      "variantBytes": {
+        "flyercard": 33060,
+        "flyerpage": 106530
+      },
+      "errors": []
+    },
+    {
+      "id": "e3434c83-74e2-47e1-c009-88de33df8700",
+      "filename": "4ebc6aeb-641b-45eb-b5e6-e2289ca32015-cropped.webp",
+      "uploaded": "2026-07-29T05:36:40.551Z",
+      "role": "hero",
+      "ownerType": "event",
+      "ownerId": "e4176789-29ec-4d2b-a0bf-58210411c123",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 32620,
+        "heropage": 82038
+      },
+      "errors": []
+    },
+    {
+      "id": "774a6120-91a5-4267-8f8e-f6726cb70b00",
+      "filename": "colette_banner-cropped.webp",
+      "uploaded": "2026-07-29T02:55:49.243Z",
+      "role": "hero",
+      "ownerType": "club_brand",
+      "ownerId": "bece778d-facc-4abf-a36c-82454c916ff7",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 34242,
+        "heropage": 86496
+      },
+      "errors": []
+    },
+    {
+      "id": "c21a28aa-bef2-4f2a-b1d6-90f796f9ca00",
+      "filename": "original-cropped.webp",
+      "uploaded": "2026-07-29T01:25:23.011Z",
+      "role": "logo",
+      "ownerType": "event_series",
+      "ownerId": "8d7bb1ca-3b34-4024-a25b-84726f26dbec",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 6796
+      },
+      "errors": []
+    },
+    {
+      "id": "4346fa25-84f3-47b0-8c0d-cff1282d2800",
+      "filename": "chrome_HOsFGa51ah-cropped.webp",
+      "uploaded": "2026-07-29T01:12:50.805Z",
+      "role": "logo",
+      "ownerType": "event_series",
+      "ownerId": "8d7bb1ca-3b34-4024-a25b-84726f26dbec",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 10814
+      },
+      "errors": []
+    },
+    {
+      "id": "52190cc4-959f-478b-5de5-9b05d3ef2100",
+      "filename": "chrome_6i8HnAqWoo.png",
+      "uploaded": "2026-07-27T19:31:20.668Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "dbd06a79-03c5-4f73-ac3f-fc011a0baddb",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 23956
+      },
+      "errors": []
+    },
+    {
+      "id": "6fdc97ff-f086-485a-0466-0bbd52053f00",
+      "filename": "chrome_vf0rfk9OrS-cropped.webp",
+      "uploaded": "2026-07-27T04:11:44.523Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "296df8d8-b33e-4462-aa7e-7ba03346278a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 22152,
+        "heropage": 56294
+      },
+      "errors": []
+    },
+    {
+      "id": "1d701416-e2ae-4515-e0b9-c84540755b00",
+      "filename": "chrome_YtIK7oFjMY.png",
+      "uploaded": "2026-07-27T04:10:53.657Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "296df8d8-b33e-4462-aa7e-7ba03346278a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 6298
+      },
+      "errors": []
+    },
+    {
+      "id": "d47740f6-b0a4-4aef-254c-42ce65759d00",
+      "filename": "aa41296617d3f61d06e8661eab2f0fa93f0be964192ec1f10938dc4e5b52f968-cropped.webp",
+      "uploaded": "2026-07-24T22:28:06.378Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "bea6f071-bdbd-4c3b-a98a-de29b0bbee93",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 59444,
+        "heropage": 113078
+      },
+      "errors": []
+    },
+    {
+      "id": "7fee5ed4-58a2-4ab1-1336-03077f466d00",
+      "filename": "c46c456451369d3f7d98c8f30d3d870596ab0db45bd47be279b8b92537c9caab-cropped.webp",
+      "uploaded": "2026-07-24T22:27:47.839Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "bea6f071-bdbd-4c3b-a98a-de29b0bbee93",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 15544,
+        "heropage": 30146
+      },
+      "errors": []
+    },
+    {
+      "id": "66122e9c-50f8-4712-cc02-a518eb632700",
+      "filename": "aa41296617d3f61d06e8661eab2f0fa93f0be964192ec1f10938dc4e5b52f968-cropped.webp",
+      "uploaded": "2026-07-24T22:27:36.560Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "bea6f071-bdbd-4c3b-a98a-de29b0bbee93",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 59444,
+        "heropage": 113078
+      },
+      "errors": []
+    },
+    {
+      "id": "d0547c97-fa53-4acc-53a0-17fe9b41f400",
+      "filename": "eb9f4987e9fffd38bf912dac5c57d62e8d2c65ba69b865521d4a2147bdd9cadb-cropped.webp",
+      "uploaded": "2026-07-24T22:26:39.109Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "bea6f071-bdbd-4c3b-a98a-de29b0bbee93",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 21106,
+        "heropage": 51540
+      },
+      "errors": []
+    },
+    {
+      "id": "d6072a62-6393-4f4e-7002-79bdabb10300",
+      "filename": "b9e0b5a3af432f03151e644489c54f1d7c73dd0ff202c0afe92cdee220fe6636.jpg",
+      "uploaded": "2026-07-24T22:26:11.389Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "bea6f071-bdbd-4c3b-a98a-de29b0bbee93",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 8198
+      },
+      "errors": []
+    },
+    {
+      "id": "242bfcd5-6680-4034-c131-2da070b2cd00",
+      "filename": "0810dc6c0f9659b583e1131d4007a41809f6bb1e72fd2883b8f5029ca1e8a805-cropped.webp",
+      "uploaded": "2026-07-24T21:53:45.617Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "f78077b0-9124-4b02-a4fe-3b48b1ebe25a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 39992,
+        "heropage": 70434
+      },
+      "errors": []
+    },
+    {
+      "id": "aa3eaee1-c8d6-4e71-2899-f3b00546e300",
+      "filename": "4fbae97d1dc5db085b48d9f3865b604519108bf2ce80ea1a7374bc51cac0ed94-cropped.webp",
+      "uploaded": "2026-07-24T21:52:34.016Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "f78077b0-9124-4b02-a4fe-3b48b1ebe25a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 15310,
+        "heropage": 41122
+      },
+      "errors": []
+    },
+    {
+      "id": "dc29c3ab-6276-48e8-876f-d153e2a70c00",
+      "filename": "f5427dce60d5e824ef20c943c4a34598318da623c93b3c3e81ed9d3fa0e1fa20.jpg",
+      "uploaded": "2026-07-24T21:51:37.257Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "f78077b0-9124-4b02-a4fe-3b48b1ebe25a",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 9994
+      },
+      "errors": []
+    },
+    {
+      "id": "db9b79e1-01a4-4800-9b69-908647ebef00",
+      "filename": "IMG_20250913_120101-Edited.png",
+      "uploaded": "2026-07-23T05:48:44.175Z",
+      "role": "logo",
+      "ownerType": "organization",
+      "ownerId": "5bed262e-018d-4bb4-a5e1-1c068e6aeb8c",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 20412
+      },
+      "errors": []
+    },
+    {
+      "id": "019e66cf-84bd-45ca-45a3-2a9d9d178f00",
+      "filename": "chrome_GkqRRRalkz-cropped.webp",
+      "uploaded": "2026-07-23T04:52:34.544Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "b9fe374a-5235-438c-a68c-7a52df61b774",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 28970,
+        "heropage": 61926
+      },
+      "errors": []
+    },
+    {
+      "id": "ae6636d9-f865-4baa-6256-794aa12f8b00",
+      "filename": "illuminaughtylogosmall.png",
+      "uploaded": "2026-07-22T03:32:57.922Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "e4176789-29ec-4d2b-a0bf-58210411c123",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 41480
+      },
+      "errors": []
+    },
+    {
+      "id": "6f87a14f-7b55-43fa-8816-3f0294613600",
+      "filename": "chrome_tsYNjeyBzS.png",
+      "uploaded": "2026-07-22T02:59:26.122Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "269f0c91-4f15-4b8f-a728-a9f9cfd02137",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 5738
+      },
+      "errors": []
+    },
+    {
+      "id": "47c60d65-a4b1-4bfa-e2d6-ebeeeebb6e00",
+      "filename": "lounge_3-cropped.webp",
+      "uploaded": "2026-07-22T02:26:25.855Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 30052,
+        "heropage": 58280
+      },
+      "errors": []
+    },
+    {
+      "id": "af84da31-41f7-4910-0f95-e60f8e3f2f00",
+      "filename": "lounge-cropped.webp",
+      "uploaded": "2026-07-22T02:25:48.042Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "17b7ac3c-e63b-4d56-a285-76e44608eb3e",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 38698,
+        "heropage": 120906
+      },
+      "errors": []
+    },
+    {
+      "id": "c334e84e-a598-4d0a-5cad-a2f6ea911a00",
+      "filename": "MG_1823-scaled-cropped.webp",
+      "uploaded": "2026-07-22T01:17:35.388Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 35150,
+        "heropage": 78772
+      },
+      "errors": []
+    },
+    {
+      "id": "8e89f1a8-5b44-4fc3-7786-a1645210c400",
+      "filename": "MG_1761-scaled-cropped.webp",
+      "uploaded": "2026-07-22T01:17:23.301Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 22676,
+        "heropage": 46218
+      },
+      "errors": []
+    },
+    {
+      "id": "4a7bd731-2b3b-46fc-5fe1-6e580f11e900",
+      "filename": "MG_1591-scaled-cropped.webp",
+      "uploaded": "2026-07-22T01:17:13.403Z",
+      "role": "gallery",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 37454,
+        "heropage": 99420
+      },
+      "errors": []
+    },
+    {
+      "id": "f5aec98f-5881-417d-6388-c30c8e393a00",
+      "filename": "usacaliforniapowerexchange_1-cropped.webp",
+      "uploaded": "2026-07-22T01:16:57.613Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 29160,
+        "heropage": 61478
+      },
+      "errors": []
+    },
+    {
+      "id": "502221f3-a8c5-4637-b6ab-6de10dd71a00",
+      "filename": "rhxLorj2_400x400.jpg",
+      "uploaded": "2026-07-17T06:30:48.934Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "b9fe374a-5235-438c-a68c-7a52df61b774",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 22054
+      },
+      "errors": []
+    },
+    {
+      "id": "4e5f5cdc-d2b9-425e-64c6-9d6268f5b700",
+      "filename": "cdl-color_orig.png",
+      "uploaded": "2026-07-17T04:11:05.976Z",
+      "role": "logo",
+      "ownerType": "event",
+      "ownerId": "b546e9eb-5cd8-4b01-a7b0-f88358169279",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 13092
+      },
+      "errors": []
+    },
+    {
+      "id": "0fea5efc-22c8-4269-d912-9f9cf4a56700",
+      "filename": "thePE.jpg",
+      "uploaded": "2026-07-17T04:09:33.301Z",
+      "role": "logo",
+      "ownerType": "club",
+      "ownerId": "cfeea731-386c-4743-ac79-39796f5b552b",
+      "sourceBytes": null,
+      "variantBytes": {
+        "logosquare": 18938
+      },
+      "errors": []
+    },
+    {
+      "id": "f9b5a963-b624-4d23-9502-4aaf2afc8200",
+      "filename": "4c15bc_5b17ed35df994bfdb523c2f32e23137e~mv2-cropped.webp",
+      "uploaded": "2026-07-17T04:06:21.832Z",
+      "role": "hero",
+      "ownerType": "club",
+      "ownerId": "a2db47bb-d2bc-48f9-a8d5-9433c58d93b1",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 57062,
+        "heropage": 174132
+      },
+      "errors": []
+    },
+    {
+      "id": "3ec3389f-547b-4ff7-c507-8f11686ab800",
+      "filename": "swingspherelogo-cropped.webp",
+      "uploaded": "2026-07-16T22:50:39.161Z",
+      "role": "avatar",
+      "ownerType": "user",
+      "ownerId": "e3dc3a93-8d16-4e4a-b60a-30ad267ee32d",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 52330,
+        "heropage": 121512
+      },
+      "errors": []
+    },
+    {
+      "id": "b35d066b-854a-4c6e-452b-550614b06100",
+      "filename": "emailbackground.png",
+      "uploaded": "2026-07-13T07:56:15.357Z",
+      "role": null,
+      "ownerType": null,
+      "ownerId": null,
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 4098,
+        "heropage": 8494
+      },
+      "errors": []
+    },
+    {
+      "id": "754d4ab9-c1ca-485a-b0fa-23f521ed6c00",
+      "filename": "emal_BG.png",
+      "uploaded": "2026-07-13T07:56:15.070Z",
+      "role": null,
+      "ownerType": null,
+      "ownerId": null,
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 6810,
+        "heropage": 14086
+      },
+      "errors": []
+    },
+    {
+      "id": "fb139fae-9865-4607-04d1-1ac193291f00",
+      "filename": "emaillogo.png",
+      "uploaded": "2026-07-13T07:56:14.694Z",
+      "role": null,
+      "ownerType": null,
+      "ownerId": null,
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 27170,
+        "heropage": 46424
+      },
+      "errors": []
+    },
+    {
+      "id": "4733bb11-4939-4f26-6668-ca39ea843300",
+      "filename": "transparent_vector_logo.png",
+      "uploaded": "2026-07-13T07:47:22.469Z",
+      "role": null,
+      "ownerType": null,
+      "ownerId": null,
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 27170,
+        "heropage": 46424
+      },
+      "errors": []
+    },
+    {
+      "id": "498fd018-f96b-49d2-436d-742ad9e31e00",
+      "filename": "0000qpz8-cropped.webp",
+      "uploaded": "2026-07-13T00:56:51.039Z",
+      "role": "avatar",
+      "ownerType": "user",
+      "ownerId": "4274345f-e3f3-4a5e-a28c-eded7a5d82ed",
+      "sourceBytes": null,
+      "variantBytes": {
+        "herocard": 16540,
+        "heropage": 30304
+      },
+      "errors": []
+    }
+  ]
+}
