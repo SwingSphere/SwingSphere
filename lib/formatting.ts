@@ -103,35 +103,127 @@ export const formatClockTime = (value: string, locale = "en-US"): string => {
   }).format(date);
 };
 
+type ParsedWallClockIso = {
+  utcWallDate: Date;
+  epochMs: number;
+  year: number;
+  hasTime: boolean;
+  offsetLabel?: string;
+};
+
+const parseWallClockIso = (iso?: string): ParsedWallClockIso | null => {
+  if (!iso) return null;
+  const trimmed = iso.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:([+-]\d{2}:?\d{2})|(Z))?)?$/i,
+  );
+  if (match && !match[8]) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const hasTime = match[4] !== undefined && match[5] !== undefined;
+    const hour = hasTime ? Number(match[4]) : 0;
+    const minute = hasTime ? Number(match[5]) : 0;
+    const second = match[6] ? Number(match[6]) : 0;
+    const utcWallMs = Date.UTC(year, month - 1, day, hour, minute, second);
+    const parsedEpoch = new Date(trimmed).getTime();
+    return {
+      utcWallDate: new Date(utcWallMs),
+      epochMs: Number.isFinite(parsedEpoch) ? parsedEpoch : utcWallMs,
+      year,
+      hasTime,
+      offsetLabel: match[7] ? `UTC${match[7]}` : undefined,
+    };
+  }
+
+  const fallback = new Date(trimmed);
+  if (Number.isNaN(fallback.getTime())) return null;
+  const year = fallback.getFullYear();
+  return {
+    utcWallDate: new Date(
+      Date.UTC(
+        year,
+        fallback.getMonth(),
+        fallback.getDate(),
+        fallback.getHours(),
+        fallback.getMinutes(),
+        fallback.getSeconds(),
+      ),
+    ),
+    epochMs: fallback.getTime(),
+    year,
+    hasTime: /[T\s]\d{1,2}:\d{2}/.test(trimmed),
+  };
+};
+
+export const formatEventTimezoneHint = (
+  startIso?: string,
+  country?: string,
+  region?: string,
+): string => {
+  const parsed = parseWallClockIso(startIso);
+  if (!parsed || !parsed.hasTime) return "";
+  const cc = resolveCountryCode(country ?? "");
+  const abbr = formatAddressRegion(region ?? "", country ?? "");
+  if (cc === "US" && abbr) {
+    if (["CA", "OR", "WA", "NV"].includes(abbr)) return "Local venue time (PT)";
+    if (["AZ", "CO", "UT", "NM", "MT", "ID", "WY"].includes(abbr)) return "Local venue time (MT)";
+    if (["TX", "IL", "OK", "KS", "MO", "LA", "MN", "WI", "TN", "AL", "AR", "IA", "MS", "NE", "ND", "SD"].includes(abbr)) {
+      return "Local venue time (CT)";
+    }
+    if (["NY", "FL", "GA", "NC", "OH", "PA", "MI", "NJ", "VA", "MA", "MD", "IN", "SC", "CT", "DC", "DE", "ME", "NH", "RI", "VT", "WV", "KY"].includes(abbr)) {
+      return "Local venue time (ET)";
+    }
+  }
+  if (parsed.offsetLabel) return `Local venue time (${parsed.offsetLabel})`;
+  return "Local venue time";
+};
+
 export const formatEventTimeRange = (
-  startIso: string,
-  endIso: string,
+  startIso?: string,
+  endIso?: string,
   locale = "en-US",
 ): string => {
-  if (!startIso || !endIso) return "";
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
+  const start = parseWallClockIso(startIso);
+  if (!start) return "";
+  const end = parseWallClockIso(endIso);
+  const currentYear = new Date().getFullYear();
+  const includeYear = start.year !== currentYear || (end ? end.year !== currentYear : false);
 
   const dateFormatter = new Intl.DateTimeFormat(locale, {
+    timeZone: "UTC",
+    weekday: "short",
     month: "short",
     day: "numeric",
+    ...(includeYear ? { year: "numeric" } : {}),
   });
   const timeFormatter = new Intl.DateTimeFormat(locale, {
+    timeZone: "UTC",
     hour: "numeric",
     minute: "2-digit",
   });
 
-  const startDate = dateFormatter.format(start);
-  const endDate = dateFormatter.format(end);
-  const startTime = timeFormatter.format(start);
-  const endTime = timeFormatter.format(end);
-
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const durationMs = end.getTime() - start.getTime();
-  const showEndDate = durationMs > oneDayMs;
+  const startDate = dateFormatter.format(start.utcWallDate);
   const dateSeparator = " \u00b7 ";
   const timeSeparator = " \u2013 ";
+
+  if (!start.hasTime) {
+    return startDate;
+  }
+
+  const startTime = timeFormatter.format(start.utcWallDate);
+  if (!end) {
+    return `${startDate}${dateSeparator}${startTime}`;
+  }
+
+  const endDate = dateFormatter.format(end.utcWallDate);
+  const endTime = timeFormatter.format(end.utcWallDate);
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const durationMs = end.epochMs - start.epochMs;
+  const showEndDate = durationMs > oneDayMs;
 
   if (showEndDate) {
     return `${startDate}${dateSeparator}${startTime}${timeSeparator}${endDate}${dateSeparator}${endTime}`;

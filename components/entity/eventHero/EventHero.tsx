@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Expand, ExternalLink, ImagePlus, Mail, Pencil, Ticket, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { CalendarCheck2, Clock, Expand, ExternalLink, ImagePlus, Mail, Pencil, Ticket, X, ZoomIn, ZoomOut } from 'lucide-react';
 import HeroContainer from '../HeroContainer';
 import SharedHeroImage from '../SharedHeroImage';
 import HeroLogo from './HeroLogo';
@@ -18,6 +18,7 @@ import {
 } from '../../../lib/listingImage';
 import { getCanonicalMediaSignature } from '../../../lib/entityBrandMedia';
 import type { HeroCropConfig } from '../../../lib/media/heroCrop';
+import type { EventStatusBadge } from '../../event/EventEssentialsSection';
 
 type EventHeroProps = {
   eventId: string;
@@ -32,6 +33,8 @@ type EventHeroProps = {
   hostLogoUrl?: string;
   locationText?: string;
   timeText?: string;
+  timeSubValue?: string;
+  statusBadge?: EventStatusBadge | null;
   venueName?: string;
   venuePath?: string;
   hostName?: string;
@@ -39,8 +42,11 @@ type EventHeroProps = {
   attendanceText?: string;
   accessUrl?: string;
   accessDestinationType?: 'ticket' | 'rsvp' | 'website';
+  secondaryTicketUrl?: string;
+  secondaryRsvpUrl?: string;
   contactEmail?: string;
   calendarActions?: React.ReactNode;
+  isPast?: boolean;
   tags?: string[];
   mediaImages?: string[];
   onQuickEdit?: (field: 'title' | 'logo' | 'hero' | 'gallery' | 'flyer') => void;
@@ -60,6 +66,8 @@ const EventHero: React.FC<EventHeroProps> = ({
   hostLogoUrl,
   locationText,
   timeText,
+  timeSubValue,
+  statusBadge,
   venueName,
   venuePath,
   hostName,
@@ -67,8 +75,11 @@ const EventHero: React.FC<EventHeroProps> = ({
   attendanceText,
   accessUrl,
   accessDestinationType = 'website',
+  secondaryTicketUrl,
+  secondaryRsvpUrl,
   contactEmail,
   calendarActions,
+  isPast = false,
   tags,
   mediaImages = [],
   onQuickEdit,
@@ -194,8 +205,19 @@ const EventHero: React.FC<EventHeroProps> = ({
     />
   );
 
-  const tabletSummaryItems: Array<{ label: string; value: string; subValue?: string; href?: string }> = [
-    { label: 'When', value: timeText || 'Schedule TBD' },
+  const tabletSummaryItems: Array<{
+    label: string;
+    value: string;
+    subValue?: string;
+    href?: string;
+    badge?: EventStatusBadge | null;
+  }> = [
+    {
+      label: 'When',
+      value: timeText || 'Schedule TBD',
+      subValue: timeSubValue || undefined,
+      badge: statusBadge,
+    },
     {
       label: 'Where',
       value: venueName || locationText || 'Location TBD',
@@ -214,12 +236,23 @@ const EventHero: React.FC<EventHeroProps> = ({
     { label: 'Admission', value: attendanceText || 'See event details' },
   ];
 
-  const accessButtonLabel =
-    accessDestinationType === 'ticket'
+  const accessButtonLabel = isPast
+    ? 'View Event Page'
+    : accessDestinationType === 'ticket'
       ? 'Get Tickets'
       : accessDestinationType === 'rsvp'
         ? 'RSVP / Request Access'
         : 'Official Event Page';
+
+  const hasDistinctSecondaryTicket =
+    !isPast && Boolean(secondaryTicketUrl && secondaryTicketUrl !== accessUrl);
+  const hasDistinctSecondaryRsvp =
+    !isPast &&
+    Boolean(
+      secondaryRsvpUrl &&
+        secondaryRsvpUrl !== accessUrl &&
+        secondaryRsvpUrl !== secondaryTicketUrl,
+    );
 
   return (
     <>
@@ -460,9 +493,25 @@ const EventHero: React.FC<EventHeroProps> = ({
                     key={item.label}
                     className="rounded-xl border border-white/8 bg-white/[0.04] px-3.5 py-2.5 backdrop-blur-md"
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                      {item.label}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">
+                        {item.label}
+                      </p>
+                      {item.badge ? (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                            item.badge.tone === 'live'
+                              ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                              : item.badge.tone === 'today'
+                                ? 'border border-red-400/40 bg-red-500/15 text-red-200'
+                                : 'border border-white/15 bg-white/[0.06] text-gray-400'
+                          }`}
+                        >
+                          <Clock className="h-2.5 w-2.5" />
+                          {item.badge.label}
+                        </span>
+                      ) : null}
+                    </div>
                     {item.href ? (
                       <Link
                         to={item.href}
@@ -481,7 +530,7 @@ const EventHero: React.FC<EventHeroProps> = ({
               </div>
             </div>
 
-            {(accessUrl || contactEmail || calendarActions || tabletGalleryImages.length > 0) ? (
+            {((!isPast && calendarActions) || accessUrl || hasDistinctSecondaryTicket || hasDistinctSecondaryRsvp || (!isPast && contactEmail) || tabletGalleryImages.length > 0) ? (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3.5">
                 <div className="flex flex-wrap items-center gap-2.5">
                   {accessUrl ? (
@@ -489,16 +538,20 @@ const EventHero: React.FC<EventHeroProps> = ({
                       href={accessUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500"
+                      className={
+                        isPast
+                          ? 'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-200 transition hover:border-white/25 hover:bg-white/[0.09] hover:text-white'
+                          : 'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-red-950/40 transition hover:bg-red-500'
+                      }
                     >
-                      {accessDestinationType === 'ticket' ? (
+                      {accessDestinationType === 'ticket' && !isPast ? (
                         <Ticket className="h-3.5 w-3.5" />
                       ) : (
                         <ExternalLink className="h-3.5 w-3.5" />
                       )}
                       <span>{accessButtonLabel}</span>
                     </a>
-                  ) : contactEmail ? (
+                  ) : !isPast && contactEmail ? (
                     <a
                       href={`mailto:${contactEmail}`}
                       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-red-100 transition hover:bg-red-500/25"
@@ -507,7 +560,29 @@ const EventHero: React.FC<EventHeroProps> = ({
                       <span>Contact Host to RSVP</span>
                     </a>
                   ) : null}
-                  {calendarActions ? <div className="min-w-0">{calendarActions}</div> : null}
+                  {hasDistinctSecondaryTicket ? (
+                    <a
+                      href={secondaryTicketUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-100 transition hover:border-red-400/55 hover:bg-red-500/25 hover:text-white"
+                    >
+                      <Ticket className="h-3.5 w-3.5 text-red-300" />
+                      <span>Get Tickets</span>
+                    </a>
+                  ) : null}
+                  {hasDistinctSecondaryRsvp ? (
+                    <a
+                      href={secondaryRsvpUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.05] px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-gray-200 transition hover:border-white/25 hover:bg-white/[0.09] hover:text-white"
+                    >
+                      <CalendarCheck2 className="h-3.5 w-3.5 text-red-300" />
+                      <span>RSVP</span>
+                    </a>
+                  ) : null}
+                  {!isPast && calendarActions ? <div className="min-w-0">{calendarActions}</div> : null}
                 </div>
                 {tabletGalleryImages.length > 0 ? (
                   <HeroThumbnailStack images={tabletGalleryImages} title={title} showDesktop={false} showMobile />

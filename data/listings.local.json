@@ -13510,12 +13510,38 @@
     "status": "approved",
     "website": "https://www.autonomyproject.org/",
     "location": "Columbus, Ohio, United States (exact venue address not publicly disclosed)",
-    "geopoint": {"latitude": 39.9612, "longitude": -82.9988, "address": {"city": "Columbus", "region": "Ohio", "country": "United States", "countrySlug": "us", "admin1Slug": "oh", "citySlug": "columbus", "isCityState": false}},
-    "locationMeta": {"status": "approximate", "confidence": 0.3, "source": "Columbus city center; not a venue coordinate", "warnings": ["Private venue location; do not interpret map pin as exact address"]},
+    "geopoint": {
+      "latitude": 39.9612,
+      "longitude": -82.9988,
+      "address": {
+        "city": "Columbus",
+        "region": "Ohio",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "oh",
+        "citySlug": "columbus",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "approximate",
+      "confidence": 0.3,
+      "source": "Columbus city center; not a venue coordinate",
+      "warnings": [
+        "Private venue location; do not interpret map pin as exact address"
+      ]
+    },
     "isAddressPrivate": true,
     "description_short": "Queer-inclusive, consent-centered community and kink venue operated by The Autonomy Project in Columbus, Ohio.",
     "description_full": "Wicked Eden is the Columbus home of The Autonomy Project, a nonprofit offering community events, workshops, and members-only play parties. Admission and access rules vary by event; confirm them directly with the organizer. The venue's precise address is not published here.",
-    "tags": ["Kink", "BDSM", "Play Parties", "LGBTQIA+ Inclusive", "Consent-Focused", "Members-Only Events"],
+    "tags": [
+      "Kink",
+      "BDSM",
+      "Play Parties",
+      "LGBTQIA+ Inclusive",
+      "Consent-Focused",
+      "Members-Only Events"
+    ],
     "provenanceNote": "Official organizer: https://www.autonomyproject.org/; verified 2026-10-19. Do not publish an exact address without organizer authorization."
   },
   {
@@ -13527,15 +13553,2422 @@
     "venueId": "club-wicked-eden-columbus",
     "website": "https://secure.autonomyproject.org/np/clients/autonomyproject/event.jsp?event=1377",
     "location": "Columbus, Ohio, United States (location shared by organizer)",
-    "geopoint": {"latitude": 39.9612, "longitude": -82.9988, "address": {"city": "Columbus", "region": "Ohio", "country": "United States", "countrySlug": "us", "admin1Slug": "oh", "citySlug": "columbus", "isCityState": false}},
-    "locationMeta": {"status": "approximate", "confidence": 0.3, "source": "Columbus city center; not a venue coordinate", "warnings": ["Private venue location; do not interpret map pin as exact address"]},
+    "geopoint": {
+      "latitude": 39.9612,
+      "longitude": -82.9988,
+      "address": {
+        "city": "Columbus",
+        "region": "Ohio",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "oh",
+        "citySlug": "columbus",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "approximate",
+      "confidence": 0.3,
+      "source": "Columbus city center; not a venue coordinate",
+      "warnings": [
+        "Private venue location; do not interpret map pin as exact address"
+      ]
+    },
     "isAddressPrivate": true,
-    "time": {"start": "2026-02-07T19:00", "end": "2026-02-08T00:00"},
+    "time": {
+      "start": "2026-02-07T19:00",
+      "end": "2026-02-08T00:00"
+    },
     "attendancePolicy": "members_only",
     "description_short": "Historical event: members-only, romance-novel-inspired play party.",
     "description_full": "The Autonomy Project explicitly advertised Bodice Ripper as a queer and trans-inclusive members-only play party. This February 2026 event has passed. Refer to the official organizer for future events, eligibility and access details.",
-    "tags": ["Play Party", "Members Only", "21+", "LGBTQIA+ Inclusive", "Past Event"],
+    "tags": [
+      "Play Party",
+      "Members Only",
+      "21+",
+      "LGBTQIA+ Inclusive",
+      "Past Event"
+    ],
     "provenanceNote": "Verified against organizer's official 2026 event archive https://secure.autonomyproject.org/np/clients/autonomyproject/eventList.jsp?year=2026; historical only, not upcoming."
+  },
+  {
+    "id": "event-trapeze-atlanta-kinky-game-night-2026",
+    "type": "event",
+    "name": "Kinky Game Night",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/kinky-game-night/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/kinky-game-night/",
+    "time": {
+      "start": "2026-10-28T20:00:00-04:00",
+      "end": "2026-10-29T03:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Kinky Game Night at Trapeze Atlanta; membership required.",
+    "description_full": "Kinky Game Night is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/B2DBD9CD-576B-40E4-BAAD-FF60E615B172.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/B2DBD9CD-576B-40E4-BAAD-FF60E615B172.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/kinky-game-night/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-freak-show-2026",
+    "type": "event",
+    "name": "Freak Show - Halloween Costume Contest",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/freak-show/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/freak-show/",
+    "time": {
+      "start": "2026-10-31T20:00:00-04:00",
+      "end": "2026-11-01T04:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Freak Show - Halloween Costume Contest at Trapeze Atlanta; membership required.",
+    "description_full": "Freak Show - Halloween Costume Contest is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-31-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-31-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/freak-show/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-discord-night-masquerade-party-2026",
+    "type": "event",
+    "name": "DISCORD NIGHT: Masquerade Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/discord-night-masquerade-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/discord-night-masquerade-party/",
+    "time": {
+      "start": "2026-11-21T20:00:00-05:00",
+      "end": "2026-11-22T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "DISCORD NIGHT: Masquerade Party at Trapeze Atlanta; membership required.",
+    "description_full": "DISCORD NIGHT: Masquerade Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-21-A-1.jpg",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-21-A-1.jpg",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/discord-night-masquerade-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-new-years-eve-2027-white-party-2026",
+    "type": "event",
+    "name": "New Year's Eve 2027 White Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/new-years-eve-2027-white-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/new-years-eve-2027-white-party/",
+    "time": {
+      "start": "2026-12-31T20:00:00-05:00",
+      "end": "2027-01-01T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "New Year's Eve 2027 White Party at Trapeze Atlanta; membership required.",
+    "description_full": "New Year's Eve 2027 White Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/12-31-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/12-31-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/new-years-eve-2027-white-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-freaky-friday-fetish-party-2026",
+    "type": "event",
+    "name": "Freaky Friday Fetish Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/freaky-friday-fetish-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/freaky-friday-fetish-party/",
+    "time": {
+      "start": "2026-10-23T20:00:00-04:00",
+      "end": "2026-10-24T04:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Freaky Friday Fetish Party at Trapeze Atlanta; membership required.",
+    "description_full": "Freaky Friday Fetish Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-23-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-23-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/freaky-friday-fetish-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-cosplay-party-2026",
+    "type": "event",
+    "name": "Cosplay Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/cosplay-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/cosplay-party/",
+    "time": {
+      "start": "2026-10-24T20:00:00-04:00",
+      "end": "2026-10-25T04:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Cosplay Party at Trapeze Atlanta; membership required.",
+    "description_full": "Cosplay Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-24-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-24-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/cosplay-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-sinister-sundays-4-2026",
+    "type": "event",
+    "name": "Sinister Sundays",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/sinister-sundays-4/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/sinister-sundays-4/",
+    "time": {
+      "start": "2026-10-25T20:00:00-04:00",
+      "end": "2026-10-26T03:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Sinister Sundays at Trapeze Atlanta; membership required.",
+    "description_full": "Sinister Sundays is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-25-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-25-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/sinister-sundays-4/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-thriller-thursday-5-2026",
+    "type": "event",
+    "name": "Thriller Thursday",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/thriller-thursday-5/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/thriller-thursday-5/",
+    "time": {
+      "start": "2026-10-29T20:00:00-04:00",
+      "end": "2026-10-30T03:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Thriller Thursday at Trapeze Atlanta; membership required.",
+    "description_full": "Thriller Thursday is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-29-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-29-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/thriller-thursday-5/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-nightmare-on-trapeze-st-2026",
+    "type": "event",
+    "name": "Nightmare on Trapeze St. - Halloween Costume Contest",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/nightmare-on-trapeze-st/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/nightmare-on-trapeze-st/",
+    "time": {
+      "start": "2026-10-30T20:00:00-04:00",
+      "end": "2026-10-31T04:00:00-04:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Nightmare on Trapeze St. - Halloween Costume Contest at Trapeze Atlanta; membership required.",
+    "description_full": "Nightmare on Trapeze St. - Halloween Costume Contest is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-30-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-30-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/nightmare-on-trapeze-st/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-burger-bar-and-backyard-bbq-2026",
+    "type": "event",
+    "name": "Burger Bar and Backyard BBQ",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq/",
+    "time": {
+      "start": "2026-11-01T20:00:00-05:00",
+      "end": "2026-11-02T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Burger Bar and Backyard BBQ at Trapeze Atlanta; membership required.",
+    "description_full": "Burger Bar and Backyard BBQ is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-1-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-1-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-hump-day-honey-2026",
+    "type": "event",
+    "name": "Hump Day Honey",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/hump-day-honey/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/hump-day-honey/",
+    "time": {
+      "start": "2026-11-04T20:00:00-05:00",
+      "end": "2026-11-05T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Hump Day Honey at Trapeze Atlanta; membership required.",
+    "description_full": "Hump Day Honey is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-4-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-4-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/hump-day-honey/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-new-comers-2026",
+    "type": "event",
+    "name": "New Comers",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/new-comers/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/new-comers/",
+    "time": {
+      "start": "2026-11-05T20:00:00-05:00",
+      "end": "2026-11-06T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "New Comers at Trapeze Atlanta; membership required.",
+    "description_full": "New Comers is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-5-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-5-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/new-comers/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-pineapple-party-atlanta-twerk-contest-2026",
+    "type": "event",
+    "name": "Pineapple Party Atlanta Twerk Contest",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/pineapple-party-atlanta-twerk-contest/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/pineapple-party-atlanta-twerk-contest/",
+    "time": {
+      "start": "2026-11-06T20:00:00-05:00",
+      "end": "2026-11-07T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Pineapple Party Atlanta Twerk Contest at Trapeze Atlanta; membership required.",
+    "description_full": "Pineapple Party Atlanta Twerk Contest is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-6-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-6-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/pineapple-party-atlanta-twerk-contest/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-girls-in-pearls-guys-in-ties-2026",
+    "type": "event",
+    "name": "Girls in Pearls, Guys in Ties",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/girls-in-pearls-guys-in-ties/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/girls-in-pearls-guys-in-ties/",
+    "time": {
+      "start": "2026-11-07T20:00:00-05:00",
+      "end": "2026-11-08T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Girls in Pearls, Guys in Ties at Trapeze Atlanta; membership required.",
+    "description_full": "Girls in Pearls, Guys in Ties is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-7-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-7-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/girls-in-pearls-guys-in-ties/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-burger-bar-and-backyard-bbq-2-2026",
+    "type": "event",
+    "name": "Burger Bar and Backyard BBQ",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-2/",
+    "time": {
+      "start": "2026-11-08T20:00:00-05:00",
+      "end": "2026-11-09T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Burger Bar and Backyard BBQ at Trapeze Atlanta; membership required.",
+    "description_full": "Burger Bar and Backyard BBQ is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-8-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-8-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-2/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-veterans-get-50-off-before-9-p-m-2026",
+    "type": "event",
+    "name": "Veterans Get 50% Off Before 9 P.M.",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/veterans-get-50-off-before-9-p-m/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/veterans-get-50-off-before-9-p-m/",
+    "time": {
+      "start": "2026-11-11T20:00:00-05:00",
+      "end": "2026-11-12T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Veterans Get 50% Off Before 9 P.M. at Trapeze Atlanta; membership required.",
+    "description_full": "Veterans Get 50% Off Before 9 P.M. is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-11-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-11-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/veterans-get-50-off-before-9-p-m/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-new-corners-2026",
+    "type": "event",
+    "name": "New Corners",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/new-corners/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/new-corners/",
+    "time": {
+      "start": "2026-11-12T20:00:00-05:00",
+      "end": "2026-11-13T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "New Corners at Trapeze Atlanta; membership required.",
+    "description_full": "New Corners is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-12-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-12-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/new-corners/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-leather-and-latex-and-lace-2026",
+    "type": "event",
+    "name": "Leather and Latex and Lace",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/leather-and-latex-and-lace/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/leather-and-latex-and-lace/",
+    "time": {
+      "start": "2026-11-13T20:00:00-05:00",
+      "end": "2026-11-14T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Leather and Latex and Lace at Trapeze Atlanta; membership required.",
+    "description_full": "Leather and Latex and Lace is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-13-A-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-13-A-1.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/leather-and-latex-and-lace/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-sdc-camo-flauge-camel-toes-party-2026",
+    "type": "event",
+    "name": "SDC Camo (Flauge) & Camel Toes Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/sdc-camo-flauge-camel-toes-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/sdc-camo-flauge-camel-toes-party/",
+    "time": {
+      "start": "2026-11-14T20:00:00-05:00",
+      "end": "2026-11-15T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SDC Camo (Flauge) & Camel Toes Party at Trapeze Atlanta; membership required.",
+    "description_full": "SDC Camo (Flauge) & Camel Toes Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-ATL_Camo_14nov2026-1.jpg",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-ATL_Camo_14nov2026-1.jpg",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/sdc-camo-flauge-camel-toes-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-burger-bar-and-backyard-bbq-3-2026",
+    "type": "event",
+    "name": "Burger Bar and Backyard BBQ",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-3/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-3/",
+    "time": {
+      "start": "2026-11-15T20:00:00-05:00",
+      "end": "2026-11-16T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Burger Bar and Backyard BBQ at Trapeze Atlanta; membership required.",
+    "description_full": "Burger Bar and Backyard BBQ is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-15-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-15-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/burger-bar-and-backyard-bbq-3/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-hump-day-honey-2-2026",
+    "type": "event",
+    "name": "Hump Day Honey",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/hump-day-honey-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/hump-day-honey-2/",
+    "time": {
+      "start": "2026-11-18T20:00:00-05:00",
+      "end": "2026-11-19T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Hump Day Honey at Trapeze Atlanta; membership required.",
+    "description_full": "Hump Day Honey is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-18-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-18-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/hump-day-honey-2/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-newcomers-half-off-2026",
+    "type": "event",
+    "name": "Newcomers Half Off",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/newcomers-half-off/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/newcomers-half-off/",
+    "time": {
+      "start": "2026-11-19T20:00:00-05:00",
+      "end": "2026-11-20T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Newcomers Half Off at Trapeze Atlanta; membership required.",
+    "description_full": "Newcomers Half Off is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-19-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-19-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/newcomers-half-off/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-fresh-friday-purple-passion-party-2026",
+    "type": "event",
+    "name": "Fresh Friday Purple Passion Party",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/fresh-friday-purple-passion-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/fresh-friday-purple-passion-party/",
+    "time": {
+      "start": "2026-11-20T20:00:00-05:00",
+      "end": "2026-11-21T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Fresh Friday Purple Passion Party at Trapeze Atlanta; membership required.",
+    "description_full": "Fresh Friday Purple Passion Party is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/November-2026.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/November-2026.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/fresh-friday-purple-passion-party/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-burger-bar-backyard-bbq-2026",
+    "type": "event",
+    "name": "Burger Bar & Backyard BBQ",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/burger-bar-backyard-bbq/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/burger-bar-backyard-bbq/",
+    "time": {
+      "start": "2026-11-22T20:00:00-05:00",
+      "end": "2026-11-23T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Burger Bar & Backyard BBQ at Trapeze Atlanta; membership required.",
+    "description_full": "Burger Bar & Backyard BBQ is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Unknown-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Unknown-1.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/burger-bar-backyard-bbq/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-hump-day-honey-3-2026",
+    "type": "event",
+    "name": "Hump Day Honey",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/hump-day-honey-3/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/hump-day-honey-3/",
+    "time": {
+      "start": "2026-11-25T20:00:00-05:00",
+      "end": "2026-11-26T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Hump Day Honey at Trapeze Atlanta; membership required.",
+    "description_full": "Hump Day Honey is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-25-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-25-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/hump-day-honey-3/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-still-stuffed-thanksgiving-dinner-2026",
+    "type": "event",
+    "name": "Still Stuffed Thanksgiving Dinner",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/still-stuffed-thanksgiving-dinner/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/still-stuffed-thanksgiving-dinner/",
+    "time": {
+      "start": "2026-11-26T20:00:00-05:00",
+      "end": "2026-11-27T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Still Stuffed Thanksgiving Dinner at Trapeze Atlanta; membership required.",
+    "description_full": "Still Stuffed Thanksgiving Dinner is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-26-A-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-26-A-1.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/still-stuffed-thanksgiving-dinner/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-see-through-blouses-2026",
+    "type": "event",
+    "name": "SEE THROUGH BLOUSES",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/see-through-blouses/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/see-through-blouses/",
+    "time": {
+      "start": "2026-11-27T20:00:00-05:00",
+      "end": "2026-11-28T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SEE THROUGH BLOUSES at Trapeze Atlanta; membership required.",
+    "description_full": "SEE THROUGH BLOUSES is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Unknown.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Unknown.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/see-through-blouses/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-after-dark-2026",
+    "type": "event",
+    "name": "After Dark",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/after-dark/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/after-dark/",
+    "time": {
+      "start": "2026-11-28T20:00:00-05:00",
+      "end": "2026-11-29T07:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "After Dark at Trapeze Atlanta; membership required.",
+    "description_full": "After Dark is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-28-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-28-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/after-dark/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-burger-bar-backyard-bbq-2-2026",
+    "type": "event",
+    "name": "Burger Bar & Backyard BBQ",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/burger-bar-backyard-bbq-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/burger-bar-backyard-bbq-2/",
+    "time": {
+      "start": "2026-11-29T20:00:00-05:00",
+      "end": "2026-11-30T03:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Burger Bar & Backyard BBQ at Trapeze Atlanta; membership required.",
+    "description_full": "Burger Bar & Backyard BBQ is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-29-A.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-29-A.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/burger-bar-backyard-bbq-2/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-sdc-pimps-and-hoes-ball-2026",
+    "type": "event",
+    "name": "SDC Pimps and Hoes Ball",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/sdc-pimps-and-hoes-ball/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/sdc-pimps-and-hoes-ball/",
+    "time": {
+      "start": "2026-12-12T20:00:00-05:00",
+      "end": "2026-12-13T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SDC Pimps and Hoes Ball at Trapeze Atlanta; membership required.",
+    "description_full": "SDC Pimps and Hoes Ball is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-ATL_Pimps_12dec2026-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-ATL_Pimps_12dec2026-1.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/sdc-pimps-and-hoes-ball/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-atlanta-nightmare-before-christmas-2026",
+    "type": "event",
+    "name": "Nightmare Before Christmas",
+    "status": "approved",
+    "hostName": "Trapeze Atlanta",
+    "venueId": "club-trapeze-atlanta",
+    "website": "https://trapezeclubs.com/club-event/nightmare-before-christmas/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/nightmare-before-christmas/",
+    "time": {
+      "start": "2026-12-18T20:00:00-05:00",
+      "end": "2026-12-19T04:00:00-05:00"
+    },
+    "location": "4470 Commerce Drive SW, Atlanta, Georgia 30336, United States",
+    "geopoint": {
+      "latitude": 33.7611005,
+      "longitude": -84.5332855,
+      "address": {
+        "addressLine1": "4470 Commerce Drive SW",
+        "city": "Atlanta",
+        "region": "Georgia",
+        "postalCode": "30336",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "ga",
+        "citySlug": "atlanta"
+      }
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Nightmare Before Christmas at Trapeze Atlanta; membership required.",
+    "description_full": "Nightmare Before Christmas is a themed night hosted by Trapeze Atlanta. Check the organizer's official event page for theme, guest list discounts, dress code, prices, and membership eligibility.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/2612-1-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/2612-1-1.webp",
+    "tags": [
+      "Trapeze Atlanta",
+      "Membership Required"
+    ],
+    "provenanceNote": "Organizer-confirmed event and flyer: https://trapezeclubs.com/club-event/nightmare-before-christmas/ (remote image URL; not uploaded)."
+  },
+  {
+    "id": "event-trapeze-ftl-scream-my-name-2026",
+    "type": "event",
+    "name": "Scream My Name - Halloween Costume Contest",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/scream-my-name/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/scream-my-name/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-31T20:00:00-04:00",
+      "end": "2026-11-01T04:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Scream My Name - Halloween Costume Contest at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Scream My Name - Halloween Costume Contest. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-31-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-31-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/scream-my-name/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-spill-the-tease-lingerie-party-2026",
+    "type": "event",
+    "name": "DISCORD NIGHT: Spill the Tease Lingerie Party",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/spill-the-tease-lingerie-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/spill-the-tease-lingerie-party/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-21T20:00:00-05:00",
+      "end": "2026-11-22T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "DISCORD NIGHT: Spill the Tease Lingerie Party at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents DISCORD NIGHT: Spill the Tease Lingerie Party. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-21-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-21-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/spill-the-tease-lingerie-party/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-2027-new-years-eve-party-2026",
+    "type": "event",
+    "name": "2027 New Years Eve Party",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/2027-new-years-eve-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/2027-new-years-eve-party/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-12-31T20:00:00-05:00",
+      "end": "2027-01-01T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "2027 New Years Eve Party at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents 2027 New Years Eve Party. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/12-31-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/12-31-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/2027-new-years-eve-party/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-cat-calls-2026",
+    "type": "event",
+    "name": "CAT CALLS",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/cat-calls/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/cat-calls/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-23T20:00:00-04:00",
+      "end": "2026-10-24T04:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "CAT CALLS at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents CAT CALLS. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-23-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-23-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/cat-calls/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-sdc-sinister-seduction-halloween-ball-2026",
+    "type": "event",
+    "name": "SDC Sinister Seduction Halloween Ball",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/sdc-sinister-seduction-halloween-ball/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/sdc-sinister-seduction-halloween-ball/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-24T20:00:00-04:00",
+      "end": "2026-10-25T04:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SDC Sinister Seduction Halloween Ball at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents SDC Sinister Seduction Halloween Ball. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-FortLaud_Halloween_24oct2026-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-FortLaud_Halloween_24oct2026-1.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/sdc-sinister-seduction-halloween-ball/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-tailgate-sunday-2-2026",
+    "type": "event",
+    "name": "Tailgate Sunday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/tailgate-sunday-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/tailgate-sunday-2/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-25T20:00:00-04:00",
+      "end": "2026-10-26T03:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Tailgate Sunday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Tailgate Sunday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-25-F-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-25-F-1.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/tailgate-sunday-2/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-where-the-witches-at-4-2026",
+    "type": "event",
+    "name": "Where the Witches At? - Halloween Costume Contest",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/where-the-witches-at-4/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/where-the-witches-at-4/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-28T20:00:00-04:00",
+      "end": "2026-10-29T03:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Where the Witches At? - Halloween Costume Contest at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Where the Witches At? - Halloween Costume Contest. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-28-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-28-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/where-the-witches-at-4/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-the-slutening-2026",
+    "type": "event",
+    "name": "The Slutening - Halloween Costume Contest",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/the-slutening/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/the-slutening/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-29T20:00:00-04:00",
+      "end": "2026-10-30T03:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "The Slutening - Halloween Costume Contest at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents The Slutening - Halloween Costume Contest. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-29-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-29-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/the-slutening/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-freaks-2026",
+    "type": "event",
+    "name": "Freaks - Halloween Costume Contest",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/freaks/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/freaks/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-10-30T20:00:00-04:00",
+      "end": "2026-10-31T04:00:00-04:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Freaks - Halloween Costume Contest at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Freaks - Halloween Costume Contest. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-30-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/10-30-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/freaks/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-tailgate-sunday-4-2026",
+    "type": "event",
+    "name": "Tailgate Sunday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/tailgate-sunday-4/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/tailgate-sunday-4/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-01T20:00:00-05:00",
+      "end": "2026-11-02T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Tailgate Sunday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Tailgate Sunday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-1-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-1-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/tailgate-sunday-4/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-bogo-wednesday-2026",
+    "type": "event",
+    "name": "BOGO Wednesday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/bogo-wednesday/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/bogo-wednesday/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-04T20:00:00-05:00",
+      "end": "2026-11-05T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "BOGO Wednesday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents BOGO Wednesday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-4-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-4-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/bogo-wednesday/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-newd-on-the-block-newbie-night-2026",
+    "type": "event",
+    "name": "NEWD ON THE BLOCK NEWBIE NIGHT",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-05T20:00:00-05:00",
+      "end": "2026-11-06T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "NEWD ON THE BLOCK NEWBIE NIGHT at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents NEWD ON THE BLOCK NEWBIE NIGHT. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-5-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-5-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-scorpio-season-2026",
+    "type": "event",
+    "name": "Scorpio Season",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/scorpio-season/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/scorpio-season/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-06T20:00:00-05:00",
+      "end": "2026-11-07T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Scorpio Season at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Scorpio Season. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-6-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-6-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/scorpio-season/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-trouble-in-paradise-2026",
+    "type": "event",
+    "name": "Trouble in Paradise",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/trouble-in-paradise/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/trouble-in-paradise/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-07T20:00:00-05:00",
+      "end": "2026-11-08T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Trouble in Paradise at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Trouble in Paradise. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-7-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-7-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/trouble-in-paradise/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-nautical-wonderland-2026",
+    "type": "event",
+    "name": "Nautical Wonderland",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/nautical-wonderland/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/nautical-wonderland/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-08T20:00:00-05:00",
+      "end": "2026-11-09T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Nautical Wonderland at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Nautical Wonderland. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-8-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-8-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/nautical-wonderland/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-wett-shirt-contest-2026",
+    "type": "event",
+    "name": "Wett-Shirt Contest",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/wett-shirt-contest/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/wett-shirt-contest/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-11T20:00:00-05:00",
+      "end": "2026-11-12T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Wett-Shirt Contest at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Wett-Shirt Contest. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-11-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-11-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/wett-shirt-contest/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-newd-on-the-block-newbie-night-2-2026",
+    "type": "event",
+    "name": "NEWD On The Block Newbie Night",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-2/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-12T20:00:00-05:00",
+      "end": "2026-11-13T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "NEWD On The Block Newbie Night at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents NEWD On The Block Newbie Night. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-12-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-12-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-2/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-fetish-fantasies-2026",
+    "type": "event",
+    "name": "Fetish Fantasies",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/fetish-fantasies/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/fetish-fantasies/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-13T20:00:00-05:00",
+      "end": "2026-11-14T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Fetish Fantasies at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Fetish Fantasies. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-13-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-13-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/fetish-fantasies/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-a-little-pumpkin-a-whole-lot-of-spice-2026",
+    "type": "event",
+    "name": "A Little Pumpkin, A Whole Lot of Spice",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/a-little-pumpkin-a-whole-lot-of-spice/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/a-little-pumpkin-a-whole-lot-of-spice/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-14T20:00:00-05:00",
+      "end": "2026-11-15T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "A Little Pumpkin, A Whole Lot of Spice at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents A Little Pumpkin, A Whole Lot of Spice. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-14-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-14-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/a-little-pumpkin-a-whole-lot-of-spice/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-tailgate-sunday-5-2026",
+    "type": "event",
+    "name": "Tailgate Sunday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/tailgate-sunday-5/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/tailgate-sunday-5/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-15T20:00:00-05:00",
+      "end": "2026-11-16T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Tailgate Sunday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Tailgate Sunday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-15-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-15-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/tailgate-sunday-5/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-bogo-wednesday-2-2026",
+    "type": "event",
+    "name": "BOGO Wednesday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/bogo-wednesday-2/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/bogo-wednesday-2/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-18T20:00:00-05:00",
+      "end": "2026-11-19T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "BOGO Wednesday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents BOGO Wednesday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-18-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-18-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/bogo-wednesday-2/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-newd-on-the-block-newbie-night-3-2026",
+    "type": "event",
+    "name": "NEWD on the Block - Newbie Night",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-3/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-3/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-19T20:00:00-05:00",
+      "end": "2026-11-20T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "NEWD on the Block - Newbie Night at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents NEWD on the Block - Newbie Night. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-19-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-19-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/newd-on-the-block-newbie-night-3/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-unfinished-business-2026",
+    "type": "event",
+    "name": "Unfinished Business",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/unfinished-business/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/unfinished-business/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-20T20:00:00-05:00",
+      "end": "2026-11-21T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Unfinished Business at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Unfinished Business. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-20-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-20-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/unfinished-business/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-tailgate-sunday-6-2026",
+    "type": "event",
+    "name": "Tailgate Sunday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/tailgate-sunday-6/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/tailgate-sunday-6/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-22T20:00:00-05:00",
+      "end": "2026-11-23T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Tailgate Sunday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Tailgate Sunday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-22-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-22-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/tailgate-sunday-6/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-bogo-wednesday-3-2026",
+    "type": "event",
+    "name": "BOGO Wednesday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/bogo-wednesday-3/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/bogo-wednesday-3/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-25T20:00:00-05:00",
+      "end": "2026-11-26T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "BOGO Wednesday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents BOGO Wednesday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-25-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-25-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/bogo-wednesday-3/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-thanksgiving-at-trapeze-2026",
+    "type": "event",
+    "name": "Thanksgiving at Trapeze",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/thanksgiving-at-trapeze/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/thanksgiving-at-trapeze/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-26T20:00:00-05:00",
+      "end": "2026-11-27T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Thanksgiving at Trapeze at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Thanksgiving at Trapeze. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-26-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-26-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/thanksgiving-at-trapeze/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-beat-the-clock-black-friday-sale-2026",
+    "type": "event",
+    "name": "Beat The Clock Black Friday Sale",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/beat-the-clock-black-friday-sale/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/beat-the-clock-black-friday-sale/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-27T20:00:00-05:00",
+      "end": "2026-11-28T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Beat The Clock Black Friday Sale at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Beat The Clock Black Friday Sale. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-27-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-27-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/beat-the-clock-black-friday-sale/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-sdc-leather-latex-party-2026",
+    "type": "event",
+    "name": "SDC Leather & Latex Party",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/sdc-leather-latex-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/sdc-leather-latex-party/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-28T20:00:00-05:00",
+      "end": "2026-11-29T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SDC Leather & Latex Party at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents SDC Leather & Latex Party. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Trapeze-FortLaud_Leather_28nov2026-R.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/Trapeze-FortLaud_Leather_28nov2026-R.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/sdc-leather-latex-party/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-tailgate-sunday-3-2026",
+    "type": "event",
+    "name": "Tailgate Sunday",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/tailgate-sunday-3/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/tailgate-sunday-3/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-11-29T20:00:00-05:00",
+      "end": "2026-11-30T03:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "Tailgate Sunday at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents Tailgate Sunday. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-29-F.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/10/11-29-F.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/tailgate-sunday-3/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
+  },
+  {
+    "id": "event-trapeze-ftl-the-naughty-list-party-2026",
+    "type": "event",
+    "name": "SDC THE NAUGHTY LIST PARTY",
+    "status": "approved",
+    "venueId": "club-trapeze-fort-lauderdale",
+    "hostName": "Trapeze Fort Lauderdale",
+    "website": "https://trapezeclubs.com/club-event/the-naughty-list-party/",
+    "sourceUrl": "https://trapezeclubs.com/club-event/the-naughty-list-party/",
+    "location": "Trapeze Fort Lauderdale, Tamarac, Florida, United States",
+    "time": {
+      "start": "2026-12-26T20:00:00-05:00",
+      "end": "2026-12-27T04:00:00-05:00"
+    },
+    "attendancePolicy": "members_only",
+    "description_short": "SDC THE NAUGHTY LIST PARTY at Trapeze Fort Lauderdale. Membership and admission rules apply.",
+    "description_full": "Trapeze Fort Lauderdale presents SDC THE NAUGHTY LIST PARTY. Review the official event page for details, prices, guest eligibility, dress code and current entry requirements.",
+    "headerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-FortLaud_NaughtyList_26dec2026-1.webp",
+    "flyerImageUrl": "https://trapezeclubs.com/psemtugh/2026/09/Trapeze-FortLaud_NaughtyList_26dec2026-1.webp",
+    "tags": [
+      "Trapeze Fort Lauderdale",
+      "Members Only"
+    ],
+    "provenanceNote": "Organizer event page and external flyer: https://trapezeclubs.com/club-event/the-naughty-list-party/; image hosted by Trapeze, not SwingSphere.",
+    "geopoint": {
+      "latitude": 26.1895561,
+      "longitude": -80.2045441,
+      "address": {
+        "addressLine1": "5213 N State Road 7",
+        "city": "Tamarac",
+        "region": "Florida",
+        "postalCode": "33319",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "fl",
+        "citySlug": "tamarac"
+      }
+    }
   },
   {
     "id": "event-autonomy-petting-zoo-2025-11-22",
@@ -13546,14 +15979,42 @@
     "venueId": "club-wicked-eden-columbus",
     "website": "https://secure.autonomyproject.org/np/clients/autonomyproject/event.jsp?event=1281",
     "location": "Columbus, Ohio, United States (location shared with ticket purchase)",
-    "geopoint": {"latitude": 39.9612, "longitude": -82.9988, "address": {"city": "Columbus", "region": "Ohio", "country": "United States", "countrySlug": "us", "admin1Slug": "oh", "citySlug": "columbus", "isCityState": false}},
-    "locationMeta": {"status": "approximate", "confidence": 0.3, "source": "Columbus city center; not a venue coordinate", "warnings": ["Private venue location; do not interpret map pin as exact address"]},
+    "geopoint": {
+      "latitude": 39.9612,
+      "longitude": -82.9988,
+      "address": {
+        "city": "Columbus",
+        "region": "Ohio",
+        "country": "United States",
+        "countrySlug": "us",
+        "admin1Slug": "oh",
+        "citySlug": "columbus",
+        "isCityState": false
+      }
+    },
+    "locationMeta": {
+      "status": "approximate",
+      "confidence": 0.3,
+      "source": "Columbus city center; not a venue coordinate",
+      "warnings": [
+        "Private venue location; do not interpret map pin as exact address"
+      ]
+    },
     "isAddressPrivate": true,
-    "time": {"start": "2025-11-22T19:00", "end": "2025-11-23T00:00"},
+    "time": {
+      "start": "2025-11-22T19:00",
+      "end": "2025-11-23T00:00"
+    },
     "attendancePolicy": "members_only",
     "description_short": "Historical event: members-only, pet-play-themed play party.",
     "description_full": "The Autonomy Project explicitly advertised Petting Zoo as a pet-play-themed members-only play party for adults 21+. The location was provided to ticket holders. This November 2025 event has passed.",
-    "tags": ["Play Party", "Pet Play", "Members Only", "21+", "Past Event"],
+    "tags": [
+      "Play Party",
+      "Pet Play",
+      "Members Only",
+      "21+",
+      "Past Event"
+    ],
     "provenanceNote": "Verified against official event page https://secure.autonomyproject.org/np/clients/autonomyproject/event.jsp?event=1281; historical only, not upcoming."
   }
 ]

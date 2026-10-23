@@ -40,7 +40,8 @@ const ClubMapCard: React.FC<ClubMapCardProps> = ({
   const mapLat = isPrivateLocation ? formatCoord(lat) : lat;
   const mapLng = isPrivateLocation ? formatCoord(lng) : lng;
   const mapLabel = [city, region].filter(Boolean).join(', ') || 'Location';
-  const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${mapLat},${mapLng}`)}`;
+  const queryTarget = !isPrivateLocation && addressText ? addressText : `${mapLat},${mapLng}`;
+  const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryTarget)}`;
   const appleUrl = `https://maps.apple.com/?ll=${mapLat},${mapLng}&q=${encodeURIComponent(clubName)}`;
   const geoUrl = `geo:${mapLat},${mapLng}?q=${encodeURIComponent(`${clubName} ${mapLabel}`)}`;
   const canShowStreetView = !isPrivateLocation && streetViewAvailable;
@@ -99,7 +100,7 @@ const ClubMapCard: React.FC<ClubMapCardProps> = ({
           href={getStreetViewPath(listingId)}
           className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-300/30 bg-red-500/90 px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(197,29,52,0.18)] hover:bg-red-500"
         >
-          <MapPinned size={16} />View on Map
+          <MapPinned size={16} />Street View
         </a>
       ) : null}
 

@@ -434,13 +434,13 @@
   </url>
   <url>
     <loc>https://swingsphere.co/clubs/trapeze-atl--011fvop1</loc>
-    <lastmod>2026-09-26</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/clubs/trapeze-ftl--01cb2wij</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -463,6 +463,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/clubs/wicked-eden--00cwvdgv</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/clubs/zcretclub--0104sqt2</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -475,14 +481,32 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/2027-new-years-eve-party--00pqafcz</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/80s-glow-night--0037vbt0</loc>
     <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/a-little-pumpkin-a-whole-lot-of-spice--0016ye3w</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/a-masquerade-ball--0037w3j7</loc>
     <lastmod>2026-10-20</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/after-dark--01m4k0hy</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -499,8 +523,32 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/beat-the-clock-black-friday-sale--01x2lbo1</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/black-velvet-fekete-tematikus-party--00j9gcm8</loc>
     <lastmod>2026-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/bogo-wednesday--01b4kinx</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/bogo-wednesday--00hgidem</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/bogo-wednesday--01brvbq6</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -511,8 +559,50 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/burger-bar-backyard-bbq--01r4fmd9</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/burger-bar-backyard-bbq--00vd6v32</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/burger-bar-and-backyard-bbq--00ando71</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/burger-bar-and-backyard-bbq--000x878e</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/burger-bar-and-backyard-bbq--00baoh9a</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/cat-calls--01hmv3fe</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/connect-dance-love--01hnapur</loc>
     <lastmod>2026-10-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/cosplay-party--00zccmf1</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -530,13 +620,25 @@
   </url>
   <url>
     <loc>https://swingsphere.co/events/disco-90-2000--00jw9hud</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/discord-night-all-black-affair--01ibq3y5</loc>
-    <lastmod>2026-10-09</lastmod>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/discord-night-masquerade-party--00a4f61y</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/discord-night-spill-the-tease-lingerie-party--016djmwg</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -565,26 +667,56 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/fetish-fantasies--013scxmc</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/field-of-screams-wet-dreams-club-escapes-halloween-party--01om5mon</loc>
     <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://swingsphere.co/events/freak-show-halloween-costume-contest--009ah63b</loc>
-    <lastmod>2026-09-26</lastmod>
+    <loc>https://swingsphere.co/events/freak-show-halloween-costume-contest--00fasu4c</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/freaks-halloween-costume-contest--00mmdmqq</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/freaky-friday-fetish-party--01dppen4</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/freedom-party-vol6--00jw9hv6</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/fresh-friday-purple-passion-party--01mxnv9x</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/gang-bang--00j20pz8</loc>
     <lastmod>2026-10-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/girls-in-pearls-guys-in-ties--0083mf4p</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -632,7 +764,7 @@
   </url>
   <url>
     <loc>https://swingsphere.co/events/halloween-warm-up-party--00jw9hw0</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -673,6 +805,24 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/hump-day-honey--00i6tno9</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/hump-day-honey--016h8gze</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/hump-day-honey--00iu4gqi</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/illuminaughty-presents-halloween-party-beverly-hills-ca--00hptzze</loc>
     <lastmod>2026-10-20</lastmod>
     <changefreq>daily</changefreq>
@@ -709,14 +859,26 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/kinky-game-night--00pkk1p5</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/krystal-club-presents-halloween-party--00jw9hw1</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/le-deshabillage-the-undressing-an-improper-gathering--01borh2c</loc>
     <lastmod>2026-10-14</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/leather-and-latex-and-lace--00d8dphz</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -728,25 +890,25 @@
   </url>
   <url>
     <loc>https://swingsphere.co/events/love-friday-for-couples-and-gentlemen--00jw9hti</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/love-friday-for-couples-and-gentlemen--00jw9huc</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/luxe--00jw9hu6</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/events/luxe--00jw9hv7</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -805,14 +967,74 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/nautical-wonderland--00p8legi</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/neon-knots-a-halloween-rope-play-party--0190cy7e</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/new-comers--00dchh6t</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/new-corners--01enu3tk</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/new-year-s-eve-2027-white-party--00v0ff4g</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/newbie-s-night--00et8j22</loc>
     <lastmod>2026-10-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/newcomers-half-off--01egtmi0</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/newd-on-the-block-newbie-night--01bxtxxu</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/newd-on-the-block-newbie-night--01baj4vl</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/newd-on-the-block-newbie-night--00paahjm</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/nightmare-before-christmas--008pj9of</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/nightmare-on-trapeze-st-halloween-costume-contest--00oxj9gq</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -841,6 +1063,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/pineapple-party-atlanta-twerk-contest--00x8fsop</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/risque-business--00ffcsj5</loc>
     <lastmod>2026-10-15</lastmod>
     <changefreq>daily</changefreq>
@@ -855,6 +1083,66 @@
   <url>
     <loc>https://swingsphere.co/events/saints-sins-vampires--00qbi8cm</loc>
     <lastmod>2026-10-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/scorpio-season--000dpebf</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/scream-my-name-halloween-costume-contest--0077ktsy</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sdc-camo-flauge-camel-toes-party--003bz6o1</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sdc-leather-latex-party--004f3nwa</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sdc-pimps-and-hoes-ball--00us9egp</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sdc-sinister-seduction-halloween-ball--00tmx4kt</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sdc-the-naughty-list-party--00p5suca</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/see-through-blouses--010m6f3u</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/sinister-sundays--008u1mdn</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/still-stuffed-thanksgiving-dinner--00g0g08i</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -913,6 +1201,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/tailgate-sunday--00tlkpox</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/tailgate-sunday--00u8vir6</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/tailgate-sunday--00uw6btf</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/tailgate-sunday--00vjh4vo</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/tailgate-sunday--00w6rxxx</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/tats-ta-tas--00g7xysa</loc>
     <lastmod>2026-10-15</lastmod>
     <changefreq>daily</changefreq>
@@ -921,6 +1239,12 @@
   <url>
     <loc>https://swingsphere.co/events/tease-cocktail-mixer--01a3v6bc</loc>
     <lastmod>2026-10-06</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/thanksgiving-at-trapeze--003yi42l</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -949,6 +1273,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/events/the-slutening-halloween-costume-contest--01g6gv9p</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/thriller-thursday--00hs01zi</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/trouble-in-paradise--01yr91bx</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/unfinished-business--01hotsek</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/veterans-get-50-off-before-9-p-m--00prwgr5</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/events/wasteland-amsterdam--00k05k3z</loc>
     <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
@@ -957,6 +1311,18 @@
   <url>
     <loc>https://swingsphere.co/events/wasteland-halloween-ball--01cmk8ep</loc>
     <lastmod>2026-10-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/wett-shirt-contest--005hjpn2</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/events/where-the-witches-at-halloween-costume-contest--01mdy14m</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -1033,8 +1399,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/hosts/trapeze-fort-lauderdale</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/hosts/wasteland</loc>
     <lastmod>2026-10-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/hosts/the-autonomy-project</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1153,6 +1531,30 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://swingsphere.co/swinger-clubs/atlanta</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/swinger-parties/atlanta</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/swinger-clubs/tamarac</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/swinger-parties/tamarac</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://swingsphere.co/swinger-clubs/san-francisco</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>weekly</changefreq>
@@ -1189,18 +1591,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://swingsphere.co/swinger-clubs/atlanta</loc>
-    <lastmod>2026-10-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://swingsphere.co/swinger-parties/atlanta</loc>
-    <lastmod>2026-10-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://swingsphere.co/swinger-clubs/portland</loc>
     <lastmod>2026-10-16</lastmod>
     <changefreq>weekly</changefreq>
@@ -1214,13 +1604,13 @@
   </url>
   <url>
     <loc>https://swingsphere.co/swinger-clubs/vicenza</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://swingsphere.co/swinger-parties/vicenza</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1359,6 +1749,12 @@
   <url>
     <loc>https://swingsphere.co/swinger-clubs/belgrade</loc>
     <lastmod>2026-09-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://swingsphere.co/swinger-clubs/columbus</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1599,12 +1995,6 @@
   <url>
     <loc>https://swingsphere.co/swinger-clubs/paris</loc>
     <lastmod>2026-09-20</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://swingsphere.co/swinger-clubs/tamarac</loc>
-    <lastmod>2026-09-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>

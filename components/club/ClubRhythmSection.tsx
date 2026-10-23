@@ -12,6 +12,8 @@ type ClubRhythmSectionProps = {
   attendancePolicy?: AttendancePolicy;
   entryRequirements?: EntryRequirement[];
   calendarHref: string;
+  hasUpcomingEvents?: boolean;
+  officialWebsiteUrl?: string;
   onQuickEdit?: () => void;
 };
 
@@ -21,11 +23,26 @@ const occasionalRule = /^(?:Selected Event Dates|Select Saturdays|Selected Sunda
 const genericRule = /^(?:Check Event Calendar|Weekly Event|Attendance Varies(?: by Event)?|Event Format Varies|Varies by Event)$/i;
 
 const unique = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
-const formatScheduleNotes = (notes: string) => notes.replace(
-  /\b(\d{1,2}:\d{2})(\s*(?:a\.?m\.?|p\.?m\.?))?/gi,
-  (_match, time: string, meridiem: string | undefined) =>
-    meridiem ? `${time}${meridiem}` : time === '24:00' ? '12 AM' : formatClockTime(time),
-);
+
+const sanitizeEditorialArtifacts = (text: string): string =>
+  text
+    .replace(/Schedule times summarize individually confirmed[^.]*\.\s*/gi, '')
+    .replace(/CCM Productions footer is not treated as proof of operator identity\.\s*/gi, '')
+    .replace(/Heidesheim is a geographic alias\/district, not a business alias\.\s*/gi, '')
+    .replace(/No separate operator organization for an individual proprietor\.\s*/gi, '')
+    .replace(/Published coordinates retained with needs_review location validation\.\s*/gi, '')
+    .replace(/Annual\s+0,\s*six months\s+5,\s*one week\s+5\.\s*/gi, '')
+    .replace(/Cash donation:\s*couples\s+0,\s*single men\s+0,\s*single women free\.\s*/gi, '')
+    .replace(/;\s{2,}annual membership\./gi, '; annual membership required.')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+const formatScheduleNotes = (notes: string) =>
+  sanitizeEditorialArtifacts(notes).replace(
+    /\b(\d{1,2}:\d{2})(\s*(?:a\.?m\.?|p\.?m\.?))?/gi,
+    (_match, time: string, meridiem: string | undefined) =>
+      meridiem ? `${time}${meridiem}` : time === '24:00' ? '12 AM' : formatClockTime(time),
+  );
 
 const audiencePills = (entry: DaySchedule, clubPolicy?: AttendancePolicy): string[] => {
   const rules = entry.rules ?? [];
@@ -64,14 +81,24 @@ const getDayDetails = (entry: DaySchedule, clubPolicy?: AttendancePolicy) => {
     ...rules.filter((rule) =>
       !audienceRule.test(rule) && !programRule.test(rule) && !genericRule.test(rule) && !occasionalRule.test(rule)
       && rule !== entry.entryConditions?.trim()),
-  ]);
+  ])
+    .map(formatScheduleNotes)
+    .filter(Boolean);
   const occasional = entry.occurrence === 'selected_events'
     || (!entry.occurrence && rules.some((rule) => occasionalRule.test(rule)));
   return { pills: audiencePills(entry, clubPolicy), program, conditions, occasional };
 };
 
 const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({
-  schedule, summary, specialScheduleNotes, attendancePolicy, entryRequirements = [], calendarHref, onQuickEdit,
+  schedule,
+  summary,
+  specialScheduleNotes,
+  attendancePolicy,
+  entryRequirements = [],
+  calendarHref,
+  hasUpcomingEvents = false,
+  officialWebsiteUrl,
+  onQuickEdit,
 }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
   const showQuickControl = isEditing && !isAdvancedEditorOpen && Boolean(onQuickEdit);
@@ -81,13 +108,41 @@ const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({
     ? days[0].conditions.filter((condition) => days.every((day) => day.conditions.includes(condition)))
     : [];
   const generalRequirements = formatEntryRequirements(entryRequirements);
+  const formattedSpecialNotes = specialScheduleNotes ? formatScheduleNotes(specialScheduleNotes) : '';
   const extraGeneralConditions = commonConditions.filter((condition) => {
     const normalized = condition.toLowerCase();
     if (generalRequirements.toLowerCase().includes(normalized)) return false;
+    if (formattedSpecialNotes && formattedSpecialNotes.toLowerCase().includes(normalized)) return false;
     return !(normalized === 'membership and nightly fee required'
       && entryRequirements.includes('members_only')
       && entryRequirements.includes('nightly_fee_required' as EntryRequirement));
   });
+
+  const renderCalendarPrompt = () => {
+    if (hasUpcomingEvents) {
+      return (
+        <a
+          href="#club-upcoming-events"
+          className="mt-1 inline-block text-xs font-semibold text-red-200 underline-offset-2 hover:underline"
+        >
+          See scheduled events ↓
+        </a>
+      );
+    }
+    if (officialWebsiteUrl) {
+      return (
+        <a
+          href={officialWebsiteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-block text-xs font-semibold text-red-200 underline-offset-2 hover:underline"
+        >
+          Check official schedule ↗
+        </a>
+      );
+    }
+    return null;
+  };
 
   return (
     <section className="relative rounded-2xl border border-gray-800 bg-gray-900/65 p-5 sm:p-6">
@@ -97,45 +152,52 @@ const ClubRhythmSection: React.FC<ClubRhythmSectionProps> = ({
       <p className="mt-2 text-sm text-gray-400">Regular operating days and hours. Event themes may change; check the calendar for the current night.</p>
       {days.length ? (
         <ul className="mt-4 space-y-2" aria-label="Club schedule">
-          {days.map(({ entry, pills, program, conditions, occasional }) => (
-            <li key={entry.day} className="ss-glass ss-glass--ambient grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-xl px-4 py-3 text-sm sm:grid-cols-[minmax(85px,0.55fr)_minmax(105px,0.8fr)_minmax(0,2fr)] sm:items-start sm:gap-4">
-              <span className="font-semibold text-gray-100">
-                {entry.day}
-                {occasional ? <span className="mt-0.5 block text-[11px] font-normal text-gray-400">Selected dates</span> : null}
-              </span>
-              <span className="whitespace-nowrap text-right text-gray-300 sm:text-left">
-                {entry.open && entry.close ? `${formatClockTime(entry.open)} – ${formatClockTime(entry.close)}` : 'Hours vary'}
-              </span>
-              <span className="col-span-2 min-w-0 sm:col-span-1">
-                {program ? <span className="block font-medium text-red-200">{program}</span> : null}
-                {pills.length ? (
-                  <span className={`flex flex-wrap gap-1.5 ${program ? 'mt-2' : ''}`} aria-label={`Who can attend ${entry.day}: ${pills.join(', ')}`}>
-                    {pills.map((pill) => <span key={pill} className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-gray-200">{pill}</span>)}
-                  </span>
-                ) : <span className="block text-xs text-gray-500">Audience details not listed</span>}
-                {conditions.filter((condition) => !commonConditions.includes(condition)).length ? (
-                  <span className="mt-1.5 block text-xs text-gray-400">
-                    {conditions.filter((condition) => !commonConditions.includes(condition)).map(formatScheduleNotes).join(' · ')}
-                  </span>
-                ) : null}
-                {occasional ? <a href={calendarHref} className="mt-1 inline-block text-xs font-semibold text-red-200 underline-offset-2 hover:underline">Check the event calendar</a> : null}
-              </span>
-            </li>
-          ))}
+          {days.map(({ entry, pills, program, conditions, occasional }) => {
+            const daySpecificConditions = conditions.filter((condition) => !commonConditions.includes(condition));
+            return (
+              <li key={entry.day} className="ss-glass ss-glass--ambient grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-xl px-4 py-3 text-sm sm:grid-cols-[minmax(85px,0.55fr)_minmax(105px,0.8fr)_minmax(0,2fr)] sm:items-start sm:gap-4">
+                <span className="font-semibold text-gray-100">
+                  {entry.day}
+                  {occasional ? <span className="mt-0.5 block text-[11px] font-normal text-gray-400">Selected dates</span> : null}
+                </span>
+                <span className="whitespace-nowrap text-right text-gray-300 sm:text-left">
+                  {entry.open && entry.close ? `${formatClockTime(entry.open)} – ${formatClockTime(entry.close)}` : 'Hours vary'}
+                </span>
+                <span className="col-span-2 min-w-0 sm:col-span-1">
+                  {program ? <span className="block font-medium text-red-200">{program}</span> : null}
+                  {pills.length ? (
+                    <span className={`flex flex-wrap gap-1.5 ${program ? 'mt-2' : ''}`} aria-label={`Who can attend ${entry.day}: ${pills.join(', ')}`}>
+                      {pills.map((pill) => <span key={pill} className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-gray-200">{pill}</span>)}
+                    </span>
+                  ) : null}
+                  {daySpecificConditions.length ? (
+                    <span className="mt-1.5 block text-xs text-gray-400">
+                      {daySpecificConditions.join(' · ')}
+                    </span>
+                  ) : null}
+                  {occasional ? renderCalendarPrompt() : null}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div className="mt-4 space-y-2 text-sm text-gray-300">
           <p>{summary}</p>
           {attendancePolicy && attendancePolicy !== 'varies_by_night' && attendancePolicy !== 'varies_by_event' ? <p>Who can attend: {getAudienceLabel(attendancePolicy)}</p> : null}
-          <a href={calendarHref} className="inline-block text-red-200 underline-offset-2 hover:underline">Check the event calendar</a>
+          {hasUpcomingEvents ? (
+            <a href={calendarHref} className="inline-block text-red-200 underline-offset-2 hover:underline">Check the event calendar</a>
+          ) : officialWebsiteUrl ? (
+            <a href={officialWebsiteUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-red-200 underline-offset-2 hover:underline">Check official schedule ↗</a>
+          ) : null}
         </div>
       )}
       {entryRequirements.length ? (
         <p className="mt-4 text-sm text-gray-300"><span className="font-semibold text-gray-100">General entry requirements: </span>{generalRequirements}</p>
       ) : null}
-      {extraGeneralConditions.length ? <p className="mt-2 text-sm text-gray-300">{extraGeneralConditions.map(formatScheduleNotes).join(' · ')}</p> : null}
-      {specialScheduleNotes ? (
-        <p className="mt-4 text-sm leading-6 text-gray-400">{formatScheduleNotes(specialScheduleNotes)}</p>
+      {extraGeneralConditions.length ? <p className="mt-2 text-sm text-gray-300">{extraGeneralConditions.join(' · ')}</p> : null}
+      {formattedSpecialNotes ? (
+        <p className="mt-4 text-sm leading-6 text-gray-400">{formattedSpecialNotes}</p>
       ) : days.length === 0 ? (
         <p className="mt-3 text-sm text-gray-500">Contact the club for current schedule details before visiting.</p>
       ) : null}

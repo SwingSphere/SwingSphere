@@ -316,13 +316,27 @@ export const getListingPhysicalGeopoint = (
   const venue = getVenueForListing(listing, collections);
   if (venue && !collections.venues?.some((item) => item.id === venue.id)) {
     const owner = collections.listings?.find((item) => item.type === 'club' && venue.id === `venue-${item.id}`);
-    if (owner) return owner.geopoint;
+    if (owner?.geopoint) return owner.geopoint;
   }
   // Only bundled compatibility records are synthetic. A persisted Venue can
   // legitimately retain the historical venue-${listing.id} identifier.
-  if (isSyntheticListingVenue(listing, venue) && !collections.venues?.some((item) => item.id === venue?.id)) return listing.geopoint;
-  // TODO(SEMv2 Phase 4): remove the listing.geopoint fallback once Venue is required for physical location.
-  return venue ? venueToGeopoint(venue) : listing.geopoint;
+  if (isSyntheticListingVenue(listing, venue) && !collections.venues?.some((item) => item.id === venue?.id) && listing.geopoint) {
+    return listing.geopoint;
+  }
+  if (venue) return venueToGeopoint(venue);
+  if (listing.geopoint) return listing.geopoint;
+  if (listing.type === 'event') {
+    const { listings } = defaultCollections(collections);
+    const linkedClub = listings.find((item): item is ClubData => (
+      item.type === 'club' && (
+        item.id === listing.venueId ||
+        `venue-${item.id}` === listing.venueId ||
+        matchesClubVenueKey(item, listing.venueKey)
+      )
+    ));
+    if (linkedClub?.geopoint) return linkedClub.geopoint;
+  }
+  return { address: {} };
 };
 
 export const getListingPhysicalCoords = (
@@ -330,15 +344,16 @@ export const getListingPhysicalCoords = (
   collections: EntityCollections = {},
 ): { lat: number; lng: number } | null => {
   const geopoint = getListingPhysicalGeopoint(listing, collections);
+  if (!geopoint) return null;
   const { latitude, longitude } = geopoint;
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  return { lat: latitude, lng: longitude };
+  return { lat: latitude as number, lng: longitude as number };
 };
 
 export const getListingPhysicalAddress = (
   listing: Listing,
   collections: EntityCollections = {},
-): Geopoint['address'] => getListingPhysicalGeopoint(listing, collections).address;
+): Geopoint['address'] => getListingPhysicalGeopoint(listing, collections)?.address ?? {};
 
 export const formatListingPhysicalAddress = (
   listing: Listing,

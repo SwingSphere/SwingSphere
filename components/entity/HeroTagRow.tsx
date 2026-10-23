@@ -20,7 +20,7 @@ const HeroTagRow: React.FC<{
 
   if (expanded) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto pr-1">
         {uniqueTags.map((tag) => <TagPill key={tag} tag={tag} />)}
         <button
           type="button"

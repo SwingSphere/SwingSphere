@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useEntityIndex } from '../../hooks/useEntityIndex';
-import { parsePrettyKeyParam } from '../../lib/identityUtils';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { invalidateEntityIndexCache, useEntityIndex } from '../../hooks/useEntityIndex';
+import { hostSlug, normalizeHostName, parsePrettyKeyParam } from '../../lib/identityUtils';
 import { formatEventTimeRange } from '../../lib/formatting';
 import {
   getClubCanonicalPath,
@@ -23,10 +23,12 @@ import {
   isPlaceholderMediaUrl,
 } from '../../lib/listingImage';
 import { resolveBrandHeader, resolveBrandLogo } from '../../lib/entityBrandMedia';
-import ClubDetailTemplate from '../club/ClubDetailTemplate';
+import ClubDetailTemplate, { type AssociatedClubHost } from '../club/ClubDetailTemplate';
+import type { ClubEventPreviewItem } from '../club/ClubEventsPreview';
 import type { ClubQuickEditField } from '../admin-edit/ClubQuickEditPanel';
 import { useAdminEditMode } from '../admin-edit/AdminEditModeContext';
 import { usePublicEditAccess } from '../admin-edit/usePublicEditAccess';
+import type { EventData } from '../../types';
 import Seo from '../Seo';
 
 const ClubPageAdminEditor = React.lazy(() => import('../admin-edit/ClubPageAdminEditor'));
@@ -37,6 +39,10 @@ const ClubPage: React.FC = () => {
   const navigate = useNavigate();
   const key = parsePrettyKeyParam(slug ?? '');
   const { index, listings, venues, eventSeries, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
+
+  useEffect(() => {
+    invalidateEntityIndexCache({ maxAgeMs: 10_000 });
+  }, [slug]);
 
   const resolvedLookup = useMemo(
     () => (index && slug ? resolveClubFromParam(slug, index) : null),
@@ -91,9 +97,19 @@ const ClubPage: React.FC = () => {
     ownerOrganization && index?.hostsBySlug.has(ownerOrganization.slug),
   );
 
-  const upcomingEvents = useMemo(() => {
-    if (!club || !index) return [];
-    const venueEvents = index.eventsByVenueClubKey.get(clubKey) ?? [];
+  const { upcomingEvents, pastEvents, associatedHosts } = useMemo(() => {
+    if (!club || !index) {
+      return {
+        upcomingEvents: [] as ClubEventPreviewItem[],
+        pastEvents: [] as ClubEventPreviewItem[],
+        associatedHosts: [] as AssociatedClubHost[],
+      };
+    }
+    const venueEvents = (index.eventsByVenueClubKey.get(clubKey) ?? []).filter(
+      (event) =>
+        event.status === 'approved' &&
+        !(event as EventData & { archivedAt?: string | null }).archivedAt,
+    );
     const now = Date.now();
     const collections = {
       listings,
@@ -102,13 +118,14 @@ const ClubPage: React.FC = () => {
       relationships: organizationVenueRelationships,
       eventSeries,
     };
-    const upcoming = venueEvents
-      .filter((event) => event.status === 'approved' && !isPastEvent(event, now))
-      .sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime())
-      .slice(0, 12);
-    return upcoming.map((event) => {
+    const normClubName = normalizeHostName(club.name);
+
+    const mapEvent = (event: EventData): ClubEventPreviewItem => {
       const organizerId = resolveEventOrganizerOrganizationId(event, collections);
       const organizer = organizerId ? index.organizationsById.get(organizerId) : undefined;
+      const organizerName = organizer?.name ?? event.hostName ?? '';
+      const isThirdPartyHost =
+        Boolean(organizerName) && normalizeHostName(organizerName) !== normClubName;
       const resolvedLogoUrl = getListingLogoUrl(event, index);
       const flyerUrl = getEventCardImageUrl(event, index);
       return {
@@ -116,18 +133,65 @@ const ClubPage: React.FC = () => {
         name: event.name,
         dateTime: formatEventTimeRange(event.time.start, event.time.end),
         tags: [
+          ...(isThirdPartyHost ? [`Hosted by ${organizerName}`] : []),
           ...(event.tags?.includes('Couples Welcome') || event.tags?.includes('Couples Only') ? ['Couples'] : []),
           ...(event.tags?.includes('Single Women Welcome') ? ['Single women'] : []),
           ...(event.tags?.includes('Single men') || event.tags?.includes('Single Men Welcome') ? ['Single men'] : []),
           ...(event.tags?.includes('Approved Single Men Welcome') ? ['Approved single men'] : []),
         ],
         logoUrl: resolvedLogoUrl && !isPlaceholderMediaUrl(resolvedLogoUrl) ? resolvedLogoUrl : undefined,
-        logoAlt: organizer?.name ?? event.hostName ?? 'Event organizer',
+        logoAlt: organizerName || 'Event organizer',
         flyerUrl: flyerUrl && !isPlaceholderMediaUrl(flyerUrl) ? flyerUrl : undefined,
         to: getEventCanonicalPath(event, index),
       };
-    });
-  }, [club, clubKey, eventSeries, index, listings, organizationVenueRelationships, organizations, venues]);
+    };
+
+    const upcomingRaw = venueEvents
+      .filter((event) => !isPastEvent(event, now))
+      .sort((a, b) => new Date(a.time.start).getTime() - new Date(b.time.start).getTime());
+
+    const pastRaw = venueEvents
+      .filter((event) => isPastEvent(event, now))
+      .sort((a, b) => new Date(b.time.start).getTime() - new Date(a.time.start).getTime());
+
+    const hostMap = new Map<string, AssociatedClubHost>();
+    for (const event of venueEvents) {
+      const organizerId = resolveEventOrganizerOrganizationId(event, collections);
+      const organizer = organizerId ? index.organizationsById.get(organizerId) : undefined;
+      const fallbackSlug = event.hostName ? hostSlug(normalizeHostName(event.hostName)) : '';
+      const targetSlug = organizer?.slug || fallbackSlug;
+      if (!targetSlug || !index.hostsBySlug.has(targetSlug)) continue;
+      if (hasOwnerHostProfile && ownerOrganization && targetSlug === ownerOrganization.slug) continue;
+
+      const hostEntry = index.hostsBySlug.get(targetSlug);
+      const displayName = organizer?.name || hostEntry?.name || event.hostName || targetSlug;
+      const existing = hostMap.get(targetSlug);
+      const eventUpcoming = !isPastEvent(event, now);
+      if (existing) {
+        existing.totalCount += 1;
+        if (eventUpcoming) existing.upcomingCount += 1;
+      } else {
+        hostMap.set(targetSlug, {
+          id: organizer?.id || targetSlug,
+          name: displayName,
+          href: getHostCanonicalPath(targetSlug),
+          displayLabel: organizer?.displayTypes.includes('promoter') ? 'Promoter' : 'Host',
+          upcomingCount: eventUpcoming ? 1 : 0,
+          totalCount: 1,
+        });
+      }
+    }
+
+    const sortedHosts = Array.from(hostMap.values()).sort(
+      (a, b) => b.upcomingCount - a.upcomingCount || b.totalCount - a.totalCount || a.name.localeCompare(b.name),
+    );
+
+    return {
+      upcomingEvents: upcomingRaw.map(mapEvent),
+      pastEvents: pastRaw.map(mapEvent),
+      associatedHosts: sortedHosts,
+    };
+  }, [club, clubKey, eventSeries, hasOwnerHostProfile, index, listings, organizationVenueRelationships, organizations, ownerOrganization, venues]);
 
   if (resolvedLookup && !resolvedLookup.isCanonical) {
     return <Navigate to={resolvedLookup.canonicalPath} replace />;
@@ -150,8 +214,28 @@ const ClubPage: React.FC = () => {
           canonicalPath={window.location.pathname}
           noIndex
         />
-        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
-          Club not found.
+        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center">
+          <div className="w-full rounded-2xl border border-white/10 bg-gray-900/70 p-8 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-300">Club unavailable</p>
+            <h1 className="mt-2 text-2xl font-bold text-white">Club not found</h1>
+            <p className="mt-2 text-sm leading-6 text-gray-400">
+              This club listing may have been removed or its URL may have changed.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/discover?type=clubs"
+                className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-red-500"
+              >
+                Explore clubs
+              </Link>
+              <Link
+                to="/discover"
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-200 transition hover:border-white/25 hover:text-white"
+              >
+                Open directory
+              </Link>
+            </div>
+          </div>
         </div>
       </>
     );
@@ -224,11 +308,13 @@ const ClubPage: React.FC = () => {
         club={presentationClub ?? club}
         clubKey={clubKey}
         upcomingEvents={upcomingEvents}
+        pastEvents={pastEvents}
         ownerOrganization={ownerOrganization && hasOwnerHostProfile ? {
           name: ownerOrganization.name,
           href: getHostCanonicalPath(ownerOrganization.slug),
           displayLabel: ownerOrganization.displayTypes.includes('promoter') ? 'Promoter' : 'Host',
         } : undefined}
+        associatedHosts={associatedHosts}
         onQuickEdit={setQuickEditField}
         onEditLocation={() => navigate(`/submission/${encodeURIComponent(club.id)}?section=location&returnTo=${encodeURIComponent(canonicalPath)}`)}
       />
@@ -242,4 +328,3 @@ const ClubPage: React.FC = () => {
 };
 
 export default ClubPage;
-

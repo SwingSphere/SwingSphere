@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, MapPin, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronDown, ChevronUp, History, MapPin, Plus } from 'lucide-react';
 import { useEntityIndex } from '../../hooks/useEntityIndex';
 import { getEventCanonicalPath, getListingCanonicalPath } from '../../lib/entityUtils';
 import { isPastEvent } from '../../lib/eventLifecycle';
+import { formatEventTimeRange } from '../../lib/formatting';
 import {
   getEventCardImageUrl,
   getListingPrimaryHeroUrl,
@@ -19,21 +20,12 @@ const toTimestamp = (value?: string): number => {
   return Number.isFinite(ts) ? ts : Number.POSITIVE_INFINITY;
 };
 
-const toDisplayDate = (value?: string): string => {
-  if (!value) return 'Date TBD';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 'Date TBD';
-  return parsed.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-  });
-};
-
 const EventsIndexPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { listings, index, isLoading, error } = useEntityIndex();
   const clubId = searchParams.get('clubId')?.trim() || '';
+  const [showPastEvents, setShowPastEvents] = useState(false);
+
   const scopedClub = useMemo(
     () => listings.find((listing): listing is ClubData => listing.type === 'club' && listing.id === clubId) ?? null,
     [clubId, listings],
@@ -43,15 +35,24 @@ const EventsIndexPage: React.FC = () => {
     organizationIds: [scopedClub?.ownerOrganizationId],
   });
 
-  const upcomingEvents = useMemo(() => {
+  const { upcomingEvents, pastEvents } = useMemo(() => {
     const now = Date.now();
     const source = scopedClub && index
       ? (index.eventsByVenueClubKey.get(index.clubKeyById.get(scopedClub.id) ?? '') ?? [])
       : listings.filter((listing): listing is EventData => listing.type === 'event' && listing.status === 'approved');
-    return source
-      .filter((event) => event.status === 'approved')
-      .filter((event) => !isPastEvent(event, now))
-      .sort((a, b) => toTimestamp(a.time?.start) - toTimestamp(b.time?.start));
+    const approved = source.filter(
+      (event) =>
+        event.status === 'approved' &&
+        !(event as EventData & { archivedAt?: string | null }).archivedAt,
+    );
+    return {
+      upcomingEvents: approved
+        .filter((event) => !isPastEvent(event, now))
+        .sort((a, b) => toTimestamp(a.time?.start) - toTimestamp(b.time?.start)),
+      pastEvents: approved
+        .filter((event) => isPastEvent(event, now))
+        .sort((a, b) => toTimestamp(b.time?.start) - toTimestamp(a.time?.start)),
+    };
   }, [index, listings, scopedClub]);
 
   const visibleEvents = upcomingEvents;
@@ -61,7 +62,7 @@ const EventsIndexPage: React.FC = () => {
     return (
       <main className="flex-grow overflow-y-auto">
         <div className="mx-auto max-w-5xl px-4 py-10">
-          <p className="text-sm text-gray-400">Loading event templates...</p>
+          <p className="text-sm text-gray-400">Loading events...</p>
         </div>
       </main>
     );
@@ -71,11 +72,54 @@ const EventsIndexPage: React.FC = () => {
     return (
       <main className="flex-grow overflow-y-auto">
         <div className="mx-auto max-w-5xl px-4 py-10">
-          <p className="text-sm text-red-300">Could not load event templates.</p>
+          <p className="text-sm text-red-300">Could not load events.</p>
         </div>
       </main>
     );
   }
+
+  const renderEventRow = (event: EventData) => {
+    const href = getEventCanonicalPath(event, index);
+    const city = event.geopoint?.address?.city || event.location || 'Location TBD';
+    const cardImageUrl = getEventCardImageUrl(event, index);
+    const showImage = Boolean(cardImageUrl && !isPlaceholderMediaUrl(cardImageUrl));
+    const displayDate = formatEventTimeRange(event.time?.start, event.time?.end) || 'Date TBD';
+    return (
+      <li key={event.id}>
+        <Link
+          to={href}
+          className="group relative isolate block min-h-[112px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0b0e14] shadow-lg transition duration-200 hover:-translate-y-0.5 hover:border-red-300/35 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+        >
+          {showImage ? (
+            <img
+              src={cardImageUrl}
+              onError={handleListingImageError}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-50 transition duration-300 group-hover:scale-[1.015] group-hover:opacity-60"
+            />
+          ) : null}
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#07090d]/95 via-[#07090d]/82 to-[#07090d]/50" />
+          <div className="flex min-h-[112px] items-center justify-between gap-5 px-5 py-4 sm:px-6">
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-bold text-white sm:text-lg">{event.name}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-gray-300">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays size={13} className="text-red-300" /> {displayDate}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin size={13} className="text-red-300" /> {city}
+                </span>
+              </div>
+            </div>
+            <span className="shrink-0 text-xs font-bold text-red-300 transition group-hover:translate-x-1">
+              View event →
+            </span>
+          </div>
+        </Link>
+      </li>
+    );
+  };
 
   return (
     <main className="flex-grow overflow-y-auto">
@@ -138,33 +182,32 @@ const EventsIndexPage: React.FC = () => {
             </div>
           </div>
           <ul className="space-y-3">
-            {visibleEvents.map((event) => {
-              const href = getEventCanonicalPath(event, index);
-              const city = event.geopoint?.address?.city || event.location || 'Location TBD';
-              const cardImageUrl = getEventCardImageUrl(event, index);
-              const showImage = Boolean(cardImageUrl && !isPlaceholderMediaUrl(cardImageUrl));
-              return (
-                <li key={event.id}>
-                  <Link to={href} className="group relative isolate block min-h-[112px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0b0e14] shadow-lg transition duration-200 hover:-translate-y-0.5 hover:border-red-300/35 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300">
-                    {showImage ? <img src={cardImageUrl} onError={handleListingImageError} alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-50 transition duration-300 group-hover:scale-[1.015] group-hover:opacity-60" /> : null}
-                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#07090d]/95 via-[#07090d]/82 to-[#07090d]/50" />
-                    <div className="flex min-h-[112px] items-center justify-between gap-5 px-5 py-4 sm:px-6">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-bold text-white sm:text-lg">{event.name}</h3>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-gray-300">
-                          <span className="inline-flex items-center gap-1.5"><CalendarDays size={13} className="text-red-300" /> {toDisplayDate(event.time?.start)}</span>
-                          <span className="inline-flex items-center gap-1.5"><MapPin size={13} className="text-red-300" /> {city}</span>
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-xs font-bold text-red-300 transition group-hover:translate-x-1">View event →</span>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
+            {visibleEvents.map(renderEventRow)}
             {!visibleEvents.length && <li className="rounded-2xl border border-dashed border-gray-800 bg-gray-950/40 p-10 text-center text-sm text-gray-500">{scopedClub ? `No upcoming events are currently published for ${scopedClub.name}.` : 'No upcoming events are currently published.'}</li>}
           </ul>
         </section>
+
+        {pastEvents.length > 0 ? (
+          <section className="mt-8">
+            <button
+              type="button"
+              onClick={() => setShowPastEvents((prev) => !prev)}
+              aria-expanded={showPastEvents}
+              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.025] px-5 py-3.5 text-left text-sm font-semibold text-gray-200 transition hover:border-white/20 hover:bg-white/[0.045] hover:text-white"
+            >
+              <span className="inline-flex items-center gap-2">
+                <History size={16} className="text-gray-400" />
+                <span>
+                  {scopedClub ? `Past Events at ${scopedClub.name}` : 'Past Events'} ({pastEvents.length})
+                </span>
+              </span>
+              {showPastEvents ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {showPastEvents ? (
+              <ul className="mt-4 space-y-3">{pastEvents.slice(0, 24).map(renderEventRow)}</ul>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     </main>
   );

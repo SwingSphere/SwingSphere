@@ -6,6 +6,7 @@ type EventHostCardProps = {
   hostName: string;
   hostPath?: string;
   hostEventsCount?: number;
+  hostUpcomingEventsCount?: number;
   hostAvatarUrl?: string;
   hostLogoUrl?: string;
   hostHeroUrl?: string;
@@ -23,6 +24,7 @@ const EventHostCard: React.FC<EventHostCardProps> = ({
   hostName,
   hostPath,
   hostEventsCount,
+  hostUpcomingEventsCount,
   hostAvatarUrl,
   hostLogoUrl,
   hostHeroUrl,
@@ -49,6 +51,19 @@ const EventHostCard: React.FC<EventHostCardProps> = ({
 
   const identityImage = logoCandidates[logoIdx] ?? null;
   const activeHeroUrl = heroCandidates[heroIdx] ?? null;
+
+  const eventCountLabel = useMemo(() => {
+    if (typeof hostUpcomingEventsCount === 'number' && hostUpcomingEventsCount > 0) {
+      if (typeof hostEventsCount === 'number' && hostEventsCount > hostUpcomingEventsCount) {
+        return `${hostUpcomingEventsCount} upcoming event${hostUpcomingEventsCount === 1 ? '' : 's'} · ${hostEventsCount} total on SwingSphere`;
+      }
+      return `${hostUpcomingEventsCount} upcoming event${hostUpcomingEventsCount === 1 ? '' : 's'} on SwingSphere`;
+    }
+    if (typeof hostEventsCount === 'number' && hostEventsCount > 0) {
+      return `${hostEventsCount} event${hostEventsCount === 1 ? '' : 's'} listed on SwingSphere`;
+    }
+    return null;
+  }, [hostEventsCount, hostUpcomingEventsCount]);
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/60 p-5 sm:p-6">
@@ -87,10 +102,8 @@ const EventHostCard: React.FC<EventHostCardProps> = ({
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-white">{hostName || 'Host TBD'}</h2>
             {hostBio ? <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-400">{hostBio}</p> : null}
-            {typeof hostEventsCount === 'number' ? (
-              <p className="mt-2 text-xs text-gray-500">
-                {hostEventsCount} event{hostEventsCount === 1 ? '' : 's'} listed on SwingSphere
-              </p>
+            {eventCountLabel ? (
+              <p className="mt-2 text-xs text-gray-500">{eventCountLabel}</p>
             ) : null}
             {hostPath ? (
               <Link to={hostPath} className="mt-4 inline-flex rounded-lg border border-gray-700 bg-black/30 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:border-gray-600 hover:text-white">
@@ -105,4 +118,3 @@ const EventHostCard: React.FC<EventHostCardProps> = ({
 };
 
 export default EventHostCard;
-

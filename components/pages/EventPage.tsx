@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import EventHero from '../entity/eventHero/EventHero';
-import { useEntityIndex } from '../../hooks/useEntityIndex';
-import { formatEventTimeRange, resolveCountryFlagEmoji } from '../../lib/formatting';
+import { invalidateEntityIndexCache, useEntityIndex } from '../../hooks/useEntityIndex';
+import {
+  formatEventTimeRange,
+  formatEventTimezoneHint,
+  resolveCountryFlagEmoji,
+} from '../../lib/formatting';
 import { parsePrettyKeyParam, hostSlug, normalizeHostName } from '../../lib/identityUtils';
 import {
   getClubCanonicalPath,
@@ -25,11 +29,13 @@ import {
 } from '../../lib/listingImage';
 import { getListingDisplayCoords } from '../../lib/explorerMarkers';
 import {
+  formatListingPhysicalAddress,
   getListingPhysicalAddress,
   getListingPhysicalCoords,
   getVenueForListing,
   resolveEventOrganizerOrganizationId,
 } from '../../lib/entityCompatibility';
+import { formatEntryRequirements, getAudienceLabel } from '../../lib/accessDisplay';
 import ListingAccessSummary from '../listing/ListingAccessSummary';
 import {
   getCloudflareImageUrl,
@@ -39,7 +45,7 @@ import {
 import { extractHeroCropFromUrl, resolveEntityHeroCrop } from '../../lib/media/heroCrop';
 import EventFeedbackSection from '../feedback/EventFeedbackSection';
 import EventOverviewSection from '../event/EventOverviewSection';
-import EventEssentialsSection from '../event/EventEssentialsSection';
+import EventEssentialsSection, { type EventStatusBadge } from '../event/EventEssentialsSection';
 import EventAccessCard from '../event/EventAccessCard';
 import EventFlyerCard from '../event/EventFlyerCard';
 import type { EventQuickEditField } from '../admin-edit/EventQuickEditPanel';
@@ -121,6 +127,12 @@ const EventPage: React.FC = () => {
   const { index, listings, venues, eventSeries: eventSeriesCatalog, organizations, organizationVenueRelationships, isLoading, error } = useEntityIndex();
   const isMockRoute = key === MOCK_EVENT_SLUG || key.startsWith('dummy-event-');
 
+  useEffect(() => {
+    if (!isMockRoute) {
+      invalidateEntityIndexCache({ maxAgeMs: 10_000 });
+    }
+  }, [isMockRoute, slug]);
+
   const resolvedLookup = useMemo(
     () => (!isMockRoute && index && slug ? resolveEventFromParam(slug, index) : null),
     [index, isMockRoute, slug],
@@ -188,9 +200,23 @@ const EventPage: React.FC = () => {
   const hostPath = organizerOrganization
     ? getHostCanonicalPath(organizerOrganization.slug)
     : hostSlugValue ? getHostCanonicalPath(hostSlugValue) : undefined;
-  const hostEventsCount = organizerOrganization
-    ? (index?.eventsByOrganizationId.get(organizerOrganization.id)?.filter((listing) => listing.status === 'approved').length ?? 0)
-    : hostSlugValue ? (index?.eventsByHostSlug.get(hostSlugValue)?.filter((listing) => listing.status === 'approved').length ?? 0) : 0;
+  const hostApprovedEvents = useMemo(() => {
+    const raw = organizerOrganization
+      ? index?.eventsByOrganizationId.get(organizerOrganization.id) ?? []
+      : hostSlugValue
+        ? index?.eventsByHostSlug.get(hostSlugValue) ?? []
+        : [];
+    return raw.filter(
+      (listing) =>
+        listing.status === 'approved' &&
+        !(listing as EventData & { archivedAt?: string | null }).archivedAt,
+    );
+  }, [hostSlugValue, index, organizerOrganization]);
+  const hostEventsCount = hostApprovedEvents.length;
+  const hostUpcomingEventsCount = useMemo(
+    () => hostApprovedEvents.filter((listing) => !isPastEvent(listing)).length,
+    [hostApprovedEvents],
+  );
   const eventSeries = useMemo(() => {
     if (!event) return null;
     if (event.eventSeriesId) {
@@ -224,6 +250,44 @@ const EventPage: React.FC = () => {
       .filter((candidate) => candidate.id !== event.id && !isPastEvent(candidate))
       .sort((a, b) => Date.parse(a.time.start) - Date.parse(b.time.start));
   }, [event, eventSeries, index, organizerOrganization?.id]);
+
+  const relatedDiscovery = useMemo(() => {
+    if (!event || !index || seriesOccurrences.length > 0) return null;
+    const hostCandidates = hostApprovedEvents
+      .filter((candidate) => candidate.id !== event.id && !isPastEvent(candidate))
+      .sort((a, b) => Date.parse(a.time.start) - Date.parse(b.time.start));
+    if (hostCandidates.length > 0) {
+      return {
+        eyebrow: 'More from this organizer',
+        heading: `Upcoming events from ${organizerOrganization?.name || hostName || 'this host'}`,
+        viewAllHref: hostPath,
+        viewAllLabel: 'View organizer profile',
+        events: hostCandidates.slice(0, 4),
+      };
+    }
+    if (venue && venueKey) {
+      const clubCandidates = (index.eventsByVenueClubKey.get(venueKey) ?? [])
+        .filter(
+          (candidate) =>
+            candidate.id !== event.id &&
+            candidate.status === 'approved' &&
+            !(candidate as EventData & { archivedAt?: string | null }).archivedAt &&
+            !isPastEvent(candidate),
+        )
+        .sort((a, b) => Date.parse(a.time.start) - Date.parse(b.time.start));
+      if (clubCandidates.length > 0) {
+        return {
+          eyebrow: 'At this venue',
+          heading: `Upcoming events at ${venue.name}`,
+          viewAllHref: venuePath,
+          viewAllLabel: 'View club profile',
+          events: clubCandidates.slice(0, 4),
+        };
+      }
+    }
+    return null;
+  }, [event, hostApprovedEvents, hostName, hostPath, index, organizerOrganization?.name, seriesOccurrences.length, venue, venueKey, venuePath]);
+
   const hostUser = useMemo(() => {
     if (!index || !hostName) return null;
     const normalized = normalizeHostName(hostName);
@@ -291,17 +355,83 @@ const EventPage: React.FC = () => {
           canonicalPath={window.location.pathname}
           noIndex
         />
-        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
-          Event not found.
+        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center">
+          <div className="w-full rounded-2xl border border-white/10 bg-gray-900/70 p-8 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-300">Event unavailable</p>
+            <h1 className="mt-2 text-2xl font-bold text-white">Event not found</h1>
+            <p className="mt-2 text-sm leading-6 text-gray-400">
+              This event may have been removed, archived, or its link may have changed.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/events"
+                className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-red-500"
+              >
+                Browse upcoming events
+              </Link>
+              <Link
+                to="/discover?type=events"
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-gray-200 transition hover:border-white/25 hover:text-white"
+              >
+                Explore directory
+              </Link>
+            </div>
+          </div>
         </div>
       </>
     );
   }
 
+  const eventAddress = getListingPhysicalAddress(event, entityCollections);
+  const eventPhysicalAddressText = !isPrivateLocation
+    ? formatListingPhysicalAddress(event, entityCollections)
+    : undefined;
+  const eventDisplayCoords = getListingDisplayCoords(event) ?? { lat: event.geopoint.latitude, lng: event.geopoint.longitude };
+  const city = eventAddress.city ?? '';
+  const region = eventAddress.region ?? '';
+  const country = eventAddress.country ?? '';
+
   const timeRange = formatEventTimeRange(event.time.start, event.time.end);
+  const timeZoneHint = formatEventTimezoneHint(event.time.start, country, region);
   const eventIsPast = isPastEvent(event);
+
+  const eventStatusBadge: EventStatusBadge | null = (() => {
+    if (eventIsPast) {
+      return { label: 'Past Event', tone: 'past' };
+    }
+    const now = Date.now();
+    const startMs = Date.parse(event.time.start);
+    const endMs = Date.parse(event.time.end);
+    if (Number.isFinite(startMs) && Number.isFinite(endMs) && now >= startMs && now <= endMs) {
+      return { label: 'Live Now', tone: 'live' };
+    }
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const startDatePrefix = event.time.start?.slice(0, 10);
+    if (startDatePrefix && startDatePrefix === todayIso) {
+      return { label: 'Today', tone: 'today' };
+    }
+    return null;
+  })();
+
+  const fallbackNonPrivateVenueLabel = (() => {
+    if (isPrivateLocation) return undefined;
+    if (venue?.name) return venue.name;
+    if (physicalVenue?.name) return physicalVenue.name;
+    const rawLoc = event.location?.trim();
+    if (!rawLoc || /^private\b/i.test(rawLoc)) return undefined;
+    const firstSegment = rawLoc.split(',')[0]?.trim();
+    if (firstSegment && firstSegment.toLowerCase() !== city.toLowerCase()) {
+      return firstSegment;
+    }
+    return undefined;
+  })();
+
+  const displayVenueName = isPrivateLocation
+    ? locationLine || 'Private Location'
+    : fallbackNonPrivateVenueLabel;
+  const displayVenuePath = !isPrivateLocation && venue ? venuePath : undefined;
   const heroLocationText = isPrivateLocation
-    ? 'Private location / disclosed after RSVP'
+    ? 'Private location · Disclosed after RSVP'
     : locationLine || 'Location TBD';
   const eventHeroAsset = event.mediaAssets?.find((asset) => asset.role === 'hero') ?? null;
   const eventFlyerAsset = event.mediaAssets?.find((asset) => asset.role === 'flyer') ?? null;
@@ -384,27 +514,35 @@ const EventPage: React.FC = () => {
     ticketUrl?: string;
     rsvpUrl?: string;
     logoImageUrl?: string;
+    priceText?: string;
+    admissionText?: string;
   };
-  const ticketUrl = extendedEvent.ticketUrl?.trim();
+  const rawTicketUrl = extendedEvent.ticketUrl?.trim();
   const rsvpUrl = extendedEvent.rsvpUrl?.trim();
   const websiteUrl = event.website?.trim();
 
-  // Prefer the organizer's public event information page over a ticket checkout/login.
-  // Keep ticketUrl and rsvpUrl in the event record for explicit purchase flows.
-  const publicEventPageUrl = websiteUrl && !/luminasocialclub\.com\/login\//i.test(websiteUrl)
+  // Prefer the organizer's public event information page over a direct ticket checkout/login URL.
+  // Preserve ticketUrl and rsvpUrl separately for explicit purchase and registration flows.
+  const isDirectCheckoutOrLoginUrl = Boolean(
+    websiteUrl && /luminasocialclub\.com\/login\/|\/orders\/new\b|\/checkout\b/i.test(websiteUrl),
+  );
+  const publicEventPageUrl = websiteUrl && !isDirectCheckoutOrLoginUrl
     ? websiteUrl
     : undefined;
+  const ticketUrl = rawTicketUrl || (isDirectCheckoutOrLoginUrl ? websiteUrl : undefined);
   const accessUrl = publicEventPageUrl || ticketUrl || rsvpUrl || websiteUrl;
   const accessDestinationType = publicEventPageUrl ? 'website' : ticketUrl ? 'ticket' : rsvpUrl ? 'rsvp' : 'website';
 
-  const attendanceText = event.tags?.find((tag) => /ticket|rsvp|member|invite|admission/i.test(tag));
-  const eventAddress = getListingPhysicalAddress(event, entityCollections);
-  const eventDisplayCoords = getListingDisplayCoords(event) ?? { lat: event.geopoint.latitude, lng: event.geopoint.longitude };
-  const city = eventAddress.city ?? '';
-  const region = eventAddress.region ?? '';
+  const attendanceText =
+    extendedEvent.priceText?.trim() ||
+    extendedEvent.admissionText?.trim() ||
+    event.tags?.find((tag) => /ticket|rsvp|member|invite|admission/i.test(tag)) ||
+    (event.entryRequirements?.length ? formatEntryRequirements(event.entryRequirements) : '') ||
+    (event.attendancePolicy ? getAudienceLabel(event.attendancePolicy) : undefined);
+
   const locationForCalendar = isPrivateLocation
-    ? 'Private location / disclosed after RSVP'
-    : [city, region].filter(Boolean).join(', ') || event.location || 'Location TBD';
+    ? `${[city, region].filter(Boolean).join(', ') || 'Location'} (Private address disclosed after RSVP)`
+    : eventPhysicalAddressText || [city, region].filter(Boolean).join(', ') || event.location || 'Location TBD';
 
   const calendarCardNode = (
     <EventCalendarCard
@@ -425,7 +563,6 @@ const EventPage: React.FC = () => {
     : resolvedLookup?.canonicalPath ?? getEventCanonicalPath(event, index ?? undefined);
   const canonicalUrl = `https://swingsphere.co${canonicalPath}`;
   const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const country = eventAddress.country ?? '';
   const exactCoords = !isPrivateLocation ? getListingPhysicalCoords(event, entityCollections) : null;
   const resolvedVenueName =
     venue?.name ||
@@ -551,15 +688,20 @@ const EventPage: React.FC = () => {
             hostLogoUrl={presenterLogoUrl}
             locationText={heroLocationText}
             timeText={timeRange}
-            venueName={venue?.name}
-            venuePath={venuePath}
+            timeSubValue={timeZoneHint}
+            statusBadge={eventStatusBadge}
+            venueName={displayVenueName}
+            venuePath={displayVenuePath}
             hostName={presenterName}
             hostPath={hostPath}
             attendanceText={attendanceText}
             accessUrl={accessUrl}
             accessDestinationType={accessDestinationType}
+            secondaryTicketUrl={ticketUrl}
+            secondaryRsvpUrl={rsvpUrl}
             contactEmail={event.contactEmail}
             calendarActions={calendarCardNode}
+            isPast={eventIsPast}
             tags={event.tags}
             mediaImages={heroMediaImages}
             onQuickEdit={setQuickEditField}
@@ -568,16 +710,21 @@ const EventPage: React.FC = () => {
           <EventEssentialsSection
             className="ss-event-essentials-bar"
             timeText={timeRange}
+            timeSubValue={timeZoneHint}
+            statusBadge={eventStatusBadge}
             locationText={heroLocationText}
-            venueName={venue?.name}
-            venuePath={venuePath}
+            venueName={displayVenueName}
+            venuePath={displayVenuePath}
             hostName={presenterName}
             hostPath={hostPath}
             attendanceText={attendanceText}
             accessUrl={accessUrl}
             accessDestinationType={accessDestinationType}
+            secondaryTicketUrl={ticketUrl}
+            secondaryRsvpUrl={rsvpUrl}
             contactEmail={event.contactEmail}
             calendarActions={calendarCardNode}
+            isPast={eventIsPast}
           />
         </>
       }
@@ -588,7 +735,7 @@ const EventPage: React.FC = () => {
             <section className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.08] p-5">
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">Past event</div>
               <p className="mt-2 text-sm leading-6 text-amber-50/85">
-                This event ended {new Date(event.time.end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. This page remains available as part of the organizer's event history.
+                This event ended {formatEventTimeRange(event.time.start, event.time.end) || 'previously'}. This page remains available as part of the organizer's event history.
               </p>
               {hostPath && <Link to={hostPath} className="mt-3 inline-flex text-sm font-bold text-amber-200 hover:text-white">See upcoming events from {presenterName || 'this organizer'} →</Link>}
             </section>
@@ -608,12 +755,8 @@ const EventPage: React.FC = () => {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {seriesOccurrences.map((occurrence) => {
-                  const occurrenceAddress = getListingPhysicalAddress(occurrence);
-                  const occurrenceDate = new Intl.DateTimeFormat('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  }).format(new Date(occurrence.time.start));
+                  const occurrenceAddress = getListingPhysicalAddress(occurrence, entityCollections);
+                  const occurrenceDate = formatEventTimeRange(occurrence.time.start, occurrence.time.end);
                   const occurrenceCardUrl = getEventCardImageUrl(occurrence, index ?? undefined);
                   return (
                     <Link
@@ -636,7 +779,60 @@ const EventPage: React.FC = () => {
                         </>
                       )}
                       <div className="font-bold text-white">{occurrence.occurrenceTitle || occurrence.name}</div>
-                      <div className="mt-1 text-sm text-amber-200">{occurrenceDate}</div>
+                      <div className="mt-1 text-xs font-medium text-amber-200">{occurrenceDate}</div>
+                      <div className="mt-1 truncate text-xs text-gray-200">
+                        {[occurrenceAddress.city, occurrenceAddress.region].filter(Boolean).join(', ')}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ) : relatedDiscovery ? (
+            <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-300/90">
+                    {relatedDiscovery.eyebrow}
+                  </div>
+                  <h2 className="mt-1 text-xl font-black text-white">{relatedDiscovery.heading}</h2>
+                </div>
+                {relatedDiscovery.viewAllHref ? (
+                  <Link
+                    to={relatedDiscovery.viewAllHref}
+                    className="text-xs font-semibold text-red-300 transition hover:text-white"
+                  >
+                    {relatedDiscovery.viewAllLabel} →
+                  </Link>
+                ) : null}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {relatedDiscovery.events.map((occurrence) => {
+                  const occurrenceAddress = getListingPhysicalAddress(occurrence, entityCollections);
+                  const occurrenceDate = formatEventTimeRange(occurrence.time.start, occurrence.time.end);
+                  const occurrenceCardUrl = getEventCardImageUrl(occurrence, index ?? undefined);
+                  return (
+                    <Link
+                      key={occurrence.id}
+                      to={getEventCanonicalPath(occurrence, index)}
+                      className="group relative isolate overflow-hidden rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-red-300/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+                    >
+                      {occurrenceCardUrl && (
+                        <>
+                          <img
+                            src={occurrenceCardUrl}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            onError={handleListingImageError}
+                            className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-top opacity-75 transition duration-300 group-hover:scale-105"
+                          />
+                          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-[#090b10]/88 via-[#090b10]/70 to-[#090b10]/40" />
+                          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-[#090b10]/70 to-transparent" />
+                        </>
+                      )}
+                      <div className="font-bold text-white">{occurrence.occurrenceTitle || occurrence.name}</div>
+                      <div className="mt-1 text-xs font-medium text-red-200">{occurrenceDate}</div>
                       <div className="mt-1 truncate text-xs text-gray-200">
                         {[occurrenceAddress.city, occurrenceAddress.region].filter(Boolean).join(', ')}
                       </div>
@@ -651,6 +847,7 @@ const EventPage: React.FC = () => {
               <EventMapCard
                 eventId={event.id}
                 eventName={event.name}
+                addressText={eventPhysicalAddressText}
                 city={city}
                 region={region}
                 lat={eventDisplayCoords.lat}
@@ -666,9 +863,13 @@ const EventPage: React.FC = () => {
               eventId={event.id}
               accessUrl={accessUrl}
               accessDestinationType={accessDestinationType}
+              publicEventPageUrl={publicEventPageUrl}
+              ticketUrl={ticketUrl}
+              rsvpUrl={rsvpUrl}
               contactEmail={event.contactEmail}
               organizationId={event.organizerOrganizationId}
               eventSeriesId={event.eventSeriesId}
+              isPast={eventIsPast}
               placement="event_page_mobile_access"
             />
           </div>
@@ -676,6 +877,7 @@ const EventPage: React.FC = () => {
             hostName={presenterName}
             hostPath={hostPath}
             hostEventsCount={hostEventsCount}
+            hostUpcomingEventsCount={hostUpcomingEventsCount}
             hostAvatarUrl={hostUser?.avatarUrl}
             hostLogoUrl={presenterLogoUrl}
             hostHeroUrl={presenterHeroUrl}
@@ -691,6 +893,7 @@ const EventPage: React.FC = () => {
             <EventMapCard
               eventId={event.id}
               eventName={event.name}
+              addressText={eventPhysicalAddressText}
               city={city}
               region={region}
               lat={eventDisplayCoords.lat}
@@ -706,9 +909,13 @@ const EventPage: React.FC = () => {
             eventId={event.id}
             accessUrl={accessUrl}
             accessDestinationType={accessDestinationType}
+            publicEventPageUrl={publicEventPageUrl}
+            ticketUrl={ticketUrl}
+            rsvpUrl={rsvpUrl}
             contactEmail={event.contactEmail}
             organizationId={event.organizerOrganizationId}
             eventSeriesId={event.eventSeriesId}
+            isPast={eventIsPast}
             placement="event_page_rail_access"
           />
           {city && citySlug ? (
