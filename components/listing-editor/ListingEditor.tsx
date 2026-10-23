@@ -44,6 +44,7 @@ type LocationVisibility = 'exact_public' | 'approximate_public';
 type ListingDraft = {
   type: ListingKind | null;
   id?: string;
+  publicSlug?: string;
   name: string;
   hostName: string;
   venueKey: string;
@@ -68,11 +69,14 @@ type ListingDraft = {
   postedByUserId: string;
   ownerOrganizationId?: string;
   organizerOrganizationId?: string;
+  eventSeriesId?: string;
+  clubBrandId?: string;
   primaryVenueId?: string;
   venueId?: string;
   status: Listing['status'];
   headerImageUrl: string;
   logoImageUrl?: string;
+  logoOverride?: boolean;
   flyerImageUrl?: string;
   heroCrop?: HeroCropConfig | null;
   galleryImageUrls: string[];
@@ -184,6 +188,7 @@ const createDraftFromListing = (listing: ClubData | EventData, currentUser?: Use
   return {
   type: listing.type,
   id: listing.id,
+  publicSlug: listing.type === 'event' ? listing.publicSlug : undefined,
   name: listing.name,
   hostName: listing.type === 'event' ? listing.hostName : '',
   venueKey: listing.type === 'event' ? listing.venueKey ?? '' : '',
@@ -219,11 +224,14 @@ const createDraftFromListing = (listing: ClubData | EventData, currentUser?: Use
   postedByUserId: listing.postedByUserId || currentUser?.id || 'user-submission',
   ownerOrganizationId: listing.type === 'club' ? listing.ownerOrganizationId : undefined,
   organizerOrganizationId: listing.type === 'event' ? listing.organizerOrganizationId : undefined,
+  eventSeriesId: listing.type === 'event' ? listing.eventSeriesId : undefined,
+  clubBrandId: listing.type === 'club' ? listing.clubBrandId : undefined,
   primaryVenueId: listing.type === 'club' ? listing.primaryVenueId : undefined,
   venueId: listing.type === 'event' ? listing.venueId : undefined,
   status: listing.status,
   headerImageUrl: listing.headerImageUrl ?? '',
   logoImageUrl: listing.logoImageUrl,
+  logoOverride: listing.logoOverride,
   flyerImageUrl: listing.type === 'event' ? listing.flyerImageUrl : undefined,
   heroCrop: listing.heroCrop ?? null,
   galleryImageUrls: listing.galleryImageUrls ?? [],
@@ -459,6 +467,7 @@ const submitDraft = async (
     locationMeta: draft.locationMeta,
     headerImageUrl: draft.headerImageFile ? `https://firebasestorage.googleapis.com/.../${draft.headerImageFile.name}` : draft.headerImageUrl || undefined,
     logoImageUrl: draft.logoImageUrl || undefined,
+    logoOverride: draft.logoOverride,
     heroCrop: draft.heroCrop ?? null,
     galleryImageUrls: draft.galleryImageFiles?.length
       ? draft.galleryImageFiles.map((file) => `https://firebasestorage.googleapis.com/.../${file.name}`)
@@ -484,6 +493,7 @@ const submitDraft = async (
       status: draft.status,
       postedByUserId: draft.postedByUserId,
       ownerOrganizationId: draft.ownerOrganizationId,
+      clubBrandId: draft.clubBrandId,
       primaryVenueId: draft.primaryVenueId,
     } as ClubData;
     return api.saveClub(club, { requireExisting });
@@ -493,6 +503,7 @@ const submitDraft = async (
     ...shared,
     id: draft.id || `event-${Date.now()}`,
     type: 'event',
+    publicSlug: draft.publicSlug,
     name: draft.name,
     hostName: normalizeHostName(draft.hostName),
     description_full: draft.description_full,
@@ -506,6 +517,7 @@ const submitDraft = async (
     status: draft.status,
     postedByUserId: draft.postedByUserId,
     organizerOrganizationId: draft.organizerOrganizationId,
+    eventSeriesId: draft.eventSeriesId,
     venueId: draft.venueId,
   } as EventData;
   return api.saveEvent(event, { requireExisting });

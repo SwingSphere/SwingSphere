@@ -93,19 +93,24 @@ const EventCardCompact: React.FC<EventCardCompactProps> = ({
         <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
           <div className="min-w-0">
             <h4 className={`truncate text-sm font-semibold ${titleClass}`}>{title}</h4>
-            <p className={`mt-1 text-xs ${isPast ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`mt-1 text-xs ${isPast ? 'text-gray-400' : 'text-gray-300'}`}>
               {dateTime || 'Schedule TBD'}{city ? ` · ${city}` : ''}
             </p>
             {tags.length > 0 && (
-              <div className="mt-2 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
-                {tags.map((tag) => (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {tags.slice(0, 3).map((tag) => (
                   <span
                     key={tag}
-                    className="ss-glass ss-glass--ambient shrink-0 rounded-full px-1.5 py-0.5 text-[10px] text-gray-300 sm:px-2 sm:text-[11px]"
+                    className="ss-glass ss-glass--ambient shrink-0 rounded-full px-2 py-0.5 text-[10px] text-gray-300 sm:text-[11px]"
                   >
                     {tag}
                   </span>
                 ))}
+                {tags.length > 3 ? (
+                  <span className="ss-glass ss-glass--ambient shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold text-gray-400 sm:text-[11px]">
+                    +{tags.length - 3}
+                  </span>
+                ) : null}
               </div>
             )}
           </div>

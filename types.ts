@@ -448,6 +448,8 @@ export interface ClubData {
 export interface EventData {
   id: string;
   type: 'event';
+  /** Frozen human-readable URL slug for newly created events. Legacy events omit it. */
+  publicSlug?: string;
   name: string;
   hostName: string;
   description_full: string;

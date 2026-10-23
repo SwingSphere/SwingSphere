@@ -6,13 +6,15 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   Images,
   LockKeyhole,
   MapPin,
+  Repeat,
   ShieldCheck,
   Ship,
 } from 'lucide-react';
-import { useEntityIndex } from '../../hooks/useEntityIndex';
+import { invalidateEntityIndexCache, useEntityIndex } from '../../hooks/useEntityIndex';
 import { formatEventTimeRange } from '../../lib/formatting';
 import { getClubCanonicalPath, getEventCanonicalPath, getHostCanonicalPath } from '../../lib/entityUtils';
 import { isPastEvent } from '../../lib/eventLifecycle';
@@ -87,8 +89,18 @@ const formatCity = (event: EventData): string => {
   return [city, region].filter(Boolean).join(', ') || event.location || 'Location TBD';
 };
 
-const formatScheduleDate = (value: string): string =>
-  new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value));
+const formatScheduleDate = (value: string): { dateLabel: string; weekdayLabel: string } => {
+  const dateObj = new Date(value);
+  const nowYear = new Date().getFullYear();
+  const isDifferentYear = dateObj.getFullYear() !== nowYear;
+  const dateLabel = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(isDifferentYear ? { year: 'numeric' } : {}),
+  }).format(dateObj);
+  const weekdayLabel = new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(dateObj);
+  return { dateLabel, weekdayLabel };
+};
 
 const formatScheduleTime = (start: string, end: string): string => {
   const formatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -123,13 +135,13 @@ const getUpcomingStatus = (start: string, end?: string): { label: string; classN
   }
   if (daysAway <= 7) {
     return {
-      label: 'Soon',
+      label: 'This week',
       className: 'border-amber-400/25 bg-amber-500/10 text-amber-200',
       dotClassName: 'bg-amber-400',
     };
   }
   return {
-    label: 'Upcoming',
+    label: 'Scheduled',
     className: 'border-red-400/25 bg-red-500/10 text-red-200',
     dotClassName: 'bg-red-400',
   };
@@ -214,7 +226,12 @@ const HostPage: React.FC = () => {
   const ownedClub = useMemo(() => {
     const organizationId = hostProfile?.organization?.id;
     if (!organizationId) return null;
-    const matches = listings.filter((listing) => listing.type === 'club' && listing.ownerOrganizationId === organizationId);
+    const matches = listings.filter(
+      (listing): listing is ClubData =>
+        listing.type === 'club' &&
+        listing.status === 'approved' &&
+        listing.ownerOrganizationId === organizationId,
+    );
     return matches.length === 1 ? matches[0] : null;
   }, [hostProfile?.organization?.id, listings]);
   const resolvedHostLogo = useMemo(() => {
@@ -306,13 +323,35 @@ const HostPage: React.FC = () => {
     });
     return () => clearPublicPage(organization.id);
   }, [canEditHostPage, clearPublicPage, hostProfile?.organization, registerPublicPage]);
+  // A host's upcoming event list is derived from current catalog relationships,
+  // never from event titles or a fixed roster. Refresh when the host route opens
+  // if the cached snapshot is older than 10s so external edits become visible
+  // without firing redundant requests on rapid route clicks.
+  useEffect(() => {
+    invalidateEntityIndexCache({ maxAgeMs: 10_000 });
+  }, [slug]);
+
   const hostEvents = useMemo(() => {
     const organizationId = hostProfile?.organization?.id;
     const canonicalEvents = organizationId
       ? index?.eventsByOrganizationId.get(organizationId)
       : undefined;
-    return (canonicalEvents ?? hostProfile?.events ?? []).filter((event) => event.status === 'approved');
+    return (canonicalEvents ?? hostProfile?.events ?? []).filter(
+      (event) =>
+        event.status === 'approved' &&
+        !(event as EventData & { archivedAt?: string | null }).archivedAt,
+    );
   }, [hostProfile?.organization?.id, hostProfile?.events, index]);
+
+  const hostEventSeries = useMemo(() => {
+    const organizationId = hostProfile?.organization?.id;
+    if (!organizationId) return [];
+    return eventSeries.filter(
+      (series) =>
+        series.organizerOrganizationId === organizationId &&
+        series.status === 'approved',
+    );
+  }, [eventSeries, hostProfile?.organization?.id]);
 
   const hostCruiseSeries = useMemo(() => {
     const organizationId = hostProfile?.organization?.id;
@@ -352,20 +391,26 @@ const HostPage: React.FC = () => {
     return hostEvents
       .filter((event) => !isPastEvent(event, now))
       .sort((a, b) => toTimestamp(a.time.start) - toTimestamp(b.time.start))
-      .map((event) => ({
-        id: event.id,
-        name: event.name,
-        date: formatScheduleDate(event.time.start),
-        time: formatScheduleTime(event.time.start, event.time.end),
-        region: event.geopoint?.address?.city || event.geopoint?.address?.region || 'Region TBD',
-        venue: event.venueId
-          ? index?.venuesById.get(event.venueId)?.name || 'Venue TBD'
-          : event.isAddressPrivate
-            ? 'Location revealed later'
-            : event.location.split(',')[0] || 'Venue TBD',
-        availability: getUpcomingStatus(event.time.start, event.time.end),
-        to: index ? getEventCanonicalPath(event, index) : undefined,
-      }));
+      .map((event) => {
+        const { dateLabel, weekdayLabel } = formatScheduleDate(event.time.start);
+        const resolvedVenueName = event.venueId ? index?.venuesById.get(event.venueId)?.name : undefined;
+        const fallbackVenueName = event.isAddressPrivate
+          ? 'Location after approval'
+          : event.location?.split(',')[0]?.trim() || 'Venue TBD';
+        return {
+          id: event.id,
+          name: event.name,
+          date: dateLabel,
+          weekday: weekdayLabel,
+          time: formatScheduleTime(event.time.start, event.time.end),
+          region: event.geopoint?.address?.city || event.geopoint?.address?.region || 'Region TBD',
+          venue: resolvedVenueName || fallbackVenueName,
+          isAddressPrivate: Boolean(event.isAddressPrivate),
+          availability: getUpcomingStatus(event.time.start, event.time.end),
+          artwork: getListingHeroPageUrl(event, index) || getListingFlyerUrl(event, index),
+          to: index ? getEventCanonicalPath(event, index) : undefined,
+        };
+      });
   }, [hostEvents, index]);
 
   const nextEvent = useMemo(() => {
@@ -386,6 +431,7 @@ const HostPage: React.FC = () => {
         city: formatCity(event),
         dateTime: formatEventTimeRange(event.time.start, event.time.end),
         tags: event.tags ?? [],
+        flyerUrl: getListingHeroPageUrl(event, index) || getListingFlyerUrl(event, index),
         to: index ? getEventCanonicalPath(event, index) : undefined,
       }));
   }, [hostEvents, index]);
@@ -431,9 +477,16 @@ const HostPage: React.FC = () => {
     if (typeof window === 'undefined') return;
     const key = `host:past-expanded:${slug}`;
     const stored = window.localStorage.getItem(key);
-    if (stored === '1') setPastExpanded(true);
-    if (stored === '0') setPastExpanded(false);
-  }, [slug]);
+    if (stored === '1') {
+      setPastExpanded(true);
+      return;
+    }
+    if (stored === '0') {
+      setPastExpanded(false);
+      return;
+    }
+    setPastExpanded(upcomingEvents.length === 0 && pastEvents.length > 0);
+  }, [pastEvents.length, slug, upcomingEvents.length]);
 
   const togglePastExpanded = () => {
     setPastExpanded((prev) => {
@@ -490,6 +543,44 @@ const HostPage: React.FC = () => {
   const hostLogoImage = resolvedHostLogo || (ownedClub ? getListingPrimaryLogoUrl(ownedClub) : undefined);
   const seoImageUrl = hostHeroImage || hostLogoImage;
   const isLogoOnlyPreview = !hostHeroImage && Boolean(hostLogoImage);
+  const displayLabel = hostProfile.organization?.displayTypes?.includes('event_brand')
+    ? 'Event Brand'
+    : hostProfile.organization?.displayTypes?.includes('promoter')
+      ? 'Promoter'
+      : hostProfile.organization?.displayTypes?.includes('producer')
+        ? 'Producer'
+        : hostProfile.organization?.displayTypes?.includes('community')
+          ? 'Community'
+          : 'Host';
+
+  const fallbackAboutDescription = (() => {
+    const regionPhrase = hostRegions.length
+      ? `active in ${hostRegions.slice(0, 3).join(', ')}`
+      : 'listed on SwingSphere';
+    const venueNames = venueRelationships
+      .map((item) => item.venue?.name)
+      .filter((name): name is string => Boolean(name));
+    const venuePhrase = ownedClub
+      ? ` They operate ${ownedClub.name}.`
+      : venueNames.length
+        ? ` Events are hosted at venues including ${venueNames.slice(0, 2).join(' and ')}.`
+        : '';
+    const countPhrase = upcomingEvents.length > 0
+      ? ` Explore ${upcomingEvents.length} upcoming ${upcomingEvents.length === 1 ? 'event' : 'events'} on their schedule.`
+      : pastEvents.length > 0
+        ? ` Browse ${pastEvents.length} past ${pastEvents.length === 1 ? 'event' : 'events'} in their archive.`
+        : hostExternalLinks.website
+          ? ' Visit their official website for announcements and upcoming dates.'
+          : '';
+    return `${hostProfile.name} is a lifestyle ${displayLabel.toLowerCase()} ${regionPhrase}.${venuePhrase}${countPhrase}`;
+  })();
+
+  const aboutDescription =
+    hostProfile.organization?.descriptionFull?.trim() ||
+    hostProfile.organization?.descriptionShort?.trim() ||
+    ownedClub?.description_short?.trim() ||
+    fallbackAboutDescription;
+
   const structuredData: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -498,7 +589,7 @@ const HostPage: React.FC = () => {
     description:
       hostProfile.organization?.descriptionShort ||
       hostProfile.organization?.descriptionFull ||
-      `Explore ${hostProfile.name} on SwingSphere. View upcoming events, venues, and promoter information.`,
+      aboutDescription,
     url: canonicalUrl,
     ...(hostLogoImage ? { logo: hostLogoImage } : {}),
     ...(seoImageUrl ? { image: seoImageUrl } : {}),
@@ -511,7 +602,7 @@ const HostPage: React.FC = () => {
       title={`${hostProfile.name} | Lifestyle Host & Promoter | SwingSphere`}
       description={
         hostProfile.organization?.descriptionShort ||
-        `Explore ${hostProfile.name} on SwingSphere. See upcoming events, venues, destinations, and host information.`
+        aboutDescription
       }
       canonicalPath={canonicalPath}
       ogType="profile"
@@ -567,7 +658,7 @@ const HostPage: React.FC = () => {
             { label: 'Hosts', href: '/discover?type=hosts' },
             { label: hostProfile.name },
           ]}
-          listingId={ownedClub?.id}
+          listingId={ownedClub?.id ?? nextEvent?.id}
         />
       }
       hero={
@@ -582,10 +673,12 @@ const HostPage: React.FC = () => {
           heroCrop={hostHeroCrop}
           description={hostProfile.organization?.descriptionShort}
           operatorName={operatorOrganization?.name}
-          displayLabel={hostProfile.organization?.displayTypes?.includes('event_brand') ? 'Event Brand' : hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : hostProfile.organization?.displayTypes?.includes('producer') ? 'Producer' : hostProfile.organization?.displayTypes?.includes('community') ? 'Community' : 'Host'}
+          displayLabel={displayLabel}
           regions={hostRegions}
           website={hostExternalLinks.website}
           eventsListed={hostEvents.length}
+          upcomingEventsCount={upcomingEvents.length}
+          pastEventsCount={pastEvents.length}
           cruisesListed={hostCruiseSeries.length}
           hostingSince={hostSince}
           badges={hostBadges}
@@ -639,7 +732,7 @@ const HostPage: React.FC = () => {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-red-300">Next event</p>
                 {nextEvent.isAddressPrivate ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-300">
                     <LockKeyhole size={13} /> Location protected
                   </span>
                 ) : null}
@@ -663,8 +756,8 @@ const HostPage: React.FC = () => {
                 <div className="min-w-0">
                   <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{nextEvent.name}</h2>
                   <div className="mt-3 space-y-2 text-sm text-gray-300">
-                    <p className="flex items-center gap-2"><CalendarDays size={15} className="text-red-300" />{formatEventTimeRange(nextEvent.time.start, nextEvent.time.end)}</p>
-                    <p className="flex items-center gap-2"><MapPin size={15} className="text-red-300" />{nextEvent.isAddressPrivate ? `${formatCity(nextEvent)} · exact location after approval` : nextEvent.location}</p>
+                    <p className="flex items-center gap-2"><CalendarDays size={15} className="shrink-0 text-red-300" /><span>{formatEventTimeRange(nextEvent.time.start, nextEvent.time.end)}</span></p>
+                    <p className="flex items-center gap-2"><MapPin size={15} className="shrink-0 text-red-300" /><span>{nextEvent.isAddressPrivate ? `${formatCity(nextEvent)} · exact location after approval` : nextEvent.location}</span></p>
                   </div>
                   <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-300">{nextEvent.description_full}</p>
                   <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -685,18 +778,20 @@ const HostPage: React.FC = () => {
             </section>
           ) : null}
 
-          <section className="ss-glass ss-glass--ambient overflow-hidden rounded-2xl">
+          <section id="host-upcoming-events" className="ss-glass ss-glass--ambient scroll-mt-24 overflow-hidden rounded-2xl">
             <div className="flex items-end justify-between gap-4 px-5 pb-4 pt-5 sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold text-gray-100">Upcoming Events</h2>
                 <p className="mt-1 text-xs text-gray-400">Soonest dates first</p>
               </div>
-              <span className="text-xs tabular-nums text-gray-500">{upcomingEvents.length} listed</span>
+              <span className="text-xs tabular-nums text-gray-400">
+                {upcomingEvents.length} upcoming{pastEvents.length > 0 ? ` · ${pastEvents.length} past` : ''}
+              </span>
             </div>
 
             {upcomingEvents.length ? (
               <div className="border-t border-white/10">
-                <div className="hidden grid-cols-[72px_minmax(150px,1.25fr)_minmax(90px,.7fr)_minmax(130px,1fr)_92px_18px] gap-3 border-b border-white/10 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 md:grid sm:px-6">
+                <div className="hidden grid-cols-[78px_minmax(180px,1.4fr)_minmax(90px,.7fr)_minmax(130px,1fr)_96px_18px] gap-3 border-b border-white/10 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 md:grid sm:px-6">
                   <span>Date</span>
                   <span>Event</span>
                   <span>Region</span>
@@ -708,28 +803,75 @@ const HostPage: React.FC = () => {
                   <Link
                     key={item.id}
                     to={item.to || '#'}
-                    className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-white/[0.07] px-5 py-3 transition-colors last:border-b-0 hover:bg-white/[0.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-300 md:grid-cols-[72px_minmax(150px,1.25fr)_minmax(90px,.7fr)_minmax(130px,1fr)_92px_18px] md:gap-3 md:px-6 md:py-2.5"
+                    className="group relative isolate grid min-h-[58px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 overflow-hidden border-b border-white/[0.08] px-5 py-3.5 transition-colors last:border-b-0 hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-300 md:grid-cols-[78px_minmax(180px,1.4fr)_minmax(90px,.7fr)_minmax(130px,1fr)_96px_18px] md:gap-3 md:px-6 md:py-3"
                   >
-                    <span className="order-2 truncate text-[11px] font-semibold tabular-nums text-gray-400 md:order-none md:text-xs">
-                      {item.date}
-                      <span className="font-normal text-gray-500 md:hidden"> · {item.time} · {item.region}</span>
+                    {item.artwork ? (
+                      <>
+                        <img
+                          src={item.artwork}
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-[0.30] saturate-125 transition-opacity duration-200 group-hover:opacity-[0.42]"
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-[#080a10]/94 via-[#080a10]/78 to-[#080a10]/45"
+                        />
+                      </>
+                    ) : null}
+
+                    <div className="order-2 truncate text-[11px] tabular-nums text-gray-300 md:order-none md:text-xs">
+                      <span className="font-semibold text-gray-200">{item.date}</span>
+                      <span className="hidden text-[11px] font-normal text-gray-400 md:block">{item.weekday}</span>
+                      <span className="font-normal text-gray-400 md:hidden">
+                        {' '}({item.weekday}) · {item.time} · {item.venue !== 'Venue TBD' ? item.venue : item.region}
+                      </span>
+                    </div>
+
+                    <div className="order-1 flex min-w-0 items-center gap-3 md:order-none">
+                      {item.artwork || hostLogoImage ? (
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-black/60">
+                          <img
+                            src={item.artwork || hostLogoImage}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            onError={(e) => {
+                              if (hostLogoImage && e.currentTarget.src !== hostLogoImage) {
+                                e.currentTarget.src = hostLogoImage;
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                              }
+                            }}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : null}
+                      <div className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-white group-hover:text-red-100">{item.name}</span>
+                        <span className="mt-0.5 hidden text-[11px] font-normal tabular-nums text-gray-400 md:block">{item.time}</span>
+                      </div>
+                    </div>
+
+                    <span className="order-3 hidden truncate text-xs text-gray-300 md:order-none md:block">{item.region}</span>
+                    <span className="order-4 hidden items-center gap-1.5 truncate text-xs text-gray-300 md:order-none md:flex">
+                      {item.isAddressPrivate ? <LockKeyhole size={12} className="shrink-0 text-gray-400" /> : null}
+                      <span className="truncate">{item.venue}</span>
                     </span>
-                    <span className="order-1 min-w-0 font-semibold text-gray-100 md:order-none">
-                      <span className="block truncate text-sm">{item.name}</span>
-                      <span className="mt-0.5 hidden text-[11px] font-normal tabular-nums text-gray-500 md:block">{item.time}</span>
-                    </span>
-                    <span className="order-3 hidden truncate text-xs text-gray-400 md:order-none md:block">{item.region}</span>
-                    <span className="order-4 hidden truncate text-xs text-gray-400 md:order-none md:block">{item.venue}</span>
                     <span className={`order-1 row-span-2 inline-flex w-fit items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold md:order-none md:row-span-1 ${item.availability.className}`}>
                       <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${item.availability.dotClassName}`} />
                       {item.availability.label}
                     </span>
-                    <ChevronRight size={14} className="order-5 hidden text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-red-300 md:block" />
+                    <ChevronRight size={14} className="order-5 hidden text-gray-500 transition-transform group-hover:translate-x-0.5 group-hover:text-red-300 md:block" />
                   </Link>
                 ))}
-                {upcomingEvents.length > 6 ? (
-                  <div className="border-t border-white/10 px-5 py-3 sm:px-6">
-                    <button
+                {(upcomingEvents.length > 6 || pastEvents.length > 0) ? (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-3 sm:px-6">
+                    {upcomingEvents.length > 6 ? <button
                       type="button"
                       onClick={() => setUpcomingExpanded((prev) => !prev)}
                       className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white"
@@ -738,25 +880,83 @@ const HostPage: React.FC = () => {
                         ? 'Show fewer upcoming events'
                         : `Show all ${upcomingEvents.length} upcoming events (+${upcomingEvents.length - 6} more)`}
                       <ChevronDown size={14} className={`transition-transform ${upcomingExpanded ? 'rotate-180' : 'rotate-0'}`} />
-                    </button>
+                    </button> : null}
+                    {pastEvents.length > 0 ? (
+                      <a href="#host-past-events" onClick={() => setPastExpanded(true)} className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white">
+                        View past events ({pastEvents.length}) <ChevronRight size={14} />
+                      </a>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
             ) : (
-              <p className="border-t border-white/10 px-5 py-6 text-sm text-gray-500 sm:px-6">No upcoming events listed right now.</p>
+              <div className="border-t border-white/10 px-5 py-6 sm:px-6">
+                <p className="text-sm text-gray-300">
+                  No upcoming events are currently scheduled on SwingSphere for {hostProfile.name}.
+                </p>
+                {(hostExternalLinks.website || pastEvents.length > 0 || ownedClub) ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                    {hostExternalLinks.website ? (
+                      <a
+                        href={hostExternalLinks.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white"
+                      >
+                        Check official website <ExternalLink size={13} />
+                      </a>
+                    ) : null}
+                    {ownedClub ? (
+                      <Link
+                        to={getClubCanonicalPath(ownedClub, index)}
+                        className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white"
+                      >
+                        View {ownedClub.name} club page <ChevronRight size={13} />
+                      </Link>
+                    ) : null}
+                    {pastEvents.length > 0 ? (
+                      <a
+                        href="#host-past-events"
+                        onClick={() => setPastExpanded(true)}
+                        className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-200 hover:text-white"
+                      >
+                        Browse {pastEvents.length} past {pastEvents.length === 1 ? 'event' : 'events'} <ChevronRight size={13} />
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             )}
           </section>
 
           <section className="ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-red-300">About the promoter</p>
-            <p className="mt-4 text-sm leading-7 text-gray-300">
-              {hostProfile.organization?.descriptionFull || hostProfile.organization?.descriptionShort || 'No promoter description has been added yet.'}
+            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-red-300">About {hostProfile.name}</h2>
+            <p className="mt-3 text-sm leading-7 text-gray-300">
+              {aboutDescription}
             </p>
+            {themePills.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-4">
+                {themePills.slice(0, 6).map((pill) => (
+                  <span
+                    key={pill}
+                    className="ss-glass ss-glass--ambient rounded-full px-2.5 py-1 text-xs font-medium text-gray-300"
+                  >
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           {hostProfile.organization?.standards?.length ? (
-            <details className="ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
-              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-red-300">Standards & expectations</summary>
+            <details className="group ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-red-300">
+                <span className="inline-flex items-center gap-2"><ShieldCheck size={16} /> Standards & expectations</span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium normal-case tracking-normal text-gray-400">
+                  {hostProfile.organization.standards.length} guidelines
+                  <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {hostProfile.organization.standards.map((standard) => (
                   <div key={standard} className="ss-glass ss-glass--ambient flex gap-3 rounded-xl p-3">
@@ -768,43 +968,59 @@ const HostPage: React.FC = () => {
             </details>
           ) : null}
 
-          <section className="ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-[0.16em] text-red-300">Past Events</h2>
-                <p className="mt-1 text-xs text-gray-500">{pastEvents.length} completed listing{pastEvents.length === 1 ? '' : 's'}, newest first</p>
+          {pastEvents.length > 0 ? (
+            <section id="host-past-events" className="ss-glass ss-glass--ambient scroll-mt-24 rounded-2xl p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-[0.16em] text-red-300">Past Events</h2>
+                  <p className="mt-1 text-xs text-gray-400">{pastEvents.length} completed listing{pastEvents.length === 1 ? '' : 's'}, newest first</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={togglePastExpanded}
+                  aria-expanded={pastExpanded}
+                  className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-gray-200"
+                >
+                  {pastExpanded ? 'Hide history' : `Show history (${pastEvents.length})`}
+                  <ChevronDown size={14} className={`transition-transform ${pastExpanded ? 'rotate-180' : 'rotate-0'}`} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={togglePastExpanded}
-                aria-expanded={pastExpanded}
-                className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-gray-300"
-              >
-                {pastExpanded ? 'Hide history' : 'Show history'}
-                <ChevronDown size={14} className={`transition-transform ${pastExpanded ? 'rotate-180' : 'rotate-0'}`} />
-              </button>
-            </div>
-            {pastExpanded ? (
-              <div className="mt-5">
-                <ShowMoreList
-                  items={pastEvents}
-                  initialCount={5}
-                  moreLabel="Show more past events"
-                  lessLabel="Show fewer past events"
-                  emptyState={<p className="text-sm text-gray-500">No past events yet.</p>}
-                  renderItem={(item) => (
-                    <EventCardCompact key={item.id} title={item.name} dateTime={item.dateTime} city={item.city} tags={item.tags} to={item.to} isPast />
-                  )}
-                />
-              </div>
-            ) : null}
-          </section>
+              {pastExpanded ? (
+                <div className="mt-5">
+                  <ShowMoreList
+                    items={pastEvents}
+                    initialCount={5}
+                    moreLabel="Show more past events"
+                    lessLabel="Show fewer past events"
+                    emptyState={<p className="text-sm text-gray-500">No past events yet.</p>}
+                    renderItem={(item) => (
+                      <EventCardCompact
+                        key={item.id}
+                        title={item.name}
+                        dateTime={item.dateTime}
+                        city={item.city}
+                        tags={item.tags}
+                        flyerUrl={item.flyerUrl}
+                        logoUrl={hostLogoImage}
+                        logoAlt={hostProfile.name}
+                        to={item.to}
+                        isPast
+                      />
+                    )}
+                  />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {hostProfile.organization?.galleryImageUrls?.length ? (
-            <details className="ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
+            <details className="group ss-glass ss-glass--ambient rounded-2xl p-5 sm:p-6">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-red-300">
                 <span className="inline-flex items-center gap-2"><Images size={16} /> Gallery</span>
-                <span className="text-[11px] font-medium normal-case tracking-normal text-gray-500">{hostProfile.organization.galleryImageUrls.length} photos</span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium normal-case tracking-normal text-gray-400">
+                  {hostProfile.organization.galleryImageUrls.length} photos
+                  <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
+                </span>
               </summary>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {hostProfile.organization.galleryImageUrls.slice(0, 4).map((imageUrl, imageIndex) => (
@@ -819,17 +1035,31 @@ const HostPage: React.FC = () => {
       }
       rail={
         <>
-          {hostRegions.length ? (
+          <HostExternalLinks
+            organizationId={hostProfile.organization?.id ?? hostProfile.slug}
+            website={hostExternalLinks.website}
+            fetlife={hostExternalLinks.fetlife}
+            instagram={hostExternalLinks.instagram}
+            email={hostExternalLinks.email}
+          />
+
+          {ownedClub && !venueRelationships.some(({ venue }) => venue && (ownedClub.primaryVenueId === venue.id || `venue-${ownedClub.id}` === venue.id)) ? (
             <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100"><MapPin size={16} className="text-red-300" />Operating regions</h2>
-              <ul className="mt-3 divide-y divide-white/10">
-                {hostRegions.map((region, regionIndex) => (
-                  <li key={region} className="flex gap-3 py-3 first:pt-1">
-                    <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-[11px] font-bold text-red-300">{regionIndex + 1}</span>
-                    <p className="self-center text-sm font-semibold text-gray-200">{region}</p>
-                  </li>
-                ))}
-              </ul>
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100">
+                <Building2 size={16} className="text-red-300" /> Home club
+              </h2>
+              <Link
+                to={getClubCanonicalPath(ownedClub, index)}
+                className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 p-3 transition hover:border-red-400/40 hover:bg-white/[0.04]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">{ownedClub.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-gray-400">
+                    {[ownedClub.geopoint?.address?.city, ownedClub.geopoint?.address?.region].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+                <ChevronRight size={15} className="shrink-0 text-red-300" />
+              </Link>
             </section>
           ) : null}
 
@@ -850,7 +1080,7 @@ const HostPage: React.FC = () => {
                   ));
                   const content = (
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><p className="truncate text-sm font-semibold text-gray-200">{venue.name}</p><p className="mt-0.5 text-[11px] text-gray-500">{venue.visibility === 'private' ? 'Exact location protected' : [venue.address.city, venue.address.region].filter(Boolean).join(', ')}</p></div>
+                      <div className="min-w-0"><p className="truncate text-sm font-semibold text-gray-200">{venue.name}</p><p className="mt-0.5 text-[11px] text-gray-400">{venue.visibility === 'private' ? 'Exact location protected' : [venue.address.city, venue.address.region].filter(Boolean).join(', ')}</p></div>
                       <span className="ss-glass ss-glass--ambient shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold text-red-200">{relationship.label || relationshipLabel[relationship.relationshipType]}</span>
                     </div>
                   );
@@ -871,65 +1101,74 @@ const HostPage: React.FC = () => {
             </section>
           ) : null}
 
-          {hostProfile.organization ? (
-            <>
-              <ListingClaimCard
-                entityType="organization"
-                entityId={hostProfile.organization.id}
-                entityName={hostProfile.organization.name}
-                organizationId={hostProfile.organization.id}
-                defaultRole="manager"
-              />
-              <HostExternalLinks
-                organizationId={hostProfile.organization.id}
-                website={hostExternalLinks.website}
-                fetlife={hostExternalLinks.fetlife}
-                instagram={hostExternalLinks.instagram}
-                email={hostExternalLinks.email}
-              />
-            </>
+          {hostEventSeries.length ? (
+            <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100">
+                <Repeat size={16} className="text-red-300" /> Event series
+              </h2>
+              <ul className="mt-3 divide-y divide-white/10">
+                {hostEventSeries.map((series) => {
+                  const seriesOccurrences = (index.eventsBySeriesId.get(series.id) ?? []).filter(
+                    (ev) => ev.status === 'approved',
+                  );
+                  const nextSeriesOccurrence = seriesOccurrences.find((ev) => !isPastEvent(ev)) ?? seriesOccurrences.at(-1);
+                  const rowContent = (
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-200">{series.name}</p>
+                        <p className="mt-0.5 text-[11px] text-gray-400">
+                          {series.cadenceSummary || `${seriesOccurrences.length} listed ${seriesOccurrences.length === 1 ? 'date' : 'dates'}`}
+                        </p>
+                      </div>
+                      {seriesOccurrences.length > 0 ? (
+                        <span className="ss-glass ss-glass--ambient shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold tabular-nums text-red-200">
+                          {seriesOccurrences.length} {seriesOccurrences.length === 1 ? 'date' : 'dates'}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                  return (
+                    <li key={series.id} className="py-3 first:pt-1">
+                      {nextSeriesOccurrence ? (
+                        <Link
+                          to={getEventCanonicalPath(nextSeriesOccurrence, index)}
+                          className="block rounded-xl transition hover:bg-white/[0.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
+                        >
+                          {rowContent}
+                        </Link>
+                      ) : (
+                        rowContent
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           ) : null}
 
-          <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100">
-              <ShieldCheck size={16} className="text-red-300" /> Profile information
-            </h2>
-            <dl className="mt-3 divide-y divide-white/10 text-xs">
-              <div className="flex items-center justify-between gap-4 py-2.5 first:pt-1">
-                <dt className="text-gray-500">Profile type</dt>
-                <dd className="font-semibold text-gray-200">
-                  {hostProfile.organization?.displayTypes?.includes('promoter') ? 'Promoter' : 'Host'}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-2.5">
-                <dt className="text-gray-500">Approved events</dt>
-                <dd className="font-semibold tabular-nums text-gray-200">{hostEvents.length}</dd>
-              </div>
-              {hostCruiseSeries.length ? (
-                <div className="flex items-center justify-between gap-4 py-2.5">
-                  <dt className="text-gray-500">Cruise series</dt>
-                  <dd className="font-semibold tabular-nums text-gray-200">{hostCruiseSeries.length}</dd>
-                </div>
-              ) : null}
-              {upcomingCruiseSailings.length ? (
-                <div className="flex items-center justify-between gap-4 py-2.5">
-                  <dt className="text-gray-500">Upcoming sailings</dt>
-                  <dd className="font-semibold tabular-nums text-gray-200">{upcomingCruiseSailings.length}</dd>
-                </div>
-              ) : null}
-              <div className="flex items-center justify-between gap-4 py-2.5">
-                <dt className="text-gray-500">First listed event</dt>
-                <dd className="font-semibold text-gray-200">{hostSince || 'Not available'}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-2.5 last:pb-1">
-                <dt className="text-gray-500">Listing status</dt>
-                <dd className="font-semibold capitalize text-gray-200">{hostProfile.organization?.status || 'approved'}</dd>
-              </div>
-            </dl>
-            <p className="mt-3 border-t border-white/10 pt-3 text-[10px] leading-4 text-gray-500">
-              These are listing facts, not a safety rating or endorsement by SwingSphere.
-            </p>
-          </section>
+          {hostRegions.length ? (
+            <section className="ss-glass ss-glass--ambient rounded-2xl p-4">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100"><MapPin size={16} className="text-red-300" />Operating regions</h2>
+              <ul className="mt-3 divide-y divide-white/10">
+                {hostRegions.map((region, regionIndex) => (
+                  <li key={region} className="flex gap-3 py-2.5 first:pt-1">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-[11px] font-bold text-red-300">{regionIndex + 1}</span>
+                    <p className="self-center text-sm font-semibold text-gray-200">{region}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {hostProfile.organization ? (
+            <ListingClaimCard
+              entityType="organization"
+              entityId={hostProfile.organization.id}
+              entityName={hostProfile.organization.name}
+              organizationId={hostProfile.organization.id}
+              defaultRole="manager"
+            />
+          ) : null}
         </>
       }
     />

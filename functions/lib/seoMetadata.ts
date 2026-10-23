@@ -17,6 +17,7 @@ import {
   parsePrettyKeyParam,
 } from '../../lib/identityUtils';
 import { slugifyPlace } from '../../lib/geoNormalize';
+import { eventCanonicalSlug, eventPublicSlug } from '../../lib/eventPublicSlug';
 import { VERIFIED_RESORT_PUBLIC_COORDINATES } from '../../lib/travelMarkerModel';
 
 export const SITE_ORIGIN = 'https://swingsphere.co';
@@ -61,6 +62,7 @@ export type ListingCatalog = {
   clubsBySlug: Map<string, any>;
   unambiguousClubBySlug: Map<string, any>;
   eventsByKey: Map<string, any>;
+  eventsByPublicSlug: Map<string, any>;
   eventRedirectByKey: Map<string, any>;
   eventsById: Map<string, any>;
   eventsBySlug: Map<string, any>;
@@ -370,6 +372,7 @@ export const buildListingCatalog = (
 
   // Events indexing & Host event aggregation
   const eventsByKey = new Map<string, any>();
+  const eventsByPublicSlug = new Map<string, any>();
   const eventRedirectByKey = new Map<string, any>();
   const eventsById = new Map<string, any>();
   const eventsBySlug = new Map<string, any>();
@@ -419,6 +422,8 @@ export const buildListingCatalog = (
     const key = eventKey(event, resolvedHostName);
     const pretty = nameSlug(event.name);
     eventsByKey.set(key, event);
+    const publicSlug = eventPublicSlug(event);
+    if (publicSlug && !eventsByPublicSlug.has(publicSlug)) eventsByPublicSlug.set(publicSlug, event);
     eventsById.set(event.id, event);
     eventsBySlug.set(pretty, event);
 
@@ -666,6 +671,7 @@ export const buildListingCatalog = (
     clubsBySlug,
     unambiguousClubBySlug,
     eventsByKey,
+    eventsByPublicSlug,
     eventRedirectByKey,
     eventsById,
     eventsBySlug,
@@ -1184,7 +1190,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
     }
     const event = catalog.eventsById.get(id);
     if (event) {
-      const targetPath = `/events/${nameSlug(event.name)}--${eventKey(event, event.hostName ?? '')}`;
+      const targetPath = `/events/${eventCanonicalSlug(event)}`;
       const resolved = resolvePageSeoWithCatalog(targetPath, catalog);
       return { ...resolved, status: 301, redirectUrl: `${SITE_ORIGIN}${targetPath}` };
     }
@@ -1283,7 +1289,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
     for (const ev of clubHostedEvents) {
       relatedLinks.push({
         label: `Event: ${ev.name}`,
-        href: `/events/${nameSlug(ev.name)}--${eventKey(ev, ev.hostName ?? '')}`,
+        href: `/events/${eventCanonicalSlug(ev)}`,
       });
     }
     if (cityEntry && cityEntry.clubs.length > 0) {
@@ -1384,6 +1390,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
 
     const event =
       catalog.eventsByKey.get(parsedKey) ??
+      catalog.eventsByPublicSlug.get(rawParam.toLowerCase()) ??
       catalog.eventRedirectByKey.get(parsedKey) ??
       (!hasKey
         ? catalog.unambiguousEventBySlug.get(rawParam.toLowerCase()) ??
@@ -1460,7 +1467,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
     const description = truncateCleanDescription(rawDesc, 165);
 
     const key = eventKey(event, hostName);
-    const prettySlug = `${nameSlug(event.name)}--${key}`;
+    const prettySlug = eventCanonicalSlug(event, hostName);
     const canonicalPathOnly = `/events/${prettySlug}`;
     const canonicalPath = `${SITE_ORIGIN}${canonicalPathOnly}`;
     const isCanonicalRequest = rawParam === prettySlug;
@@ -1644,7 +1651,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
 
     const eventLinks = hostEvents.slice(0, 12).map((ev) => ({
       label: ev.name,
-      href: `/events/${nameSlug(ev.name)}--${eventKey(ev, host.name)}`,
+      href: `/events/${eventCanonicalSlug(ev, host.name)}`,
     }));
 
     const structuredData: any[] = [
@@ -1664,7 +1671,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
                 '@type': 'Event',
                 name: ev.name,
                 startDate: ev.time?.start || undefined,
-                url: `${SITE_ORIGIN}/events/${nameSlug(ev.name)}--${eventKey(ev, host.name)}`,
+                url: `${SITE_ORIGIN}/events/${eventCanonicalSlug(ev, host.name)}`,
               })),
             }
           : {}),
@@ -2054,7 +2061,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
         const href =
           item.type === 'club'
             ? `/clubs/${nameSlug(item.name)}--${clubKey(item)}`
-            : `/events/${nameSlug(item.name)}--${eventKey(item, item.hostName ?? '')}`;
+            : `/events/${eventCanonicalSlug(item)}`;
         return { label: item.name, href, fullUrl: `${SITE_ORIGIN}${href}` };
       });
 
@@ -2213,7 +2220,7 @@ export const resolvePageSeoWithCatalog = (pathname: string, catalog: ListingCata
   if (cleanPath === '/events') {
     const topEvents = catalog.events.slice(0, 12).map((e) => ({
       label: e.name,
-      href: `/events/${nameSlug(e.name)}--${eventKey(e, e.hostName ?? '')}`,
+      href: `/events/${eventCanonicalSlug(e)}`,
     }));
     return {
       title: 'Upcoming Lifestyle Events & Swinger Parties | SwingSphere',
@@ -2586,7 +2593,7 @@ export const generateSitemapXmlWithCatalog = (catalog: ListingCatalog): string =
 
     const host = normalizeHostName(event.hostName ?? '');
     const key = eventKey(event, host);
-    const prettySlug = `${nameSlug(event.name)}--${key}`;
+    const prettySlug = eventCanonicalSlug(event, host);
     const loc = `${SITE_ORIGIN}/events/${prettySlug}`;
     urls.push({
       loc,

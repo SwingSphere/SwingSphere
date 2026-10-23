@@ -24,6 +24,7 @@ import type { User } from '../data/mockUsers';
 import type { AuditLogEntry } from '../data/mockAuditLog';
 import type { FlaggedContent } from '../data/mockFlaggedContent';
 import { normalizeHostName } from './identityUtils';
+import { makeEventPublicSlug } from './eventPublicSlug';
 import { supabase } from './supabase';
 import { adminFetchJson } from './adminApi';
 import type { BuildingAssetHistoryEvent } from './buildingAssetHistory';
@@ -42,7 +43,7 @@ import { mockOrganizations } from '../data/mockOrganizations';
 import { mockOrganizationVenueRelationships } from '../data/mockEntityRelationships';
 import { eventSeries as mockEventSeries } from '../data/eventSeries';
 import { organizationRelationships as mockOrganizationRelationships } from '../data/organizationRelationships';
-import { getVenueForListing } from './entityCompatibility';
+import { getVenueForListing, resolveEventOrganizerOrganizationId } from './entityCompatibility';
 import { normalizeListing } from './explorerFilters';
 import publicListings from 'virtual:swingsphere-public-listings';
 
@@ -122,9 +123,40 @@ const requestAdminJson = async <T>(url: string, init?: RequestInit): Promise<T> 
     },
 });
 
-const catalogMutationListeners = new Set<() => void>();
+const catalogMutationListeners = new Set<(options?: { remoteOnly?: boolean }) => void>();
+const CATALOG_MUTATION_CHANNEL = 'swingsphere:catalog-mutations';
+let catalogBroadcastChannel: BroadcastChannel | null = null;
+let cruiseSeriesCache: { rows: CruiseSeriesData[]; fetchedAt: number } | null = null;
+let inFlightCruiseSeriesPromise: Promise<CruiseSeriesData[]> | null = null;
+let cruiseSailingsCache: { rows: CruiseSailingData[]; fetchedAt: number } | null = null;
+let inFlightCruiseSailingsPromise: Promise<CruiseSailingData[]> | null = null;
+const CRUISE_CACHE_TTL_MS = 60_000;
 
-export const subscribeCatalogMutations = (listener: () => void): (() => void) => {
+const ensureCatalogBroadcastChannel = () => {
+    if (catalogBroadcastChannel || typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') {
+        return catalogBroadcastChannel;
+    }
+    try {
+        catalogBroadcastChannel = new BroadcastChannel(CATALOG_MUTATION_CHANNEL);
+        catalogBroadcastChannel.onmessage = () => {
+            cruiseSeriesCache = null;
+            cruiseSailingsCache = null;
+            catalogMutationListeners.forEach((listener) => {
+                try {
+                    listener({ remoteOnly: true });
+                } catch {
+                    // Ignore listener errors.
+                }
+            });
+        };
+    } catch {
+        catalogBroadcastChannel = null;
+    }
+    return catalogBroadcastChannel;
+};
+
+export const subscribeCatalogMutations = (listener: (options?: { remoteOnly?: boolean }) => void): (() => void) => {
+    ensureCatalogBroadcastChannel();
     catalogMutationListeners.add(listener);
     return () => {
         catalogMutationListeners.delete(listener);
@@ -132,13 +164,20 @@ export const subscribeCatalogMutations = (listener: () => void): (() => void) =>
 };
 
 export const notifyCatalogMutations = () => {
+    cruiseSeriesCache = null;
+    cruiseSailingsCache = null;
     catalogMutationListeners.forEach((listener) => {
         try {
-            listener();
+            listener({ remoteOnly: false });
         } catch {
             // Ignore listener errors.
         }
     });
+    try {
+        ensureCatalogBroadcastChannel()?.postMessage({ ts: Date.now() });
+    } catch {
+        // Ignore broadcast errors.
+    }
 };
 
 export const getBundledCatalogSnapshot = () => ({
@@ -377,9 +416,37 @@ export const saveEventSeries = withCatalogInvalidation(async (series: EventSerie
 });
 export const getResorts = entityCatalog.getResorts;
 export const saveResort = withCatalogInvalidation(entityCatalog.saveResort);
-export const getCruiseSeries = entityCatalog.getCruiseSeries;
+export const getCruiseSeries = async (): Promise<CruiseSeriesData[]> => {
+    if (cruiseSeriesCache && Date.now() - cruiseSeriesCache.fetchedAt < CRUISE_CACHE_TTL_MS) {
+        return cruiseSeriesCache.rows;
+    }
+    if (inFlightCruiseSeriesPromise) return inFlightCruiseSeriesPromise;
+    inFlightCruiseSeriesPromise = entityCatalog.getCruiseSeries()
+        .then((rows) => {
+            cruiseSeriesCache = { rows, fetchedAt: Date.now() };
+            return rows;
+        })
+        .finally(() => {
+            inFlightCruiseSeriesPromise = null;
+        });
+    return inFlightCruiseSeriesPromise;
+};
 export const saveCruiseSeries = withCatalogInvalidation(entityCatalog.saveCruiseSeries);
-export const getCruiseSailings = entityCatalog.getCruiseSailings;
+export const getCruiseSailings = async (): Promise<CruiseSailingData[]> => {
+    if (cruiseSailingsCache && Date.now() - cruiseSailingsCache.fetchedAt < CRUISE_CACHE_TTL_MS) {
+        return cruiseSailingsCache.rows;
+    }
+    if (inFlightCruiseSailingsPromise) return inFlightCruiseSailingsPromise;
+    inFlightCruiseSailingsPromise = entityCatalog.getCruiseSailings()
+        .then((rows) => {
+            cruiseSailingsCache = { rows, fetchedAt: Date.now() };
+            return rows;
+        })
+        .finally(() => {
+            inFlightCruiseSailingsPromise = null;
+        });
+    return inFlightCruiseSailingsPromise;
+};
 export const saveCruiseSailing = withCatalogInvalidation(entityCatalog.saveCruiseSailing);
 export const getVenues = async (): Promise<VenueData[]> => {
     const rows = await entityCatalog.getVenues();
@@ -613,12 +680,33 @@ export const saveEvent = async (
     options: { requireExisting?: boolean } = {},
 ): Promise<EventData> => {
     const trimmedHost = event.hostName?.trim() || normalizeHostName(event.hostName ?? '');
+    const existing = db.listings.find((item) => item.type === 'event' && item.id === event.id) as EventData | undefined;
+    const collections = {
+        listings: db.listings,
+        venues: db.venues,
+        organizations: db.organizations,
+        relationships: db.organizationVenueRelationships,
+        eventSeries: db.eventSeries,
+    };
+    const resolvedOrganizerId =
+        event.organizerOrganizationId
+        ?? existing?.organizerOrganizationId
+        ?? (existing ? resolveEventOrganizerOrganizationId(existing, collections) : undefined)
+        ?? resolveEventOrganizerOrganizationId({ ...event, hostName: trimmedHost }, collections);
     const nextEvent: EventData = {
+        ...existing,
         ...event,
         id: event.id || `event-${Date.now()}`,
         hostName: trimmedHost,
         location: buildListingLocation(event),
+        organizerOrganizationId: resolvedOrganizerId,
+        eventSeriesId: event.eventSeriesId ?? existing?.eventSeriesId,
     };
+    // Never convert an existing URL, including edits to old events.
+    if (existing) nextEvent.publicSlug = existing.publicSlug;
+    else if (!options.requireExisting && !nextEvent.publicSlug) {
+        nextEvent.publicSlug = makeEventPublicSlug(nextEvent, db.listings.filter((item): item is EventData => item.type === 'event'));
+    }
     return persistListingToSupabase(nextEvent, { requireExisting: options.requireExisting });
 };
 

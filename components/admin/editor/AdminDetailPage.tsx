@@ -46,6 +46,7 @@ import DayProgramFields from '../../club/DayProgramFields';
 import { buildEditorTaxonomyGroups } from '../../../lib/taxonomySupabase';
 import MediaUploader from '../../media/MediaUploader';
 import MediaLibraryPickerModal from '../../media/MediaLibraryPickerModal';
+import { applyAssetAssignmentToListing, type CanonicalMediaAsset } from '../../../lib/media/canonicalAssetModel';
 import { getCloudflareImageUrl } from '../../../lib/media/getCloudflareImageUrl';
 import { getMediaOwnerId } from '../../../lib/media/getMediaOwnerId';
 import { getMediaRule } from '../../../lib/media/mediaRules';
@@ -545,6 +546,7 @@ const ImagesSection = ({
   effectivePublicImageUrl,
   galleryImageUrls,
   onAssetUploaded,
+  onLibraryAssetSelected,
   onLogoChange,
   onFlyerChange,
   onHeaderChange,
@@ -562,6 +564,7 @@ const ImagesSection = ({
   effectivePublicImageUrl?: string;
   galleryImageUrls?: string[];
   onAssetUploaded: (asset: MediaAsset) => void;
+  onLibraryAssetSelected: (asset: CanonicalMediaAsset, role: 'logo' | 'hero' | 'flyer' | 'gallery') => void;
   onLogoChange: (value: string | undefined) => void;
   onFlyerChange?: (value: string | undefined) => void;
   onHeaderChange: (value: string) => void;
@@ -730,14 +733,8 @@ const ImagesSection = ({
         targetRole={libraryPickerRole ?? 'hero'}
         targetOwnerType={ownerType}
         targetOwnerId={ownerId}
-        onSelectCanonicalAsset={({ syntheticMediaAsset, resolvedUrl }) => {
-          onAssetUploaded(syntheticMediaAsset);
-          if (syntheticMediaAsset.role === 'logo') onLogoChange(resolvedUrl);
-          if (syntheticMediaAsset.role === 'flyer') onFlyerChange?.(resolvedUrl);
-          if (syntheticMediaAsset.role === 'hero') onHeaderChange(resolvedUrl);
-          if (syntheticMediaAsset.role === 'gallery') {
-            onGalleryChange(Array.from(new Set([...(galleryImageUrls ?? []), resolvedUrl])));
-          }
+        onSelectCanonicalAsset={({ canonicalAsset }) => {
+          if (libraryPickerRole) onLibraryAssetSelected(canonicalAsset, libraryPickerRole as 'logo' | 'hero' | 'flyer' | 'gallery');
         }}
       />
     </div>
@@ -1180,9 +1177,18 @@ export const AdminListingDetailEditor = ({
     const relationshipError = validateDraftRelationships(nextDraft);
     if (relationshipError) {
       addToast({ message: relationshipError, type: 'error' });
-      return;
+      throw new Error(relationshipError);
     }
     const saved = nextDraft.type === 'club' ? await api.saveClub(nextDraft) : await api.saveEvent(nextDraft);
+    if (nextDraft.type === 'event' && saved.type === 'event') {
+      const expectedMedia = (nextDraft.mediaAssets ?? []).filter((asset) => asset.role === 'hero' || asset.role === 'flyer');
+      const missingMedia = expectedMedia.filter((asset) => !(saved.mediaAssets ?? []).some(
+        (persisted) => persisted.role === asset.role && persisted.external_id === asset.external_id,
+      ));
+      if (missingMedia.length || saved.headerImageUrl !== nextDraft.headerImageUrl || saved.flyerImageUrl !== nextDraft.flyerImageUrl) {
+        throw new Error('The event save did not retain the selected hero or flyer. Please try again; the images were not confirmed saved.');
+      }
+    }
     if (saved.type === 'club' && saved.ownerOrganizationId && saved.logoImageUrl && !saved.clubBrandId) {
       const ownedClubsCount = listings.filter(
         (item): item is ClubData => item.type === 'club' && item.ownerOrganizationId === saved.ownerOrganizationId,
@@ -1339,6 +1345,7 @@ export const AdminListingDetailEditor = ({
             headerImageUrl={draft.headerImageUrl}
             effectivePublicImageUrl={getListingImageUrl(draft) ?? undefined}
             galleryImageUrls={draft.galleryImageUrls}
+            onLibraryAssetSelected={(asset, role) => setDraft((current) => applyAssetAssignmentToListing(current, asset, role))}
             onAssetUploaded={(asset) => setDraft((current) => ({
               ...current,
               ...(current.type === 'event' && asset.role === 'logo' ? { logoOverride: true } : {}),

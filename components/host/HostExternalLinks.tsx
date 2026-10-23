@@ -15,7 +15,15 @@ const displayHref = (href: string): string => {
   if (href.startsWith('mailto:')) return href.replace('mailto:', '');
   try {
     const url = new URL(href);
-    return url.hostname.replace(/^www\./, '');
+    const host = url.hostname.replace(/^www\./, '');
+    const cleanPath = url.pathname.replace(/^\/+|\/+$/g, '');
+    if (host.includes('instagram.com') && cleanPath && !cleanPath.includes('/')) {
+      return `@${cleanPath.replace(/^@/, '')}`;
+    }
+    if (cleanPath && cleanPath.length <= 28) {
+      return `${host}/${cleanPath}`;
+    }
+    return host;
   } catch {
     return href;
   }

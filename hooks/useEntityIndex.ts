@@ -60,12 +60,16 @@ const buildCatalogSignature = (
         clubBrandId?: string;
         hostName?: string;
         logoOverride?: boolean;
+        time?: { start?: string; end?: string };
+        isAddressPrivate?: boolean;
+        archivedAt?: string | null;
       };
       const mediaSig = (l.mediaAssets ?? []).map((m) => `${m.role}:${m.external_id}`).join(',');
       return [
         l.id,
         l.status,
         l.name,
+        l.location ?? '',
         l.primaryImageUrl ?? '',
         ev.flyerImageUrl ?? '',
         ev.logoImageUrl ?? '',
@@ -77,6 +81,10 @@ const buildCatalogSignature = (
         ev.eventSeriesId ?? '',
         ev.clubBrandId ?? '',
         ev.hostName ?? '',
+        ev.time?.start ?? '',
+        ev.time?.end ?? '',
+        String(ev.isAddressPrivate ?? ''),
+        ev.archivedAt ?? '',
         String(ev.logoOverride ?? ''),
         JSON.stringify(l.heroCrop ?? null),
         mediaSig,
@@ -89,7 +97,7 @@ const buildCatalogSignature = (
   const orgSig = organizations
     .map(
       (o) =>
-        `${o.id}:${o.slug}:${o.status}:${o.name}:${o.displayTypes.join(',')}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}:${JSON.stringify(o.heroCrop ?? null)}`,
+        `${o.id}:${o.slug}:${o.status}:${o.name}:${o.displayTypes.join(',')}:${o.website ?? ''}:${o.descriptionShort ?? ''}:${o.descriptionFull ?? ''}:${o.logoImageUrl ?? ''}:${o.headerImageUrl ?? ''}:${JSON.stringify(o.heroCrop ?? null)}`,
     )
     .join('|');
   const seriesSig = eventSeries
@@ -122,27 +130,21 @@ const publishSnapshot = (next: EntityIndexSnapshot) => {
   snapshotListeners.forEach((listener) => listener(next));
 };
 
-const ensureBundledSnapshot = async (): Promise<EntityIndexSnapshot> => {
-  if (cachedSnapshot) return cachedSnapshot;
-  const [{ buildEntityIndex }, api] = await loadCoreModules();
-  if (!mutationSubscriptionInitialized) {
-    mutationSubscriptionInitialized = true;
-    api.subscribeCatalogMutations(() => {
-      invalidateEntityIndexCache();
-    });
-  }
-  if (cachedSnapshot) return cachedSnapshot;
-
+const buildSnapshotFromBundled = (
+  buildEntityIndex: typeof import('../lib/entityIndex').buildEntityIndex,
+  api: typeof import('../lib/api'),
+  users: User[] = cachedSnapshot?.users ?? [],
+  isRemoteHydrated = Boolean(cachedSnapshot?.isRemoteHydrated),
+): EntityIndexSnapshot => {
   const bundled = api.getBundledCatalogSnapshot();
   const listings = bundled.listings;
-  const users: User[] = [];
   const venues = bundled.venues;
   const organizations = bundled.organizations;
   const organizationVenueRelationships = bundled.organizationVenueRelationships;
   const eventSeries: EventSeriesData[] = bundled.eventSeries ?? [];
   const organizationRelationships: OrganizationRelationship[] = bundled.organizationRelationships ?? [];
 
-  const initial: EntityIndexSnapshot = {
+  return {
     index: buildEntityIndex(
       listings,
       users,
@@ -168,10 +170,29 @@ const ensureBundledSnapshot = async (): Promise<EntityIndexSnapshot> => {
       organizationVenueRelationships,
       organizationRelationships,
     ),
-    isRemoteHydrated: false,
-    fetchedAt: 0,
+    isRemoteHydrated,
+    fetchedAt: isRemoteHydrated ? Date.now() : 0,
   };
+};
 
+const ensureBundledSnapshot = async (): Promise<EntityIndexSnapshot> => {
+  if (cachedSnapshot) return cachedSnapshot;
+  const [{ buildEntityIndex }, api] = await loadCoreModules();
+  if (!mutationSubscriptionInitialized) {
+    mutationSubscriptionInitialized = true;
+    api.subscribeCatalogMutations((options) => {
+      if (!options?.remoteOnly) {
+        const localSnapshot = buildSnapshotFromBundled(buildEntityIndex, api);
+        if (!cachedSnapshot || localSnapshot.signature !== cachedSnapshot.signature) {
+          publishSnapshot(localSnapshot);
+        }
+      }
+      invalidateEntityIndexCache();
+    });
+  }
+  if (cachedSnapshot) return cachedSnapshot;
+
+  const initial = buildSnapshotFromBundled(buildEntityIndex, api, [], false);
   publishSnapshot(initial);
   return initial;
 };
@@ -264,8 +285,15 @@ const fetchRemoteSnapshot = async (): Promise<EntityIndexSnapshot> => {
   return inFlightRemotePromise;
 };
 
-export const invalidateEntityIndexCache = () => {
-  inFlightRemotePromise = null;
+export const invalidateEntityIndexCache = (options?: { maxAgeMs?: number }) => {
+  if (typeof options?.maxAgeMs === 'number') {
+    if (inFlightRemotePromise) return;
+    if (cachedSnapshot?.isRemoteHydrated && Date.now() - cachedSnapshot.fetchedAt < options.maxAgeMs) {
+      return;
+    }
+  } else {
+    inFlightRemotePromise = null;
+  }
   if (cachedSnapshot) {
     cachedSnapshot.fetchedAt = 0;
     void fetchRemoteSnapshot().catch(() => {

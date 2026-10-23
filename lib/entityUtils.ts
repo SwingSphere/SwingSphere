@@ -1,5 +1,6 @@
 import type { ClubData, EventData, Listing, VenueData } from '../types';
 import type { EntityIndex } from './entityIndex';
+import { eventCanonicalSlug, eventPublicSlug } from './eventPublicSlug';
 import {
   clubKey,
   eventKey,
@@ -27,7 +28,7 @@ export const getEventCanonicalPath = (
   index?: EntityIndex,
 ): string => {
   const key = index?.eventKeyById.get(event.id) || eventKey(event, event.hostName ?? '');
-  const slug = key ? buildPrettyKeySlug(event.name, key) : nameSlug(event.name);
+  const slug = eventPublicSlug(event) ?? (key ? buildPrettyKeySlug(event.name, key) : nameSlug(event.name));
   return `/events/${slug}`;
 };
 
@@ -76,6 +77,7 @@ export const resolveEventFromParam = (
   const hasKey = hasExplicitKeyParam(trimmed);
   const event =
     index.eventsByKey.get(key)
+    ?? index.eventsByPublicSlug.get(trimmed.toLowerCase())
     ?? index.eventRedirectByKey.get(key)
     ?? (!hasKey ? index.unambiguousEventBySlug.get(trimmed.toLowerCase()) ?? index.eventRedirectByKey.get(trimmed) : null);
   if (!event) return null;

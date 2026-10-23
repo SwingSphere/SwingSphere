@@ -73,6 +73,15 @@ const loadProfile = async (userId: string, email: string): Promise<User> => {
   return mapProfile(data, email, (mediaRows ?? []) as ProfileMediaRow[]);
 };
 
+const authDeadline = <T,>(promise: PromiseLike<T>, message: string, ms = 12000): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), ms);
+    Promise.resolve(promise).then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (error) => { window.clearTimeout(timer); reject(error); },
+    );
+  });
+
 const loadProfileWithRetry = async (userId: string, email: string): Promise<User> => {
   try {
     return await loadProfile(userId, email);
@@ -106,12 +115,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.localStorage.getItem('swingsphere:dev-admin') === 'true';
 
     const restore = async () => {
-      const { data } = await supabase.auth.getSession();
-      const user = data.session?.user;
+      let user: import('@supabase/supabase-js').User | undefined;
+      try {
+        const { data } = await authDeadline(supabase.auth.getSession(), 'Session restoration timed out. Please retry signing in.');
+        user = data.session?.user;
+      } catch (error) {
+        console.warn('Session restoration did not complete:', error);
+      }
       let profile: User | null = null;
       if (user) {
         try {
-          profile = await loadProfileWithRetry(user.id, user.email ?? '');
+          profile = await authDeadline(loadProfileWithRetry(user.id, user.email ?? ''), 'Account profile loading timed out.');
         } catch (error) {
           console.error('Failed to restore authenticated profile:', error);
         }
@@ -131,7 +145,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let profile: User | null = null;
         if (session?.user) {
           try {
-            profile = await loadProfileWithRetry(session.user.id, session.user.email ?? '');
+            profile = await authDeadline(loadProfileWithRetry(session.user.id, session.user.email ?? ''), 'Account profile loading timed out.');
           } catch (error) {
             console.error('Failed to load authenticated profile after auth state change:', error);
           }
@@ -195,10 +209,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearTimeLens: AppState['clearTimeLens'] = useCallback(() => setTimeLensState({ mode: 'none' }), []);
 
   const login: AppState['login'] = useCallback(async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await authDeadline(supabase.auth.signInWithPassword({ email, password }), 'Sign-in is taking too long. Please retry.', 15000);
     if (error) throw error;
     if (!data.user) return null;
-    const profile = await loadProfileWithRetry(data.user.id, data.user.email ?? email);
+    const profile = await authDeadline(loadProfileWithRetry(data.user.id, data.user.email ?? email), 'Signed in, but account loading timed out. Refresh and try again.');
     setCurrentUser(profile);
     return profile;
   }, []);

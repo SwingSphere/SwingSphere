@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore';
 import ListingEditor from '../listing-editor/ListingEditor';
 import { useAdminEditMode } from './AdminEditModeContext';
 import AdminEntityEditorDrawer from './AdminEntityEditorDrawer';
+import { getEventCanonicalPath } from '../../lib/entityUtils';
 import { nameSlug } from '../../lib/identityUtils';
 
 type EventPageAdminEditorProps = {
@@ -13,7 +14,7 @@ type EventPageAdminEditorProps = {
 
 const EventPageAdminEditor: React.FC<EventPageAdminEditorProps> = ({ event, isMockRoute = false }) => {
   const { currentUser, addToast } = useAppStore();
-  const { isEditing, isAdvancedEditorOpen, closeAdvancedEditor, setMode, markSaved } = useAdminEditMode();
+  const { isEditing, isAdvancedEditorOpen, closeAdvancedEditor, markSaved } = useAdminEditMode();
 
   if (currentUser?.status !== 'Active' || currentUser.role !== 'Admin' || !isEditing || !isAdvancedEditorOpen || isMockRoute) return null;
 
@@ -33,9 +34,7 @@ const EventPageAdminEditor: React.FC<EventPageAdminEditorProps> = ({ event, isMo
         onSaved={(saved) => {
           markSaved();
           addToast({ message: 'Event updated. Refreshing the public page…', type: 'success' });
-          const currentSegment = window.location.pathname.split('/').filter(Boolean).at(-1) ?? '';
-          const keySuffix = currentSegment.includes('--') ? `--${currentSegment.split('--').slice(1).join('--')}` : '';
-          const nextPath = `/events/${nameSlug(saved.name)}${keySuffix}`;
+          const nextPath = saved.type === 'event' ? getEventCanonicalPath(saved) : `/events/${nameSlug(saved.name)}`;
           window.setTimeout(() => {
             if (window.location.pathname === nextPath) window.location.reload();
             else window.location.href = nextPath;

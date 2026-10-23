@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, MapPin, Pencil } from 'lucide-react';
+import { CalendarDays, ExternalLink, MapPin, Pencil } from 'lucide-react';
 import TrackedExternalLink from '../analytics/TrackedExternalLink';
 import EntityTypePill from '../entity/EntityTypePill';
 import SharedHeroImage from '../entity/SharedHeroImage';
@@ -25,6 +25,8 @@ type HostHeroProps = {
   regions?: string[];
   website?: string;
   eventsListed?: number;
+  upcomingEventsCount?: number;
+  pastEventsCount?: number;
   cruisesListed?: number;
   hostingSince?: string;
   badges?: BadgeAwardView[];
@@ -50,7 +52,9 @@ const HostHero: React.FC<HostHeroProps> = ({
   displayLabel = 'Promoter',
   regions = [],
   website,
-  badges = [],
+  upcomingEventsCount = 0,
+  pastEventsCount = 0,
+   badges = [],
   onQuickEdit,
 }) => {
   const { isEditing, isAdvancedEditorOpen } = useAdminEditMode();
@@ -80,7 +84,7 @@ const HostHero: React.FC<HostHeroProps> = ({
 
   return (
     <section className="relative mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-2xl shadow-black/40">
-      <div className="relative aspect-[4/3] min-h-[220px] sm:aspect-[16/9] sm:min-h-[320px] lg:aspect-[20/9] lg:min-h-[420px]">
+      <div className="relative flex min-h-[260px] flex-col justify-between p-4 sm:min-h-[340px] sm:p-6 lg:min-h-[420px]">
         {activeHeaderUrl ? (
           <SharedHeroImage
             src={activeHeaderUrl}
@@ -98,114 +102,139 @@ const HostHero: React.FC<HostHeroProps> = ({
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(185,28,28,0.28),transparent_34%),linear-gradient(135deg,#17191f,#07090d_62%,#14070a)]" />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/85 via-[#05060a]/25 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05060a]/92 via-[#05060a]/40 to-black/15" />
 
-
-        {showQuickControls ? (
-          <div className="absolute right-4 top-4 z-30 flex flex-wrap gap-2 sm:right-6 sm:top-6">
-            <button
-              type="button"
-              data-testid="quick-edit-hero-button"
-              onClick={() => onQuickEdit?.('hero')}
-              className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+        <div className="relative z-20 flex items-start justify-between gap-4">
+          <div>
+            <div
+              className="ss-glass ss-glass--liquid relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl text-2xl font-black text-white sm:h-24 sm:w-24"
+              role={activeLogoUrl ? undefined : 'img'}
+              aria-label={activeLogoUrl ? undefined : `${hostName} logo initials`}
             >
-              <Pencil size={14} /> Hero
-            </button>
-            <button
-              type="button"
-              onClick={() => onQuickEdit?.('profile')}
-              className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
-            >
-              <Pencil size={14} /> Profile
-            </button>
+              {activeLogoUrl ? (
+                <img
+                  src={activeLogoUrl}
+                  alt={`${hostName} logo`}
+                  className="h-full w-full object-contain"
+                  onError={() => {
+                    const nextUrl = logoCandidates[logoIdx + 1] ?? null;
+                    markMediaUrlFailed(activeLogoUrl, { entityId: organizationId ?? hostSlug, role: 'logo', nextUrl });
+                    setLogoIdx((prev) => prev + 1);
+                  }}
+                />
+              ) : (
+                <>
+                  <span aria-hidden="true" className="font-serif text-2xl tracking-[-0.12em] text-white sm:text-4xl">{toInitials(hostName)}</span>
+                  <span aria-hidden="true" className="absolute bottom-2.5 h-0.5 w-7 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)] sm:bottom-3 sm:w-8" />
+                </>
+              )}
+            </div>
+            {showQuickControls ? (
+              <button
+                type="button"
+                onClick={() => onQuickEdit?.('logo')}
+                className="mt-2 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+              >
+                <Pencil size={14} /> Logo
+              </button>
+            ) : null}
           </div>
-        ) : null}
 
-        <div className="absolute left-4 top-4 z-20 sm:left-6 sm:top-6">
-          <div className="ss-glass ss-glass--liquid relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl text-2xl font-black text-white sm:h-24 sm:w-24">
-            {activeLogoUrl ? (
-              <img
-                src={activeLogoUrl}
-                alt={`${hostName} logo`}
-                className="h-full w-full object-contain"
-                onError={() => {
-                  const nextUrl = logoCandidates[logoIdx + 1] ?? null;
-                  markMediaUrlFailed(activeLogoUrl, { entityId: organizationId ?? hostSlug, role: 'logo', nextUrl });
-                  setLogoIdx((prev) => prev + 1);
-                }}
-              />
-            ) : (
-              <>
-                <span className="font-serif text-3xl tracking-[-0.12em] text-white sm:text-4xl">{toInitials(hostName)}</span>
-                <span className="absolute bottom-3 h-0.5 w-8 rotate-[-18deg] bg-red-500 shadow-[0_0_12px_rgba(239,68,68,.8)]" />
-              </>
-            )}
-          </div>
           {showQuickControls ? (
-            <button
-              type="button"
-              onClick={() => onQuickEdit?.('logo')}
-              className="mt-2 inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
-            >
-              <Pencil size={14} /> Logo
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                data-testid="quick-edit-hero-button"
+                onClick={() => onQuickEdit?.('hero')}
+                className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+              >
+                <Pencil size={14} /> Hero
+              </button>
+              <button
+                type="button"
+                onClick={() => onQuickEdit?.('profile')}
+                className="inline-flex items-center gap-2 rounded-full border border-red-300/35 bg-black/75 px-3 py-2 text-xs font-black text-white"
+              >
+                <Pencil size={14} /> Profile
+              </button>
+            </div>
           ) : null}
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-6">
-          <div className="max-w-4xl rounded-2xl p-4 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)]">
+        <div className="relative z-20 mt-6 sm:mt-12 lg:mt-20">
+          <div className="max-w-4xl rounded-2xl p-2 sm:p-4 [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.9)]">
             <div className="flex flex-wrap items-center gap-2">
               <EntityTypePill tone="host">{displayLabel}</EntityTypePill>
+              {upcomingEventsCount > 0 ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-red-100">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                  {upcomingEventsCount} upcoming {upcomingEventsCount === 1 ? 'event' : 'events'}
+                </span>
+              ) : null}
+              {pastEventsCount > 0 ? (
+                <span className="inline-flex items-center rounded-full border border-white/15 bg-black/45 px-2.5 py-0.5 text-[11px] font-medium text-gray-300">
+                  {pastEventsCount} past
+                </span>
+              ) : null}
               {operatorName ? (
-                <span className="text-xs font-medium text-gray-400">
-                  Operated by <span className="text-gray-200">{operatorName}</span>
+                <span className="text-xs font-medium text-gray-300">
+                  Operated by <span className="font-semibold text-white">{operatorName}</span>
                 </span>
               ) : null}
             </div>
 
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div className="mt-2.5 flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">{hostName}</h1>
                 {regions.length ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-300">
-                    <MapPin size={14} className="text-red-300" />
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-200 sm:text-sm">
+                    <MapPin size={14} className="shrink-0 text-red-300" />
                     {regions.slice(0, 4).map((region, index) => (
                       <React.Fragment key={region}>
                         <span>{region}</span>
-                        {index < Math.min(regions.length, 4) - 1 ? <span className="text-gray-600">•</span> : null}
+                        {index < Math.min(regions.length, 4) - 1 ? <span className="text-gray-500">•</span> : null}
                       </React.Fragment>
                     ))}
                   </div>
                 ) : null}
-                {cadenceText ? <p className="mt-1 text-sm text-gray-400">{cadenceText}</p> : null}
+                {cadenceText ? <p className="mt-1 text-xs text-gray-300 sm:text-sm">{cadenceText}</p> : null}
               </div>
 
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive rounded-xl px-4 py-2.5 text-sm font-bold text-white"
-                >
-                  + Follow
-                </button>
-                {website ? (
-                  <TrackedExternalLink
-                    href={website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    tracking={{
-                      entityType: organizationId ? 'organization' : 'profile',
-                      entityId: organizationId ?? hostSlug,
-                      organizationId,
-                      destinationType: 'website',
-                      placement: 'host_hero_website_cta',
-                      surface: 'entity_page',
-                    }}
-                    className="ss-glass ss-glass--ambient ss-glass--interactive inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-100"
-                  >
-                    Website <ExternalLink size={14} />
-                  </TrackedExternalLink>
-                ) : null}
-              </div>
+              {(upcomingEventsCount > 0 || website || pastEventsCount > 0) ? (
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {upcomingEventsCount > 0 ? (
+                    <a
+                      href="#host-upcoming-events"
+                      className="ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive inline-flex min-h-[40px] items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-white sm:text-sm"
+                    >
+                      <CalendarDays size={15} />
+                      Upcoming events ({upcomingEventsCount})
+                    </a>
+                  ) : null}
+                  {website ? (
+                    <TrackedExternalLink
+                      href={website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      tracking={{
+                        entityType: organizationId ? 'organization' : 'profile',
+                        entityId: organizationId ?? hostSlug,
+                        organizationId,
+                        destinationType: 'website',
+                        placement: 'host_hero_website_cta',
+                        surface: 'entity_page',
+                      }}
+                      className={`${
+                        upcomingEventsCount === 0
+                          ? 'ss-glass ss-glass--liquid ss-glass--crimson ss-glass--interactive text-white'
+                          : 'ss-glass ss-glass--ambient ss-glass--interactive text-gray-100'
+                      } inline-flex min-h-[40px] items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold sm:text-sm`}
+                    >
+                      Official website <ExternalLink size={14} />
+                    </TrackedExternalLink>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             {badges.length ? (

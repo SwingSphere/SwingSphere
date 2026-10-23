@@ -45,3 +45,64 @@ test('canonical organizations do not inherit unrelated events sharing a venue', 
   const index = buildEntityIndex([event('owned', 'Club Escape'), unrelated], [], [], [host], [], [], []);
   assert.deepEqual(index.hostsBySlug.get(host.slug)?.events.map((item) => item.id), ['owned']);
 });
+
+test('approved host organizations with zero events still register derived name slug aliases (e.g. /hosts/afterdark -> afterdark-sf)', () => {
+  const afterDark: OrganizationData = {
+    id: 'org-afterdark-sf',
+    type: 'organization',
+    name: 'AfterDark',
+    slug: 'afterdark-sf',
+    displayTypes: ['promoter'],
+    status: 'approved',
+  };
+  const index = buildEntityIndex([], [], [], [afterDark], [], [], []);
+  assert.equal(index.hostsBySlug.has('afterdark-sf'), true);
+  assert.equal(index.hostsBySlug.has('afterdark'), false);
+  assert.equal(index.hostSlugAliases.get('afterdark'), 'afterdark-sf');
+});
+
+test('renaming an event preserves its canonical host association via organizerOrganizationId', () => {
+  const original = event('event-illuminaughty-halloween', 'Illuminaughty');
+  const renamed: EventData = {
+    ...original,
+    name: 'Illuminaughty Winter Masquerade Ball 2026',
+  };
+  const index = buildEntityIndex([renamed], [], [], [host], [], [], []);
+  const profile = index.hostsBySlug.get(host.slug);
+  assert.equal(profile?.events.length, 1);
+  assert.equal(profile?.events[0].name, 'Illuminaughty Winter Masquerade Ball 2026');
+});
+
+test('non-approved and archived events are excluded from public host profiles while remaining directly addressable by key', () => {
+  const approvedEv = event('ev-approved', 'Club Escape');
+  const pendingEv: EventData = {
+    ...event('ev-pending', 'Club Escape'),
+    status: 'pending_approval',
+  };
+  const archivedEv = {
+    ...event('ev-archived', 'Club Escape'),
+    archivedAt: '2026-10-01T00:00:00Z',
+  } as EventData;
+  const pendingOrphan: EventData = {
+    ...event('ev-pending-orphan', 'Unapproved Promoter'),
+    organizerOrganizationId: undefined,
+    status: 'pending_approval',
+  };
+
+  const index = buildEntityIndex(
+    [approvedEv, pendingEv, archivedEv, pendingOrphan],
+    [],
+    [],
+    [host],
+    [],
+    [],
+    [],
+  );
+
+  assert.deepEqual(
+    index.hostsBySlug.get(host.slug)?.events.map((item) => item.id),
+    ['ev-approved'],
+  );
+  assert.equal(index.hostsBySlug.has('unapproved-promoter'), false);
+  assert.equal(index.eventsByKey.size, 4);
+});
