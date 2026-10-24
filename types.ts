@@ -559,6 +559,8 @@ export type Review = {
 export type AppState = {
   currentUser: UserType | null;
   isAuthLoading: boolean;
+  authConnectionError?: string | null;
+  retryAuthRestore?: () => Promise<void>;
   tags: TagType[];
   tagCategories: TagCategoryType[];
   toasts: Toast[];

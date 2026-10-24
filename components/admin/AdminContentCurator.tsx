@@ -31,10 +31,14 @@ import {
   approveCandidateViaAuthorizedWorkflow,
   buildCommandIdempotencyKey,
   fetchCuratorDashboardSnapshot,
+  gatherPublishableApprovedCandidates,
+  publishApprovedCuratorChanges,
   sendCuratorCommand,
   type CuratorCandidateRecord,
   type CuratorCommandType,
   type CuratorDashboardSnapshot,
+  type CuratorManualPublishPreview,
+  type CuratorManualPublishSummary,
   type CuratorMediaItem,
   type CuratorMonitoredSource,
 } from '../../lib/contentCuratorApi';
@@ -86,10 +90,10 @@ const formatShortDate = (dateStr: string | null | undefined): string => {
 
 const statusBadgeClass = (status: string): string => {
   const normalized = String(status || '').toLowerCase();
-  if (['approved', 'ok', 'connected', 'pass'].includes(normalized)) {
+  if (['approved', 'published', 'ok', 'connected', 'pass'].includes(normalized)) {
     return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   }
-  if (['staged_in_submissions', 'brief_ready', 'moderate', 'normal'].includes(normalized)) {
+  if (['ready_to_publish', 'staged_in_submissions', 'brief_ready', 'moderate', 'normal'].includes(normalized)) {
     return 'bg-blue-50 text-blue-700 border-blue-200';
   }
   if (
@@ -109,6 +113,7 @@ const statusBadgeClass = (status: string): string => {
   if (
     [
       'rejected',
+      'publish_failed',
       'failed',
       'offline',
       'closure_notice',
@@ -148,13 +153,65 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
   // View A: Review Queue state
   const [candidateSearch, setCandidateSearch] = useState('');
   const [candidateFilter, setCandidateFilter] = useState<
-    'actionable' | 'all' | 'new' | 'correction_proposed' | 'warnings' | 'closure' | 'inferred_year'
+    'actionable' | 'all' | 'new' | 'correction_proposed' | 'warnings' | 'closure' | 'inferred_year' | 'ambiguous_play_party'
   >('actionable');
   const [candidateReviewFilter, setCandidateReviewFilter] = useState<
-    'all' | 'pending_review' | 'approved' | 'changes_requested' | 'rejected'
+    | 'all'
+    | 'pending_review'
+    | 'approved'
+    | 'ready_to_publish'
+    | 'published'
+    | 'publish_failed'
+    | 'changes_requested'
+    | 'deferred'
+    | 'rejected'
   >('all');
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishPreview, setPublishPreview] = useState<CuratorManualPublishPreview | null>(null);
+  const [isPublishingBatch, setIsPublishingBatch] = useState(false);
+  const [publishProgress, setPublishProgress] = useState<{
+    completed: number;
+    total: number;
+    currentTitle: string;
+  } | null>(null);
+  const [publishSummary, setPublishSummary] = useState<CuratorManualPublishSummary | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [candidateNotes, setCandidateNotes] = useState('');
+  const [isEditingCandidate, setIsEditingCandidate] = useState(false);
+  const [showListingPreview, setShowListingPreview] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    venue: string;
+    city: string;
+    region: string;
+    country: string;
+    theme: string;
+    dressCode: string;
+    sourceUrl: string;
+    ticketUrl: string;
+    displayDescription: string;
+    flyerUrl: string;
+    customArtworkLocked: boolean;
+  }>({
+    title: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    venue: '',
+    city: '',
+    region: '',
+    country: '',
+    theme: '',
+    dressCode: '',
+    sourceUrl: '',
+    ticketUrl: '',
+    displayDescription: '',
+    flyerUrl: '',
+    customArtworkLocked: false,
+  });
 
   // View B: Artwork Studio state
   const [mediaSearch, setMediaSearch] = useState('');
@@ -185,11 +242,11 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
   const [sourceEntityFilter, setSourceEntityFilter] = useState<'all' | 'club' | 'promoter'>('all');
   const [sourceTierFilter, setSourceTierFilter] = useState<'all' | 'high' | 'moderate' | 'normal' | 'low' | 'static'>('all');
   const [sourceStatusFilter, setSourceStatusFilter] = useState<
-    'all' | 'ok' | 'partial' | 'failed' | 'unattempted' | 'paused' | 'due_now'
+    'all' | 'ok' | 'partial' | 'failed' | 'unattempted' | 'paused' | 'due_now' | 'missing_url'
   >('all');
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [scheduleTierInput, setScheduleTierInput] = useState<string>('normal');
-  const [scheduleIntervalInput, setScheduleIntervalInput] = useState<string>('14');
+  const [scheduleIntervalInput, setScheduleIntervalInput] = useState<string>('7');
   const [scheduleAdaptiveInput, setScheduleAdaptiveInput] = useState<boolean>(true);
   const [scheduleReasonInput, setScheduleReasonInput] = useState<string>('');
 
@@ -236,6 +293,8 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
         if (c.candidateType !== 'closure_notice' && c.reconciliationState !== 'possible_duplicate') return false;
       } else if (candidateFilter === 'inferred_year') {
         if (!c.inferredFields.some((f) => f.field === 'date')) return false;
+      } else if (candidateFilter === 'ambiguous_play_party') {
+        if (!c.playPartyEligibility?.requiresHumanReview) return false;
       }
 
       if (candidateReviewFilter !== 'all') {
@@ -266,6 +325,28 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
       filteredCandidates[0]
     );
   }, [filteredCandidates, selectedCandidateId, snapshot]);
+
+  useEffect(() => {
+    if (selectedCandidate) {
+      setEditForm({
+        title: selectedCandidate.title || '',
+        date: selectedCandidate.date || '',
+        startTime: selectedCandidate.startTime || '',
+        endTime: selectedCandidate.endTime || '',
+        venue: selectedCandidate.venue || '',
+        city: selectedCandidate.city || '',
+        region: selectedCandidate.region || '',
+        country: selectedCandidate.country || '',
+        theme: formatCuratorDetail(selectedCandidate.theme || selectedCandidate.eventDetails?.theme),
+        dressCode: formatCuratorDetail(selectedCandidate.dressCode || selectedCandidate.eventDetails?.dressCode),
+        sourceUrl: selectedCandidate.sourceUrl || '',
+        ticketUrl: selectedCandidate.ticketUrl || '',
+        displayDescription: selectedCandidate.displayDescription || selectedCandidate.description || '',
+        flyerUrl: selectedCandidate.customFlyerUrl || selectedCandidate.flyerUrl || '',
+        customArtworkLocked: Boolean(selectedCandidate.customArtworkLocked),
+      });
+    }
+  }, [selectedCandidate?.id]);
 
   // Filtered Media Items for Artwork Studio
   const filteredMediaItems = useMemo(() => {
@@ -329,6 +410,8 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
       if (sourceStatusFilter !== 'all') {
         if (sourceStatusFilter === 'due_now') {
           if (!s.isDueNow) return false;
+        } else if (sourceStatusFilter === 'missing_url') {
+          if (!s.missingEventSourceUrl && !s.missingWebsiteUrl) return false;
         } else if (s.extractionStatus !== sourceStatusFilter) {
           return false;
         }
@@ -356,7 +439,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
   useEffect(() => {
     if (selectedSource) {
       setScheduleTierInput(selectedSource.monitoringTier || 'normal');
-      setScheduleIntervalInput(String(selectedSource.currentIntervalDays || 14));
+      setScheduleIntervalInput(String(selectedSource.currentIntervalDays || 7));
       setScheduleAdaptiveInput(selectedSource.adaptiveSchedulingEnabled !== false);
       setScheduleReasonInput(selectedSource.manualOverride?.reason || '');
     }
@@ -408,6 +491,60 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
     }
   };
 
+  const livePublishPreview = useMemo(() => {
+    if (!snapshot) return null;
+    return gatherPublishableApprovedCandidates(snapshot, listings);
+  }, [snapshot, listings]);
+
+  const handleOpenPublishModal = () => {
+    if (!snapshot) return;
+    const preview = gatherPublishableApprovedCandidates(snapshot, listings);
+    setPublishPreview(preview);
+    setPublishSummary(null);
+    setPublishProgress(null);
+    setPublishModalOpen(true);
+  };
+
+  const handleExecuteManualPublish = async () => {
+    if (!publishPreview || isPublishingBatch) return;
+    try {
+      setIsPublishingBatch(true);
+      setPublishProgress({
+        completed: 0,
+        total: publishPreview.readyItems.length,
+        currentTitle: publishPreview.readyItems[0]?.candidate.title || 'Preparing batch...',
+      });
+      const summary = await publishApprovedCuratorChanges(publishPreview, listings, {
+        batchSize: 3,
+        moderationApi: {
+          saveEvent: api.saveEvent,
+          approveSubmission: api.approveSubmission,
+        },
+        onProgress: (prog) => setPublishProgress(prog),
+      });
+      setPublishSummary(summary);
+      if (summary.snapshot) {
+        setSnapshot(summary.snapshot);
+        setPublishPreview(gatherPublishableApprovedCandidates(summary.snapshot, listings));
+      } else {
+        await loadSnapshot(false);
+      }
+      await onDataChange();
+      addToast({
+        message: `Manual publish completed: ${summary.succeeded.length} published, ${summary.failed.length} failed, ${summary.skipped.length} skipped.`,
+        type: summary.failed.length > 0 ? 'error' : 'success',
+      });
+    } catch (err) {
+      addToast({
+        message: err instanceof Error ? err.message : 'Manual publication batch failed.',
+        type: 'error',
+      });
+    } finally {
+      setIsPublishingBatch(false);
+      setPublishProgress(null);
+    }
+  };
+
   const handleCandidateAuthorizedPublish = async (
     candidate: CuratorCandidateRecord,
     mode: 'stage_submission' | 'approve_and_publish',
@@ -453,8 +590,18 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
         <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
         <h2 className="mt-3 text-base font-bold text-slate-900">Connecting to OpenClaw Content Curator...</h2>
         <p className="mt-1 max-w-md text-xs text-slate-500">
-          Loading staged event candidates, generated artwork pairs, 84 monitored club/promoter sources, and operational cron job state.
+          Loading staged event candidates, generated artwork pairs, monitored club/promoter sources, community discovery queue, and operational cron job state.
         </p>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void loadSnapshot(false)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry Now
+          </button>
+        </div>
       </div>
     );
   }
@@ -495,6 +642,18 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
   const displayLandscapeOrigUrl =
     activeVersion?.previewUrls?.landscapeOriginal || selectedMedia?.previewUrls?.landscapeOriginal || null;
 
+  const nextScheduledJobIso =
+    snapshot.agentAndJobs?.cronJobs
+      ?.map((j) => j.schedulerOutcome?.nextRunAt)
+      .filter((iso): iso is string => Boolean(iso))
+      .sort()[0] || null;
+  const lastSuccessfulJobIso =
+    snapshot.agentAndJobs?.cronJobs
+      ?.map((j) => j.schedulerOutcome?.lastRunAt)
+      .filter((iso): iso is string => Boolean(iso))
+      .sort()
+      .at(-1) || snapshot.connection.lastSynchronizedAt;
+
   return (
     <div className="space-y-6" data-testid="admin-content-curator">
       {/* Top Header & Security Status Banner */}
@@ -533,29 +692,108 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => void loadSnapshot(true)}
+              onClick={() => void loadSnapshot(false)}
               disabled={isSyncing}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
-              {isSyncing ? 'Synchronizing...' : 'Refresh & Mirror Bridge'}
+              {isSyncing ? 'Refreshing...' : 'Refresh Local State'}
             </button>
             <button
               type="button"
-              onClick={() =>
-                void handleRunCommand(
-                  'agent_sync_bridge',
-                  snapshot.connection.agentId,
-                  { requestedFrom: 'admin_header' },
-                  'Synchronization heartbeat recorded in Content Curator bridge.',
-                )
-              }
-              disabled={busyActionKey === `agent_sync_bridge:${snapshot.connection.agentId}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+              data-testid="curator-publish-approved-button"
+              onClick={handleOpenPublishModal}
+              disabled={isPublishingBatch}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              Acknowledge Sync
+              <span>Publish Approved Changes</span>
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-black text-white">
+                {livePublishPreview?.counts.readyToPublish ?? 0}
+              </span>
             </button>
+          </div>
+        </div>
+
+        {/* Operational Health & Activity Strip */}
+        <div
+          data-testid="curator-operational-health-strip"
+          className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-xs sm:grid-cols-5 lg:grid-cols-10"
+        >
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-400">Monitored</div>
+            <div className="font-black text-slate-900">{snapshot.summary.sources.total}</div>
+            <div className="text-[10px] text-slate-500">
+              {snapshot.summary.sources.clubs}c · {snapshot.summary.sources.promoters}p
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-emerald-600">Checked ≤7d</div>
+            <div className="font-black text-slate-900">
+              {snapshot.summary.sources.sourcesCheckedRolling7d ?? snapshot.summary.sources.clubsCheckedRolling7d}/
+              {snapshot.summary.sources.total}
+            </div>
+            <div className="text-[10px] text-slate-500">Rolling 7-day window</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-amber-600">Overdue / Due</div>
+            <div className="font-black text-slate-900">{snapshot.summary.sources.dueNow}</div>
+            <div className="text-[10px] text-slate-500">Ready for scan</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-rose-600">Missing URL</div>
+            <div className="font-black text-slate-900">
+              {snapshot.summary.sources.missingEventSourceUrlCount ?? 0}
+            </div>
+            <div className="text-[10px] text-slate-500">No calendar URL</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-blue-600">New Events</div>
+            <div className="font-black text-slate-900">{snapshot.summary.reviewQueue.newEvents}</div>
+            <div className="text-[10px] text-slate-500">
+              +{snapshot.summary.reviewQueue.proposedCorrections} edits
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-indigo-600">Pending Review</div>
+            <div className="font-black text-slate-900">{snapshot.summary.reviewQueue.pendingReview}</div>
+            <div className="text-[10px] text-slate-500">
+              {snapshot.summary.reviewQueue.ambiguousPlayPartyCount ?? 0} ambiguous
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-purple-600">New Communities</div>
+            <div className="font-black text-slate-900">
+              {snapshot.summary.communityCandidates?.pendingReview ?? 0}
+            </div>
+            <div className="text-[10px] text-slate-500">
+              of {snapshot.summary.communityCandidates?.total ?? 0} discovered
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-500">Duplicates Skipped</div>
+            <div className="font-black text-slate-900">
+              {snapshot.summary.reviewQueue.possibleDuplicates +
+                snapshot.summary.reviewQueue.duplicateTranslations +
+                snapshot.summary.reviewQueue.alreadyInCatalog}
+            </div>
+            <div className="text-[10px] text-slate-500">
+              {snapshot.summary.reviewQueue.alreadyInCatalog} in catalog
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-rose-600">Failed Checks</div>
+            <div className="font-black text-slate-900">{snapshot.summary.sources.failedTotal}</div>
+            <div className="text-[10px] text-slate-500">With ≤72h backoff</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-500">Last / Next Run</div>
+            <div className="truncate font-bold text-slate-800" title={formatDateTime(lastSuccessfulJobIso)}>
+              {formatDateTime(lastSuccessfulJobIso)}
+            </div>
+            <div className="truncate text-[10px] text-blue-600" title={formatDateTime(nextScheduledJobIso)}>
+              Next: {formatDateTime(nextScheduledJobIso)}
+            </div>
           </div>
         </div>
 
@@ -802,6 +1040,9 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                 <option value="correction_proposed">
                   Proposed Corrections ({snapshot.summary.reviewQueue.proposedCorrections})
                 </option>
+                <option value="ambiguous_play_party">
+                  Ambiguous Play-Party Flagged ({snapshot.summary.reviewQueue.ambiguousPlayPartyCount ?? 0})
+                </option>
                 <option value="inferred_year">Inferred-Year Events ({snapshot.summary.reviewQueue.inferredYearCount})</option>
                 <option value="warnings">With Warnings / Missing Info</option>
                 <option value="closure">Duplicates &amp; Closure Notices</option>
@@ -813,11 +1054,19 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                 onChange={(e) => setCandidateReviewFilter(e.target.value as any)}
                 className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
               >
-                <option value="all">All Review Statuses</option>
-                <option value="pending_review">Pending Review</option>
-                <option value="approved">Approved / Staged in Submissions</option>
+                <option value="all">All Editorial Statuses</option>
+                <option value="pending_review">Discovered / Pending Review ({snapshot.summary.reviewQueue.pendingReview})</option>
+                <option value="approved">Approved ({snapshot.summary.reviewQueue.approvedCount})</option>
+                <option value="ready_to_publish">
+                  Ready to Publish ({snapshot.summary.reviewQueue.readyToPublishCount ?? 0})
+                </option>
+                <option value="published">Published ({snapshot.summary.reviewQueue.publishedCount ?? 0})</option>
+                <option value="publish_failed">
+                  Publish Failed ({snapshot.summary.reviewQueue.publishFailedCount ?? 0})
+                </option>
                 <option value="changes_requested">Changes Requested</option>
-                <option value="rejected">Rejected</option>
+                <option value="deferred">Deferred ({snapshot.summary.reviewQueue.deferredCount ?? 0})</option>
+                <option value="rejected">Rejected ({snapshot.summary.reviewQueue.rejectedCount})</option>
               </select>
             </div>
           </div>
@@ -882,6 +1131,24 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </div>
 
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {cand.playPartyEligibility && (
+                          <span
+                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                              cand.playPartyEligibility.qualified
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-900'
+                            }`}
+                          >
+                            {cand.playPartyEligibility.qualified
+                              ? '✓ Qualifying Play Party'
+                              : '⚠ Ambiguous — Needs Human Review'}
+                          </span>
+                        )}
+                        {cand.customArtworkLocked && (
+                          <span className="inline-flex items-center rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-900">
+                            🔒 Custom Artwork Locked
+                          </span>
+                        )}
                         {hasInferredYear && (
                           <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
                             ⚡ Year Inferred
@@ -931,6 +1198,20 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                           {reconciliationLabel(selectedCandidate.reconciliationState, selectedCandidate.candidateType)}
                         </span>
+                        {selectedCandidate.playPartyEligibility && (
+                          <span
+                            data-testid="curator-play-party-eligibility"
+                            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase ${
+                              selectedCandidate.playPartyEligibility.qualified
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                : 'border-amber-300 bg-amber-50 text-amber-900'
+                            }`}
+                          >
+                            {selectedCandidate.playPartyEligibility.qualified
+                              ? 'Qualifying Play Party'
+                              : 'Ambiguous — Flagged for Review'}
+                          </span>
+                        )}
                         <span className="text-[11px] font-mono text-slate-400">{selectedCandidate.id}</span>
                       </div>
                       <h2 className="mt-2 text-lg font-black text-slate-900 sm:text-xl">{selectedCandidate.title}</h2>
@@ -940,20 +1221,295 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         {' · '}Venue: <span className="font-bold text-slate-800">{selectedCandidate.venue || 'Unspecified'}</span>
                         {selectedCandidate.city ? ` (${[selectedCandidate.city, selectedCandidate.region, selectedCandidate.country].filter(Boolean).join(', ')})` : ''}
                       </p>
+                      {selectedCandidate.publicSlug && (
+                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <span className="font-semibold text-slate-600">Proposed Event URL:</span>
+                          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-800">
+                            /events/{selectedCandidate.publicSlug}
+                          </code>
+                        </div>
+                      )}
                     </div>
 
-                    {selectedCandidate.sourceUrl && (
-                      <a
-                        href={selectedCandidate.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowListingPreview((v) => !v)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                       >
-                        <span>Official Source Page</span>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>{showListingPreview ? 'Hide Preview' : 'Preview Listing'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingCandidate((v) => !v)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        <Sliders className="h-3.5 w-3.5" />
+                        <span>{isEditingCandidate ? 'Close Editor' : 'Edit & Artwork'}</span>
+                      </button>
+                      {selectedCandidate.sourceUrl && (
+                        <a
+                          href={selectedCandidate.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                        >
+                          <span>Official Source Page</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Play-Party Eligibility Rationale Banner */}
+                  {selectedCandidate.playPartyEligibility && (
+                    <div
+                      className={`rounded-xl border p-3 text-xs ${
+                        selectedCandidate.playPartyEligibility.qualified
+                          ? 'border-emerald-200 bg-emerald-50/60 text-emerald-950'
+                          : 'border-amber-300 bg-amber-50 text-amber-950'
+                      }`}
+                    >
+                      <div className="font-bold">
+                        Play-Party Eligibility:{' '}
+                        {selectedCandidate.playPartyEligibility.qualified
+                          ? 'Explicitly Qualified Play Party / Lifestyle Club Event'
+                          : 'Ambiguous / Generic Social or Nightlife — Requires Human Verification'}
+                      </div>
+                      <div className="mt-0.5">{selectedCandidate.playPartyEligibility.reason}</div>
+                    </div>
+                  )}
+
+                  {/* Proposed Listing Preview Drawer */}
+                  {showListingPreview && (
+                    <div
+                      data-testid="curator-proposed-listing-preview"
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-white shadow-inner"
+                    >
+                      <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-400">
+                        <span className="font-bold text-emerald-400">Proposed SwingSphere Event Card Preview</span>
+                        <span className="font-mono text-[10px]">/events/{selectedCandidate.publicSlug}</span>
+                      </div>
+                      <div className="flex flex-col gap-4 sm:flex-row">
+                        {(selectedCandidate.customFlyerUrl ||
+                          selectedCandidate.stagedMedia?.flyerPreviewUrl ||
+                          selectedCandidate.flyerUrl) && (
+                          <img
+                            src={
+                              selectedCandidate.customFlyerUrl ||
+                              selectedCandidate.stagedMedia?.flyerPreviewUrl ||
+                              selectedCandidate.flyerUrl ||
+                              ''
+                            }
+                            alt={selectedCandidate.title}
+                            className="h-40 w-32 shrink-0 rounded-lg border border-slate-700 bg-slate-900 object-cover"
+                          />
+                        )}
+                        <div className="space-y-1.5 text-xs">
+                          <div className="text-base font-black text-white">{selectedCandidate.title}</div>
+                          <div className="font-semibold text-rose-400">
+                            Hosted by {selectedCandidate.hostName || selectedCandidate.clubName}
+                          </div>
+                          <div className="text-slate-300">
+                            📅 {formatShortDate(selectedCandidate.date)}
+                            {selectedCandidate.startTime ? ` · ${selectedCandidate.startTime}` : ''}
+                            {selectedCandidate.endTime ? ` – ${selectedCandidate.endTime}` : ''}{' '}
+                            {selectedCandidate.timezone ? `(${selectedCandidate.timezone})` : ''}
+                          </div>
+                          <div className="text-slate-300">
+                            📍 {[selectedCandidate.venue, selectedCandidate.address, selectedCandidate.city, selectedCandidate.region, selectedCandidate.country]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </div>
+                          <p className="line-clamp-3 text-slate-400">
+                            {selectedCandidate.displayDescription || selectedCandidate.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Candidate Field & Artwork Editor */}
+                  {isEditingCandidate && (
+                    <div
+                      data-testid="curator-candidate-inline-editor"
+                      className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+                          Edit Candidate Details &amp; Custom Artwork Override
+                        </h3>
+                        <span className="text-[11px] text-indigo-700">
+                          Persists to OpenClaw SQLite &amp; protects manual curations
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700">Event Title</label>
+                          <input
+                            type="text"
+                            value={editForm.title}
+                            onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">Date</label>
+                            <input
+                              type="text"
+                              value={editForm.date}
+                              onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                              placeholder="YYYY-MM-DD"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">Start</label>
+                            <input
+                              type="text"
+                              value={editForm.startTime}
+                              onChange={(e) => setEditForm((f) => ({ ...f, startTime: e.target.value }))}
+                              placeholder="21:00"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">End</label>
+                            <input
+                              type="text"
+                              value={editForm.endTime}
+                              onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))}
+                              placeholder="02:00"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700">Venue Name</label>
+                          <input
+                            type="text"
+                            value={editForm.venue}
+                            onChange={(e) => setEditForm((f) => ({ ...f, venue: e.target.value }))}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">City</label>
+                            <input
+                              type="text"
+                              value={editForm.city}
+                              onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">Region</label>
+                            <input
+                              type="text"
+                              value={editForm.region}
+                              onChange={(e) => setEditForm((f) => ({ ...f, region: e.target.value }))}
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700">Country</label>
+                            <input
+                              type="text"
+                              value={editForm.country}
+                              onChange={(e) => setEditForm((f) => ({ ...f, country: e.target.value }))}
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700">Theme</label>
+                          <input
+                            type="text"
+                            value={editForm.theme}
+                            onChange={(e) => setEditForm((f) => ({ ...f, theme: e.target.value }))}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700">Dress Code</label>
+                          <input
+                            type="text"
+                            value={editForm.dressCode}
+                            onChange={(e) => setEditForm((f) => ({ ...f, dressCode: e.target.value }))}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700">
+                            Custom / Replacement Flyer Image URL
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.flyerUrl}
+                            onChange={(e) => setEditForm((f) => ({ ...f, flyerUrl: e.target.value }))}
+                            placeholder="https://... or /api/admin/curator/media-file?..."
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700">Description</label>
+                          <textarea
+                            rows={3}
+                            value={editForm.displayDescription}
+                            onChange={(e) => setEditForm((f) => ({ ...f, displayDescription: e.target.value }))}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-900"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-indigo-950">
+                          <input
+                            type="checkbox"
+                            checked={editForm.customArtworkLocked}
+                            onChange={(e) => setEditForm((f) => ({ ...f, customArtworkLocked: e.target.checked }))}
+                            className="rounded border-indigo-300 text-indigo-700"
+                          />
+                          Lock custom artwork against future automated overwrites
+                        </label>
+                        <button
+                          type="button"
+                          disabled={busyActionKey === `candidate_update_fields:${selectedCandidate.id}`}
+                          onClick={() =>
+                            void handleRunCommand(
+                              'candidate_update_fields',
+                              selectedCandidate.id,
+                              {
+                                fields: {
+                                  title: editForm.title,
+                                  date: editForm.date,
+                                  startTime: editForm.startTime,
+                                  endTime: editForm.endTime,
+                                  venue: editForm.venue,
+                                  city: editForm.city,
+                                  region: editForm.region,
+                                  country: editForm.country,
+                                  theme: editForm.theme,
+                                  dressCode: editForm.dressCode,
+                                  displayDescription: editForm.displayDescription,
+                                  flyerUrl: editForm.flyerUrl || undefined,
+                                  customFlyerUrl: editForm.flyerUrl || undefined,
+                                },
+                                customArtworkLocked: editForm.customArtworkLocked,
+                                notes: candidateNotes.trim() || 'Edited candidate fields & artwork in Admin Review Queue',
+                              },
+                              `Saved edits for "${editForm.title || selectedCandidate.title}".`,
+                            )
+                          }
+                          className="rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          Save Candidate Edits
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Independent 4-Dimension Readiness Matrix */}
                   {selectedCandidate.statusMatrix && (
@@ -1310,30 +1866,74 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                     </div>
                   )}
 
-                  {/* Review Decision History if already reviewed */}
-                  {selectedCandidate.reviewDecision && (
+                  {/* Review Decision & Publication History if already reviewed */}
+                  {(selectedCandidate.reviewDecision || selectedCandidate.publicationRecord) && (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-                      <div className="font-bold text-slate-800">
-                        Last Review Decision: {selectedCandidate.reviewDecision.status.toUpperCase()} by{' '}
-                        {selectedCandidate.reviewDecision.reviewedBy} at{' '}
-                        {formatDateTime(selectedCandidate.reviewDecision.reviewedAt)}
-                      </div>
-                      {selectedCandidate.reviewDecision.notes && (
+                      {selectedCandidate.reviewDecision && (
+                        <div className="font-bold text-slate-800">
+                          Last Review Decision: {selectedCandidate.reviewDecision.status.toUpperCase()} by{' '}
+                          {selectedCandidate.reviewDecision.reviewedBy} at{' '}
+                          {formatDateTime(selectedCandidate.reviewDecision.reviewedAt)}
+                        </div>
+                      )}
+                      {selectedCandidate.reviewDecision?.notes && (
                         <div className="mt-1 text-slate-600">Notes: {selectedCandidate.reviewDecision.notes}</div>
                       )}
-                      {selectedCandidate.reviewDecision.publishedListingId && onOpenSubmissionInEditor && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenSubmissionInEditor(selectedCandidate.reviewDecision!.publishedListingId!)}
-                          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
-                        >
-                          Open Listing {selectedCandidate.reviewDecision.publishedListingId} in SwingSphere Editor →
-                        </button>
+                      {selectedCandidate.publicationRecord && (
+                        <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5 text-[11px]">
+                          <div className="font-bold text-slate-900">
+                            Publication Status:{' '}
+                            <span className="uppercase">{selectedCandidate.publicationRecord.status}</span>
+                            {selectedCandidate.publicationRecord.publishedListingId
+                              ? ` · Listing ID: ${selectedCandidate.publicationRecord.publishedListingId}`
+                              : ''}
+                          </div>
+                          {selectedCandidate.publicationRecord.publishedAt && (
+                            <div className="mt-0.5 text-slate-600">
+                              Published At: {formatDateTime(selectedCandidate.publicationRecord.publishedAt)} · Hash:{' '}
+                              <code className="font-mono text-[10px]">
+                                {(selectedCandidate.publicationRecord.publishedContentHash || '').slice(0, 16)}
+                              </code>
+                            </div>
+                          )}
+                          {selectedCandidate.publicationRecord.lastError && (
+                            <div className="mt-1 font-semibold text-rose-700">
+                              Last Publish Error: {selectedCandidate.publicationRecord.lastError}
+                            </div>
+                          )}
+                        </div>
                       )}
+                      {Array.isArray(selectedCandidate.unreviewedSourceUpdates) &&
+                        selectedCandidate.unreviewedSourceUpdates.length > 0 && (
+                          <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-900">
+                            <strong>Protected Published Record:</strong> {selectedCandidate.unreviewedSourceUpdates.length}{' '}
+                            subsequent source scan update(s) were recorded locally without overwriting the published event.
+                            Review and explicitly approve changes in the editor to publish an update.
+                          </div>
+                        )}
+                      {(selectedCandidate.publicationRecord?.publishedListingId ||
+                        selectedCandidate.reviewDecision?.publishedListingId) &&
+                        onOpenSubmissionInEditor && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenSubmissionInEditor(
+                                selectedCandidate.publicationRecord?.publishedListingId ||
+                                  selectedCandidate.reviewDecision!.publishedListingId!,
+                              )
+                            }
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                          >
+                            Open Listing{' '}
+                            {selectedCandidate.publicationRecord?.publishedListingId ||
+                              selectedCandidate.reviewDecision?.publishedListingId}{' '}
+                            in SwingSphere Editor →
+                          </button>
+                        )}
                     </div>
                   )}
 
-                  {/* Authorized Moderation & Review Controls */}
+                  {/* Local-First Editorial Review & Manual Publishing Controls */}
                   <div className="border-t border-slate-200 pt-4">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
                       Administrator Review Notes / Change Request Instructions
@@ -1352,13 +1952,24 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         disabled={
                           selectedCandidate.isClosureNotice ||
                           !selectedCandidate.date ||
-                          busyActionKey === `stage_submission:${selectedCandidate.id}`
+                          busyActionKey === `candidate_approve:${selectedCandidate.id}`
                         }
-                        onClick={() => void handleCandidateAuthorizedPublish(selectedCandidate, 'stage_submission')}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-blue-600 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() =>
+                          void handleRunCommand(
+                            'candidate_approve',
+                            selectedCandidate.id,
+                            {
+                              notes:
+                                candidateNotes.trim() ||
+                                'Approved locally in Content Curator Review Queue (awaiting manual publish).',
+                            },
+                            `Approved "${selectedCandidate.title}" locally. Use "Publish Approved Changes" to publish to production.`,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <FileCheck2 className="h-3.5 w-3.5" />
-                        Stage in Submissions Queue
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Approve (Local)
                       </button>
 
                       <button
@@ -1366,13 +1977,43 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         disabled={
                           selectedCandidate.isClosureNotice ||
                           !selectedCandidate.date ||
-                          busyActionKey === `approve_and_publish:${selectedCandidate.id}`
+                          busyActionKey === `candidate_mark_ready_to_publish:${selectedCandidate.id}`
                         }
-                        onClick={() => void handleCandidateAuthorizedPublish(selectedCandidate, 'approve_and_publish')}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() =>
+                          void handleRunCommand(
+                            'candidate_mark_ready_to_publish',
+                            selectedCandidate.id,
+                            {
+                              notes:
+                                candidateNotes.trim() ||
+                                'Marked Ready to Publish locally by administrator.',
+                            },
+                            `Marked "${selectedCandidate.title}" as Ready to Publish.`,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-blue-600 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Approve &amp; Publish via Moderation
+                        <FileCheck2 className="h-3.5 w-3.5" />
+                        Mark Ready to Publish
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busyActionKey === `candidate_defer:${selectedCandidate.id}`}
+                        onClick={() =>
+                          void handleRunCommand(
+                            'candidate_defer',
+                            selectedCandidate.id,
+                            {
+                              notes: candidateNotes.trim() || 'Deferred for subsequent review cycle.',
+                            },
+                            `Deferred candidate "${selectedCandidate.title}".`,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <PauseCircle className="h-3.5 w-3.5" />
+                        Defer
                       </button>
 
                       <button
@@ -1414,12 +2055,180 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </button>
                     </div>
                     <p className="mt-2 text-[11px] text-slate-400">
-                      Approvals use SwingSphere&apos;s authorized <code>save_listing</code> +{' '}
-                      <code>admin_moderate_listing</code> moderation workflow and record an idempotent audit entry.
+                      Editorial decisions stay in local SQLite until you explicitly click{' '}
+                      <strong>Publish Approved Changes</strong> in the header to validate, upload approved media, and publish
+                      in bounded batches.
                     </p>
                   </div>
                 </div>
               ) : null}
+            </div>
+          </div>
+
+          {/* Autonomous Web Discovery: New Club, Host & Promoter Candidate Queue */}
+          <div
+            data-testid="curator-community-candidates-section"
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+          >
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold uppercase text-purple-800">
+                    Autonomous Web Discovery Queue
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {snapshot.summary.communityCandidates?.pendingReview ?? 0} pending review ·{' '}
+                    {snapshot.summary.communityCandidates?.total ?? 0} total discovered
+                  </span>
+                </div>
+                <h2 className="mt-1 text-base font-black text-slate-900 sm:text-lg">
+                  New Club, Promoter &amp; Community Candidates (Never Auto-Published)
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Discovered via multi-strategy web &amp; association discovery (event associations, regional directories,
+                  organizer cross-links, underserved regions, and public calendars).
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busyActionKey === `agent_run_discovery:${snapshot.connection.agentId}`}
+                onClick={() =>
+                  void handleRunCommand(
+                    'agent_run_discovery',
+                    snapshot.connection.agentId,
+                    { requestedFrom: 'review_queue' },
+                    'Executed multi-strategy community & promoter discovery pass.',
+                  )
+                }
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-purple-800 disabled:opacity-50"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Run Web Discovery Pass
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {(snapshot.communityCandidates || []).length === 0 ? (
+                <div className="col-span-full rounded-xl border border-slate-100 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                  No community candidates staged yet. Click &ldquo;Run Web Discovery Pass&rdquo; to scan for new clubs and promoters.
+                </div>
+              ) : (
+                (snapshot.communityCandidates || []).map((org) => (
+                  <div
+                    key={org.id}
+                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-800">
+                            {org.entityType}
+                          </span>
+                          <span className="rounded bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-900">
+                            {org.discoveryStrategy.replace(/_/g, ' ')}
+                          </span>
+                          <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                            Confidence: {org.confidence}
+                          </span>
+                        </div>
+                        <span
+                          className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${statusBadgeClass(
+                            org.reviewState,
+                          )}`}
+                        >
+                          {org.reviewState.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 text-sm font-black text-slate-900">{org.name}</div>
+                      <div className="mt-0.5 text-slate-600">
+                        📍 {[org.city, org.region, org.country].filter(Boolean).join(', ') || 'Location under review'}
+                        {org.website && (
+                          <>
+                            {' · '}
+                            <a
+                              href={org.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:underline"
+                            >
+                              {org.website} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </>
+                        )}
+                      </div>
+
+                      {org.qualifyingEventsEvidence?.length > 0 && (
+                        <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-400">
+                            Evidence of Qualifying Play-Party Events
+                          </div>
+                          <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] text-slate-700">
+                            {org.qualifyingEventsEvidence.map((ev, i) => (
+                              <li key={i}>{ev}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {org.possibleDatabaseMatches?.length > 0 && (
+                        <div className="mt-2 text-[11px] text-amber-800">
+                          <span className="font-bold">Possible Existing DB Matches: </span>
+                          {org.possibleDatabaseMatches.map((m) => `${m.name} (${Math.round(m.similarity * 100)}%)`).join(', ')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-3">
+                      <button
+                        type="button"
+                        disabled={busyActionKey === `community_candidate_approve:${org.id}`}
+                        onClick={() =>
+                          void handleRunCommand(
+                            'community_candidate_approve',
+                            org.id,
+                            { notes: 'Approved community discovery candidate for onboarding & monitoring' },
+                            `Approved community candidate "${org.name}".`,
+                          )
+                        }
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        Approve Candidate
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyActionKey === `community_candidate_defer:${org.id}`}
+                        onClick={() =>
+                          void handleRunCommand(
+                            'community_candidate_defer',
+                            org.id,
+                            { notes: 'Deferred community candidate for additional verification' },
+                            `Deferred community candidate "${org.name}".`,
+                          )
+                        }
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        Defer
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyActionKey === `community_candidate_reject:${org.id}`}
+                        onClick={() =>
+                          void handleRunCommand(
+                            'community_candidate_reject',
+                            org.id,
+                            { notes: 'Rejected community candidate' },
+                            `Rejected community candidate "${org.name}".`,
+                          )
+                        }
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -2401,12 +3210,12 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                 onChange={(e) => setSourceTierFilter(e.target.value as any)}
                 className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
               >
-                <option value="all">All Monitoring Tiers</option>
-                <option value="high">High Frequency (3–5d)</option>
-                <option value="moderate">Moderate (7–10d)</option>
-                <option value="normal">Normal (14d)</option>
-                <option value="low">Low (21–30d)</option>
-                <option value="static">Static (30–45d)</option>
+                <option value="all">All Monitoring Tiers (≤7d Weekly Window)</option>
+                <option value="high">High Frequency (2d)</option>
+                <option value="moderate">Moderate (4d)</option>
+                <option value="normal">Normal (7d)</option>
+                <option value="low">Low (7d)</option>
+                <option value="static">Static (7d)</option>
               </select>
 
               <select
@@ -2420,6 +3229,9 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                 <option value="partial">Partial ({snapshot.summary.sources.partialTotal})</option>
                 <option value="failed">Failed / Restricted ({snapshot.summary.sources.failedTotal})</option>
                 <option value="due_now">Due Now ({snapshot.summary.sources.dueNow})</option>
+                <option value="missing_url">
+                  Missing Event-Source URL ({snapshot.summary.sources.missingEventSourceUrlCount ?? 0})
+                </option>
                 <option value="paused">Paused ({snapshot.summary.sources.pausedTotal})</option>
               </select>
             </div>
@@ -2451,7 +3263,14 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                           }`}
                         >
                           <td className="px-3.5 py-2.5">
-                            <div className="font-bold text-slate-900">{src.name}</div>
+                            <div className="flex flex-wrap items-center gap-1.5 font-bold text-slate-900">
+                              <span>{src.name}</span>
+                              {src.missingEventSourceUrl && (
+                                <span className="rounded bg-rose-100 px-1.5 py-0.2 text-[9px] font-bold uppercase text-rose-800">
+                                  Missing Event URL
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[11px] text-slate-500">
                               <span className="uppercase">{src.entityType}</span> ·{' '}
                               {[src.city, src.region, src.country].filter(Boolean).join(', ') || 'Multi-region'} ·{' '}
@@ -2509,7 +3328,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                 <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-700">
                           {selectedSource.entityType}
                         </span>
@@ -2520,6 +3339,11 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         >
                           Extraction: {selectedSource.extractionStatus}
                         </span>
+                        {selectedSource.missingEventSourceUrl && (
+                          <span className="rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-800">
+                            Missing Event-Source URL
+                          </span>
+                        )}
                       </div>
                       <h2 className="mt-1.5 text-lg font-black text-slate-900">{selectedSource.name}</h2>
                       <div className="text-xs text-slate-500">
@@ -2538,6 +3362,17 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                       </a>
                     )}
                   </div>
+
+                  {selectedSource.missingEventSourceUrl && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                      <div className="font-bold">Missing Dedicated Event-Source / Calendar URL</div>
+                      <div className="mt-0.5">
+                        {selectedSource.missingWebsiteUrl
+                          ? 'This source has neither a website URL nor an event calendar URL configured.'
+                          : 'This source only has a root homepage URL configured and requires a dedicated events/calendar endpoint or adapter verification.'}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Scan Timestamps & Discovered Counts */}
                   <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-slate-50 p-3 text-xs">
@@ -2604,11 +3439,11 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                           onChange={(e) => setScheduleTierInput(e.target.value)}
                           className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-800"
                         >
-                          <option value="high">High (3–5 days)</option>
-                          <option value="moderate">Moderate (7–10 days)</option>
-                          <option value="normal">Normal (14 days)</option>
-                          <option value="low">Low (21–30 days)</option>
-                          <option value="static">Static (30–45 days)</option>
+                          <option value="high">High (2 days)</option>
+                          <option value="moderate">Moderate (4 days)</option>
+                          <option value="normal">Normal (7 days)</option>
+                          <option value="low">Low (7 days)</option>
+                          <option value="static">Static (7 days)</option>
                         </select>
                       </div>
                       <div>
@@ -2652,7 +3487,7 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                             selectedSource.id,
                             {
                               tier: scheduleTierInput,
-                              intervalDays: Number(scheduleIntervalInput) || 14,
+                              intervalDays: Number(scheduleIntervalInput) || 7,
                               adaptiveEnabled: scheduleAdaptiveInput,
                               reason: scheduleReasonInput.trim() || 'Admin dashboard schedule update',
                             },
@@ -2681,6 +3516,27 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                         className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                       >
                         {selectedSource.paused ? 'Resume Source' : 'Pause Source'}
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="curator-source-check-now"
+                        disabled={busyActionKey === `source_request_scan:${selectedSource.id}`}
+                        onClick={() =>
+                          void handleRunCommand(
+                            'source_request_scan',
+                            selectedSource.id,
+                            {
+                              runImmediately: true,
+                              reason: 'Manual Check Now triggered from Admin Monitored Sources view',
+                            },
+                            `Executed immediate Check Now scan for ${selectedSource.name}.`,
+                          )
+                        }
+                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Check Now
                       </button>
 
                       <button
@@ -3009,6 +3865,237 @@ const AdminContentCurator: React.FC<AdminContentCuratorProps> = ({
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Publish Approved Changes Modal */}
+      {publishModalOpen && publishPreview && (
+        <div
+          data-testid="curator-publish-approved-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+          onClick={() => {
+            if (!isPublishingBatch) setPublishModalOpen(false);
+          }}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase text-emerald-700">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Manual Production Publishing Workflow
+                </div>
+                <h2 className="mt-1 text-lg font-black text-slate-900">
+                  Publish Approved Changes to SwingSphere
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Only explicitly approved records that have not yet been published (or whose approved content hash has
+                  changed) are included below.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isPublishingBatch}
+                onClick={() => setPublishModalOpen(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Preview Counts Strip */}
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-6">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                <div className="text-[10px] font-bold uppercase text-emerald-700">Ready to Publish</div>
+                <div className="mt-0.5 text-xl font-black text-emerald-950">
+                  {publishPreview.counts.readyToPublish}
+                </div>
+              </div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+                <div className="text-[10px] font-bold uppercase text-blue-700">New Inserts</div>
+                <div className="mt-0.5 text-xl font-black text-blue-950">{publishPreview.counts.inserts}</div>
+              </div>
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3">
+                <div className="text-[10px] font-bold uppercase text-indigo-700">Updates</div>
+                <div className="mt-0.5 text-xl font-black text-indigo-950">{publishPreview.counts.updates}</div>
+              </div>
+              <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3">
+                <div className="text-[10px] font-bold uppercase text-purple-700">Media Uploads</div>
+                <div className="mt-0.5 text-xl font-black text-purple-950">
+                  {publishPreview.counts.mediaUploadsRequired}
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                <div className="text-[10px] font-bold uppercase text-amber-700">Blocked / Invalid</div>
+                <div className="mt-0.5 text-xl font-black text-amber-950">
+                  {publishPreview.counts.blockedByValidation}
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-[10px] font-bold uppercase text-slate-500">Skipped (Current)</div>
+                <div className="mt-0.5 text-xl font-black text-slate-800">
+                  {publishPreview.counts.skippedAlreadyPublished}
+                </div>
+              </div>
+            </div>
+
+            {isPublishingBatch && publishProgress && (
+              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3.5 text-xs text-blue-950">
+                <div className="flex items-center justify-between font-bold">
+                  <span>
+                    Publishing in bounded batches: {publishProgress.completed} / {publishProgress.total}
+                  </span>
+                  <span>{publishProgress.currentTitle}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Post-execution Summary */}
+            {publishSummary && (
+              <div
+                data-testid="curator-publish-summary"
+                className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs"
+              >
+                <div className="font-black text-slate-900">
+                  Publication Batch Summary ({formatDateTime(publishSummary.completedAt)})
+                </div>
+                <div className="mt-1 flex flex-wrap gap-3 text-[11px] font-bold">
+                  <span className="text-emerald-700">
+                    Succeeded: {publishSummary.succeeded.length}
+                  </span>
+                  <span className="text-rose-700">Failed: {publishSummary.failed.length}</span>
+                  <span className="text-slate-600">Skipped: {publishSummary.skipped.length}</span>
+                </div>
+                {publishSummary.succeeded.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {publishSummary.succeeded.map((item) => (
+                      <div
+                        key={item.candidateId}
+                        className="flex flex-wrap items-center justify-between rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[11px]"
+                      >
+                        <span className="font-bold text-slate-900">
+                          [{item.operationType.toUpperCase()}] {item.title}
+                        </span>
+                        <span className="font-mono text-[10px] text-emerald-700">
+                          ID: {item.publishedListingId} · Hash: {item.contentHash.slice(0, 12)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {publishSummary.failed.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {publishSummary.failed.map((item) => (
+                      <div
+                        key={item.candidateId}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] text-rose-900"
+                      >
+                        <strong>{item.title}:</strong> {item.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Proposed Inserts & Updates Preview List */}
+            <div className="mt-4 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Proposed Production Inserts &amp; Updates ({publishPreview.readyItems.length})
+              </div>
+              {publishPreview.readyItems.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                  No unpublished approved changes are waiting to be published. Approve candidates in the Review Queue first.
+                </div>
+              ) : (
+                <div className="max-h-72 space-y-2.5 overflow-y-auto pr-1">
+                  {publishPreview.readyItems.map((item) => (
+                    <div
+                      key={item.candidate.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
+                              item.operationType === 'update'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {item.operationType === 'update' ? 'Update Existing' : 'New Insert'}
+                          </span>
+                          <span className="font-bold text-slate-900">{item.candidate.title}</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          Target ID: {item.targetListingId} · Hash: {item.contentHash.slice(0, 12)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-600">
+                        Date: <strong>{item.candidate.date}</strong> · Club/Venue:{' '}
+                        <strong>{item.candidate.venue || item.candidate.clubName}</strong> · Media:{' '}
+                        <span>{item.mediaStatusLabel}</span>
+                      </div>
+                      {item.changedFields.length > 0 && (
+                        <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2 text-[11px]">
+                          <div className="font-bold text-slate-700">Affected Fields:</div>
+                          <div className="mt-1 space-y-0.5">
+                            {item.changedFields.slice(0, 5).map((ch) => (
+                              <div key={ch.field} className="text-slate-600">
+                                <strong>{ch.label}:</strong>{' '}
+                                <span className="line-through text-slate-400">{ch.before || '—'}</span> →{' '}
+                                <span className="font-semibold text-slate-900">{ch.after || '—'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {publishPreview.invalidItems.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+                  <div className="font-bold">
+                    Blocked by Validation ({publishPreview.invalidItems.length})
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {publishPreview.invalidItems.map((inv) => (
+                      <div key={inv.candidate.id} className="text-[11px]">
+                        <strong>{inv.candidate.title}:</strong> {inv.validationErrors.join(' · ')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                disabled={isPublishingBatch}
+                onClick={() => setPublishModalOpen(false)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                data-testid="curator-confirm-publish-button"
+                disabled={isPublishingBatch || publishPreview.readyItems.length === 0}
+                onClick={() => void handleExecuteManualPublish()}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {isPublishingBatch
+                  ? 'Publishing Approved Batch...'
+                  : `Confirm & Publish ${publishPreview.readyItems.length} Approved Change(s)`}
+              </button>
             </div>
           </div>
         </div>

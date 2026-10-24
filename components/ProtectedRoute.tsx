@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 
@@ -8,15 +8,58 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
-  const { currentUser, isAuthLoading, logout } = useAppStore();
+  const { currentUser, isAuthLoading, authConnectionError, retryAuthRestore, logout } = useAppStore();
   const location = useLocation();
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  if (import.meta.env.DEV && typeof window !== 'undefined' && window.localStorage.getItem('swingsphere:dev-admin') === 'true') {
+  const isLocalDevHost =
+    typeof window !== 'undefined' &&
+    ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname.toLowerCase());
+
+  if (import.meta.env.DEV && isLocalDevHost && window.localStorage.getItem('swingsphere:dev-admin') === 'true') {
     return <>{children}</>;
   }
 
   if (isAuthLoading) {
     return <div className="min-h-screen bg-black text-gray-400 flex items-center justify-center">Loading account…</div>;
+  }
+
+  const isRoleUnverifiedDuringOutage = Boolean(
+    currentUser && authConnectionError && roles && !roles.includes(currentUser.role),
+  );
+
+  if ((!currentUser && authConnectionError) || isRoleUnverifiedDuringOutage) {
+    return (
+      <div className="min-h-screen bg-black px-6 text-gray-200 flex items-center justify-center">
+        <div
+          data-testid="auth-connection-recoverable-state"
+          className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl"
+        >
+          <h1 className="text-2xl font-bold text-white">Connection Temporarily Interrupted</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-400">
+            {authConnectionError}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              disabled={isRetrying}
+              onClick={async () => {
+                if (!retryAuthRestore) return;
+                setIsRetrying(true);
+                try {
+                  await retryAuthRestore();
+                } finally {
+                  setIsRetrying(false);
+                }
+              }}
+              className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+            >
+              {isRetrying ? 'Reconnecting…' : 'Retry Connection'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!currentUser) {

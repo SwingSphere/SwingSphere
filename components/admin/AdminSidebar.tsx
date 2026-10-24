@@ -156,7 +156,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setView, pendi
             isActive={['manage-organizations', 'add-organization', 'edit-organization'].includes(currentView)}
             onClick={() => setView('manage-organizations')}
           />
-          {isAdmin ? (
+          {isAdmin && import.meta.env.DEV ? (
             <NavLink
               icon={<Sparkles {...iconProps} />}
               label="Content Curator"

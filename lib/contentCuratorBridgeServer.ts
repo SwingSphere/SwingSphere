@@ -24,8 +24,13 @@ export const requireCuratorAdmin = async (
   options: { allowLocalDevHeader?: boolean; allowLocalPreviewQuery?: boolean } = {},
 ): Promise<ActiveAdminIdentity> => {
   const authHeader = req?.headers?.authorization as string | undefined;
+  let bearerAuthError: unknown = null;
   if (authHeader && /^Bearer\s+.+/i.test(authHeader)) {
-    return requireActiveAdmin(authHeader);
+    try {
+      return await requireActiveAdmin(authHeader);
+    } catch (err) {
+      bearerAuthError = err;
+    }
   }
 
   const isLocal = isLocalhostRequest(req);
@@ -39,12 +44,19 @@ export const requireCuratorAdmin = async (
 
   if (isLocal && options.allowLocalPreviewQuery) {
     const reqUrl = new URL(req?.url || '/', 'http://localhost');
-    if (reqUrl.searchParams.get('adminPreview') === '1') {
+    if (
+      reqUrl.searchParams.get('adminPreview') === '1' ||
+      reqUrl.searchParams.get('devAdmin') === '1'
+    ) {
       return {
         userId: '00000000-0000-0000-0000-000000000001',
         email: 'dev-admin@swingsphere.local',
       };
     }
+  }
+
+  if (bearerAuthError instanceof Error) {
+    throw bearerAuthError;
   }
 
   throw new Error('Active administrator authentication is required to access Content Curator.');
@@ -105,6 +117,7 @@ type CuratorBridgeModules = {
 };
 
 let cachedModulesPromise: Promise<CuratorBridgeModules> | null = null;
+let cachedModulesVersionKey = '';
 let backgroundSyncDaemonHandle: {
   schedule: any;
   stop: () => void;
@@ -116,11 +129,13 @@ let backgroundSyncDaemonHandle: {
 export const ensureAutomaticCuratorBridgeSync = async (
   options: { forceStartInTest?: boolean; intervalMs?: number } = {},
 ) => {
-  const isTestProcess =
-    Boolean(process.env.NODE_TEST_CONTEXT) ||
-    process.execArgv.includes('--test') ||
-    process.argv.includes('--test');
-  if (isTestProcess && !options.forceStartInTest) {
+  // Continuous automatic Supabase bridge sync is disabled in local-first manual publishing mode.
+  // Only start when explicitly forced by an isolated unit test.
+  if (!options.forceStartInTest) {
+    if (backgroundSyncDaemonHandle && backgroundSyncDaemonHandle.isRunning()) {
+      backgroundSyncDaemonHandle.stop();
+    }
+    backgroundSyncDaemonHandle = null;
     return null;
   }
   if (backgroundSyncDaemonHandle && backgroundSyncDaemonHandle.isRunning()) {
@@ -131,6 +146,7 @@ export const ensureAutomaticCuratorBridgeSync = async (
     backgroundSyncDaemonHandle = bridge.startBridgeSyncDaemon({
       intervalMs: options.intervalMs || bridge.BRIDGE_SYNC_SCHEDULE.intervalMs,
       runImmediately: false,
+      enforceSingleton: false,
     });
     return backgroundSyncDaemonHandle;
   } catch {
@@ -139,17 +155,26 @@ export const ensureAutomaticCuratorBridgeSync = async (
 };
 
 const loadCuratorBridgeModules = async (): Promise<CuratorBridgeModules> => {
-  if (!cachedModulesPromise) {
+  const root = getCuratorWorkspaceRoot();
+  const corePath = path.join(root, 'src', 'core.mjs');
+  const bridgePath = path.join(root, 'src', 'bridge.mjs');
+  if (!fs.existsSync(corePath) || !fs.existsSync(bridgePath)) {
+    throw new Error('Local OpenClaw Content Curator workspace is not reachable.');
+  }
+  let versionKey = '';
+  try {
+    const coreStat = fs.statSync(corePath);
+    const bridgeStat = fs.statSync(bridgePath);
+    versionKey = `${Math.floor(coreStat.mtimeMs)}-${Math.floor(bridgeStat.mtimeMs)}`;
+  } catch {
+    versionKey = '0';
+  }
+  if (!cachedModulesPromise || cachedModulesVersionKey !== versionKey) {
+    cachedModulesVersionKey = versionKey;
     cachedModulesPromise = (async () => {
-      const root = getCuratorWorkspaceRoot();
-      const corePath = path.join(root, 'src', 'core.mjs');
-      const bridgePath = path.join(root, 'src', 'bridge.mjs');
-      if (!fs.existsSync(corePath) || !fs.existsSync(bridgePath)) {
-        throw new Error('Local OpenClaw Content Curator workspace is not reachable.');
-      }
       const [core, bridge] = await Promise.all([
         import(pathToFileURL(corePath).href),
-        import(pathToFileURL(bridgePath).href),
+        import(`${pathToFileURL(bridgePath).href}?v=${versionKey}`),
       ]);
       return { core, bridge };
     })().catch((err) => {
@@ -216,24 +241,9 @@ const appendServerPreviewFlag = (snapshot: any): any => {
 
 export const getCuratorBridgeSnapshot = async (req: any) => {
   const admin = await requireCuratorAdmin(req);
-  await ensureAutomaticCuratorBridgeSync();
   const { core, bridge } = await loadCuratorBridgeModules();
   const db = core.database();
   try {
-    const reqUrl = new URL(req?.url || '/', 'http://localhost');
-    if (reqUrl.searchParams.get('mirrorSupabase') === '1') {
-      try {
-        await bridge.syncWithRemoteSupabaseBridge(db, {
-          accessToken: req?.headers?.authorization || null,
-          onlyPushChanged: true,
-          respectWorkflowLock: true,
-          gracefulAuthSkip: true,
-        });
-      } catch {
-        // Non-fatal if remote migration has not been applied yet or offline
-      }
-    }
-
     const rawSnapshot = bridge.buildCuratorSnapshot(db);
     const snapshot = appendServerPreviewFlag(bridge.sanitizeDeep(rawSnapshot));
 
@@ -276,34 +286,199 @@ export const executeCuratorBridgeCommand = async (req: any, body: any) => {
       retryFailed: Boolean(body?.retryFailed ?? payload?.retryFailed),
     });
 
-    // Also record in Supabase command queue if a Supabase bearer session is active
-    if (req?.headers?.authorization) {
-      try {
-        const { supabase } = createAuthenticatedSupabaseServerClient(req.headers.authorization);
-        const enq = await supabase.rpc('admin_enqueue_curator_command', {
-          p_idempotency_key: execution.command?.idempotencyKey || idempotencyKey || '',
-          p_command_type: commandType,
-          p_target_id: targetId,
-          p_payload: payload,
-        });
-        const remoteCommandId = enq.data?.command?.id;
-        if (remoteCommandId) {
-          await supabase.rpc('admin_acknowledge_curator_command', {
-            p_command_id: remoteCommandId,
-            p_status: 'acknowledged',
-            p_result: execution.command?.result || {},
-            p_error: null,
-          });
-        }
-      } catch {
-        // Non-fatal if remote migration is not yet applied
-      }
-    }
-
     const updatedSnapshot = appendServerPreviewFlag(bridge.sanitizeDeep(bridge.buildCuratorSnapshot(db)));
     return {
       ...execution,
       snapshot: updatedSnapshot,
+    };
+  } finally {
+    db.close();
+  }
+};
+
+const isRealCloudflareCredential = (val: string | undefined): boolean => {
+  const trimmed = String(val || '').trim();
+  return Boolean(trimmed && !/placeholder/i.test(trimmed));
+};
+
+export const uploadCuratorApprovedMediaToProduction = async (req: any, body: any) => {
+  const admin = await requireCuratorAdmin(req);
+  const mediaId = String(body?.mediaId || body?.candidateId || '').trim();
+  if (!mediaId) {
+    throw new Error('mediaId or candidateId is required to upload approved Curator media.');
+  }
+
+  const { core, bridge } = await loadCuratorBridgeModules();
+  const db = core.database();
+  try {
+    const rawMediaRows = db
+      .prepare('SELECT data FROM media WHERE id = ?')
+      .all(mediaId)
+      .map((r: any) => JSON.parse(r.data));
+    const mediaItem = rawMediaRows[0] || null;
+    if (!mediaItem) {
+      return {
+        uploaded: false,
+        mediaId,
+        reason: 'No staged media record exists for this candidate.',
+        flyerUrl: null,
+        heroUrl: null,
+      };
+    }
+
+    const isApproved =
+      mediaItem.status === 'approved' || mediaItem.visualReview?.decision === 'approved';
+    if (!isApproved) {
+      return {
+        uploaded: false,
+        mediaId: mediaItem.id,
+        reason: 'Media item has not been approved in Artwork Studio.',
+        flyerUrl: null,
+        heroUrl: null,
+      };
+    }
+
+    const versionId = String(body?.versionId || mediaItem.selectedVersionId || 'v1').trim();
+    const flyerSha = String(mediaItem.assets?.flyer?.sha256 || '').trim();
+    const heroSha = String(mediaItem.assets?.hero?.sha256 || '').trim();
+
+    const existingVersionUploads = mediaItem.uploadedAssets?.[versionId] || null;
+    if (
+      existingVersionUploads?.flyer?.deliveryUrl &&
+      existingVersionUploads?.hero?.deliveryUrl &&
+      (!flyerSha || existingVersionUploads.flyer.sha256 === flyerSha) &&
+      (!heroSha || existingVersionUploads.hero.sha256 === heroSha)
+    ) {
+      return {
+        uploaded: true,
+        reusedExistingUpload: true,
+        mediaId: mediaItem.id,
+        versionId,
+        flyerUrl: existingVersionUploads.flyer.deliveryUrl,
+        heroUrl: existingVersionUploads.hero.deliveryUrl,
+        flyerRecord: existingVersionUploads.flyer,
+        heroRecord: existingVersionUploads.hero,
+      };
+    }
+
+    const flyerResolved = bridge.resolvePreviewMediaFile(db, {
+      mediaId: mediaItem.id,
+      version: versionId,
+      role: 'flyer',
+    });
+    const heroResolved = bridge.resolvePreviewMediaFile(db, {
+      mediaId: mediaItem.id,
+      version: versionId,
+      role: 'hero',
+    });
+
+    if (!flyerResolved || !fs.existsSync(flyerResolved.filePath) || !heroResolved || !fs.existsSync(heroResolved.filePath)) {
+      throw new Error('Approved media files for flyer/hero pair could not be resolved on disk.');
+    }
+
+    const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const cfApiToken = process.env.CLOUDFLARE_IMAGES_API_TOKEN;
+    const cfAccountHash =
+      process.env.NEXT_PUBLIC_CLOUDFLARE_IMAGES_ACCOUNT_HASH ||
+      process.env.VITE_CLOUDFLARE_IMAGES_ACCOUNT_HASH;
+
+    const uploadSingleRole = async (
+      role: 'flyer' | 'hero',
+      filePath: string,
+      sha256: string,
+      variant: 'eventCard' | 'heroDesktop',
+    ) => {
+      if (
+        isRealCloudflareCredential(cfAccountId) &&
+        isRealCloudflareCredential(cfApiToken) &&
+        isRealCloudflareCredential(cfAccountHash)
+      ) {
+        const buffer = fs.readFileSync(filePath);
+        const form = new FormData();
+        form.append(
+          'file',
+          new Blob([buffer], { type: 'image/png' }),
+          `${mediaItem.id}-${versionId}-${role}.png`,
+        );
+        form.append(
+          'metadata',
+          JSON.stringify({
+            source: 'swingsphere-content-curator',
+            mediaId: mediaItem.id,
+            versionId,
+            role,
+            sha256,
+          }),
+        );
+        const response = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/images/v1`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${cfApiToken}`,
+            },
+            body: form,
+          },
+        );
+        const payload = (await response.json().catch(() => null)) as any;
+        if (response.ok && payload?.success && payload?.result?.id) {
+          const cfId = String(payload.result.id);
+          const deliveryUrl = `https://imagedelivery.net/${cfAccountHash}/${cfId}/${variant}`;
+          return {
+            provider: 'cloudflare-images',
+            cloudflareImageId: cfId,
+            deliveryUrl,
+            sha256,
+            uploadedAt: new Date().toISOString(),
+          };
+        }
+      }
+
+      // Local-first canonical static asset fallback when Cloudflare Images token is not configured locally
+      const safeSlug = String(mediaItem.id || 'event')
+        .replace(/[^a-zA-Z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const fileName = `${safeSlug}-${versionId}-${role}-${(sha256 || 'asset').slice(0, 10)}.png`;
+      const targetDir = path.resolve(process.cwd(), 'public', 'images', 'events', 'curator-published');
+      fs.mkdirSync(targetDir, { recursive: true });
+      const targetPath = path.join(targetDir, fileName);
+      fs.copyFileSync(filePath, targetPath);
+      const deliveryUrl = `/images/events/curator-published/${fileName}`;
+      return {
+        provider: 'swingsphere-static-storage',
+        cloudflareImageId: null,
+        deliveryUrl,
+        sha256,
+        uploadedAt: new Date().toISOString(),
+      };
+    };
+
+    const [flyerRecord, heroRecord] = await Promise.all([
+      uploadSingleRole('flyer', flyerResolved.filePath, flyerSha, 'eventCard'),
+      uploadSingleRole('hero', heroResolved.filePath, heroSha, 'heroDesktop'),
+    ]);
+
+    await bridge.enqueueAndExecuteCommand(db, {
+      idempotencyKey: `media_record_upload:${mediaItem.id}:${versionId}:${flyerSha.slice(0, 12)}:${heroSha.slice(0, 12)}`,
+      commandType: 'media_record_upload',
+      targetId: mediaItem.id,
+      actor: admin.email || admin.userId,
+      payload: {
+        versionId,
+        flyer: flyerRecord,
+        hero: heroRecord,
+      },
+    });
+
+    return {
+      uploaded: true,
+      reusedExistingUpload: false,
+      mediaId: mediaItem.id,
+      versionId,
+      flyerUrl: flyerRecord.deliveryUrl,
+      heroUrl: heroRecord.deliveryUrl,
+      flyerRecord,
+      heroRecord,
     };
   } finally {
     db.close();

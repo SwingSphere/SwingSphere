@@ -23,6 +23,7 @@ import {
 import {
   getCuratorBridgeSnapshot,
   executeCuratorBridgeCommand,
+  uploadCuratorApprovedMediaToProduction,
   streamCuratorMediaPreview,
   sanitizeBridgeError,
 } from './lib/contentCuratorBridgeServer';
@@ -3311,6 +3312,13 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
+    if (req.url.startsWith('/api/admin/curator/') && !isLocalhostRequest(req)) {
+      res.statusCode = 403;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: 'Content Curator is only accessible from localhost during local development.' }));
+      return;
+    }
+
     if (req.method === 'GET' && req.url.startsWith('/api/admin/curator/snapshot')) {
       try {
         const snapshot = await getCuratorBridgeSnapshot(req);
@@ -3340,6 +3348,27 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
         res.statusCode = /authentication|expired|admin access/i.test(msg)
           ? 401
           : /allow-list|required|invalid/i.test(msg)
+            ? 400
+            : 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: msg }));
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/admin/curator/upload-media')) {
+      try {
+        const body = await readJsonBody(req);
+        const result = await uploadCuratorApprovedMediaToProduction(req, body);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.end(JSON.stringify(result));
+      } catch (err: any) {
+        const msg = sanitizeBridgeError(err?.message || 'Unable to upload approved Curator media.');
+        res.statusCode = /authentication|expired|admin access/i.test(msg)
+          ? 401
+          : /required|invalid|not found|could not be resolved/i.test(msg)
             ? 400
             : 500;
         res.setHeader('Content-Type', 'application/json');

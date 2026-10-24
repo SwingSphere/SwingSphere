@@ -4,6 +4,30 @@ import { mockUsers, type User } from '../data/mockUsers';
 import { getPublicTagCategories, getPublicTags } from '../lib/taxonomySupabase';
 import { supabase } from '../lib/supabase';
 import { getCloudflareImageUrl } from '../lib/media/getCloudflareImageUrl';
+import {
+  buildFallbackUserFromAuthSession,
+  cacheUserProfile,
+  clearCachedUserProfiles,
+  createDeduplicatedProfileLoader,
+  isRevokedOrInvalidSessionError,
+  isTransientAuthOrNetworkError,
+  readCachedUserProfile,
+  readPersistedSupabaseSession,
+  resolveAuthTransition,
+  withAuthDeadline,
+} from '../lib/authResilience';
+
+export {
+  buildFallbackUserFromAuthSession,
+  cacheUserProfile,
+  clearCachedUserProfiles,
+  createDeduplicatedProfileLoader,
+  isRevokedOrInvalidSessionError,
+  isTransientAuthOrNetworkError,
+  readCachedUserProfile,
+  readPersistedSupabaseSession,
+  resolveAuthTransition,
+};
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
@@ -49,55 +73,84 @@ const mapProfile = (profile: ProfileRow, email: string, media: ProfileMediaRow[]
   };
 };
 
+const USER_MEDIA_CACHE_TTL_MS = 10 * 60 * 1000;
+const userMediaCache = new Map<string, { rows: ProfileMediaRow[]; expiresAt: number }>();
+
+const loadUserMediaNonBlocking = async (userId: string): Promise<ProfileMediaRow[]> => {
+  const nowMs = Date.now();
+  const cached = userMediaCache.get(userId);
+  if (cached && cached.expiresAt > nowMs) {
+    return cached.rows;
+  }
+
+  try {
+    const { data: mediaRows, error: mediaError } = await withAuthDeadline(
+      supabase
+        .from('media_assets')
+        .select('role, external_id, created_at')
+        .eq('owner_type', 'user')
+        .eq('owner_id', userId)
+        .in('role', ['avatar', 'hero'])
+        .order('created_at', { ascending: false }),
+      'Member media lookup timed out.',
+      1800,
+    );
+    if (mediaError) {
+      console.warn('Failed to load member media:', mediaError);
+      return cached?.rows ?? [];
+    }
+    const rows = (mediaRows ?? []) as ProfileMediaRow[];
+    userMediaCache.set(userId, { rows, expiresAt: nowMs + USER_MEDIA_CACHE_TTL_MS });
+    return rows;
+  } catch (mediaErr) {
+    console.warn('Non-fatal member media lookup error:', mediaErr);
+    return cached?.rows ?? [];
+  }
+};
+
 const loadProfile = async (userId: string, email: string): Promise<User> => {
-  const [{ data, error }, { data: mediaRows, error: mediaError }] = await Promise.all([
+  const { data, error } = await withAuthDeadline(
     supabase
       .from('profiles')
       .select('id, display_name, handle, bio, role, status, avatar_url, created_at')
       .eq('id', userId)
       .single<ProfileRow>(),
-    supabase
-      .from('media_assets')
-      .select('role, external_id, created_at')
-      .eq('owner_type', 'user')
-      .eq('owner_id', userId)
-      .in('role', ['avatar', 'hero'])
-      .order('created_at', { ascending: false }),
-  ]);
+    'Account profile lookup timed out.',
+    4000,
+  );
 
-  if (error) {
+  if (error || !data) {
     console.error('Failed to load profile:', error);
-    throw new Error(`Signed in, but SwingSphere could not load your account profile: ${error.message}`);
+    const wrapped = new Error(
+      `Signed in, but SwingSphere could not load your account profile: ${error?.message || 'Unknown error'}`,
+    ) as Error & { status?: number; code?: string };
+    wrapped.code = (error as any)?.code;
+    wrapped.status = Number((error as any)?.status || 0) || undefined;
+    throw wrapped;
   }
-  if (mediaError) console.warn('Failed to load member media:', mediaError);
-  return mapProfile(data, email, (mediaRows ?? []) as ProfileMediaRow[]);
+
+  // Only query media_assets after profiles succeeds, with a 10-minute per-user cache
+  const mediaRows = await loadUserMediaNonBlocking(userId);
+  const mapped = mapProfile(data, email, mediaRows);
+  cacheUserProfile(mapped);
+  return mapped;
 };
 
-const authDeadline = <T,>(promise: PromiseLike<T>, message: string, ms = 12000): Promise<T> =>
-  new Promise<T>((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(message)), ms);
-    Promise.resolve(promise).then(
-      (value) => { window.clearTimeout(timer); resolve(value); },
-      (error) => { window.clearTimeout(timer); reject(error); },
-    );
-  });
+const profileLoader = createDeduplicatedProfileLoader(loadProfile, {
+  retryDelaysMs: [400],
+  attemptTimeoutMs: 4500,
+});
 
-const loadProfileWithRetry = async (userId: string, email: string): Promise<User> => {
-  try {
-    return await loadProfile(userId, email);
-  } catch (firstError) {
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    try {
-      return await loadProfile(userId, email);
-    } catch {
-      throw firstError;
-    }
-  }
-};
+const loadProfileWithRetry = (userId: string, email: string): Promise<User> =>
+  profileLoader.load(userId, email);
+
+const MIN_ACCOUNT_REFRESH_COOLDOWN_MS = 60_000;
+const ACCOUNT_REFRESH_INTERVAL_MS = 5 * 60_000;
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<AppState['currentUser']>(null);
+  const [currentUser, setCurrentUserState] = useState<AppState['currentUser']>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authConnectionError, setAuthConnectionError] = useState<string | null>(null);
   const [tags, setTags] = useState<AppState['tags']>([]);
   const [tagCategories, setTagCategories] = useState<AppState['tagCategories']>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -105,82 +158,262 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [debugInfo, setDebugInfoState] = useState<{ label: string; extra?: string }>({ label: '' });
   const baseDebugInfo = useRef<{ label: string; extra?: string }>({ label: '' });
   const debugTimeoutRef = useRef<number | null>(null);
+  const currentUserRef = useRef<User | null>(null);
+  const lastRefreshAtRef = useRef<number>(0);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+
+  const setCurrentUser = useCallback((next: User | null) => {
+    currentUserRef.current = next;
+    setCurrentUserState(next);
+  }, []);
+
+  const isDevAdminFallback = useCallback(
+    () =>
+      import.meta.env.DEV &&
+      typeof window !== 'undefined' &&
+      ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname.toLowerCase()) &&
+      window.localStorage.getItem('swingsphere:dev-admin') === 'true',
+    [],
+  );
+
+  const purgeRevokedLocalSession = useCallback(() => {
+    clearCachedUserProfiles();
+    void supabase.auth.signOut({ scope: 'local' }).catch(() => {
+      // Ignore local signOut cleanup errors
+    });
+  }, []);
+
+  const restoreSessionAndProfile = useCallback(async () => {
+    let sessionUser: import('@supabase/supabase-js').User | null = null;
+    let sessionError: unknown = null;
+
+    try {
+      const { data, error } = await withAuthDeadline(
+        supabase.auth.getSession(),
+        'Session restoration timed out. Please retry signing in.',
+        10000,
+      );
+      if (error) {
+        sessionError = error;
+      } else {
+        sessionUser = data.session?.user ?? null;
+      }
+    } catch (error) {
+      sessionError = error;
+      console.warn('Session restoration did not complete:', error);
+    }
+
+    const persisted = readPersistedSupabaseSession();
+    const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
+    let profile: User | null = null;
+    let profileError: unknown = null;
+
+    if (sessionUser) {
+      try {
+        profile = await loadProfileWithRetry(sessionUser.id, sessionUser.email ?? '');
+      } catch (error) {
+        profileError = error;
+        console.error('Failed to restore authenticated profile:', error);
+      }
+    } else if (!sessionError && !persisted.hasToken && isDevAdminFallback()) {
+      profile = mockUsers[0];
+    }
+
+    const transition = resolveAuthTransition({
+      sessionUser,
+      sessionError,
+      profile,
+      profileError,
+      previousUser: currentUserRef.current,
+      hasStoredToken: persisted.hasToken,
+      persistedUser: persisted.user,
+      isOffline,
+    });
+
+    if (transition.shouldClearSession) {
+      purgeRevokedLocalSession();
+    }
+
+    const finalUser =
+      transition.nextUser ||
+      (!transition.shouldClearSession && !sessionUser && !sessionError && !persisted.hasToken && isDevAdminFallback()
+        ? mockUsers[0]
+        : null);
+
+    setCurrentUser(finalUser);
+    setAuthConnectionError(transition.connectionError);
+    setIsAuthLoading(false);
+    lastRefreshAtRef.current = Date.now();
+  }, [isDevAdminFallback, purgeRevokedLocalSession, setCurrentUser]);
 
   useEffect(() => {
     let mounted = true;
 
-    const isDevAdminFallback = () =>
-      import.meta.env.DEV &&
-      typeof window !== 'undefined' &&
-      window.localStorage.getItem('swingsphere:dev-admin') === 'true';
+    void restoreSessionAndProfile();
 
-    const restore = async () => {
-      let user: import('@supabase/supabase-js').User | undefined;
-      try {
-        const { data } = await authDeadline(supabase.auth.getSession(), 'Session restoration timed out. Please retry signing in.');
-        user = data.session?.user;
-      } catch (error) {
-        console.warn('Session restoration did not complete:', error);
-      }
-      let profile: User | null = null;
-      if (user) {
-        try {
-          profile = await authDeadline(loadProfileWithRetry(user.id, user.email ?? ''), 'Account profile loading timed out.');
-        } catch (error) {
-          console.error('Failed to restore authenticated profile:', error);
-        }
-      } else if (isDevAdminFallback()) {
-        profile = mockUsers[0];
-      }
-      if (mounted) {
-        setCurrentUser(profile);
-        setIsAuthLoading(false);
-      }
-    };
-
-    void restore();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       window.setTimeout(async () => {
+        if (!mounted) return;
+
+        if (event === 'SIGNED_OUT') {
+          clearCachedUserProfiles();
+          setCurrentUser(isDevAdminFallback() ? mockUsers[0] : null);
+          setAuthConnectionError(null);
+          setIsAuthLoading(false);
+          return;
+        }
+
+        const sessionUser = session?.user ?? null;
+        const persisted = readPersistedSupabaseSession();
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
         let profile: User | null = null;
-        if (session?.user) {
+        let profileError: unknown = null;
+
+        if (sessionUser) {
           try {
-            profile = await authDeadline(loadProfileWithRetry(session.user.id, session.user.email ?? ''), 'Account profile loading timed out.');
+            profile = await loadProfileWithRetry(sessionUser.id, sessionUser.email ?? '');
           } catch (error) {
+            profileError = error;
             console.error('Failed to load authenticated profile after auth state change:', error);
           }
-        } else if (isDevAdminFallback()) {
+        } else if (!persisted.hasToken && isDevAdminFallback()) {
           profile = mockUsers[0];
         }
-        if (mounted) {
-          setCurrentUser(profile);
-          setIsAuthLoading(false);
+
+        if (!mounted) return;
+
+        const transition = resolveAuthTransition({
+          event,
+          sessionUser,
+          profile,
+          profileError,
+          previousUser: currentUserRef.current,
+          hasStoredToken: persisted.hasToken,
+          persistedUser: persisted.user,
+          isOffline,
+        });
+
+        if (transition.shouldClearSession) {
+          purgeRevokedLocalSession();
         }
+
+        setCurrentUser(
+          transition.nextUser ||
+            (!transition.shouldClearSession && !sessionUser && !persisted.hasToken && isDevAdminFallback()
+              ? mockUsers[0]
+              : null),
+        );
+        setAuthConnectionError(transition.connectionError);
+        setIsAuthLoading(false);
+        lastRefreshAtRef.current = Date.now();
       }, 0);
     });
 
-    const refreshAccountState = async () => {
-      const { data } = await supabase.auth.getSession();
-      const user = data.session?.user;
-      if (!user) {
-        if (mounted) setCurrentUser(isDevAdminFallback() ? mockUsers[0] : null);
+    const refreshAccountState = async (force = false) => {
+      if (!mounted) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden' && !force) {
         return;
       }
-      try {
-        const profile = await loadProfileWithRetry(user.id, user.email ?? '');
-        if (mounted) setCurrentUser(profile);
-      } catch (error) {
-        // Keep the last known profile on a transient refresh failure. Backend
-        // RLS still enforces the current role/status on every privileged write.
-        console.warn('Failed to refresh account role/status:', error);
+      if (typeof navigator !== 'undefined' && navigator.onLine === false && !force) {
+        return;
       }
+      const elapsed = Date.now() - lastRefreshAtRef.current;
+      if (!force && elapsed < MIN_ACCOUNT_REFRESH_COOLDOWN_MS) {
+        return;
+      }
+      if (refreshInFlightRef.current) {
+        return refreshInFlightRef.current;
+      }
+
+      const task = (async () => {
+        lastRefreshAtRef.current = Date.now();
+        let sessionUser: import('@supabase/supabase-js').User | null = null;
+        let sessionError: unknown = null;
+
+        try {
+          const { data, error } = await withAuthDeadline(
+            supabase.auth.getSession(),
+            'Background session check timed out.',
+            10000,
+          );
+          if (error) {
+            sessionError = error;
+          } else {
+            sessionUser = data.session?.user ?? null;
+          }
+        } catch (err) {
+          sessionError = err;
+        }
+
+        const persisted = readPersistedSupabaseSession();
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
+        if (!sessionUser) {
+          const transition = resolveAuthTransition({
+            sessionUser: null,
+            sessionError,
+            previousUser: currentUserRef.current,
+            hasStoredToken: persisted.hasToken,
+            persistedUser: persisted.user,
+            isOffline,
+          });
+          if (mounted) {
+            if (transition.shouldClearSession || (!persisted.hasToken && !sessionError && !isOffline)) {
+              if (transition.shouldClearSession) {
+                purgeRevokedLocalSession();
+              }
+              setCurrentUser(isDevAdminFallback() ? mockUsers[0] : null);
+              setAuthConnectionError(null);
+            } else {
+              if (transition.nextUser) {
+                setCurrentUser(transition.nextUser);
+              }
+              setAuthConnectionError(transition.connectionError);
+            }
+          }
+          return;
+        }
+
+        try {
+          const profile = await loadProfileWithRetry(sessionUser.id, sessionUser.email ?? '');
+          if (mounted) {
+            setCurrentUser(profile);
+            setAuthConnectionError(null);
+          }
+        } catch (error) {
+          if (isRevokedOrInvalidSessionError(error)) {
+            purgeRevokedLocalSession();
+            if (mounted) {
+              setCurrentUser(null);
+              setAuthConnectionError(null);
+            }
+            return;
+          }
+          // Keep the last known profile on a transient refresh failure. Backend
+          // RLS still enforces the current role/status on every privileged write.
+          console.warn('Failed to refresh account role/status:', error);
+          if (mounted && !currentUserRef.current) {
+            setCurrentUser(buildFallbackUserFromAuthSession(sessionUser, null));
+          }
+        }
+      })().finally(() => {
+        refreshInFlightRef.current = null;
+      });
+
+      refreshInFlightRef.current = task;
+      return task;
     };
 
-    const handleFocus = () => void refreshAccountState();
+    const handleFocus = () => void refreshAccountState(false);
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') void refreshAccountState();
+      if (document.visibilityState === 'visible') void refreshAccountState(false);
     };
-    const accountRefreshInterval = window.setInterval(() => void refreshAccountState(), 60_000);
+    const accountRefreshInterval = window.setInterval(
+      () => void refreshAccountState(false),
+      ACCOUNT_REFRESH_INTERVAL_MS,
+    );
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
 
@@ -191,7 +424,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [isDevAdminFallback, purgeRevokedLocalSession, restoreSessionAndProfile, setCurrentUser]);
 
   const setDebugInfo: AppState['setDebugInfo'] = useCallback((info, duration) => {
     if (!duration) baseDebugInfo.current = info;
@@ -209,13 +442,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearTimeLens: AppState['clearTimeLens'] = useCallback(() => setTimeLensState({ mode: 'none' }), []);
 
   const login: AppState['login'] = useCallback(async (email, password) => {
-    const { data, error } = await authDeadline(supabase.auth.signInWithPassword({ email, password }), 'Sign-in is taking too long. Please retry.', 15000);
+    const { data, error } = await withAuthDeadline(
+      supabase.auth.signInWithPassword({ email, password }),
+      'Sign-in is taking too long. Please retry.',
+      12000,
+    );
     if (error) throw error;
     if (!data.user) return null;
-    const profile = await authDeadline(loadProfileWithRetry(data.user.id, data.user.email ?? email), 'Signed in, but account loading timed out. Refresh and try again.');
-    setCurrentUser(profile);
-    return profile;
-  }, []);
+
+    // Immediately establish authenticated session user so profile query latency
+    // (504 / 522 on /rest/v1/profiles) never blocks login completion.
+    const immediateUser = buildFallbackUserFromAuthSession(data.user, currentUserRef.current);
+    setCurrentUser(immediateUser);
+
+    try {
+      const profile = await withAuthDeadline(
+        loadProfileWithRetry(data.user.id, data.user.email ?? email),
+        'Account profile request timed out.',
+        4500,
+      );
+      setCurrentUser(profile);
+      setAuthConnectionError(null);
+      return profile;
+    } catch (profileErr) {
+      if (!isRevokedOrInvalidSessionError(profileErr)) {
+        setCurrentUser(immediateUser);
+        setAuthConnectionError(
+          'Signed in, but SwingSphere is temporarily unable to reach the profile service. Retrying automatically.',
+        );
+        return immediateUser;
+      }
+      throw profileErr;
+    }
+  }, [setCurrentUser]);
 
   const signInWithGoogle: AppState['signInWithGoogle'] = useCallback(async (nextPath = '/account') => {
     const safeNextPath = nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/account';
@@ -230,10 +489,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const logout: AppState['logout'] = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      await withAuthDeadline(supabase.auth.signOut(), 'Sign-out timed out.', 5000);
+    } catch (err) {
+      console.warn('Non-fatal signOut error (clearing local session anyway):', err);
+    }
+    clearCachedUserProfiles();
     setCurrentUser(null);
-  }, []);
+    setAuthConnectionError(null);
+  }, [setCurrentUser]);
 
   const signUp: AppState['signUp'] = useCallback(async ({ displayName, email, password, accountIntent }) => {
     const { data, error } = await supabase.auth.signUp({
@@ -288,7 +552,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedUser = await loadProfileWithRetry(userId, authData.user?.email ?? profileData.email);
     setCurrentUser(updatedUser);
     return updatedUser;
-  }, [currentUser]);
+  }, [currentUser, setCurrentUser]);
 
   const removeToast: AppState['removeToast'] = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -313,6 +577,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value: AppState = useMemo(() => ({
     currentUser,
     isAuthLoading,
+    authConnectionError,
+    retryAuthRestore: restoreSessionAndProfile,
     tags,
     tagCategories,
     toasts,
@@ -330,7 +596,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast,
     removeToast,
     fetchTags,
-  }), [currentUser, isAuthLoading, tags, tagCategories, toasts, debugInfo, timeLens, setTimeLens, clearTimeLens, setDebugInfo, login, signInWithGoogle, logout, signUp, requestPasswordReset, updateUserProfile, addToast, removeToast, fetchTags]);
+  }), [
+    currentUser,
+    isAuthLoading,
+    authConnectionError,
+    restoreSessionAndProfile,
+    tags,
+    tagCategories,
+    toasts,
+    debugInfo,
+    timeLens,
+    setTimeLens,
+    clearTimeLens,
+    setDebugInfo,
+    login,
+    signInWithGoogle,
+    logout,
+    signUp,
+    requestPasswordReset,
+    updateUserProfile,
+    addToast,
+    removeToast,
+    fetchTags,
+  ]);
 
   return React.createElement(AppContext.Provider, { value }, children);
 };

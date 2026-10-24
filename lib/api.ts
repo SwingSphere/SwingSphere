@@ -875,7 +875,7 @@ export const getUsers = async (): Promise<User[]> => {
             .from('profiles')
             .select('id, display_name, handle, bio, role, status, avatar_url, created_at')
             .order('created_at', { ascending: false }),
-        supabase.auth.getUser(),
+        Promise.resolve({ data: { user: sessionData.session.user } }),
     ]);
 
     if (error) throw error;

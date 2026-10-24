@@ -25,8 +25,11 @@ import AdminListingClaims from './AdminListingClaims';
 import AdminOutboundAnalytics from './AdminOutboundAnalytics';
 import AdminInboundAnalytics from './AdminInboundAnalytics';
 import AdminBuildingInspector from './AdminBuildingInspector';
-import AdminContentCurator from './AdminContentCurator';
 import { AdminListingDetailEditor } from './editor/AdminDetailPage';
+
+const AdminContentCurator = import.meta.env.DEV
+    ? React.lazy(() => import('./AdminContentCurator'))
+    : null;
 import { useAppStore } from '../../store/appStore';
 import * as api from '../../lib/api';
 import { buildEntityIndex } from '../../lib/entityIndex';
@@ -366,6 +369,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
         const canAccessBuildingInspector = isAdmin || import.meta.env.DEV;
         if (
             (!isAdmin && ['users', 'tags', 'settings', 'audit-log', 'listing-claims', 'outbound-analytics', 'inbound-analytics', 'content-curator'].includes(currentView)) ||
+            (currentView === 'content-curator' && !import.meta.env.DEV) ||
             (currentView === 'building-inspector' && !canAccessBuildingInspector)
         ) {
             return <div>Access Denied.</div>;
@@ -666,12 +670,17 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             case 'audit-log':
                 return <AdminAuditLog />;
             case 'content-curator':
+                if (!import.meta.env.DEV || !AdminContentCurator) {
+                    return <div>Access Denied.</div>;
+                }
                 return (
-                    <AdminContentCurator
-                        listings={listings}
-                        onDataChange={fetchData}
-                        onOpenSubmissionInEditor={(listingId) => setView({ view: 'review-submission', listingId })}
-                    />
+                    <React.Suspense fallback={<div className="flex items-center justify-center h-full"><div className="text-gray-500">Loading Content Curator...</div></div>}>
+                        <AdminContentCurator
+                            listings={listings}
+                            onDataChange={fetchData}
+                            onOpenSubmissionInEditor={(listingId) => setView({ view: 'review-submission', listingId })}
+                        />
+                    </React.Suspense>
                 );
             case 'building-inspector':
                 return (
