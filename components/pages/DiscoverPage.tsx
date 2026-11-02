@@ -293,7 +293,7 @@ const DirectoryResultCard: React.FC<DirectoryResultCardProps> = React.memo(({ ca
             onError={handleListingImageError}
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
-            fetchPriority={priority ? 'high' : 'auto'}
+            {...({ fetchpriority: priority ? 'high' : 'auto' } as any)}
             className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 lg:group-hover:scale-[1.03] ${
               card.kind === 'event' ? 'object-top' : 'object-center'
             }`}

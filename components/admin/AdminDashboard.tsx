@@ -56,6 +56,7 @@ import type {
 } from '../../types';
 import type { AdminView } from './AdminPanel';
 import * as api from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { getOpenSiteIssueCount } from '../../lib/issueReports';
 import { getPendingWrittenReviews, type PendingWrittenReview } from '../../lib/feedback/adminFeedbackModeration';
 import { listListingClaimsForAdmin, type AdminListingClaim } from '../../lib/claims/listingClaims';
@@ -317,6 +318,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Load Inbound & Outbound Analytics for selected date range
   const loadTrafficSummaries = useCallback(async () => {
+    const { data: trafficSession } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (!trafficSession.session?.access_token) return;
     setIsTrafficLoading(true);
     try {
       const [inbound, outbound] = await Promise.all([
@@ -336,6 +339,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Load supplemental operational queues, users, audit log, and platform health
   const loadSupplementalAdminData = useCallback(async () => {
+    const { data: suppSession } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (!suppSession.session?.access_token) return;
     setIsSupplementalLoading(true);
     try {
       const [usersResult, reviewsResult, claimsResult, auditResult, healthResult] = await Promise.all([

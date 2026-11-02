@@ -47,6 +47,7 @@ const allowedOrganizationIds = new Set([
   'org-club-twist-sf',
   'org-club-power-exchange-sf',
   'org-club-club-joi-la',
+  'org-promoter-hotwife-community',
   'org-promoter-illuminaughty',
   'org-promoter-mumbai-velvet',
   'org-promoter-sinful-house',
@@ -195,7 +196,7 @@ const cruiseSailings = travelModule.cruiseSailings.filter((item) => item.status 
 if (organizations.length !== allowedOrganizationIds.size) {
   throw new Error(`Expected ${allowedOrganizationIds.size} curated organizations, found ${organizations.length}.`);
 }
-if (venues.length !== 3 || relationships.length !== 3 || organizationRelationships.length !== 2 || eventSeries.length !== 3 || clubBrands.length !== 5 || resorts.length !== 1) {
+if (venues.length !== 3 || relationships.length !== 4 || organizationRelationships.length !== 2 || eventSeries.length !== 5 || clubBrands.length !== 5 || resorts.length !== 1) {
   throw new Error('Curated entity source counts changed. Review the backfill allowlist before importing.');
 }
 if (cruiseSeries.length || cruiseSailings.length) {

@@ -102,7 +102,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = React.memo((
           alt={listing.name}
           loading={loadingMode}
           decoding="async"
-          fetchPriority={fetchPriorityMode}
+          {...({ fetchpriority: fetchPriorityMode } as any)}
           className={`absolute inset-0 h-full w-full object-cover transition duration-500 lg:group-hover:scale-105 ${monochrome ? 'grayscale contrast-[1.08]' : ''}`}
         />
       ) : null}
@@ -117,7 +117,7 @@ const HomepageDiscoveryCard: React.FC<HomepageDiscoveryCardProps> = React.memo((
           alt={`${listing.name} logo`}
           loading={loadingMode}
           decoding="async"
-          fetchPriority={fetchPriorityMode}
+          {...({ fetchpriority: fetchPriorityMode } as any)}
           className={`h-full w-full scale-[1.04] object-cover ${monochrome ? 'grayscale contrast-[1.12]' : ''}`}
         />
       </div>

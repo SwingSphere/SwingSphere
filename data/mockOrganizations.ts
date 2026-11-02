@@ -120,6 +120,36 @@ const canonicalClubOrganizations: OrganizationData[] = [
 
 const standaloneOrganizations: OrganizationData[] = [
   {
+    id: 'org-promoter-hotwife-community',
+    type: 'organization',
+    name: 'Hotwife Community',
+    slug: 'hotwife-community',
+    displayTypes: ['promoter', 'host', 'community', 'producer'],
+    descriptionShort: 'A members-only lifestyle community and independent event organizer producing themed social gatherings in Southern California and destination events in Arizona.',
+    descriptionFull: 'Hotwife Community organizes its own members-only lifestyle gatherings, including Ladies Fantasy Night events hosted at partner venue Club Joi in Los Angeles and Hotwife Palooza destination programming in Tucson, Arizona. Club Joi is a venue partner, not the owner of Hotwife Community. Events and travel offers advertised through affiliated calendars may be produced by third parties and should not be attributed to Hotwife Community without verification. Check official event pages for admission requirements, schedules and venue details.',
+    website: 'https://hotwifecommunity.com/',
+    contactEmail: 'info@hotwifecommunity.com',
+    logoImageUrl: 'https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/3180576/2f62bc21-32a6-47b9-843b-b8ecce39332e/original.jpg?v=sq0mce',
+    headerImageUrl: 'https://modernlifestyle-prod.nyc3.cdn.digitaloceanspaces.com/3180566/7abac4f3-7b3b-455d-9b52-d6931aa96190/original.png?v=rrut6l',
+    operatingRegions: ['Los Angeles, California', 'Tucson, Arizona'],
+    globePresence: {
+      visibility: 'visible',
+      regions: [
+        hostRegion('hotwife-community-los-angeles', 'Los Angeles', 'CA', 'United States', 34.0522, -118.2437),
+        hostRegion('hotwife-community-tucson', 'Tucson', 'AZ', 'United States', 32.2226, -110.9747),
+      ],
+    },
+    standards: [
+      'Enthusiastic consent is mandatory: No means No, and Ask First applies in all social and play spaces.',
+      'Respect boundaries and privacy: photography and phone use are restricted in event areas.',
+      'Members-only admission: guests must register and purchase event tickets in advance.',
+      'Dress to impress or match the event theme; hygiene and respectful etiquette are required.',
+      'Event-specific rules and partner venue policies apply at each hosted gathering.',
+    ],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+  {
     id: 'org-promoter-illuminaughty',
     type: 'organization',
     name: 'Illuminaughty',

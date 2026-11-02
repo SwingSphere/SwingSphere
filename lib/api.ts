@@ -362,7 +362,7 @@ export const getListings = async (): Promise<Listing[]> => {
         const { data, error } = accessibleResult;
         if (error) throw error;
         const remoteListings = asListings(data);
-        db.listings = state?.legacyImportComplete ? remoteListings : mergeLegacyCatalog(remoteListings);
+        db.listings = remoteListings.length === 0 && db.listings.length > 0 ? db.listings : (state?.legacyImportComplete ? remoteListings : mergeLegacyCatalog(remoteListings));
         return db.listings.map((listing) => normalizeListing({ ...listing }));
     } catch (error) {
         console.warn('Supabase listing store unavailable; using bundled read-only catalog.', error);

@@ -28,5 +28,14 @@ export const mockOrganizationVenueRelationships: OrganizationVenueRelationship[]
     isPrimary: true,
     confidence: 0.85,
   },
+  {
+    id: 'rel-hotwife-community-club-joi-la',
+    organizationId: 'org-promoter-hotwife-community',
+    venueId: 'venue-club-club-joi-la',
+    relationshipType: 'recurring_guest',
+    label: 'Partner venue for Ladies Fantasy Night',
+    isPrimary: false,
+    confidence: 0.95,
+  },
 ];
 

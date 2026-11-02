@@ -4,8 +4,10 @@ import {
   compareMigrationManifests,
   classifyGitStatus,
   classifyReleaseError,
+  extractMeaningfulCliError,
   isSecretPath,
   isBuildOrTempPath,
+  isExperimentalOrLocalDataPath,
   sanitizeErrorMessage,
   verifyFrontendCompatibility,
   parseMigrationListCliOutput,
@@ -19,20 +21,58 @@ describe('Migration manifest comparison', () => {
     const result = compareMigrationManifests(local, remote);
     assert.equal(result.status, 'synchronized');
     assert.equal(result.safeToMigrate, true);
+    assert.equal(result.requiresIncludeAll, false);
     assert.equal(result.pendingLocal.length, 0);
     assert.equal(result.missingRemote.length, 0);
     assert.equal(result.matchedCount, 3);
   });
 
-  it('detects local-only pending migrations', () => {
+  it('detects in-order local-only pending migrations', () => {
     const local = ['20261005081500', '20261006220721', '20261007010000'];
     const remote = ['20261005081500', '20261006220721'];
 
     const result = compareMigrationManifests(local, remote);
     assert.equal(result.status, 'local_pending');
     assert.equal(result.safeToMigrate, true);
+    assert.equal(result.requiresIncludeAll, false);
     assert.deepEqual(result.pendingLocal, ['20261007010000']);
+    assert.deepEqual(result.inOrderPendingLocal, ['20261007010000']);
+    assert.deepEqual(result.outOfOrderPendingLocal, []);
     assert.equal(result.missingRemote.length, 0);
+  });
+
+  it('detects out-of-order pending migration when localHead and remoteHead match (20261007010000 < 20261015000000)', () => {
+    const local = [
+      '20261006222420',
+      '20261007005614',
+      '20261007010000',
+      '20261009050000',
+      '20261015000000',
+    ];
+    const remote = [
+      '20261006222420',
+      '20261007005614',
+      '20261009050000',
+      '20261015000000',
+    ];
+
+    const result = compareMigrationManifests(local, remote, {
+      '20261007010000': {
+        filename: '20261007010000_venue_ambient_building_massings.sql',
+        name: 'venue_ambient_building_massings',
+      },
+    });
+    assert.equal(result.status, 'local_pending');
+    assert.equal(result.localHead, '20261015000000');
+    assert.equal(result.remoteHead, '20261015000000');
+    assert.equal(result.requiresIncludeAll, true);
+    assert.deepEqual(result.pendingLocal, ['20261007010000']);
+    assert.deepEqual(result.outOfOrderPendingLocal, ['20261007010000']);
+    assert.deepEqual(result.inOrderPendingLocal, []);
+    assert.equal(result.pendingDetails?.[0]?.isOutOfOrder, true);
+    assert.equal(result.pendingDetails?.[0]?.filename, '20261007010000_venue_ambient_building_massings.sql');
+    assert(result.explanation.includes('out-of-order'));
+    assert(result.explanation.includes('--include-all'));
   });
 
   it('detects remote migrations missing locally', () => {
@@ -111,21 +151,65 @@ UU components/maps/mapLayers.ts
     assert(result.blockReason?.includes('Unresolved merge conflicts'));
   });
 
-  it('allows safe files when no secrets or conflicts are present', () => {
+  it('allows safe files when no secrets or conflicts are present and flags experimental/local data', () => {
     const status = `
  M components/EventBrowser.tsx
  M vite.config.ts
 ?? supabase/migrations/20261007010000_venue_ambient_building_massings.sql
+?? components/dev/Globe2LabPage.tsx
+ M data/listings.local.json
 `;
     const result = classifyGitStatus(status);
     assert.equal(result.canStage, true);
     assert.equal(result.conflicts.length, 0);
     assert.equal(result.excludedSecrets.length, 0);
-    assert.equal(result.safeToStage.length, 3);
+    assert.equal(result.safeToStage.length, 5);
+    assert.deepEqual(result.flaggedExperimentalOrLocal, [
+      'components/dev/Globe2LabPage.tsx',
+      'data/listings.local.json',
+    ]);
+    assert.deepEqual(result.defaultSelectedFiles, [
+      'components/EventBrowser.tsx',
+      'supabase/migrations/20261007010000_venue_ambient_building_massings.sql',
+      'vite.config.ts',
+    ]);
+    assert.equal(isExperimentalOrLocalDataPath('src/features/globe-v2/index.ts'), true);
   });
 });
 
 describe('Error classification & sanitization', () => {
+  it('extracts meaningful CLI error messages while stripping Supabase startup and update noise', () => {
+    const cliOutput = `
+Initialising login role...
+Connecting to remote database...
+DRY RUN: migrations will *not* be pushed to the database.
+Found local migration files to be inserted before the last migration on remote database.
+
+Rerun the command with --include-all flag to apply these migrations:
+supabase\\migrations\\20261007010000_venue_ambient_building_massings.sql
+
+A new version of Supabase CLI is available: v2.84.2 (currently installed v2.75.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started
+`;
+    const extracted = extractMeaningfulCliError(cliOutput);
+    assert(!extracted.includes('Initialising login role'));
+    assert(!extracted.includes('A new version of Supabase CLI'));
+    assert(extracted.includes('Found local migration files to be inserted before the last migration on remote database.'));
+    assert(extracted.includes('20261007010000_venue_ambient_building_massings.sql'));
+  });
+
+  it('classifies out-of-order migration and concurrency lock errors', () => {
+    const outOfOrder = classifyReleaseError(
+      'migration',
+      'Found local migration files to be inserted before the last migration on remote database. Rerun with --include-all',
+    );
+    assert.equal(outOfOrder.category, 'migration_mismatch');
+    assert(outOfOrder.userMessage.includes('earlier than the latest migration'));
+    assert(outOfOrder.recoveryGuidance?.includes('No database changes were applied'));
+
+    const locked = classifyReleaseError('lock', 'Another release operation is already in progress');
+    assert.equal(locked.category, 'concurrency_locked');
+  });
   it('redacts database credentials and bearer tokens', () => {
     const raw = 'Failed with postgresql://postgres:SuperSecret123@db.supabase.co:5432/postgres and Bearer eyJhbGciOiJIUzI1NiJ9.test.sig';
     const sanitized = sanitizeErrorMessage(raw);

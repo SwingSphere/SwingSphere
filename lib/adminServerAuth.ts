@@ -9,10 +9,18 @@ const getBearerToken = (authorization?: string | null): string => {
 
 let cachedDotEnv: Record<string, string> | null = null;
 
-const readLocalEnvFallback = (): Record<string, string> => {
+const ENV_FALLBACK_FILES = [
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.development.local',
+  '.env.cloudflare',
+];
+
+export const readLocalEnvFallback = (): Record<string, string> => {
   if (cachedDotEnv) return cachedDotEnv;
   const parsed: Record<string, string> = {};
-  for (const filename of ['.env', '.env.local']) {
+  for (const filename of ENV_FALLBACK_FILES) {
     const filePath = path.resolve(process.cwd(), filename);
     if (!fs.existsSync(filePath)) continue;
     try {
@@ -34,29 +42,41 @@ const readLocalEnvFallback = (): Record<string, string> => {
   return parsed;
 };
 
+export const getResolvedServerEnvValue = (...keys: string[]): string => {
+  const fallback = readLocalEnvFallback();
+  for (const key of keys) {
+    const fromProc = process.env[key]?.trim();
+    if (fromProc) return fromProc;
+    const fromFile = fallback[key]?.trim();
+    if (fromFile) return fromFile;
+  }
+  return '';
+};
+
 export type ActiveAdminIdentity = {
   userId: string;
   email: string | null;
 };
 
+const createAuthError = (message: string, statusCode: number): Error & { statusCode: number } => {
+  const error = new Error(message) as Error & { statusCode: number };
+  error.statusCode = statusCode;
+  return error;
+};
+
 export const createAuthenticatedSupabaseServerClient = (authorization?: string | null) => {
   const token = getBearerToken(authorization);
-  if (!token) throw new Error('Active admin authentication is required.');
+  if (!token) throw createAuthError('Active admin authentication is required.', 401);
 
-  const envFallback = readLocalEnvFallback();
-  const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL ||
-    envFallback.SUPABASE_URL ||
-    envFallback.VITE_SUPABASE_URL;
-  const publishableKey =
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    envFallback.SUPABASE_ANON_KEY ||
-    envFallback.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    envFallback.VITE_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !publishableKey) throw new Error('Supabase server authentication is not configured.');
+  const supabaseUrl = getResolvedServerEnvValue('SUPABASE_URL', 'VITE_SUPABASE_URL');
+  const publishableKey = getResolvedServerEnvValue(
+    'SUPABASE_ANON_KEY',
+    'VITE_SUPABASE_PUBLISHABLE_KEY',
+    'VITE_SUPABASE_ANON_KEY',
+  );
+  if (!supabaseUrl || !publishableKey) {
+    throw createAuthError('Supabase server authentication is not configured.', 500);
+  }
 
   return {
     token,
@@ -70,16 +90,20 @@ export const createAuthenticatedSupabaseServerClient = (authorization?: string |
 export const requireActiveAdmin = async (authorization?: string | null): Promise<ActiveAdminIdentity> => {
   const { token, supabase } = createAuthenticatedSupabaseServerClient(authorization);
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !authData.user) throw new Error('Your admin session is invalid or expired.');
+  if (authError || !authData.user) {
+    throw createAuthError('Your admin session is invalid or expired.', 401);
+  }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, status')
     .eq('id', authData.user.id)
     .maybeSingle();
-  if (profileError) throw new Error(`Could not verify admin access: ${profileError.message}`);
+  if (profileError) {
+    throw createAuthError(`Could not verify admin access: ${profileError.message}`, 500);
+  }
   if (profile?.role !== 'admin' || profile.status !== 'active') {
-    throw new Error('Active admin access is required for Building Inspector changes.');
+    throw createAuthError('Active admin access is required.', 403);
   }
 
   return { userId: authData.user.id, email: authData.user.email ?? null };

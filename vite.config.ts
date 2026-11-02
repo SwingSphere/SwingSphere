@@ -3224,92 +3224,86 @@ const createGeoApiMiddleware = () => async (req: any, res: any, next: any) => {
       return;
     }
 
-    if (req.method === 'GET' && req.url.startsWith('/api/admin/release/preflight')) {
+    if (req.url.startsWith('/api/admin/release/') || req.url.startsWith('/api/admin/deployment-sync/')) {
       if (!isLocalhostRequest(req)) {
         res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Release operations are only permitted from localhost.' }));
         return;
       }
-      const preflight = await runReleasePreflight(req.headers.authorization);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(preflight));
-      return;
-    }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/verify')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
-        return;
-      }
-      const preflight = await runReleasePreflight(req.headers.authorization);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(preflight));
-      return;
-    }
+      try {
+        if (req.method === 'GET' && req.url.startsWith('/api/admin/release/preflight')) {
+          const preflight = await runReleasePreflight(req.headers.authorization);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(preflight));
+          return;
+        }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/deploy-frontend')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
-        return;
-      }
-      const body = await readJsonBody(req).catch(() => ({}));
-      const plan = await runDeployFrontend(req.headers.authorization, body);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(plan));
-      return;
-    }
+        if (req.method === 'POST' && req.url.startsWith('/api/admin/release/verify')) {
+          const preflight = await runReleasePreflight(req.headers.authorization);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(preflight));
+          return;
+        }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/apply-migrations')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
-        return;
-      }
-      const body = await readJsonBody(req).catch(() => ({}));
-      const plan = await runApplyMigrations(req.headers.authorization, body);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(plan));
-      return;
-    }
+        if (req.method === 'POST' && req.url.startsWith('/api/admin/release/deploy-frontend')) {
+          const body = await readJsonBody(req).catch(() => ({}));
+          const plan = await runDeployFrontend(req.headers.authorization, body);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(plan));
+          return;
+        }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/admin/release/full')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
-        return;
-      }
-      const body = await readJsonBody(req).catch(() => ({}));
-      const plan = await runFullRelease(req.headers.authorization, body);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(plan));
-      return;
-    }
+        if (req.method === 'POST' && req.url.startsWith('/api/admin/release/apply-migrations')) {
+          const body = await readJsonBody(req).catch(() => ({}));
+          const plan = await runApplyMigrations(req.headers.authorization, body);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(plan));
+          return;
+        }
 
-    if (req.method === 'GET' && req.url.startsWith('/api/admin/release/audit-log')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
-        return;
-      }
-      await requireActiveAdmin(req.headers.authorization);
-      const audit = getReleaseAuditLog();
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(audit));
-      return;
-    }
+        if (req.method === 'POST' && req.url.startsWith('/api/admin/release/full')) {
+          const body = await readJsonBody(req).catch(() => ({}));
+          const plan = await runFullRelease(req.headers.authorization, body);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(plan));
+          return;
+        }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/admin/deployment-sync/run')) {
-      if (!isLocalhostRequest(req)) {
-        res.statusCode = 403;
-        res.end('Release operations are only permitted from localhost.');
+        if (req.method === 'GET' && req.url.startsWith('/api/admin/release/audit-log')) {
+          await requireActiveAdmin(req.headers.authorization);
+          const audit = getReleaseAuditLog();
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(audit));
+          return;
+        }
+
+        if (req.method === 'POST' && req.url.startsWith('/api/admin/deployment-sync/run')) {
+          const payload = await runLocalProductionSync(req.headers.authorization);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(payload));
+          return;
+        }
+      } catch (releaseErr: any) {
+        const statusCode = Number(releaseErr?.statusCode) || 500;
+        res.statusCode = statusCode;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify({
+            error: releaseErr?.message || 'Release operation failed.',
+            classified: releaseErr?.classified,
+          }),
+        );
         return;
       }
-      const payload = await runLocalProductionSync(req.headers.authorization);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(payload));
-      return;
     }
 
     if (req.url.startsWith('/api/admin/curator/') && !isLocalhostRequest(req)) {
@@ -5035,6 +5029,10 @@ export default defineConfig(({ command, mode }) => {
             '**/data/building-verification-reviews.local.json',
             '**/data/building-asset-history.local.json',
             '**/data/ambient-building-massings.local.json',
+            '**/public/images/events/curator-published/**',
+            '**/content-curator/**',
+            '**/*.tmp',
+            '**/*.bak',
           ],
         },
       },

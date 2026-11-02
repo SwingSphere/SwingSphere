@@ -25,22 +25,22 @@ const App: React.FC = () => {
     navigate('/');
   }
 
-  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/dev/globe', '/dev/hybrid-globe', '/dev/usa-pin-lab', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
+  const isGlobeExperienceRoute = ['/explore', '/map', '/globe', '/app/globe-lab', '/dev/globe-lab', '/dev/globe', '/dev/hybrid-globe', '/dev/usa-pin-lab', '/dev/language-explorer-globe', '/dev/hero-camera', '/dev/lighting-audit', '/dev/street-view'].includes(location.pathname);
   const explorerSurface =
     location.pathname === '/map'
       ? ('map' as const)
       : location.pathname === '/discover'
         ? ('directory' as const)
-        : location.pathname === '/globe' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/usa-pin-lab' || location.pathname === '/dev/language-explorer-globe'
+        : location.pathname === '/globe' || location.pathname === '/app/globe-lab' || location.pathname === '/dev/globe-lab' || location.pathname === '/dev/globe' || location.pathname === '/dev/hybrid-globe' || location.pathname === '/dev/usa-pin-lab' || location.pathname === '/dev/language-explorer-globe'
           ? ('globe' as const)
           : null;
   const isScrollablePage = !isGlobeExperienceRoute;
   const explorerScopeSearch = new URLSearchParams(location.search).has('activityRegion') ? location.search : '';
-  const showDebugBadge = DEV_TOOLS_ENABLED && location.pathname.startsWith('/dev/');
+  const showDebugBadge = DEV_TOOLS_ENABLED && (location.pathname.startsWith('/dev/') || location.pathname === '/app/globe-lab');
   const hasDedicatedEntitySeo = /^\/(clubs|hosts|resorts|cruises|venues)\/[^/]+$/.test(location.pathname)
     || /^\/events\/[^/]+$/.test(location.pathname)
     || /^\/(swinger-clubs|lifestyle-clubs|swinger-parties|lifestyle-events|play-parties)\/[^/]+$/.test(location.pathname);
-  const isPrivateOrUtilityRoute = /^(\/admin|\/dev|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(location.pathname);
+  const isPrivateOrUtilityRoute = /^(\/admin|\/dev|\/app\/globe-lab|\/account|\/host-dashboard|\/submission|\/login|\/signup|\/forgot-password|\/reset-password|\/listing\/|\/mobile|\/tablet)/.test(location.pathname);
   const seo = React.useMemo(() => resolvePageSeo(location.pathname), [location.pathname]);
 
   return (

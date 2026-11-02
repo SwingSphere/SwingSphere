@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useState } from 'react';
-import type { EntityIndex } from '../lib/entityIndex';
+import { buildEntityIndex, type EntityIndex } from '../lib/entityIndex';
+import * as api from '../lib/api';
 import type { EventSeriesData, Listing, OrganizationData, OrganizationRelationship, OrganizationVenueRelationship, VenueData } from '../types';
 import type { User } from '../data/mockUsers';
 
@@ -117,10 +118,10 @@ const buildCatalogSignature = (
 
 const loadCoreModules = () => {
   if (!modulesPromise) {
-    modulesPromise = Promise.all([
-      import('../lib/entityIndex'),
-      import('../lib/api'),
-    ]);
+    modulesPromise = Promise.resolve([{ buildEntityIndex } as typeof import('../lib/entityIndex'), api]);
+
+
+
   }
   return modulesPromise;
 };
@@ -222,6 +223,7 @@ const fetchRemoteSnapshot = async (): Promise<EntityIndexSnapshot> => {
       api.getOrganizationRelationships(),
     ]);
 
+
     if (listingsResult.status === 'rejected') throw listingsResult.reason;
 
     const nextListings = listingsResult.value;
@@ -309,7 +311,12 @@ export const invalidateEntityIndexCache = (options?: { maxAgeMs?: number }) => {
 };
 
 export const useEntityIndex = (): EntityIndexState => {
-  const [snapshot, setSnapshot] = useState<EntityIndexSnapshot | null>(() => cachedSnapshot);
+  const [snapshot, setSnapshot] = useState<EntityIndexSnapshot | null>(() => {
+    if (cachedSnapshot) return cachedSnapshot;
+    const initial = buildSnapshotFromBundled(buildEntityIndex, api, [], false);
+    publishSnapshot(initial);
+    return initial;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(() => !cachedSnapshot);
   const [error, setError] = useState<string | null>(null);
 

@@ -14,7 +14,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'swingsphere-ts-'));
 const outputPath = path.join(tempRoot, 'entry.mjs');
 try {
   buildSync({ entryPoints: [path.resolve(entry)], outfile: outputPath, bundle: true, platform: 'node', format: 'esm', target: 'node22', sourcemap: 'inline', logLevel: 'warning' });
-  const args = mode === 'test' ? ['--test', outputPath, ...forwardedArgs] : [outputPath, ...forwardedArgs];
+  const args = mode === 'test' ? ['--test', ...forwardedArgs, outputPath] : [outputPath, ...forwardedArgs];
   const result = spawnSync(process.execPath, args, { cwd: process.cwd(), stdio: 'inherit', windowsHide: true });
   process.exitCode = result.status ?? 1;
 } finally {

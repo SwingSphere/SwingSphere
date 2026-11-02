@@ -77,6 +77,10 @@ const AdminSettings: React.FC = () => {
   const [classifiedError, setClassifiedError] = useState<ClassifiedReleaseError | null>(null);
   const [showPreflightDetails, setShowPreflightDetails] = useState(false);
   const [showErrorTechnicalDetails, setShowErrorTechnicalDetails] = useState(false);
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [selectedFilesToStage, setSelectedFilesToStage] = useState<string[]>([]);
+  const [approveOutOfOrderMigrations, setApproveOutOfOrderMigrations] = useState(false);
+  const [simulateDryRun, setSimulateDryRun] = useState(false);
 
   const refreshHealth = useCallback(async () => {
     setHealthState('loading');
@@ -84,6 +88,9 @@ const AdminSettings: React.FC = () => {
     try {
       const snapshot = await getPlatformHealth();
       setHealth(snapshot);
+      if (snapshot.preflight?.staging) {
+        setSelectedFilesToStage(snapshot.preflight.staging.defaultSelectedFiles ?? []);
+      }
       setHealthState('ready');
     } catch (error) {
       console.error('Platform health check failed:', error);
@@ -99,6 +106,20 @@ const AdminSettings: React.FC = () => {
 
   const preflight = health?.preflight;
   const migrationSync = health?.migrationSync;
+  const canApplyMigrationsEffective = Boolean(
+    preflight?.actions.canApplyMigrations ||
+      (approveOutOfOrderMigrations && preflight?.actions.canApplyMigrationsWithIncludeAll),
+  );
+  const canFullReleaseEffective = Boolean(
+    preflight?.actions.canFullRelease ||
+      (approveOutOfOrderMigrations && preflight?.actions.canFullReleaseWithIncludeAll),
+  );
+
+  const toggleFileToStage = (filePath: string) => {
+    setSelectedFilesToStage((prev) =>
+      prev.includes(filePath) ? prev.filter((f) => f !== filePath) : [...prev, filePath].sort(),
+    );
+  };
 
   // Operation A: Verify Release
   const handleVerifyRelease = async () => {
@@ -113,8 +134,9 @@ const AdminSettings: React.FC = () => {
       setReleaseActionMessage(
         result.ok
           ? `Preflight verified: branch ${result.git.branch} (${result.git.commit}) · DB ${result.migration.statusLabel}`
-          : `Preflight issues found: ${result.blockReasons.join(' · ')}`,
+          : `Preflight completed with ${result.blockReasons.length} blocker(s): ${result.blockReasons.join(' · ')}`,
       );
+      setShowPreflightDetails(true);
     } catch (err: any) {
       setReleaseActionState('error');
       setReleaseActionMessage(err?.message || 'Verification failed.');
@@ -124,26 +146,33 @@ const AdminSettings: React.FC = () => {
   // Operation B: Commit & Deploy Frontend
   const handleDeployFrontend = async () => {
     if (releaseActionState === 'running') return;
-    const safeCount = preflight?.staging.safeToStage.length ?? 0;
+    const modePrefix = simulateDryRun ? '[SIMULATED DRY RUN] ' : '';
     const confirmed = window.confirm(
-      `Commit approved files (${safeCount}) and deploy the Cloudflare frontend?\n\nThis will NOT apply database migrations. It builds, commits, pushes origin/main, and deploys Cloudflare Pages.`,
+      `${modePrefix}Build Cloudflare bundle, commit ${selectedFilesToStage.length} selected file(s), push origin/main, and deploy Cloudflare Pages?\n\nSelected files (${selectedFilesToStage.length}):\n${selectedFilesToStage.slice(0, 12).join('\n') || '(none — deploy current HEAD)'}${selectedFilesToStage.length > 12 ? `\n…and ${selectedFilesToStage.length - 12} more` : ''}\n\nThis will NOT apply database migrations.`,
     );
     if (!confirmed) return;
 
     setReleaseActionState('running');
-    setReleaseActionMessage('Deploying frontend…');
+    setReleaseActionMessage(simulateDryRun ? 'Simulating frontend release…' : 'Deploying frontend…');
     setActivePlan(null);
     setClassifiedError(null);
     try {
       const plan = await adminFetchJson<ReleaseExecutionPlan>('/api/admin/release/deploy-frontend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          filesToStage: selectedFilesToStage,
+          dryRun: simulateDryRun,
+        }),
       });
       setActivePlan(plan);
       if (plan.success) {
         setReleaseActionState('success');
-        setReleaseActionMessage('Frontend deployed successfully to Cloudflare Pages.');
+        setReleaseActionMessage(
+          plan.dryRun
+            ? 'Simulated frontend release completed with all stages verified.'
+            : 'Frontend deployed successfully to Cloudflare Pages.',
+        );
       } else {
         setReleaseActionState('error');
         setClassifiedError(plan.error || null);
@@ -159,26 +188,40 @@ const AdminSettings: React.FC = () => {
   // Operation C: Apply Database Migrations
   const handleApplyMigrations = async () => {
     if (releaseActionState === 'running') return;
-    const pendingCount = migrationSync?.pendingLocal.length ?? 0;
+    const pendingList = migrationSync?.pendingDetails?.length
+      ? migrationSync.pendingDetails.map((d) => `${d.filename || d.version}${d.isOutOfOrder ? ' (out-of-order)' : ''}`)
+      : migrationSync?.pendingLocal ?? [];
+    const modePrefix = simulateDryRun ? '[SIMULATED DRY RUN] ' : '';
+    const includeAllNote = migrationSync?.requiresIncludeAll
+      ? '\n\nNote: Includes "--include-all" for out-of-order migration(s) before remote head.'
+      : '';
     const confirmed = window.confirm(
-      `Apply ${pendingCount} pending Supabase migration(s) to the production database?\n\nMigrations to apply:\n${(migrationSync?.pendingLocal ?? []).join('\n')}\n\nThis will execute "supabase db push".`,
+      `${modePrefix}Apply ${pendingList.length} pending Supabase migration(s) to the production database?\n\nMigrations to apply:\n${pendingList.join('\n')}${includeAllNote}`,
     );
     if (!confirmed) return;
 
     setReleaseActionState('running');
-    setReleaseActionMessage('Applying database migrations…');
+    setReleaseActionMessage(simulateDryRun ? 'Simulating database migration apply…' : 'Applying database migrations…');
     setActivePlan(null);
     setClassifiedError(null);
     try {
       const plan = await adminFetchJson<ReleaseExecutionPlan>('/api/admin/release/apply-migrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
+        body: JSON.stringify({
+          confirm: true,
+          includeAll: approveOutOfOrderMigrations,
+          dryRun: simulateDryRun,
+        }),
       });
       setActivePlan(plan);
       if (plan.success) {
         setReleaseActionState('success');
-        setReleaseActionMessage('Database migrations applied successfully.');
+        setReleaseActionMessage(
+          plan.dryRun
+            ? 'Simulated database migration apply completed successfully.'
+            : 'Database migrations applied successfully.',
+        );
       } else {
         setReleaseActionState('error');
         setClassifiedError(plan.error || null);
@@ -195,26 +238,35 @@ const AdminSettings: React.FC = () => {
   const handleFullRelease = async () => {
     if (releaseActionState === 'running') return;
     const pendingMigrations = migrationSync?.pendingLocal.length ?? 0;
-    const safeFiles = preflight?.staging.safeToStage.length ?? 0;
+    const modePrefix = simulateDryRun ? '[SIMULATED DRY RUN] ' : '';
     const confirmed = window.confirm(
-      `Execute Full Release?\n\n- Safe files to stage/commit: ${safeFiles}\n- Pending database migrations: ${pendingMigrations}\n- Cloudflare Pages deployment: Yes\n\nAll preflight safeguards will run before any deployment.`,
+      `${modePrefix}Execute Full Release?\n\n- Selected files to stage/commit: ${selectedFilesToStage.length}\n- Pending database migrations: ${pendingMigrations}${approveOutOfOrderMigrations && migrationSync?.requiresIncludeAll ? ' (with --include-all)' : ''}\n- Cloudflare Pages deployment: Yes\n\nBuild runs before Git commit and database migration so build failures abort cleanly.`,
     );
     if (!confirmed) return;
 
     setReleaseActionState('running');
-    setReleaseActionMessage('Running full release sequence…');
+    setReleaseActionMessage(simulateDryRun ? 'Running simulated full release sequence…' : 'Running full release sequence…');
     setActivePlan(null);
     setClassifiedError(null);
     try {
       const plan = await adminFetchJson<ReleaseExecutionPlan>('/api/admin/release/full', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
+        body: JSON.stringify({
+          confirm: true,
+          filesToStage: selectedFilesToStage,
+          includeAll: approveOutOfOrderMigrations,
+          dryRun: simulateDryRun,
+        }),
       });
       setActivePlan(plan);
       if (plan.success) {
         setReleaseActionState('success');
-        setReleaseActionMessage('Full release completed successfully!');
+        setReleaseActionMessage(
+          plan.dryRun
+            ? 'Simulated full release completed with all 9 stages verified!'
+            : 'Full release completed successfully!',
+        );
       } else {
         setReleaseActionState('error');
         setClassifiedError(plan.error || null);
@@ -333,7 +385,8 @@ const AdminSettings: React.FC = () => {
                     </span>
                     {migrationSync?.pendingLocal.length ? (
                       <span className="font-semibold text-amber-800">
-                        {migrationSync.pendingLocal.length} pending migration(s)
+                        Pending local migration(s): <code>{migrationSync.pendingLocal.join(', ')}</code>
+                        {migrationSync.requiresIncludeAll ? ' (out-of-order before head)' : ''}
                       </span>
                     ) : null}
                     {migrationSync?.missingRemote.length ? (
@@ -353,14 +406,26 @@ const AdminSettings: React.FC = () => {
                   </div>
                 </div>
                 {localProductionSyncAvailable ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowPreflightDetails((prev) => !prev)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
-                  >
-                    <span>{showPreflightDetails ? 'Hide preflight inspection' : 'Inspect release preflight'}</span>
-                    {showPreflightDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {health.auditLog?.length ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAuditHistory((prev) => !prev)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                      >
+                        <span>{showAuditHistory ? 'Hide release history' : `Release history (${health.auditLog.length})`}</span>
+                        {showAuditHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setShowPreflightDetails((prev) => !prev)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                    >
+                      <span>{showPreflightDetails ? 'Hide preflight inspection' : 'Inspect release preflight'}</span>
+                      {showPreflightDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -380,6 +445,11 @@ const AdminSettings: React.FC = () => {
                       <div>
                         HEAD: <code>{preflight.git.commit}</code>
                       </div>
+                      {preflight.git.upstream ? (
+                        <div>
+                          Upstream: <code>{preflight.git.upstream}</code> (+{preflight.git.aheadCount ?? 0} / -{preflight.git.behindCount ?? 0})
+                        </div>
+                      ) : null}
                       <div className="truncate text-gray-500">{preflight.git.commitMessage}</div>
                     </div>
                   </div>
@@ -390,10 +460,11 @@ const AdminSettings: React.FC = () => {
                     </div>
                     <div className="mt-2 space-y-1">
                       <div>
-                        Safe to stage: <strong className="text-emerald-700">{preflight.staging.safeToStage.length}</strong> files
+                        Selected to stage: <strong className="text-emerald-700">{selectedFilesToStage.length}</strong> / {preflight.staging.safeToStage.length} safe
                       </div>
+                      <div>Tracked modified: {preflight.staging.modifiedTracked?.length ?? 0} files</div>
                       <div>Untracked: {preflight.staging.untracked.length} files</div>
-                      <div>Excluded temp/build: {preflight.staging.excludedBuildOrTemp.length} files</div>
+                      <div>Excluded experimental/local: {preflight.staging.flaggedExperimentalOrLocal?.length ?? 0} files</div>
                       {preflight.staging.excludedSecrets.length ? (
                         <div className="font-bold text-rose-700">
                           Excluded secrets: {preflight.staging.excludedSecrets.join(', ')}
@@ -408,10 +479,16 @@ const AdminSettings: React.FC = () => {
                     </div>
                     <div className="mt-2 space-y-1">
                       <div>Status: <strong>{preflight.migration.statusLabel}</strong></div>
-                      <div>Matched: {preflight.migration.matchedCount}</div>
+                      <div>Matched: {preflight.migration.matchedCount} / {preflight.migration.localCount}</div>
                       <div>Pending: {preflight.migration.pendingLocal.length}</div>
                       <div>Missing locally: {preflight.migration.missingRemote.length}</div>
-                      <div>Dry-run: {preflight.migrationDryRun.passed ? '✓ Succeeded' : '✗ Failed'}</div>
+                      <div>
+                        Dry-run: {preflight.migrationDryRun.passed
+                          ? '✓ Succeeded'
+                          : preflight.migrationDryRun.includeAllDryRunPassed
+                            ? '⚠ Needs --include-all (SQL valid)'
+                            : '✗ Failed'}
+                      </div>
                     </div>
                   </div>
 
@@ -421,11 +498,107 @@ const AdminSettings: React.FC = () => {
                     </div>
                     <div className="mt-2 space-y-1">
                       <div>Frontend deploy: {preflight.actions.canDeployFrontend ? '✓ Ready' : '✗ Blocked'}</div>
-                      <div>DB migrations: {preflight.actions.canApplyMigrations ? '✓ Ready' : '✗ Blocked'}</div>
-                      <div>Full release: {preflight.actions.canFullRelease ? '✓ Ready' : '✗ Blocked'}</div>
+                      <div>DB migrations: {canApplyMigrationsEffective ? '✓ Ready' : '✗ Blocked'}</div>
+                      <div>Full release: {canFullReleaseEffective ? '✓ Ready' : '✗ Blocked'}</div>
+                      <div>Cloudflare project: <code>{preflight.cloudflare.projectName || 'swingsphere'}</code></div>
                     </div>
                   </div>
                 </div>
+
+                {/* Out-of-order migration inspection & opt-in confirmation */}
+                {preflight.migration.requiresIncludeAll && preflight.migration.pendingDetails?.length ? (
+                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50/90 p-3 text-amber-950">
+                    <div className="font-bold">
+                      Out-of-Order Pending Migration Detected ({preflight.migration.pendingLocal.join(', ')})
+                    </div>
+                    <p className="mt-1 leading-5">
+                      Local head (<code>{preflight.migration.localHead}</code>) and production head (<code>{preflight.migration.remoteHead}</code>) match because later migrations were applied first, leaving{' '}
+                      <code>{preflight.migration.pendingDetails.map((d) => d.filename || d.version).join(', ')}</code> unapplied in <code>supabase_migrations.schema_migrations</code>.
+                    </p>
+                    {preflight.migrationDryRun.includeAllPreview ? (
+                      <pre className="mt-2 overflow-x-auto rounded bg-amber-950/10 p-2 font-mono text-[11px] whitespace-pre-wrap">
+                        {preflight.migrationDryRun.includeAllPreview}
+                      </pre>
+                    ) : null}
+                    {preflight.migrationDryRun.includeAllDryRunPassed ? (
+                      <label className="mt-2 inline-flex cursor-pointer items-center gap-2 font-semibold text-amber-900">
+                        <input
+                          type="checkbox"
+                          checked={approveOutOfOrderMigrations}
+                          onChange={(e) => setApproveOutOfOrderMigrations(e.target.checked)}
+                          className="rounded border-amber-400"
+                        />
+                        <span>
+                          I have reviewed the out-of-order migration SQL and approve applying with <code>--include-all</code>
+                        </span>
+                      </label>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {/* Explicit File Selection for Git Staging */}
+                {preflight.staging.safeToStage.length > 0 ? (
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-white/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-bold text-gray-900">
+                        Files to Stage & Commit ({selectedFilesToStage.length} of {preflight.staging.safeToStage.length} selected)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFilesToStage(preflight.staging.defaultSelectedFiles ?? [])}
+                          className="rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                          Select default safe ({preflight.staging.defaultSelectedFiles?.length ?? 0})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFilesToStage([])}
+                          className="rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                          Clear all (deploy HEAD only)
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 max-h-44 overflow-y-auto divide-y divide-gray-100 rounded border border-gray-100 bg-white p-1.5">
+                      {preflight.staging.safeToStage.map((filePath) => {
+                        const isChecked = selectedFilesToStage.includes(filePath);
+                        const isExperimental = preflight.staging.flaggedExperimentalOrLocal?.includes(filePath);
+                        const isUntracked = preflight.staging.untracked.includes(filePath);
+                        return (
+                          <label
+                            key={filePath}
+                            className="flex cursor-pointer items-center justify-between gap-2 py-1 px-1.5 hover:bg-gray-50"
+                          >
+                            <span className="flex items-center gap-2 truncate">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleFileToStage(filePath)}
+                                className="rounded border-gray-300"
+                              />
+                              <code className="truncate text-[11px]">{filePath}</code>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {isExperimental ? (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                                  Experimental / Local Data
+                                </span>
+                              ) : null}
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  isUntracked ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                }`}
+                              >
+                                {isUntracked ? 'Untracked' : 'Modified'}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
                 {preflight.blockReasons.length > 0 ? (
                   <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-900">
@@ -451,62 +624,122 @@ const AdminSettings: React.FC = () => {
               </div>
             ) : null}
 
+            {/* Recent Release Audit Log Drawer */}
+            {showAuditHistory && health.auditLog?.length ? (
+              <div className="mt-4 border-t border-gray-200/60 pt-3 text-xs text-gray-700">
+                <div className="font-bold text-gray-900">Recent Release Audit History</div>
+                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+                  {health.auditLog.slice(0, 8).map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white/80 px-3 py-2"
+                    >
+                      <div>
+                        <span className="font-semibold text-gray-900">{entry.operation}</span>
+                        {entry.dryRun ? (
+                          <span className="ml-1.5 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
+                            DRY RUN
+                          </span>
+                        ) : null}
+                        <span className="ml-2 text-gray-500">
+                          {new Date(entry.startedAt).toLocaleString()}
+                        </span>
+                        {entry.error ? (
+                          <div className="mt-0.5 text-[11px] text-red-700">
+                            {entry.error.categoryLabel}: {entry.error.userMessage}
+                          </div>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          entry.success ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {entry.success ? 'Succeeded' : 'Failed'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {/* Action Bar (Operations A, B, C, D) */}
             {localProductionSyncAvailable ? (
-              <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-gray-200/60 pt-4">
-                {/* Action A: Verify Release */}
-                <button
-                  type="button"
-                  onClick={handleVerifyRelease}
-                  disabled={releaseActionState === 'running'}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-xs transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-50"
-                >
-                  <RefreshCw size={14} className={releaseActionState === 'running' ? 'animate-spin' : ''} />
-                  A. Verify release
-                </button>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200/60 pt-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Action A: Verify Release */}
+                  <button
+                    type="button"
+                    onClick={handleVerifyRelease}
+                    disabled={releaseActionState === 'running'}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-xs transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={releaseActionState === 'running' ? 'animate-spin' : ''} />
+                    A. Verify release
+                  </button>
 
-                {/* Action B: Commit & Deploy Frontend */}
-                <button
-                  type="button"
-                  onClick={handleDeployFrontend}
-                  disabled={releaseActionState === 'running' || !preflight?.actions.canDeployFrontend}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-800 shadow-xs transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  title={preflight?.actions.canDeployFrontend ? 'Deploy frontend to Cloudflare Pages' : 'Frontend deploy blocked by preflight'}
-                >
-                  <GitCommit size={14} />
-                  B. Commit & deploy frontend
-                </button>
+                  {/* Action B: Commit & Deploy Frontend */}
+                  <button
+                    type="button"
+                    onClick={handleDeployFrontend}
+                    disabled={releaseActionState === 'running' || !preflight?.actions.canDeployFrontend}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-800 shadow-xs transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={preflight?.actions.canDeployFrontend ? 'Deploy frontend to Cloudflare Pages' : 'Frontend deploy blocked by preflight'}
+                  >
+                    <GitCommit size={14} />
+                    B. Commit & deploy frontend ({selectedFilesToStage.length})
+                  </button>
 
-                {/* Action C: Apply Database Migrations */}
-                <button
-                  type="button"
-                  onClick={handleApplyMigrations}
-                  disabled={
-                    releaseActionState === 'running' ||
-                    !preflight?.actions.canApplyMigrations ||
-                    migrationSync?.status !== 'local_pending'
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-purple-50 px-3.5 py-2 text-xs font-semibold text-purple-800 shadow-xs transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  title={
-                    migrationSync?.status === 'local_pending'
-                      ? 'Apply pending database migrations'
-                      : 'No pending migrations or migration history diverged'
-                  }
-                >
-                  <Database size={14} />
-                  C. Apply database migrations
-                </button>
+                  {/* Action C: Apply Database Migrations */}
+                  <button
+                    type="button"
+                    onClick={handleApplyMigrations}
+                    disabled={
+                      releaseActionState === 'running' ||
+                      !canApplyMigrationsEffective ||
+                      migrationSync?.status !== 'local_pending'
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-purple-50 px-3.5 py-2 text-xs font-semibold text-purple-800 shadow-xs transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={
+                      canApplyMigrationsEffective
+                        ? 'Apply pending database migrations'
+                        : migrationSync?.requiresIncludeAll
+                          ? 'Inspect release preflight and approve out-of-order migration (--include-all) first'
+                          : 'No pending migrations or migration history diverged'
+                    }
+                  >
+                    <Database size={14} />
+                    C. Apply database migrations
+                  </button>
 
-                {/* Action D: Full Release */}
-                <button
-                  type="button"
-                  onClick={handleFullRelease}
-                  disabled={releaseActionState === 'running' || !preflight?.actions.canFullRelease}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-700 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Rocket size={14} />
-                  {releaseActionState === 'running' ? 'Executing release…' : 'D. Full release'}
-                </button>
+                  {/* Action D: Full Release */}
+                  <button
+                    type="button"
+                    onClick={handleFullRelease}
+                    disabled={releaseActionState === 'running' || !canFullReleaseEffective}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-rose-700 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={
+                      canFullReleaseEffective
+                        ? 'Execute full release'
+                        : migrationSync?.requiresIncludeAll && !approveOutOfOrderMigrations
+                          ? 'Inspect release preflight and approve out-of-order migration (--include-all) first'
+                          : 'Full release blocked by preflight'
+                    }
+                  >
+                    <Rocket size={14} />
+                    {releaseActionState === 'running' ? 'Executing release…' : 'D. Full release'}
+                  </button>
+                </div>
+
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={simulateDryRun}
+                    onChange={(e) => setSimulateDryRun(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>Simulate dry-run (no production writes)</span>
+                </label>
               </div>
             ) : (
               <p className="mt-4 border-t border-gray-200/60 pt-3 text-xs text-gray-500">
@@ -546,6 +779,11 @@ const AdminSettings: React.FC = () => {
                         <div className="mt-1 text-red-700">
                           Next step: {classifiedError.actionableNextStep}
                         </div>
+                        {classifiedError.recoveryGuidance ? (
+                          <div className="mt-1 font-medium text-red-800">
+                            Recovery state: {classifiedError.recoveryGuidance}
+                          </div>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => setShowErrorTechnicalDetails((prev) => !prev)}
@@ -567,12 +805,14 @@ const AdminSettings: React.FC = () => {
               {/* Stage Progress Tracker */}
               {activePlan?.stages ? (
                 <div className="mt-4 border-t border-gray-200/50 pt-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Stage Progress</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Stage Progress {activePlan.dryRun ? '(Simulated Dry Run)' : ''}
+                  </div>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                     {activePlan.stages.map((stage) => (
                       <div
                         key={stage.name}
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                        className={`rounded-lg border px-3 py-2 text-xs ${
                           stage.status === 'success'
                             ? 'border-emerald-200 bg-emerald-100/60 text-emerald-900'
                             : stage.status === 'running'
@@ -582,16 +822,28 @@ const AdminSettings: React.FC = () => {
                                 : 'border-gray-200 bg-gray-100/50 text-gray-500'
                         }`}
                       >
-                        {stage.status === 'success' ? (
-                          <Check size={14} className="shrink-0 text-emerald-700" />
-                        ) : stage.status === 'running' ? (
-                          <RefreshCw size={14} className="shrink-0 animate-spin text-blue-700" />
-                        ) : stage.status === 'failed' ? (
-                          <XCircle size={14} className="shrink-0 text-red-700" />
-                        ) : (
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-gray-300" />
-                        )}
-                        <span className="truncate">{stage.label}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 truncate">
+                            {stage.status === 'success' ? (
+                              <Check size={14} className="shrink-0 text-emerald-700" />
+                            ) : stage.status === 'running' ? (
+                              <RefreshCw size={14} className="shrink-0 animate-spin text-blue-700" />
+                            ) : stage.status === 'failed' ? (
+                              <XCircle size={14} className="shrink-0 text-red-700" />
+                            ) : (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-gray-300" />
+                            )}
+                            <span className="truncate">{stage.label}</span>
+                          </span>
+                          {typeof stage.durationMs === 'number' ? (
+                            <span className="shrink-0 text-[10px] opacity-70">{stage.durationMs}ms</span>
+                          ) : null}
+                        </div>
+                        {stage.detail ? (
+                          <div className="mt-1 truncate text-[11px] opacity-80" title={stage.detail}>
+                            {stage.detail}
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>

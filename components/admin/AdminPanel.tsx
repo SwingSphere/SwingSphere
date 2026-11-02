@@ -96,7 +96,14 @@ export type AdminView =
 
 
 const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
-    const [view, setView] = useState<AdminView>(initialView ?? 'dashboard');
+    const [view, setView] = useState<AdminView>(() => {
+        if (initialView) return initialView;
+        if (typeof window !== 'undefined' && import.meta.env.DEV) {
+            const requested = new URLSearchParams(window.location.search).get('view');
+            if (requested === 'content-curator') return 'content-curator';
+        }
+        return 'dashboard';
+    });
     const [queueFilter, setQueueFilter] = useState<AdminQueueFilterSpec | null>(null);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const { currentUser, tags, fetchTags, addToast } = useAppStore();
@@ -713,7 +720,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
     const pendingFlagsCount = issueCount ?? 0;
 
     return (
-        <div className="flex h-screen flex-col bg-slate-50 font-sans text-gray-800 lg:flex-row">
+        <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-slate-50 font-sans text-gray-800 lg:h-[calc(100vh-4rem)] lg:flex-row lg:overflow-hidden">
             {/* Mobile & Tablet Top Header */}
             <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
                 <button
@@ -776,7 +783,7 @@ const AdminPanel: React.FC<{ initialView?: AdminView }> = ({ initialView }) => {
             )}
 
             {/* Desktop Permanent Sidebar */}
-            <div className="hidden lg:flex lg:shrink-0">
+            <div className="hidden lg:flex lg:h-full lg:shrink-0">
                 <AdminSidebar 
                     currentView={currentViewName} 
                     setView={(nextView) => {

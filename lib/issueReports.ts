@@ -37,6 +37,8 @@ export const getAdminSiteIssues = async (status = 'open', offset = 0, limit = 50
 // Keep administration usable while the issue-inbox migration is pending, without
 // presenting mock flags or an invented empty count.
 export const getOpenSiteIssueCount = async (): Promise<number | null> => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return null;
   const { data, error } = await supabase.rpc('admin_list_site_issues', { p_status: 'open', p_offset: 0, p_limit: 1 });
   if (error) return null;
   return Number((data as { total: number }).total);

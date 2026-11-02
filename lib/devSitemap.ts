@@ -16,6 +16,13 @@ export type DevRouteCatalogEntry = {
 
 export const DEV_ROUTE_CATALOG: readonly DevRouteCatalogEntry[] = [
   {
+    id: 'dev-globe-2-lab',
+    label: 'Globe 2.0 Sandbox & Diagnostic Lab',
+    path: '/app/globe-lab',
+    description: 'Isolated clean-room Globe 2.0 reconstruction with Phase 9 geographic debug mode, coordinate inspector, and V1 comparison.',
+    category: 'Discovery & globe',
+  },
+  {
     id: 'dev-globe',
     label: 'Production Globe Controls',
     path: '/dev/globe',

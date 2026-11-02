@@ -44,6 +44,29 @@ export const eventSeries: EventSeriesData[] = [
     status: 'approved',
     postedByUserId: 'user1',
   },
+  {
+    id: 'series-ladies-fantasy-night',
+    type: 'event_series',
+    name: 'Ladies Fantasy Night',
+    slug: 'ladies-fantasy-night',
+    organizerOrganizationId: 'org-promoter-hotwife-community',
+    descriptionShort: 'A recurring women-centered lifestyle play party series organized by Hotwife Community and hosted at partner venue Club Joi in Los Angeles, welcoming couples, single women, and a limited number of vetted single men.',
+    defaultVenueId: 'venue-club-club-joi-la',
+    defaultTags: ['Couples Welcome', 'Single Women Welcome', 'Single Men Welcome', 'Members Only'],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
+  {
+    id: 'series-hotwife-palooza',
+    type: 'event_series',
+    name: 'Hotwife Palooza',
+    slug: 'hotwife-palooza',
+    organizerOrganizationId: 'org-promoter-hotwife-community',
+    descriptionShort: 'A recurring 48-hour destination hotel takeover lifestyle event series in Tucson, Arizona produced by Hotwife Community and HWP Entertainment, LLC.',
+    defaultTags: ['Hotel Takeover', 'Couples Welcome', 'Single Women Welcome', 'Single Men Welcome'],
+    status: 'approved',
+    postedByUserId: 'user1',
+  },
 ];
 
 export default eventSeries;

@@ -14,29 +14,55 @@ import { DEV_TOOLS_ENABLED } from './lib/devTools';
 import ComingSoonPage from './components/ComingSoonPage';
 import InboundAnalyticsTracker from './components/analytics/InboundAnalyticsTracker';
 
-const ProductionGlobePage = React.lazy(() => import('./components/ProductionGlobePage'));
+const lazyWithRetry = <T extends React.ComponentType<any>>(importer: () => Promise<{ default: T }>) =>
+  React.lazy(async () => {
+    try {
+      return await importer();
+    } catch (firstErr) {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      try {
+        return await importer();
+      } catch (secondErr) {
+        const msg = String((secondErr as any)?.message ?? secondErr ?? '');
+        if (
+          typeof window !== 'undefined' &&
+          /Failed to fetch dynamically imported module|Importing a module script failed/i.test(msg)
+        ) {
+          const reloadKey = `swingsphere:lazy-reload:${window.location.pathname}`;
+          const lastReload = Number(window.sessionStorage.getItem(reloadKey) || '0');
+          if (Date.now() - lastReload > 15_000) {
+            window.sessionStorage.setItem(reloadKey, String(Date.now()));
+            window.location.reload();
+          }
+        }
+        throw secondErr;
+      }
+    }
+  });
+
+const ProductionGlobePage = lazyWithRetry(() => import('./components/ProductionGlobePage'));
 const ListingSubmissionForm = React.lazy(() => import('./components/ListingSubmissionForm'));
 const PrivacyPolicy = React.lazy(() => import('./components/PrivacyPolicy'));
 const AboutUs = React.lazy(() => import('./components/AboutUs'));
 const FAQ = React.lazy(() => import('./components/FAQ'));
 const ContactUs = React.lazy(() => import('./components/ContactUs'));
 const TermsOfService = React.lazy(() => import('./components/TermsOfService'));
-const LogIn = React.lazy(() => import('./components/LogIn'));
+const LogIn = lazyWithRetry(() => import('./components/LogIn'));
 const SignUp = React.lazy(() => import('./components/SignUp'));
 const GoogleAuthCallback = React.lazy(() => import('./components/auth/GoogleAuthCallback'));
 const GoogleAccountSetup = React.lazy(() => import('./components/auth/GoogleAccountSetup'));
-const AccountPage = React.lazy(() => import('./components/AccountPage'));
+const AccountPage = lazyWithRetry(() => import('./components/AccountPage'));
 const PublicProfilePage = React.lazy(() => import('./components/PublicProfilePage'));
 const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('./components/ResetPassword'));
-const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
+const AdminPanel = lazyWithRetry(() => import('./components/admin/AdminPanel'));
 const AdminMiniMapHybridTest = React.lazy(() => import('./components/admin/AdminMiniMapHybridTest'));
 const AdminToolPage = React.lazy(() => import('./components/admin/AdminToolPage'));
-const EventPage = React.lazy(() => import('./components/pages/EventPage'));
-const EventsIndexPage = React.lazy(() => import('./components/pages/EventsIndexPage'));
-const DiscoverPage = React.lazy(() => import('./components/pages/DiscoverPage'));
-const ClubPage = React.lazy(() => import('./components/pages/ClubPage'));
-const HostPage = React.lazy(() => import('./components/pages/HostPage'));
+const EventPage = lazyWithRetry(() => import('./components/pages/EventPage'));
+const EventsIndexPage = lazyWithRetry(() => import('./components/pages/EventsIndexPage'));
+const DiscoverPage = lazyWithRetry(() => import('./components/pages/DiscoverPage'));
+const ClubPage = lazyWithRetry(() => import('./components/pages/ClubPage'));
+const HostPage = lazyWithRetry(() => import('./components/pages/HostPage'));
 const HostDashboard = React.lazy(() => import('./components/host/HostDashboard'));
 const VenuePage = React.lazy(() => import('./components/pages/VenuePage'));
 const TravelIndexPage = React.lazy(() => import('./components/pages/TravelIndexPage'));
@@ -60,6 +86,7 @@ const BadgeAchievementLabPage = import.meta.env.DEV ? React.lazy(() => import('.
 const LivingBackgroundLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LivingBackgroundLabPage')) : null;
 const BorderSurgeryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BorderSurgeryPage')) : null;
 const CleanRoomGlobePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/CleanRoomGlobePage')) : null;
+const Globe2LabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/Globe2LabPage')) : null;
 const PinMarkerStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/PinMarkerStudioPage')) : null;
 const DevImageLibraryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevImageLibraryPage')) : null;
 const MobileExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/MobileExplorerWorkbenchPage')) : null;
@@ -105,6 +132,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             {this.state.error?.toString()}
           </pre>
           <p style={{ marginTop: '20px', color: '#888' }}>Check the console for more details.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '8px', backgroundColor: '#dc2626', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+          >
+            Reload Page
+          </button>
         </div>
       );
     }
@@ -270,6 +304,14 @@ root.render(
               <Route
                 path="dev/border-surgery"
                 element={DEV_TOOLS_ENABLED && BorderSurgeryPage ? <ProtectedRoute roles={['Admin']}><BorderSurgeryPage /></ProtectedRoute> : <Navigate to="/" replace />}
+              />
+              <Route
+                path="app/globe-lab"
+                element={DEV_TOOLS_ENABLED && Globe2LabPage ? <Globe2LabPage /> : <Navigate to="/globe" replace />}
+              />
+              <Route
+                path="dev/globe-lab"
+                element={DEV_TOOLS_ENABLED && Globe2LabPage ? <Globe2LabPage /> : <Navigate to="/globe" replace />}
               />
             </Route>
           </Routes>

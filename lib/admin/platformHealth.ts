@@ -4,6 +4,7 @@ import { adminFetchJson } from '../adminApi';
 import {
   compareMigrationManifests,
   type MigrationComparisonResult,
+  type ReleaseExecutionPlan,
   type ReleasePreflightReport,
 } from './releaseManagement';
 
@@ -94,6 +95,7 @@ export type PlatformHealthSnapshot = {
   migrationMatches: boolean;
   migrationSync: MigrationComparisonResult;
   preflight?: ReleasePreflightReport;
+  auditLog?: ReleaseExecutionPlan[];
   items: PlatformHealthItem[];
   counts: PlatformHealthRpc['counts'];
 };
@@ -232,17 +234,21 @@ const buildItems = (
       description: migrationSync.status === 'synchronized'
         ? 'All database migrations in this checkout are fully synchronized with production Supabase.'
         : migrationSync.status === 'local_pending'
-          ? `This checkout contains ${migrationSync.pendingLocal.length} database migration(s) that production Supabase has not applied yet.`
+          ? migrationSync.requiresIncludeAll
+            ? `This checkout contains ${migrationSync.pendingLocal.length} unapplied migration(s) (${migrationSync.pendingLocal.join(', ')}) timestamped before the production head (${migrationSync.remoteHead}).`
+            : `This checkout contains ${migrationSync.pendingLocal.length} database migration(s) that production Supabase has not applied yet.`
           : migrationSync.status === 'remote_missing'
             ? `Production contains ${migrationSync.missingRemote.length} migration(s) missing from this local checkout. Reconcile before applying changes.`
             : migrationSync.status === 'divergent'
               ? `Divergent migration histories: production has ${migrationSync.missingRemote.length} migration(s) missing locally and local has ${migrationSync.pendingLocal.length} unapplied migration(s). Database push is blocked.`
               : 'Could not independently verify complete migration history.',
-      detail: `Local ${migrationSync.localHead || local} · Production ${migrationSync.remoteHead || remote}${migrationSync.pendingLocal.length ? ` · ${migrationSync.pendingLocal.length} pending` : ''}${migrationSync.missingRemote.length ? ` · ${migrationSync.missingRemote.length} missing locally` : ''}`,
+      detail: `Local ${migrationSync.localHead || local} · Production ${migrationSync.remoteHead || remote}${migrationSync.pendingLocal.length ? ` · ${migrationSync.pendingLocal.length} pending (${migrationSync.pendingLocal.join(', ')})` : ''}${migrationSync.missingRemote.length ? ` · ${migrationSync.missingRemote.length} missing locally` : ''}`,
       nextStep: migrationSync.status === 'synchronized'
         ? undefined
         : migrationSync.status === 'local_pending'
-          ? 'Review the pending migration chain in the Release Manager and deploy when ready.'
+          ? migrationSync.requiresIncludeAll
+            ? 'Inspect the out-of-order migration in Release Preflight and confirm "--include-all" if verified safe.'
+            : 'Review the pending migration chain in the Release Manager and deploy when ready.'
           : 'Reconcile local migration files with production records before pushing schema changes.',
     },
     {
@@ -405,10 +411,16 @@ export const getPlatformHealth = async (): Promise<PlatformHealthSnapshot> => {
   const health = data as PlatformHealthRpc;
 
   let preflightReport: ReleasePreflightReport | null = null;
+  let auditLog: ReleaseExecutionPlan[] = [];
   const isLocal = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
   if (isLocal) {
     try {
-      preflightReport = await adminFetchJson<ReleasePreflightReport>('/api/admin/release/preflight');
+      const [preflightRes, auditRes] = await Promise.all([
+        adminFetchJson<ReleasePreflightReport>('/api/admin/release/preflight'),
+        adminFetchJson<ReleaseExecutionPlan[]>('/api/admin/release/audit-log').catch(() => []),
+      ]);
+      preflightReport = preflightRes;
+      auditLog = Array.isArray(auditRes) ? auditRes : [];
     } catch {
       // Graceful fallback to RPC when preflight endpoint is unavailable
     }
@@ -424,6 +436,7 @@ export const getPlatformHealth = async (): Promise<PlatformHealthSnapshot> => {
     migrationMatches: migrationSync.status === 'synchronized',
     migrationSync,
     preflight: preflightReport ?? undefined,
+    auditLog,
     items: buildItems(health, migrationSync),
     counts: health.counts,
   };
