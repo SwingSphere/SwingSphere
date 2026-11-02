@@ -1,3 +1,8 @@
+---
+name: release-verification
+description: Verify SwingSphere code changes, tests, builds, and regression risks before completion.
+---
+
 # Release Verification Skill
 
 Use this skill after meaningful implementation work and before declaring a task complete.

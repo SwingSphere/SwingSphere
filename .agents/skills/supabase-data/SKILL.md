@@ -1,3 +1,8 @@
+---
+name: supabase-data
+description: Guide SwingSphere Supabase schema, migrations, authentication, storage, access policies, and data relationships.
+---
+
 # Supabase Data Skill
 
 Use this skill for Supabase schema work, migrations, authentication, storage, row-level security, moderation, submissions, listing relationships, media metadata, and host or promoter ownership.

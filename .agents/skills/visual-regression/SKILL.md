@@ -1,3 +1,8 @@
+---
+name: visual-regression
+description: Check SwingSphere visual changes across viewports, content states, and related surfaces.
+---
+
 # Visual Regression Skill
 
 Use this skill whenever a task changes visible UI or fixes a presentation bug.

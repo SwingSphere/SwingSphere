@@ -1,3 +1,8 @@
+---
+name: swingsphere-ui
+description: Design and refine SwingSphere user interfaces, responsive layouts, and visual consistency.
+---
+
 # SwingSphere UI Skill
 
 Use this skill for visible product UI: details panels, cards, tags, filters, forms, host pages, event pages, club pages, navigation, responsive behavior, and design-system consistency.
