@@ -114,7 +114,18 @@ export const resolveEventOrganizerOrganizationId = (
     const exact = organizations.find((org) => org.id === event.organizerOrganizationId);
     const isProducerOnly =
       exact?.displayTypes?.length === 1 && exact.displayTypes[0] === 'producer';
-    if (exact && !isProducerOnly && !isSyntheticHostOrganization(exact)) return exact.id;
+    const normalizedHostForFallback = normalizeHostName(event.hostName ?? '');
+    const isVenueClubFallbackWithDistinctHost =
+      Boolean(exact?.id.startsWith('org-club-')) &&
+      Boolean(normalizedHostForFallback) &&
+      normalizeHostName(exact?.name ?? '') !== normalizedHostForFallback &&
+      organizations.some(
+        (org) =>
+          !org.id.startsWith('org-club-') &&
+          !isSyntheticHostOrganization(org) &&
+          (org.slug === nameSlug(normalizedHostForFallback) || normalizeHostName(org.name) === normalizedHostForFallback),
+      );
+    if (exact && !isProducerOnly && !isSyntheticHostOrganization(exact) && !isVenueClubFallbackWithDistinctHost) return exact.id;
   }
   if (event.eventSeriesId) {
     const linkedSeries = eventSeries.find((item) => item.id === event.eventSeriesId);

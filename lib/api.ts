@@ -400,12 +400,20 @@ const withCatalogInvalidation = <TArgs extends any[], TResult>(
     return result;
 };
 
+const mergeById = <T extends { id: string }>(bundled: T[], remote: T[]): T[] => {
+    const merged = new Map<string, T>();
+    bundled.forEach((item) => merged.set(item.id, item));
+    remote.forEach((item) => merged.set(item.id, item));
+    return Array.from(merged.values());
+};
+
 export const getClubBrands = entityCatalog.getClubBrands;
 export const saveClubBrand = withCatalogInvalidation(entityCatalog.saveClubBrand);
 export const getEventSeries = async (): Promise<EventSeriesData[]> => {
     const rows = await entityCatalog.getEventSeries();
-    if (rows.length > 0) db.eventSeries = rows;
-    return rows;
+    if (rows.length > 0) db.eventSeries = mergeById(mockEventSeries, rows);
+    return db.eventSeries;
+
 };
 export const saveEventSeries = withCatalogInvalidation(async (series: EventSeriesData): Promise<EventSeriesData> => {
     const saved = await entityCatalog.saveEventSeries(series);
@@ -425,6 +433,7 @@ export const getCruiseSeries = async (): Promise<CruiseSeriesData[]> => {
         .then((rows) => {
             cruiseSeriesCache = { rows, fetchedAt: Date.now() };
             return rows;
+        
         })
         .finally(() => {
             inFlightCruiseSeriesPromise = null;
@@ -441,6 +450,7 @@ export const getCruiseSailings = async (): Promise<CruiseSailingData[]> => {
         .then((rows) => {
             cruiseSailingsCache = { rows, fetchedAt: Date.now() };
             return rows;
+        
         })
         .finally(() => {
             inFlightCruiseSailingsPromise = null;
@@ -450,23 +460,27 @@ export const getCruiseSailings = async (): Promise<CruiseSailingData[]> => {
 export const saveCruiseSailing = withCatalogInvalidation(entityCatalog.saveCruiseSailing);
 export const getVenues = async (): Promise<VenueData[]> => {
     const rows = await entityCatalog.getVenues();
-    if (rows.length > 0) db.venues = rows;
-    return rows;
+    if (rows.length > 0) db.venues = mergeById(mockVenues, rows);
+    return db.venues;
+
 };
 export const getOrganizations = async (): Promise<OrganizationData[]> => {
     const rows = await entityCatalog.getOrganizations();
-    if (rows.length > 0) db.organizations = rows;
-    return rows;
+    if (rows.length > 0) db.organizations = mergeById(mockOrganizations, rows);
+    return db.organizations;
+
 };
 export const getOrganizationRelationships = async (): Promise<OrganizationRelationship[]> => {
     const rows = await entityCatalog.getOrganizationRelationships();
-    if (rows.length > 0) db.organizationRelationships = rows;
-    return rows;
+    if (rows.length > 0) db.organizationRelationships = mergeById(mockOrganizationRelationships, rows);
+    return db.organizationRelationships;
+
 };
 export const getOrganizationVenueRelationships = async (): Promise<OrganizationVenueRelationship[]> => {
     const rows = await entityCatalog.getOrganizationVenueRelationships();
-    if (rows.length > 0) db.organizationVenueRelationships = rows;
-    return rows;
+    if (rows.length > 0) db.organizationVenueRelationships = mergeById(mockOrganizationVenueRelationships, rows);
+    return db.organizationVenueRelationships;
+
 };
 
 const mapOrganizationMember = (row: {

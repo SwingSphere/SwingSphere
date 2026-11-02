@@ -86,7 +86,6 @@ const BadgeAchievementLabPage = import.meta.env.DEV ? React.lazy(() => import('.
 const LivingBackgroundLabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/LivingBackgroundLabPage')) : null;
 const BorderSurgeryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/BorderSurgeryPage')) : null;
 const CleanRoomGlobePage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/CleanRoomGlobePage')) : null;
-const Globe2LabPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/Globe2LabPage')) : null;
 const PinMarkerStudioPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/PinMarkerStudioPage')) : null;
 const DevImageLibraryPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/DevImageLibraryPage')) : null;
 const MobileExplorerWorkbenchPage = import.meta.env.DEV ? React.lazy(() => import('./components/dev/MobileExplorerWorkbenchPage')) : null;
@@ -304,14 +303,6 @@ root.render(
               <Route
                 path="dev/border-surgery"
                 element={DEV_TOOLS_ENABLED && BorderSurgeryPage ? <ProtectedRoute roles={['Admin']}><BorderSurgeryPage /></ProtectedRoute> : <Navigate to="/" replace />}
-              />
-              <Route
-                path="app/globe-lab"
-                element={DEV_TOOLS_ENABLED && Globe2LabPage ? <Globe2LabPage /> : <Navigate to="/globe" replace />}
-              />
-              <Route
-                path="dev/globe-lab"
-                element={DEV_TOOLS_ENABLED && Globe2LabPage ? <Globe2LabPage /> : <Navigate to="/globe" replace />}
               />
             </Route>
           </Routes>

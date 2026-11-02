@@ -5060,7 +5060,13 @@ export default defineConfig(({ command, mode }) => {
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        ...(command === 'build'
+          ? {
+              'import.meta.env.DEV': false,
+              'import.meta.env.PROD': true,
+            }
+          : {}),
       },
       resolve: {
         dedupe: ['three'],

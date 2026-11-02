@@ -27,11 +27,24 @@ export const normalizeListing = (listing: Listing): Listing => {
     const fallbackDesc = typeof (listing as { description_short?: unknown }).description_short === 'string'
       ? (listing as { description_short: string }).description_short
       : '';
+    const isHotwifeLfnEvent =
+      /^hotwife community$/i.test(String(listing.hostName ?? '').trim()) &&
+      /\blfn\b|ladies\s+fantasy\s+night/i.test(String(listing.name ?? ''));
+    const normalizedOrganizerId =
+      isHotwifeLfnEvent && (!listing.organizerOrganizationId || listing.organizerOrganizationId.startsWith('org-club-'))
+        ? 'org-promoter-hotwife-community'
+        : listing.organizerOrganizationId;
+    const normalizedSeriesId =
+      isHotwifeLfnEvent && !listing.eventSeriesId
+        ? 'series-ladies-fantasy-night'
+        : listing.eventSeriesId;
     return {
       ...common,
       tags: toStringArray(listing.tags),
       time: { ...listing.time, start, end },
       description_full: typeof listing.description_full === 'string' ? listing.description_full : fallbackDesc,
+      ...(normalizedOrganizerId ? { organizerOrganizationId: normalizedOrganizerId } : {}),
+      ...(normalizedSeriesId ? { eventSeriesId: normalizedSeriesId } : {}),
     } as EventData;
   }
 

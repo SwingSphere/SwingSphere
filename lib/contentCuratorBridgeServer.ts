@@ -1494,6 +1494,42 @@ export const getCuratorBridgeSnapshot = async (req: any) => {
   const { core, bridge } = await loadCuratorBridgeModules();
   const db = core.database();
   try {
+    try {
+      const hwcRow = db.prepare("SELECT data FROM profiles WHERE id = 'org-promoter-hotwife-community'").get();
+      if (hwcRow?.data) {
+        const parsedHwc = JSON.parse(hwcRow.data);
+        if (parsedHwc && parsedHwc.active === false) {
+          parsedHwc.active = true;
+          core.put(db, 'profiles', 'org-promoter-hotwife-community', parsedHwc);
+        }
+      }
+      const lfnRows = db
+        .prepare("SELECT id, data FROM candidates WHERE data LIKE '%LFN%' OR data LIKE '%Ladies Fantasy Night%'")
+        .all();
+      for (const r of lfnRows) {
+        const parsed = JSON.parse(r.data);
+        if (
+          parsed &&
+          (parsed.seriesId === 'series-ladies-fantasy-night' || /\bLFN\b|Ladies\s+Fantasy\s+Night/i.test(parsed.title || '')) &&
+          (parsed.hostId !== 'org-promoter-hotwife-community' || parsed.clubId !== null || parsed.clubName !== 'Hotwife Community')
+        ) {
+          parsed.hostId = 'org-promoter-hotwife-community';
+          parsed.host = 'Hotwife Community';
+          parsed.hostName = 'Hotwife Community';
+          parsed.clubId = null;
+          parsed.clubName = 'Hotwife Community';
+          parsed.venueId = 'venue-club-club-joi-la';
+          parsed.venue = 'Club Joi';
+          parsed.seriesId = 'series-ladies-fantasy-night';
+          parsed.startTime = parsed.startTime || '20:00:00';
+          parsed.endTime = parsed.endTime || '02:00:00';
+          parsed.timezone = 'America/Los_Angeles';
+          core.put(db, 'candidates', r.id, parsed);
+        }
+      }
+    } catch {
+      // Ignore profile repair error
+    }
     const rawSnapshot = bridge.buildCuratorSnapshot(db);
     const snapshot = appendServerPreviewFlag(bridge.sanitizeDeep(rawSnapshot), db);
 

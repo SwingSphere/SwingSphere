@@ -5820,54 +5820,5 @@
       "ringCount": 1,
       "vertexCount": 5
     }
-  },
-  {
-    "id": "building-asset-club-paradox-san-francisco",
-    "listingId": "club-paradox-san-francisco",
-    "venueId": "venue-paradox-sf",
-    "version": 1,
-    "provider": {
-      "source": "OpenFreeMap",
-      "featureIds": [
-        "331944220"
-      ],
-      "origin": "provider"
-    },
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            -122.41511285305023,
-            37.77607865215495
-          ],
-          [
-            -122.41534888744354,
-            37.7762652160617
-          ],
-          [
-            -122.415252327919,
-            37.77633729744505
-          ],
-          [
-            -122.4150162935257,
-            37.776150733720215
-          ],
-          [
-            -122.41511285305023,
-            37.77607865215495
-          ]
-        ]
-      ]
-    },
-    "renderHeightMeters": 55,
-    "renderMinHeightMeters": 0,
-    "capture": {
-      "createdAt": "2026-11-02T04:43:50.243Z",
-      "updatedAt": "2026-11-02T04:43:50.628Z",
-      "polygonCount": 1,
-      "ringCount": 1,
-      "vertexCount": 5
-    }
   }
 ]
